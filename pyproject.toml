@@ -1,0 +1,12 @@
+[tool.ruff]
+line-length = 100
+exclude = [
+    "Сброс настроек COMET.py",
+    "Сброс настрок COMET.py",
+    "graph_route_example.py",
+    "vectordb/__init__.py",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501"]
