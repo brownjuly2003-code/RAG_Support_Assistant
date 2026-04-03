@@ -53,6 +53,7 @@ class Settings:
     - vector_backend: "chroma" или "qdrant" (используется vectordb/manager.py).
     - support_sink_backend: "local" или "bitrix" (используется integrations/mock_inbox.py).
     - bitrix_webhook_url: вебхук для BitrixSupportSink (если нужен).
+    - session_ttl_seconds: TTL API-сессий в памяти.
     """
 
     # --- Пути проекта ---
@@ -118,6 +119,7 @@ class Settings:
     # REQUIRE_OLLAMA=true → fail fast если Ollama недоступна при старте.
     # По умолчанию false, чтобы не ломать локальную разработку без LLM.
     require_ollama: bool = os.getenv("REQUIRE_OLLAMA", "false").strip().lower() in ("1", "true", "yes")
+    session_ttl_seconds: int = int(os.getenv("SESSION_TTL_SECONDS", "7200"))
 
     def ensure_dirs(self) -> None:
         """

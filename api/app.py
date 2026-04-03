@@ -13,6 +13,7 @@ Endpoints:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 import time
@@ -134,6 +135,7 @@ except ImportError:
             vectordb_chroma_dir = PROJECT_ROOT / "data" / "vectordb" / "chroma"
             ollama_base_url = "http://localhost:11434"
             tracing_db_path = PROJECT_ROOT / "data" / "tracing" / "traces.db"
+            session_ttl_seconds = 7200
             require_ollama = False
         return _S()
 
@@ -195,10 +197,64 @@ class UploadResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 _sessions: Dict[str, Any] = {}
+_session_last_accessed: Dict[str, float] = {}
 _vector_store: Any = None
 _retriever: Any = None
 _chunks: List[Any] = []
 _llm: Any = None
+
+
+def _touch_session(session_id: str, timestamp: Optional[float] = None) -> None:
+    _session_last_accessed[session_id] = time.time() if timestamp is None else timestamp
+
+
+def _get_session_ttl_seconds(settings: Any) -> int:
+    raw_ttl = getattr(settings, "session_ttl_seconds", 7200)
+    try:
+        return max(int(raw_ttl), 0)
+    except (TypeError, ValueError):
+        logger.warning("Invalid SESSION_TTL_SECONDS=%r, falling back to 7200", raw_ttl)
+        return 7200
+
+
+def _cleanup_expired_sessions(
+    ttl_seconds: int,
+    now: Optional[float] = None,
+) -> int:
+    current_time = time.time() if now is None else now
+    expired_ids = [
+        session_id
+        for session_id, last_accessed in _session_last_accessed.items()
+        if current_time - last_accessed > ttl_seconds
+    ]
+
+    for session_id in expired_ids:
+        session = _sessions.get(session_id)
+        if session is not None and hasattr(session, "clear"):
+            session.clear()
+        _sessions.pop(session_id, None)
+        _session_last_accessed.pop(session_id, None)
+
+    return len(expired_ids)
+
+
+async def _session_cleanup_loop(
+    stop_event: asyncio.Event,
+    ttl_seconds: int,
+    interval_seconds: int = 600,
+) -> None:
+    while True:
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=interval_seconds)
+            return
+        except asyncio.TimeoutError:
+            removed_sessions = _cleanup_expired_sessions(ttl_seconds)
+            if removed_sessions:
+                logger.info(
+                    "Removed %d expired sessions older than %d seconds",
+                    removed_sessions,
+                    ttl_seconds,
+                )
 
 
 def _get_or_create_session(session_id: Optional[str]) -> tuple:
@@ -218,6 +274,7 @@ def _get_or_create_session(session_id: Optional[str]) -> tuple:
         else:
             _sessions[session_id] = {"history": []}
 
+    _touch_session(session_id)
     return session_id, _sessions[session_id]
 
 
@@ -340,12 +397,25 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         raise SystemExit(1) from exc
 
     initialize_vector_store()
+    session_ttl_seconds = _get_session_ttl_seconds(settings)
+    session_cleanup_stop = asyncio.Event()
+    session_cleanup_task = asyncio.create_task(
+        _session_cleanup_loop(
+            stop_event=session_cleanup_stop,
+            ttl_seconds=session_ttl_seconds,
+        )
+    )
+    app.state.session_cleanup_stop = session_cleanup_stop
+    app.state.session_cleanup_task = session_cleanup_task
     logger.info("RAG Support Assistant started")
+    logger.info("Session cleanup enabled: ttl=%d seconds", session_ttl_seconds)
 
-    yield
-
-    # Shutdown
-    logger.info("RAG Support Assistant shutting down")
+    try:
+        yield
+    finally:
+        session_cleanup_stop.set()
+        await session_cleanup_task
+        logger.info("RAG Support Assistant shutting down")
 
 
 # ---------------------------------------------------------------------------
@@ -506,6 +576,7 @@ async def clear_session(session_id: str) -> Dict[str, str]:
     if hasattr(session, "clear"):
         session.clear()
     del _sessions[session_id]
+    _session_last_accessed.pop(session_id, None)
     return {"status": "ok", "message": f"Session {session_id} cleared"}
 
 
