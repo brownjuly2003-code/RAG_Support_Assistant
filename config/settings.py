@@ -120,6 +120,7 @@ class Settings:
     # По умолчанию false, чтобы не ломать локальную разработку без LLM.
     require_ollama: bool = os.getenv("REQUIRE_OLLAMA", "false").strip().lower() in ("1", "true", "yes")
     session_ttl_seconds: int = int(os.getenv("SESSION_TTL_SECONDS", "7200"))
+    api_key: str = os.getenv("API_KEY", "")
 
     def ensure_dirs(self) -> None:
         """

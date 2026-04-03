@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import httpx
-from fastapi import APIRouter, FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 try:
@@ -76,6 +76,19 @@ logger = logging.getLogger(__name__)
 # Rate limiter
 # ---------------------------------------------------------------------------
 limiter = Limiter(key_func=get_remote_address)
+
+
+def _require_api_key(request: Request) -> None:
+    """FastAPI dependency — validates X-API-Key header if API_KEY is configured."""
+    settings = get_settings()
+    expected = getattr(settings, "api_key", "")
+    if not expected:
+        return
+    provided = request.headers.get("X-API-Key", "")
+    if not provided:
+        raise HTTPException(status_code=401, detail="X-API-Key header required")
+    if provided != expected:
+        raise HTTPException(status_code=403, detail="Invalid API key")
 
 # ---------------------------------------------------------------------------
 # Safe imports with fallbacks
@@ -160,6 +173,7 @@ except ImportError:
             ollama_base_url = "http://localhost:11434"
             tracing_db_path = PROJECT_ROOT / "data" / "tracing" / "traces.db"
             session_ttl_seconds = 7200
+            api_key = ""
             require_ollama = False
         return _S()
 
@@ -398,8 +412,13 @@ router = APIRouter(prefix="/api", tags=["RAG API"])
 
 @router.post("/ask", response_model=AskResponse)
 @limiter.limit("60/minute")
-async def ask(request: Request, body: AskRequest) -> AskResponse:
+async def ask(
+    request: Request,
+    body: AskRequest,
+    _auth: None = Depends(_require_api_key),
+) -> AskResponse:
     """Ask a question to the RAG assistant."""
+    _ = _auth
     question = body.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="question is empty")
@@ -456,8 +475,13 @@ async def ask(request: Request, body: AskRequest) -> AskResponse:
 
 @router.post("/upload", response_model=UploadResponse)
 @limiter.limit("10/minute")
-async def upload_document(request: Request, file: UploadFile = File(...)) -> UploadResponse:
+async def upload_document(
+    request: Request,
+    file: UploadFile = File(...),
+    _auth: None = Depends(_require_api_key),
+) -> UploadResponse:
     """Upload a document (PDF/DOCX/TXT/MD) and ingest it into the vector store."""
+    _ = _auth
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
