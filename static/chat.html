@@ -3,234 +3,1052 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAG Support Chat</title>
+    <title>RAG Support Assistant</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f0f2f5;
+            --bg-chat: #e8ecf1;
+            --bg-user-msg: #4a90d9;
+            --bg-bot-msg: #ffffff;
+            --text-primary: #1a1a2e;
+            --text-secondary: #555770;
+            --text-user-msg: #ffffff;
+            --text-bot-msg: #1a1a2e;
+            --border-color: #d1d5db;
+            --accent: #4a90d9;
+            --accent-hover: #357abd;
+            --badge-quality: #10b981;
+            --badge-route: #8b5cf6;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --shadow-msg: 0 1px 3px rgba(0, 0, 0, 0.06);
+            --radius: 12px;
+            --radius-msg: 16px;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-chat: #0f1729;
+            --bg-user-msg: #4a90d9;
+            --bg-bot-msg: #1e2a4a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a4b8;
+            --text-user-msg: #ffffff;
+            --text-bot-msg: #e0e0e0;
+            --border-color: #2a3550;
+            --accent: #5b9ee6;
+            --accent-hover: #4a90d9;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-msg: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
             height: 100vh;
             display: flex;
             flex-direction: column;
         }
-        header {
-            background: #2563eb;
-            color: white;
-            padding: 16px 24px;
+
+        /* Header */
+        .header {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+            z-index: 10;
+        }
+
+        .header-left {
             display: flex;
             align-items: center;
             gap: 12px;
         }
-        header h1 { font-size: 18px; font-weight: 600; }
-        .status {
-            margin-left: auto;
-            font-size: 12px;
-            padding: 4px 10px;
-            border-radius: 12px;
-            background: rgba(255,255,255,0.2);
+
+        .header-logo {
+            width: 36px;
+            height: 36px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
         }
-        .status.ok { background: #22c55e; }
-        .chat-area {
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .header-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-icon:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .btn-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Status indicator */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            display: inline-block;
+            margin-right: 4px;
+        }
+
+        .status-dot.offline {
+            background: #ef4444;
+        }
+
+        .status-text {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* Chat area */
+        .chat-container {
             flex: 1;
             overflow-y: auto;
-            padding: 20px 24px;
+            padding: 20px;
+            background: var(--bg-chat);
+            scroll-behavior: smooth;
+        }
+
+        .chat-messages {
+            max-width: 800px;
+            margin: 0 auto;
             display: flex;
             flex-direction: column;
             gap: 16px;
         }
-        .msg {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 12px;
+
+        .message {
+            display: flex;
+            gap: 10px;
+            max-width: 85%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message.bot {
+            align-self: flex-start;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: var(--bg-user-msg);
+            color: white;
+        }
+
+        .message.bot .message-avatar {
+            background: var(--accent);
+            color: white;
+        }
+
+        .message-content {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .message-bubble {
+            padding: 10px 14px;
+            border-radius: var(--radius-msg);
             line-height: 1.5;
             font-size: 14px;
             white-space: pre-wrap;
             word-wrap: break-word;
+            box-shadow: var(--shadow-msg);
         }
-        .msg.user {
-            align-self: flex-end;
-            background: #2563eb;
-            color: white;
+
+        .message.user .message-bubble {
+            background: var(--bg-user-msg);
+            color: var(--text-user-msg);
             border-bottom-right-radius: 4px;
         }
-        .msg.bot {
-            align-self: flex-start;
-            background: white;
-            color: #1f2937;
-            border: 1px solid #e5e7eb;
+
+        .message.bot .message-bubble {
+            background: var(--bg-bot-msg);
+            color: var(--text-bot-msg);
             border-bottom-left-radius: 4px;
         }
-        .msg .meta {
-            margin-top: 8px;
-            font-size: 11px;
-            opacity: 0.7;
+
+        /* Badges */
+        .message-badges {
             display: flex;
-            gap: 12px;
+            gap: 6px;
+            flex-wrap: wrap;
         }
-        .msg .sources {
-            margin-top: 8px;
-            font-size: 12px;
-            color: #6b7280;
-        }
-        .msg .sources span {
-            display: inline-block;
-            background: #f3f4f6;
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
             padding: 2px 8px;
-            border-radius: 4px;
-            margin: 2px 4px 2px 0;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
         }
-        .typing {
-            align-self: flex-start;
-            color: #9ca3af;
-            font-size: 14px;
-            display: none;
-        }
-        .typing.active { display: block; }
-        .input-area {
-            padding: 16px 24px;
-            background: white;
-            border-top: 1px solid #e5e7eb;
-            display: flex;
-            gap: 12px;
-        }
-        .input-area input {
-            flex: 1;
-            padding: 10px 16px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 14px;
-            outline: none;
-        }
-        .input-area input:focus { border-color: #2563eb; }
-        .input-area button {
-            padding: 10px 24px;
-            background: #2563eb;
+
+        .badge-quality {
+            background: var(--badge-quality);
             color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
         }
-        .input-area button:hover { background: #1d4ed8; }
-        .input-area button:disabled { background: #9ca3af; cursor: not-allowed; }
+
+        .badge-quality.low {
+            background: #f59e0b;
+        }
+
+        .badge-quality.critical {
+            background: #ef4444;
+        }
+
+        .badge-route {
+            background: var(--badge-route);
+            color: white;
+        }
+
+        .badge-route.human {
+            background: #ef4444;
+        }
+
+        /* Sources */
+        .message-sources {
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .message-sources summary {
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .message-sources ul {
+            margin-top: 4px;
+            padding-left: 16px;
+        }
+
+        .message-sources li {
+            margin-top: 2px;
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            gap: 10px;
+            max-width: 85%;
+            margin-top: 16px;
+            margin-left: auto;
+            margin-right: auto;
+            max-width: 800px;
+        }
+
+        .typing-indicator.active {
+            display: flex;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+            background: var(--bg-bot-msg);
+            border-radius: var(--radius-msg);
+            border-bottom-left-radius: 4px;
+            box-shadow: var(--shadow-msg);
+        }
+
+        .typing-dots span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Welcome message */
+        .welcome {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .welcome h2 {
+            font-size: 20px;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .welcome p {
+            font-size: 14px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Input area */
+        .input-area {
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-color);
+            padding: 12px 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .input-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .input-group {
+            flex: 1;
+            display: flex;
+            align-items: flex-end;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 4px;
+            transition: border-color 0.2s;
+        }
+
+        .input-group:focus-within {
+            border-color: var(--accent);
+        }
+
+        .input-group textarea {
+            flex: 1;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            padding: 8px 10px;
+            resize: none;
+            min-height: 20px;
+            max-height: 120px;
+            line-height: 1.4;
+        }
+
+        .input-group textarea::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .btn-upload {
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-upload:hover {
+            background: var(--bg-primary);
+            color: var(--accent);
+        }
+
+        .btn-upload svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .btn-send {
+            background: var(--accent);
+            border: none;
+            color: white;
+            border-radius: var(--radius);
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            height: 44px;
+        }
+
+        .btn-send:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-send svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* File upload overlay */
+        .upload-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-overlay.active {
+            display: flex;
+        }
+
+        .upload-box {
+            background: var(--bg-primary);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            max-width: 420px;
+            width: 90%;
+        }
+
+        .upload-box h3 {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .upload-box p {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .upload-dropzone {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .upload-dropzone:hover,
+        .upload-dropzone.dragover {
+            border-color: var(--accent);
+            background: rgba(74, 144, 217, 0.05);
+            color: var(--accent);
+        }
+
+        .upload-dropzone svg {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 8px;
+        }
+
+        .upload-close {
+            margin-top: 16px;
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 20px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .upload-close:hover {
+            background: var(--bg-secondary);
+        }
+
+        .upload-status {
+            margin-top: 12px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .upload-status.success { color: #10b981; }
+        .upload-status.error { color: #ef4444; }
+
+        /* Drag overlay on body */
+        .drag-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(74, 144, 217, 0.08);
+            border: 3px dashed var(--accent);
+            z-index: 99;
+            pointer-events: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drag-overlay.active {
+            display: flex;
+        }
+
+        .drag-overlay-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--accent);
+            background: var(--bg-primary);
+            padding: 20px 40px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header h1 { font-size: 15px; }
+            .header-subtitle { display: none; }
+            .message { max-width: 95%; }
+            .chat-container { padding: 12px; }
+        }
     </style>
 </head>
 <body>
-    <header>
-        <h1>RAG Support Assistant</h1>
-        <div class="status" id="status">connecting...</div>
-    </header>
-
-    <div class="chat-area" id="chat">
-        <div class="msg bot">
-            Здравствуйте! Я ассистент службы поддержки. Задайте мне вопрос, и я постараюсь ответить на основе базы знаний.
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="header-logo">R</div>
+            <div>
+                <h1>RAG Support Assistant</h1>
+                <div class="header-subtitle">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span class="status-text" id="statusText">Connecting...</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <!-- Dark mode toggle -->
+            <button class="btn-icon" id="themeToggle" title="Toggle dark mode">
+                <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            </button>
+            <!-- New session -->
+            <button class="btn-icon" id="newSessionBtn" title="New session">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+            </button>
         </div>
     </div>
 
-    <div class="typing" id="typing">Ассистент печатает...</div>
+    <!-- Chat area -->
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome" id="welcomeBlock">
+                <h2>RAG Support Assistant</h2>
+                <p>Задайте вопрос по загруженным документам. Вы можете загрузить файлы (PDF, DOCX, TXT) через кнопку скрепки.</p>
+            </div>
+        </div>
+        <!-- Typing indicator -->
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="message-avatar" style="background: var(--accent); color: white;">A</div>
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </div>
 
+    <!-- Input area -->
     <div class="input-area">
-        <input type="text" id="input" placeholder="Введите вопрос..." autocomplete="off" />
-        <button id="send" onclick="sendMessage()">Отправить</button>
+        <div class="input-wrapper">
+            <div class="input-group">
+                <button class="btn-upload" id="uploadBtn" title="Upload document">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                    </svg>
+                </button>
+                <textarea
+                    id="questionInput"
+                    placeholder="Напишите ваш вопрос..."
+                    rows="1"
+                    autofocus
+                ></textarea>
+            </div>
+            <button class="btn-send" id="sendBtn" title="Отправить">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"/>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Upload overlay -->
+    <div class="upload-overlay" id="uploadOverlay">
+        <div class="upload-box">
+            <h3>Загрузить документ</h3>
+            <p>Поддерживаемые форматы: PDF, DOCX, TXT, MD, HTML</p>
+            <div class="upload-dropzone" id="uploadDropzone">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <div>Нажмите или перетащите файл сюда</div>
+                <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md,.html" hidden>
+            </div>
+            <div class="upload-status" id="uploadStatus"></div>
+            <button class="upload-close" id="uploadClose">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- Drag overlay -->
+    <div class="drag-overlay" id="dragOverlay">
+        <div class="drag-overlay-text">Перетащите файл для загрузки</div>
     </div>
 
     <script>
-        const chatEl = document.getElementById('chat');
-        const inputEl = document.getElementById('input');
-        const sendBtn = document.getElementById('send');
-        const typingEl = document.getElementById('typing');
-        const statusEl = document.getElementById('status');
+        // ---------------------------------------------------------------------------
+        // State
+        // ---------------------------------------------------------------------------
+        const API_BASE = '/api';
+        let sessionId = localStorage.getItem('rag_session_id') || null;
+        let isLoading = false;
 
-        let sessionId = null;
+        // ---------------------------------------------------------------------------
+        // DOM elements
+        // ---------------------------------------------------------------------------
+        const chatContainer = document.getElementById('chatContainer');
+        const chatMessages = document.getElementById('chatMessages');
+        const questionInput = document.getElementById('questionInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const welcomeBlock = document.getElementById('welcomeBlock');
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const newSessionBtn = document.getElementById('newSessionBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadOverlay = document.getElementById('uploadOverlay');
+        const uploadDropzone = document.getElementById('uploadDropzone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadClose = document.getElementById('uploadClose');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const dragOverlay = document.getElementById('dragOverlay');
 
-        inputEl.addEventListener('keydown', e => {
+        // ---------------------------------------------------------------------------
+        // Theme
+        // ---------------------------------------------------------------------------
+        const savedTheme = localStorage.getItem('rag_theme') || 'light';
+        if (savedTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+        updateThemeIcon();
+
+        themeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('rag_theme', next);
+            updateThemeIcon();
+        });
+
+        function updateThemeIcon() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            themeIcon.innerHTML = isDark
+                ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
+                : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+        }
+
+        // ---------------------------------------------------------------------------
+        // Health check
+        // ---------------------------------------------------------------------------
+        async function checkHealth() {
+            try {
+                const res = await fetch(API_BASE + '/health');
+                if (res.ok) {
+                    const data = await res.json();
+                    statusDot.classList.remove('offline');
+                    if (data.vector_store_loaded && data.pipeline_available) {
+                        statusText.textContent = 'Online';
+                    } else if (data.pipeline_available) {
+                        statusText.textContent = 'Online (нет векторной БД)';
+                    } else {
+                        statusText.textContent = 'Online (демо-режим)';
+                    }
+                } else {
+                    statusDot.classList.add('offline');
+                    statusText.textContent = 'Ошибка сервера';
+                }
+            } catch (e) {
+                statusDot.classList.add('offline');
+                statusText.textContent = 'Нет соединения';
+            }
+        }
+        checkHealth();
+        setInterval(checkHealth, 30000);
+
+        // ---------------------------------------------------------------------------
+        // Auto-resize textarea
+        // ---------------------------------------------------------------------------
+        questionInput.addEventListener('input', () => {
+            questionInput.style.height = 'auto';
+            questionInput.style.height = Math.min(questionInput.scrollHeight, 120) + 'px';
+        });
+
+        // ---------------------------------------------------------------------------
+        // Send message
+        // ---------------------------------------------------------------------------
+        sendBtn.addEventListener('click', sendMessage);
+        questionInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
             }
         });
 
-        async function checkHealth() {
-            try {
-                const r = await fetch('/api/health');
-                const d = await r.json();
-                statusEl.textContent = d.vector_store_loaded ? 'online' : 'no index';
-                statusEl.className = 'status' + (d.vector_store_loaded ? ' ok' : '');
-            } catch {
-                statusEl.textContent = 'offline';
-                statusEl.className = 'status';
-            }
-        }
-
-        function addMessage(text, role, extra) {
-            const div = document.createElement('div');
-            div.className = 'msg ' + role;
-            div.textContent = text;
-
-            if (extra && role === 'bot') {
-                const meta = document.createElement('div');
-                meta.className = 'meta';
-                if (extra.quality_score != null) {
-                    meta.innerHTML += '<span>Quality: ' + extra.quality_score + '/100</span>';
-                }
-                if (extra.route) {
-                    meta.innerHTML += '<span>Route: ' + extra.route + '</span>';
-                }
-                div.appendChild(meta);
-
-                if (extra.sources && extra.sources.length > 0) {
-                    const src = document.createElement('div');
-                    src.className = 'sources';
-                    src.innerHTML = 'Sources: ' + extra.sources
-                        .filter(s => s.source)
-                        .map(s => '<span>' + s.source + '</span>')
-                        .join('');
-                    div.appendChild(src);
-                }
-            }
-
-            chatEl.appendChild(div);
-            chatEl.scrollTop = chatEl.scrollHeight;
-        }
-
         async function sendMessage() {
-            const q = inputEl.value.trim();
-            if (!q) return;
+            const question = questionInput.value.trim();
+            if (!question || isLoading) return;
 
-            inputEl.value = '';
+            // Hide welcome
+            if (welcomeBlock) welcomeBlock.style.display = 'none';
+
+            // Add user message
+            addMessage('user', question);
+            questionInput.value = '';
+            questionInput.style.height = 'auto';
+
+            // Show typing
+            isLoading = true;
             sendBtn.disabled = true;
-            addMessage(q, 'user');
-            typingEl.classList.add('active');
+            typingIndicator.classList.add('active');
+            scrollToBottom();
 
             try {
-                const body = { question: q };
+                const body = { question: question };
                 if (sessionId) body.session_id = sessionId;
 
-                const r = await fetch('/api/ask', {
+                const res = await fetch(API_BASE + '/ask', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body),
                 });
-                const d = await r.json();
 
-                if (!sessionId && d.session_id) sessionId = d.session_id;
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ detail: res.statusText }));
+                    throw new Error(err.detail || 'Ошибка сервера');
+                }
 
-                addMessage(d.answer || '[no answer]', 'bot', {
-                    quality_score: d.quality_score,
-                    route: d.route,
-                    sources: d.sources || [],
+                const data = await res.json();
+
+                // Save session
+                if (data.session_id) {
+                    sessionId = data.session_id;
+                    localStorage.setItem('rag_session_id', sessionId);
+                }
+
+                // Add bot message
+                addMessage('bot', data.answer, {
+                    quality: data.quality_score,
+                    route: data.route,
+                    sources: data.sources,
                 });
             } catch (err) {
-                addMessage('Error: ' + err.message, 'bot');
+                addMessage('bot', 'Ошибка: ' + err.message, { quality: 0, route: 'error' });
             } finally {
-                typingEl.classList.remove('active');
+                isLoading = false;
                 sendBtn.disabled = false;
-                inputEl.focus();
+                typingIndicator.classList.remove('active');
+                scrollToBottom();
             }
         }
 
-        checkHealth();
-        setInterval(checkHealth, 30000);
+        // ---------------------------------------------------------------------------
+        // Add message to chat
+        // ---------------------------------------------------------------------------
+        function addMessage(role, text, meta) {
+            const msg = document.createElement('div');
+            msg.className = 'message ' + role;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = role === 'user' ? 'U' : 'A';
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = text;
+            content.appendChild(bubble);
+
+            // Badges (bot only)
+            if (role === 'bot' && meta) {
+                const badges = document.createElement('div');
+                badges.className = 'message-badges';
+
+                if (meta.quality !== undefined && meta.quality !== null) {
+                    const qBadge = document.createElement('span');
+                    qBadge.className = 'badge badge-quality';
+                    if (meta.quality < 50) qBadge.classList.add('critical');
+                    else if (meta.quality < 70) qBadge.classList.add('low');
+                    qBadge.textContent = 'Качество: ' + meta.quality;
+                    badges.appendChild(qBadge);
+                }
+
+                if (meta.route) {
+                    const rBadge = document.createElement('span');
+                    rBadge.className = 'badge badge-route';
+                    if (meta.route === 'human' || meta.route === 'error') rBadge.classList.add('human');
+                    rBadge.textContent = 'Маршрут: ' + meta.route;
+                    badges.appendChild(rBadge);
+                }
+
+                content.appendChild(badges);
+
+                // Sources
+                if (meta.sources && meta.sources.length > 0) {
+                    const srcBlock = document.createElement('details');
+                    srcBlock.className = 'message-sources';
+                    const summary = document.createElement('summary');
+                    summary.textContent = 'Источники (' + meta.sources.length + ')';
+                    srcBlock.appendChild(summary);
+                    const ul = document.createElement('ul');
+                    meta.sources.forEach(function(s) {
+                        const li = document.createElement('li');
+                        li.textContent = (s.source || 'Неизвестно') + ': ' + (s.page_content || '').substring(0, 120) + '...';
+                        ul.appendChild(li);
+                    });
+                    srcBlock.appendChild(ul);
+                    content.appendChild(srcBlock);
+                }
+            }
+
+            msg.appendChild(avatar);
+            msg.appendChild(content);
+            chatMessages.appendChild(msg);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            requestAnimationFrame(function() {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            });
+        }
+
+        // ---------------------------------------------------------------------------
+        // New session
+        // ---------------------------------------------------------------------------
+        newSessionBtn.addEventListener('click', async function() {
+            if (sessionId) {
+                try {
+                    await fetch(API_BASE + '/sessions/' + sessionId, { method: 'DELETE' });
+                } catch (e) {
+                    // ignore
+                }
+            }
+            sessionId = null;
+            localStorage.removeItem('rag_session_id');
+            chatMessages.innerHTML = '';
+            const welcome = document.createElement('div');
+            welcome.className = 'welcome';
+            welcome.id = 'welcomeBlock';
+            welcome.innerHTML = '<h2>RAG Support Assistant</h2><p>Новая сессия. Задайте ваш вопрос.</p>';
+            chatMessages.appendChild(welcome);
+        });
+
+        // ---------------------------------------------------------------------------
+        // File upload
+        // ---------------------------------------------------------------------------
+        uploadBtn.addEventListener('click', function() {
+            uploadOverlay.classList.add('active');
+            uploadStatus.textContent = '';
+            uploadStatus.className = 'upload-status';
+        });
+
+        uploadClose.addEventListener('click', function() {
+            uploadOverlay.classList.remove('active');
+        });
+
+        uploadOverlay.addEventListener('click', function(e) {
+            if (e.target === uploadOverlay) uploadOverlay.classList.remove('active');
+        });
+
+        uploadDropzone.addEventListener('click', function() { fileInput.click(); });
+
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) uploadFile(e.target.files[0]);
+        });
+
+        // Drag & drop on dropzone
+        uploadDropzone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadDropzone.classList.add('dragover');
+        });
+        uploadDropzone.addEventListener('dragleave', function() {
+            uploadDropzone.classList.remove('dragover');
+        });
+        uploadDropzone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadDropzone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) uploadFile(e.dataTransfer.files[0]);
+        });
+
+        // Global drag & drop
+        var dragCounter = 0;
+        document.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            dragCounter++;
+            if (!uploadOverlay.classList.contains('active')) {
+                dragOverlay.classList.add('active');
+            }
+        });
+        document.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            dragCounter--;
+            if (dragCounter <= 0) {
+                dragCounter = 0;
+                dragOverlay.classList.remove('active');
+            }
+        });
+        document.addEventListener('dragover', function(e) { e.preventDefault(); });
+        document.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dragCounter = 0;
+            dragOverlay.classList.remove('active');
+            if (!uploadOverlay.classList.contains('active') && e.dataTransfer.files.length > 0) {
+                uploadOverlay.classList.add('active');
+                uploadFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        async function uploadFile(file) {
+            uploadStatus.textContent = 'Загрузка ' + file.name + '...';
+            uploadStatus.className = 'upload-status';
+
+            var formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                var res = await fetch(API_BASE + '/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                var data = await res.json();
+                if (res.ok && data.status === 'ok') {
+                    uploadStatus.textContent = data.message;
+                    uploadStatus.className = 'upload-status success';
+                    checkHealth();
+                } else {
+                    uploadStatus.textContent = data.message || data.detail || 'Ошибка загрузки';
+                    uploadStatus.className = 'upload-status error';
+                }
+            } catch (err) {
+                uploadStatus.textContent = 'Ошибка: ' + err.message;
+                uploadStatus.className = 'upload-status error';
+            }
+
+            fileInput.value = '';
+        }
+
+        // ---------------------------------------------------------------------------
+        // Load history on page load
+        // ---------------------------------------------------------------------------
+        async function loadHistory() {
+            if (!sessionId) return;
+            try {
+                var res = await fetch(API_BASE + '/sessions/' + sessionId + '/history');
+                if (!res.ok) {
+                    sessionId = null;
+                    localStorage.removeItem('rag_session_id');
+                    return;
+                }
+                var data = await res.json();
+                if (data.messages && data.messages.length > 0) {
+                    if (welcomeBlock) welcomeBlock.style.display = 'none';
+                    data.messages.forEach(function(msg) {
+                        addMessage(msg.role === 'user' ? 'user' : 'bot', msg.content);
+                    });
+                }
+            } catch (e) {
+                // Server not running
+            }
+        }
+        loadHistory();
     </script>
 </body>
 </html>
