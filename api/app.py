@@ -612,6 +612,23 @@ async def health_check() -> HealthResponse:
 # ---------------------------------------------------------------------------
 
 app = FastAPI(title="RAG Support Assistant API", version="0.3.0", lifespan=_lifespan)
+
+
+@app.middleware("http")
+async def _log_requests(request: Request, call_next: Any) -> Any:
+    t0 = time.monotonic()
+    response = await call_next(request)
+    duration_ms = round((time.monotonic() - t0) * 1000, 1)
+    logger.info(
+        "%s %s → %d (%.1fms)",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
+
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.include_router(router)
