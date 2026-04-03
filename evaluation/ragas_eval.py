@@ -18,18 +18,14 @@ Main class: RAGEvaluator
 from __future__ import annotations
 
 import json
-import math
-import os
+import logging
 import re
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
-try:
-    from langchain_core.documents import Document  # type: ignore
-except ImportError:
-    from langchain.schema import Document  # type: ignore
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -482,7 +478,11 @@ class RAGEvaluator:
                 else:
                     docs = retriever.invoke(tc.question)
             except Exception as e:
-                print(f"[RAGEvaluator] Retrieval error for '{tc.question[:50]}': {e}")
+                logger.exception(
+                    "RAGEvaluator retrieval error for '%s': %s",
+                    tc.question[:50],
+                    e,
+                )
                 docs = []
 
             # Generate
@@ -497,7 +497,11 @@ class RAGEvaluator:
                 if not isinstance(answer, str):
                     answer = str(answer)
             except Exception as e:
-                print(f"[RAGEvaluator] Generation error for '{tc.question[:50]}': {e}")
+                logger.exception(
+                    "RAGEvaluator generation error for '%s': %s",
+                    tc.question[:50],
+                    e,
+                )
                 answer = ""
 
             elapsed = time.time() - start
@@ -543,5 +547,5 @@ class RAGEvaluator:
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
-        print(f"[RAGEvaluator] Results saved to {path}")
+        logger.info("RAGEvaluator results saved to %s", path)
         return str(path)

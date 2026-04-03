@@ -46,7 +46,7 @@ agent/prompts.py
 
 from __future__ import annotations
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 
 def _format_context_block(context_docs: List[Dict[str, Any]]) -> str:

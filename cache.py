@@ -17,16 +17,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
+import logging
 import time
 from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-try:
-    from langchain_core.documents import Document  # type: ignore
-except ImportError:
-    from langchain.schema import Document  # type: ignore
+logger = logging.getLogger(__name__)
 
 
 def _hash_key(text: str) -> str:
@@ -240,7 +237,7 @@ class RAGCache:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(payload, f, ensure_ascii=False, indent=2, default=str)
         except Exception as e:
-            print(f"[RAGCache] Failed to save to disk: {e}")
+            logger.exception("RAGCache failed to save to disk: %s", e)
 
     def _load_from_disk(self) -> None:
         """Load caches from JSON file if it exists."""
@@ -266,4 +263,4 @@ class RAGCache:
                     self._retrieval_cache[key] = entry
 
         except Exception as e:
-            print(f"[RAGCache] Failed to load from disk: {e}")
+            logger.exception("RAGCache failed to load from disk: %s", e)
