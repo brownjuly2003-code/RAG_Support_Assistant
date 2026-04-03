@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 def _project_root() -> Path:
     """Корень проекта относительно текущего файла."""
-    return Path(__file__).resolve().parent.parent
+    return Path(__file__).resolve().parent
 
 
 def _inbox_path() -> Path:
