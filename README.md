@@ -1,80 +1,67 @@
 # RAG Support Assistant
 
-RAG Support Assistant отвечает на вопросы поддержки по внутренней базе знаний, используя локальную LLM через Ollama, Chroma для retrieval и LangGraph для orchestration. Если уверенного ответа нет, запрос маршрутизируется на человека через mock inbox или Bitrix. API и UI работают через FastAPI, а ключевые шаги пайплайна пишутся в SQLite tracing.
+RAG Support Assistant отвечает на вопросы поддержки по базе знаний и решает, можно ли отдать ответ автоматически или лучше эскалировать запрос человеку. Стек проекта: FastAPI, LangGraph, ChromaDB, локальная LLM через Ollama, SQLite для tracing и mock inbox или Bitrix для эскалаций.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    U[User] --> API[FastAPI]
-    API --> S[Session store]
-    API --> G[LangGraph pipeline]
-    D[Docs] --> V[Chroma vector store]
-    V --> G
-    G --> T[SQLite tracing]
-    G --> R1[transform_query]
-    R1 --> R2[retrieve]
-    R2 --> R3[grade_docs]
-    R3 --> R4[generate]
-    R4 --> R5[evaluate]
-    R5 --> R6[route_or_retry]
-    R6 --> A[API response]
-    R6 --> H[mock inbox / Bitrix]
+Pipeline flow:
+```text
+transform_query → retrieve → grade_docs → generate → evaluate → route_or_retry
+                                                                     ↓        ↓
+                                                                  log      handle_error
+                                                                  ↓              ↓
+                                                                 END      escalate + END
 ```
+
+- **Retrieval**: использует ChromaDB, embedding model, optional BM25 hybrid search и cross-encoder reranker, параметры берутся из `config/settings.py`.
+- **Generation**: ответ генерирует локальная модель Ollama, по умолчанию `mistral`.
+- **Evaluation**: `quality_score` определяет, остается ли маршрут `auto`, нужен ли retry или эскалация на человека.
+- **Escalation**: при `route=human` или `route=error` вопрос уходит в local JSONL inbox или Bitrix webhook.
 
 ## Quick Start
 
-### Requirements
-
-- Python 3.11+
-- Ollama installed locally
-- Git and `pip`
-
-### Setup
+**Prerequisites:** Python 3.11+, `ollama serve`
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+# 1. Install dependencies
 pip install -r requirements.txt
-cp .env.example .env
-ollama pull mistral
+
+# 2. Start Ollama and pull model
 ollama serve
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+ollama pull mistral
+
+# 3. Run
+python main.py
 ```
 
-PowerShell activation: `.venv\Scripts\Activate.ps1`
+Open http://localhost:8000
 
 ## Environment Variables
 
-Use `.env.example` as the source of truth.
+Copy `.env.example` to `.env` and adjust:
 
-| Variable | Description | Default |
-| --- | --- | --- |
-| `OLLAMA_BASE_URL` | URL of local Ollama API | `http://localhost:11434` |
-| `OLLAMA_MODEL_NAME` | Generation model name | `mistral` |
-| `RAG_EMBEDDING_MODEL` | Embedding model | `BAAI/bge-m3` |
-| `RAG_RERANKER_MODEL` | Cross-encoder reranker | `cross-encoder/ms-marco-MiniLM-L-6-v2` |
-| `RAG_HYBRID_SEARCH` | Enable BM25 + vector hybrid search | `true` |
-| `RAG_RETRIEVAL_TOP_K` | Candidates before reranking | `20` |
-| `RAG_RERANK_TOP_K` | Final documents after reranking | `5` |
-| `RAG_SEMANTIC_CHUNKING` | Enable semantic chunking | `false` |
-| `RAG_SELF_RAG_MAX_ITER` | Max retry iterations in Self-RAG | `2` |
-| `RAG_SELF_RAG_MIN_QUALITY` | Minimum quality before escalation/retry | `70` |
-| `RAG_VECTOR_BACKEND` | Vector backend | `chroma` |
-| `SUPPORT_SINK_BACKEND` | Escalation sink backend | `local` |
-| `BITRIX_WEBHOOK_URL` | Bitrix webhook for escalations | empty |
-| `REQUIRE_OLLAMA` | Fail fast if Ollama is unavailable | `false` |
-| `SESSION_TTL_SECONDS` | Inactive API session TTL | `7200` |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | URL локального Ollama API |
+| `OLLAMA_MODEL_NAME` | `mistral` | модель генерации ответов |
+| `RAG_EMBEDDING_MODEL` | `BAAI/bge-m3` | embedding model для документов и запросов |
+| `RAG_RERANKER_MODEL` | `cross-encoder/ms-marco-MiniLM-L-6-v2` | reranker после retrieval |
+| `RAG_HYBRID_SEARCH` | `true` | включает BM25 + vector hybrid search |
+| `RAG_RETRIEVAL_TOP_K` | `20` | число кандидатов до rerank |
+| `RAG_RERANK_TOP_K` | `5` | число документов после rerank |
+| `RAG_VECTOR_BACKEND` | `chroma` | backend векторного хранилища |
+| `SUPPORT_SINK_BACKEND` | `local` | канал эскалации: local или bitrix |
+| `SESSION_TTL_SECONDS` | `7200` | idle timeout API-сессий |
 
 ## API
 
 | Method | Path | Description |
-| --- | --- | --- |
-| `POST` | `/api/ask` | Ask a question with optional `session_id` |
-| `POST` | `/api/upload` | Upload and index a document |
-| `GET` | `/api/sessions/{session_id}/history` | Get conversation history |
-| `DELETE` | `/api/sessions/{session_id}` | Clear one session |
-| `GET` | `/api/health` | Probe Ollama, Chroma and SQLite health |
+|--------|------|-------------|
+| POST | `/api/ask` | задать вопрос с optional `session_id` |
+| POST | `/api/upload` | загрузить документ и переиндексировать базу |
+| GET | `/api/health` | проверить Ollama, ChromaDB и SQLite |
+| GET | `/api/sessions/{id}/history` | получить историю сообщений сессии |
+| DELETE | `/api/sessions/{id}` | очистить одну сессию |
 
 ## Tests
 
@@ -85,7 +72,7 @@ pytest tests/ -v
 ## Docker
 
 ```bash
+cp .env.example .env
+# Edit .env — set OLLAMA_BASE_URL to your Ollama host
 docker compose up
 ```
-
-The container exposes port `8000` and starts `uvicorn main:app`.
