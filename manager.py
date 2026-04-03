@@ -309,6 +309,13 @@ def semantic_split(
     """Семантический сплиттер через langchain_experimental.SemanticChunker."""
     _ = breakpoint_threshold
 
+    if embeddings is None:
+        logger.warning(
+            "Embeddings are unavailable, fallback to RecursiveCharacterTextSplitter",
+        )
+        splitter = _build_text_splitter(max_chunk_size, min_chunk_size // 2)
+        return splitter.split_documents(list(docs))
+
     if HAS_SEMANTIC_CHUNKER:
         try:
             splitter = SemanticChunker(embeddings)

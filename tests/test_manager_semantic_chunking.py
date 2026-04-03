@@ -57,7 +57,7 @@ def test_build_vector_store_falls_back_to_recursive_splitter_when_disabled(
         lambda: SimpleNamespace(semantic_chunking=False),
     )
     monkeypatch.setattr(manager, "SemanticChunker", semantic_chunker_factory, raising=False)
-    monkeypatch.setattr(manager, "_build_text_splitter", lambda **_: splitter)
+    monkeypatch.setattr(manager, "_build_text_splitter", lambda *args, **kwargs: splitter)
     monkeypatch.setattr(manager, "_get_backend", lambda: "chroma")
     monkeypatch.setattr(manager, "_build_chroma", lambda chunks, _: {"chunks": chunks})
 
@@ -71,3 +71,28 @@ def test_build_vector_store_falls_back_to_recursive_splitter_when_disabled(
     splitter.split_documents.assert_called_once_with(docs)
     assert chunks == recursive_chunks
     assert store == {"chunks": recursive_chunks}
+
+
+def test_semantic_split_falls_back_when_embeddings_are_missing(
+    monkeypatch,
+) -> None:
+    docs = [manager.Document(page_content="Первый. Второй. Третий.", metadata={})]
+    recursive_chunks = [
+        manager.Document(page_content="Recursive chunk", metadata={}),
+    ]
+    splitter = Mock()
+    splitter.split_documents.return_value = recursive_chunks
+    semantic_chunker_factory = Mock()
+    warning_logger = Mock()
+
+    monkeypatch.setattr(manager, "SemanticChunker", semantic_chunker_factory, raising=False)
+    monkeypatch.setattr(manager, "HAS_SEMANTIC_CHUNKER", True, raising=False)
+    monkeypatch.setattr(manager, "_build_text_splitter", lambda *args, **kwargs: splitter)
+    monkeypatch.setattr(manager.logger, "warning", warning_logger)
+
+    chunks = manager.semantic_split(docs, embeddings=None)
+
+    semantic_chunker_factory.assert_not_called()
+    warning_logger.assert_called_once()
+    splitter.split_documents.assert_called_once_with(docs)
+    assert chunks
