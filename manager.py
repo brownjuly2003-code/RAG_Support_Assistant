@@ -37,6 +37,12 @@ try:
 except ImportError:
     from langchain.text_splitter import RecursiveCharacterTextSplitter  # type: ignore
 
+try:
+    from langchain_experimental.text_splitter import SemanticChunker  # type: ignore
+    HAS_SEMANTIC_CHUNKER = True
+except ImportError:
+    HAS_SEMANTIC_CHUNKER = False
+
 # Chroma
 try:
     from langchain_chroma import Chroma  # type: ignore
@@ -300,95 +306,21 @@ def semantic_split(
     min_chunk_size: int = 100,
     max_chunk_size: int = 2000,
 ) -> List[Document]:
-    """Семантический сплиттер: делит документы по смысловым границам.
+    """Семантический сплиттер через langchain_experimental.SemanticChunker."""
+    _ = breakpoint_threshold
 
-    Алгоритм:
-    1. Разбивает текст на предложения
-    2. Вычисляет embedding для каждого предложения
-    3. Считает cosine similarity между соседними предложениями
-    4. Где similarity < breakpoint_threshold → граница чанка
-    5. Объединяет предложения в чанки
-
-    Fallback: если embeddings медленные или текст короткий, использует
-    RecursiveCharacterTextSplitter.
-    """
-    import re as _re
-    import math
-
-    def _cosine_sim(a: List[float], b: List[float]) -> float:
-        dot = sum(x * y for x, y in zip(a, b))
-        na = math.sqrt(sum(x * x for x in a))
-        nb = math.sqrt(sum(y * y for y in b))
-        if na == 0 or nb == 0:
-            return 0.0
-        return dot / (na * nb)
-
-    # Sentence splitting pattern (handles Russian and English)
-    sent_pattern = _re.compile(r'(?<=[.!?…])\s+(?=[А-ЯA-Z])')
-
-    all_chunks: List[Document] = []
-
-    for doc in docs:
-        text = doc.page_content.strip()
-        if len(text) < min_chunk_size:
-            all_chunks.append(doc)
-            continue
-
-        # Split into sentences
-        sentences = sent_pattern.split(text)
-        sentences = [s.strip() for s in sentences if s.strip()]
-
-        if len(sentences) <= 2:
-            all_chunks.append(doc)
-            continue
-
-        # Get embeddings for all sentences
+    if HAS_SEMANTIC_CHUNKER:
         try:
-            vectors = embeddings.embed_documents(sentences)
-        except Exception:
-            # Fallback to simple splitting
-            splitter = _build_text_splitter(max_chunk_size, min_chunk_size // 2)
-            all_chunks.extend(splitter.split_documents([doc]))
-            continue
+            splitter = SemanticChunker(embeddings)
+            return splitter.split_documents(list(docs))
+        except Exception as exc:
+            logger.warning(
+                "SemanticChunker failed, fallback to RecursiveCharacterTextSplitter: %s",
+                exc,
+            )
 
-        # Find breakpoints: where cosine similarity drops
-        breakpoints = []
-        for i in range(len(vectors) - 1):
-            sim = _cosine_sim(vectors[i], vectors[i + 1])
-            if sim < (1.0 - breakpoint_threshold):
-                breakpoints.append(i + 1)
-
-        # Build chunks from sentence groups
-        chunk_starts = [0] + breakpoints
-        chunk_ends = breakpoints + [len(sentences)]
-
-        for start, end in zip(chunk_starts, chunk_ends):
-            chunk_text = " ".join(sentences[start:end])
-
-            # Enforce min/max size
-            if len(chunk_text) < min_chunk_size and all_chunks:
-                # Merge with previous chunk
-                prev = all_chunks[-1]
-                all_chunks[-1] = Document(
-                    page_content=prev.page_content + " " + chunk_text,
-                    metadata={**prev.metadata},
-                )
-                continue
-
-            if len(chunk_text) > max_chunk_size:
-                # Sub-split with RecursiveCharacterTextSplitter
-                sub_splitter = _build_text_splitter(max_chunk_size, min_chunk_size // 2)
-                sub_docs = sub_splitter.split_documents([
-                    Document(page_content=chunk_text, metadata={**doc.metadata})
-                ])
-                all_chunks.extend(sub_docs)
-            else:
-                all_chunks.append(Document(
-                    page_content=chunk_text,
-                    metadata={**doc.metadata},
-                ))
-
-    return all_chunks
+    splitter = _build_text_splitter(max_chunk_size, min_chunk_size // 2)
+    return splitter.split_documents(list(docs))
 
 
 # ---------------------------------------------------------------------------
@@ -762,10 +694,14 @@ def build_vector_store(
     if embeddings is None:
         embeddings = get_embeddings()
 
+    from config.settings import get_settings
+    settings = get_settings()
+
     chunk_size = int(chunk_config.get("chunk_size", 800))
     chunk_overlap = int(chunk_config.get("chunk_overlap", 200))
+    semantic_chunking_enabled = settings.semantic_chunking or use_semantic_chunking
 
-    if use_semantic_chunking:
+    if semantic_chunking_enabled:
         print("Using semantic chunking (Level 2)...")
         chunks = semantic_split(
             list(docs), embeddings,
@@ -777,7 +713,7 @@ def build_vector_store(
         chunks = splitter.split_documents(list(docs))
 
     backend = _get_backend()
-    mode = "semantic" if use_semantic_chunking else f"fixed(size={chunk_size}, overlap={chunk_overlap})"
+    mode = "semantic" if semantic_chunking_enabled else f"fixed(size={chunk_size}, overlap={chunk_overlap})"
     print(f"Backend: {backend.upper()}, chunks: {len(chunks)}, mode: {mode}")
 
     if backend == "qdrant":
