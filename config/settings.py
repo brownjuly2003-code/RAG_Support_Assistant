@@ -114,6 +114,11 @@ class Settings:
     # https://example.bitrix24.ru/rest/123/abcdefg123456/crm.timeline.comment.add.json
     bitrix_webhook_url: Optional[str] = os.getenv("BITRIX_WEBHOOK_URL") or None
 
+    # --- Продакшн-режим ---
+    # REQUIRE_OLLAMA=true → fail fast если Ollama недоступна при старте.
+    # По умолчанию false, чтобы не ломать локальную разработку без LLM.
+    require_ollama: bool = os.getenv("REQUIRE_OLLAMA", "false").strip().lower() in ("1", "true", "yes")
+
     def ensure_dirs(self) -> None:
         """
         Создаёт при необходимости директории под data/ и вложенные пути.
@@ -126,6 +131,53 @@ class Settings:
         self.tracing_db_path.parent.mkdir(parents=True, exist_ok=True)
         self.inbox_file.parent.mkdir(parents=True, exist_ok=True)
         self.chunking_config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def validate(self) -> None:
+        """
+        Проверяет доступность критичных зависимостей при старте.
+
+        Если REQUIRE_OLLAMA=true и Ollama недоступна — поднимает RuntimeError.
+        Если REQUIRE_OLLAMA=false (по умолчанию) — только предупреждение.
+        """
+        import logging
+        import urllib.request
+        import urllib.error
+
+        log = logging.getLogger(__name__)
+
+        # Проверка Ollama
+        ollama_ok = False
+        try:
+            req = urllib.request.Request(
+                f"{self.ollama_base_url}/api/tags",
+                method="GET",
+            )
+            with urllib.request.urlopen(req, timeout=3):
+                ollama_ok = True
+        except Exception as exc:
+            if self.require_ollama:
+                raise RuntimeError(
+                    f"\nERROR: Cannot connect to Ollama at {self.ollama_base_url}\n"
+                    f"       Причина: {exc}\n"
+                    f"       Запустите Ollama: ollama serve\n"
+                    f"       Затем: ollama pull {self.ollama_model_name}\n"
+                ) from exc
+            log.warning(
+                "Ollama недоступна по адресу %s (%s). "
+                "Установите REQUIRE_OLLAMA=true для fail-fast в продакшне.",
+                self.ollama_base_url,
+                exc,
+            )
+
+        if ollama_ok:
+            log.info("Ollama доступна: %s", self.ollama_base_url)
+
+        # Проверка директории ChromaDB
+        try:
+            self.vectordb_chroma_dir.mkdir(parents=True, exist_ok=True)
+            log.info("ChromaDB директория: %s", self.vectordb_chroma_dir)
+        except Exception as exc:
+            log.error("Не удалось создать директорию ChromaDB: %s", exc)
 
 
 # Ленивая инициализация синглтона настроек

@@ -36,6 +36,12 @@ langchain-text-splitters>=0.2.0
 # === Web Server extras ===
 python-multipart>=0.0.6
 
+# === Rate Limiting ===
+slowapi>=0.1.9
+
+# === HTTP client (health checks) ===
+httpx>=0.24.0
+
 # === Optional: Qdrant ===
 # langchain-qdrant>=0.1.0
 # qdrant-client>=1.7.0

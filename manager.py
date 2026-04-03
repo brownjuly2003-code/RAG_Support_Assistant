@@ -19,10 +19,13 @@ Level 3: Contextual Retrieval, Parent Document Retrieval, Multi-Query
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Sequence, Optional
+
+logger = logging.getLogger(__name__)
 
 try:
     from langchain_core.documents import Document  # type: ignore
@@ -85,7 +88,7 @@ def get_embeddings(model_name: str | None = None) -> Any:
         from config.settings import get_settings
         model_name = get_settings().embedding_model
 
-    print(f"Loading embedding model: {model_name}")
+    logger.info("Loading embedding model: %s", model_name)
     start = time.time()
 
     from sentence_transformers import SentenceTransformer  # type: ignore
@@ -105,7 +108,7 @@ def get_embeddings(model_name: str | None = None) -> Any:
     embeddings = _STEmbeddings(model)
 
     elapsed = time.time() - start
-    print(f"Embedding model loaded in {elapsed:.1f}s")
+    logger.info("Embedding model loaded in %.1fs", elapsed)
     _cached_embeddings = embeddings
     return embeddings
 
@@ -131,14 +134,14 @@ def get_reranker(model_name: str | None = None) -> Any | None:
         return None
 
     if not HAS_CROSS_ENCODER:
-        print("sentence-transformers not installed — reranker disabled")
+        logger.warning("sentence-transformers not installed — reranker disabled")
         return None
 
-    print(f"Loading reranker: {model_name}")
+    logger.info("Loading reranker: %s", model_name)
     start = time.time()
     reranker = CrossEncoder(model_name, device="cpu")
     elapsed = time.time() - start
-    print(f"Reranker loaded in {elapsed:.1f}s")
+    logger.info("Reranker loaded in %.1fs", elapsed)
     _cached_reranker = reranker
     return reranker
 
@@ -183,7 +186,7 @@ class HybridRetriever:
         if use_bm25 and HAS_BM25 and chunks:
             tokenized = [doc.page_content.lower().split() for doc in chunks]
             self._bm25 = BM25Okapi(tokenized)
-            print(f"BM25 index built: {len(chunks)} chunks")
+            logger.debug("BM25 index built: %d chunks", len(chunks))
 
     def get_relevant_documents(self, query: str) -> List[Document]:
         """Гибридный поиск с RRF и reranking."""
@@ -195,7 +198,7 @@ class HybridRetriever:
                 retriever = self._vector_store.as_retriever(search_kwargs={"k": self._retrieval_k})
                 vector_results = retriever.get_relevant_documents(query)
         except Exception as e:
-            print(f"[HybridRetriever] Vector search error: {e}")
+            logger.warning("[HybridRetriever] Vector search error: %s", e)
             vector_results = []
 
         # Step 2: BM25 search
@@ -253,7 +256,7 @@ class HybridRetriever:
             scored_docs = sorted(zip(docs, scores), key=lambda x: x[1], reverse=True)
             return [doc for doc, _ in scored_docs[:self._rerank_k]]
         except Exception as e:
-            print(f"[HybridRetriever] Reranker error: {e}")
+            logger.warning("[HybridRetriever] Reranker error: %s", e)
             return docs[:self._rerank_k]
 
     def invoke(self, query: str) -> List[Document]:

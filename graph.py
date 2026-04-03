@@ -10,10 +10,13 @@ Level 3: + conversation memory, multi-query retrieval, contextual retrieval
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any, Callable, Dict, List, Protocol
 
 from langgraph.graph import END, StateGraph
+
+logger = logging.getLogger(__name__)
 
 # Support both package-style and root-level imports
 try:
@@ -40,6 +43,97 @@ except ImportError:
         build_conversational_query_transform_prompt,
     )
     from sqlite_trace import start_trace, log_step, finish_trace
+
+
+# ---------------------------------------------------------------------------
+# Error escalation helpers
+# ---------------------------------------------------------------------------
+
+
+def _escalate_to_inbox(state: GraphState) -> None:
+    """Записывает ошибку в support inbox (mock или Bitrix)."""
+    import json as _json
+    import traceback as _tb  # noqa: F401 (used in format_exc)
+    from datetime import datetime, timezone
+    from pathlib import Path
+
+    trace_id = state.get("trace_id", "unknown")
+    record = {
+        "entity_id": trace_id,
+        "question": state.get("question", ""),
+        "answer": state.get("answer"),
+        "route": "error_escalation",
+        "error_message": state.get("error_message", ""),
+        "error_node": state.get("error_node", ""),
+        "ts": datetime.now(timezone.utc).isoformat(),
+    }
+
+    try:
+        from mock_inbox import get_support_sink  # type: ignore[import-not-found]
+        get_support_sink().send(trace_id, _json.dumps(record, ensure_ascii=False))
+        return
+    except Exception:
+        pass
+
+    # Fallback: прямая запись в JSONL
+    try:
+        inbox_path = Path(__file__).parent / "data" / "inbox" / "support_inbox.jsonl"
+        inbox_path.parent.mkdir(parents=True, exist_ok=True)
+        with inbox_path.open("a", encoding="utf-8") as f:
+            f.write(_json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception as exc:
+        logger.error("Не удалось записать в inbox: %s", exc)
+
+
+def _make_error_state(state: GraphState, node_name: str, exc: Exception) -> GraphState:
+    """Возвращает состояние с заполненными полями ошибки."""
+    import traceback as _tb
+
+    logger.error(
+        "Необработанное исключение в узле '%s': %s",
+        node_name,
+        exc,
+        extra={"trace_id": state.get("trace_id", "")},
+        exc_info=True,
+    )
+    return {
+        **state,  # type: ignore[misc]
+        "error": True,
+        "error_message": f"{type(exc).__name__}: {exc}\n{_tb.format_exc()}",
+        "error_node": node_name,
+        "route": "error",
+    }
+
+
+def make_handle_error_node() -> Callable[[GraphState], GraphState]:
+    """Узел handle_error: эскалирует ошибку и возвращает понятный ответ пользователю."""
+
+    def node(state: GraphState) -> GraphState:
+        trace_id = state.get("trace_id", "unknown")
+        logger.error(
+            "Pipeline error escalation: node='%s' trace_id=%s",
+            state.get("error_node", "unknown"),
+            trace_id,
+            extra={"trace_id": trace_id},
+        )
+
+        _escalate_to_inbox(state)
+
+        try:
+            log_step(trace_id, "handle_error", state)
+        except Exception:
+            pass
+
+        return {
+            **state,  # type: ignore[misc]
+            "answer": (
+                "Не удалось обработать запрос автоматически. "
+                "Ваш вопрос передан оператору — мы ответим в ближайшее время."
+            ),
+            "route": "error_escalation",
+        }
+
+    return node
 
 
 # ---------------------------------------------------------------------------
@@ -108,35 +202,35 @@ def make_transform_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Gra
     """
 
     def node(state: GraphState) -> GraphState:
-        trace_id = state.get("trace_id", "unknown-trace-id")
-        question = state.get("question", "")
-        chat_history = state.get("chat_history", [])
-
-        # Если search_query уже задан (rewrite_query это сделал), не перезаписываем
-        if state.get("search_query"):
-            log_step(trace_id, "transform_query", state)
+        if state.get("error"):
             return state
-
-        # Level 3: conversation-aware transform
-        if chat_history:
-            prompt = build_conversational_query_transform_prompt(question, chat_history)
-        else:
-            prompt = build_query_transform_prompt(question)
-
+        trace_id = state.get("trace_id", "unknown-trace-id")
         try:
-            search_query = llm.invoke(prompt).strip()
-            if not search_query or len(search_query) < 3:
-                search_query = question
-        except Exception as exc:
-            print(f"[transform_query] LLM error: {exc}")
-            search_query = question
+            question = state.get("question", "")
+            chat_history = state.get("chat_history", [])
 
-        new_state: GraphState = {
-            **state,
-            "search_query": search_query,
-        }
-        log_step(trace_id, "transform_query", new_state)
-        return new_state
+            if state.get("search_query"):
+                log_step(trace_id, "transform_query", state)
+                return state
+
+            if chat_history:
+                prompt = build_conversational_query_transform_prompt(question, chat_history)
+            else:
+                prompt = build_query_transform_prompt(question)
+
+            try:
+                search_query = llm.invoke(prompt).strip()
+                if not search_query or len(search_query) < 3:
+                    search_query = question
+            except Exception as exc:
+                logger.warning("[transform_query] LLM error: %s", exc, extra={"trace_id": trace_id})
+                search_query = question
+
+            new_state: GraphState = {**state, "search_query": search_query}
+            log_step(trace_id, "transform_query", new_state)
+            return new_state
+        except Exception as exc:
+            return _make_error_state(state, "transform_query", exc)
 
     return node
 
@@ -150,24 +244,22 @@ def make_retrieve_node(retriever: Any) -> Callable[[GraphState], GraphState]:
     """Узел retrieve: ищет документы по search_query (или question как fallback)."""
 
     def node(state: GraphState) -> GraphState:
+        if state.get("error"):
+            return state
         trace_id = state.get("trace_id", "unknown-trace-id")
-        # Используем трансформированный запрос, если есть
-        query = state.get("search_query") or state.get("question", "")
-
         try:
-            docs = retriever.get_relevant_documents(query)
+            query = state.get("search_query") or state.get("question", "")
+            try:
+                docs = retriever.get_relevant_documents(query)
+            except Exception as exc:
+                logger.warning("[retrieve] Retriever error: %s", exc, extra={"trace_id": trace_id})
+                docs = []
+            plain_docs = _docs_to_plain_dicts(docs)
+            new_state: GraphState = {**state, "context_docs": plain_docs}
+            log_step(trace_id, "retrieve", new_state)
+            return new_state
         except Exception as exc:
-            print(f"[retrieve] Error: {exc}")
-            docs = []
-
-        plain_docs = _docs_to_plain_dicts(docs)
-
-        new_state: GraphState = {
-            **state,
-            "context_docs": plain_docs,
-        }
-        log_step(trace_id, "retrieve", new_state)
-        return new_state
+            return _make_error_state(state, "retrieve", exc)
 
     return node
 
@@ -185,46 +277,39 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
     """
 
     def node(state: GraphState) -> GraphState:
+        if state.get("error"):
+            return state
         trace_id = state.get("trace_id", "unknown-trace-id")
-        question = state.get("question", "")
-        context_docs = state.get("context_docs", []) or []
+        try:
+            question = state.get("question", "")
+            context_docs = state.get("context_docs", []) or []
 
-        if not context_docs:
-            new_state: GraphState = {
-                **state,
-                "graded_docs": [],
-                "doc_grade_reason": "No documents retrieved",
-            }
+            if not context_docs:
+                new_state: GraphState = {**state, "graded_docs": [], "doc_grade_reason": "No documents retrieved"}
+                log_step(trace_id, "grade_docs", new_state)
+                return new_state
+
+            graded: List[Dict[str, Any]] = []
+            filtered_count = 0
+            for doc in context_docs:
+                prompt = build_doc_grade_prompt(question=question, document=doc)
+                try:
+                    verdict = llm.invoke(prompt).strip().upper()
+                    is_relevant = verdict.startswith("YES")
+                except Exception as exc:
+                    logger.warning("[grade_docs] LLM error: %s", exc, extra={"trace_id": trace_id})
+                    is_relevant = True
+                if is_relevant:
+                    graded.append(doc)
+                else:
+                    filtered_count += 1
+
+            reason = f"Kept {len(graded)}/{len(context_docs)}, filtered {filtered_count}"
+            new_state = {**state, "graded_docs": graded, "doc_grade_reason": reason}
             log_step(trace_id, "grade_docs", new_state)
             return new_state
-
-        graded: List[Dict[str, Any]] = []
-        filtered_count = 0
-
-        for doc in context_docs:
-            prompt = build_doc_grade_prompt(question=question, document=doc)
-            try:
-                verdict = llm.invoke(prompt).strip().upper()
-                is_relevant = verdict.startswith("YES")
-            except Exception as exc:
-                print(f"[grade_docs] LLM error: {exc}")
-                # При ошибке — оставляем документ (безопасный fallback)
-                is_relevant = True
-
-            if is_relevant:
-                graded.append(doc)
-            else:
-                filtered_count += 1
-
-        reason = f"Kept {len(graded)}/{len(context_docs)}, filtered {filtered_count}"
-
-        new_state: GraphState = {
-            **state,
-            "graded_docs": graded,
-            "doc_grade_reason": reason,
-        }
-        log_step(trace_id, "grade_docs", new_state)
-        return new_state
+        except Exception as exc:
+            return _make_error_state(state, "grade_docs", exc)
 
     return node
 
@@ -238,31 +323,30 @@ def make_generate_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState
     """Узел generate: формирует ответ. Level 3: учитывает chat_history."""
 
     def node(state: GraphState) -> GraphState:
+        if state.get("error"):
+            return state
         trace_id = state.get("trace_id", "unknown-trace-id")
-        question = state.get("question", "")
-        docs = state.get("graded_docs") or state.get("context_docs", []) or []
-        chat_history = state.get("chat_history", [])
-
-        # Level 3: conversation-aware generation
-        if chat_history:
-            prompt = build_conversational_qa_prompt(
-                question=question, context_docs=docs, chat_history=chat_history,
-            )
-        else:
-            prompt = build_qa_prompt(question=question, context_docs=docs)
-
         try:
-            answer = llm.invoke(prompt)
-        except Exception as exc:
-            print(f"[generate] LLM error: {exc}")
-            answer = "Извините, при обработке запроса произошла внутренняя ошибка."
+            question = state.get("question", "")
+            docs = state.get("graded_docs") or state.get("context_docs", []) or []
+            chat_history = state.get("chat_history", [])
 
-        new_state: GraphState = {
-            **state,
-            "answer": answer,
-        }
-        log_step(trace_id, "generate", new_state)
-        return new_state
+            if chat_history:
+                prompt = build_conversational_qa_prompt(question=question, context_docs=docs, chat_history=chat_history)
+            else:
+                prompt = build_qa_prompt(question=question, context_docs=docs)
+
+            try:
+                answer = llm.invoke(prompt)
+            except Exception as exc:
+                logger.warning("[generate] LLM error: %s", exc, extra={"trace_id": trace_id})
+                answer = "Извините, при обработке запроса произошла внутренняя ошибка."
+
+            new_state: GraphState = {**state, "answer": answer}
+            log_step(trace_id, "generate", new_state)
+            return new_state
+        except Exception as exc:
+            return _make_error_state(state, "generate", exc)
 
     return node
 
@@ -276,31 +360,25 @@ def make_evaluate_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState
     """Узел evaluate: самооценка качества ответа (1-100)."""
 
     def node(state: GraphState) -> GraphState:
+        if state.get("error"):
+            return state
         trace_id = state.get("trace_id", "unknown-trace-id")
-        question = state.get("question", "")
-        answer = state.get("answer") or ""
-        docs = state.get("graded_docs") or state.get("context_docs", []) or []
-
-        prompt = build_self_eval_prompt(
-            question=question, answer=answer, context_docs=docs,
-        )
-
         try:
-            raw = llm.invoke(prompt)
+            question = state.get("question", "")
+            answer = state.get("answer") or ""
+            docs = state.get("graded_docs") or state.get("context_docs", []) or []
+            prompt = build_self_eval_prompt(question=question, answer=answer, context_docs=docs)
+            try:
+                raw = llm.invoke(prompt)
+            except Exception as exc:
+                logger.warning("[evaluate] LLM error: %s", exc, extra={"trace_id": trace_id})
+                raw = ""
+            score = _parse_int_score(raw, default=50)
+            new_state: GraphState = {**state, "quality_score": score, "relevance_score": round(score / 100.0, 3)}
+            log_step(trace_id, "evaluate", new_state)
+            return new_state
         except Exception as exc:
-            print(f"[evaluate] LLM error: {exc}")
-            raw = ""
-
-        score = _parse_int_score(raw, default=50)
-        relevance = round(score / 100.0, 3)
-
-        new_state: GraphState = {
-            **state,
-            "quality_score": score,
-            "relevance_score": relevance,
-        }
-        log_step(trace_id, "evaluate", new_state)
-        return new_state
+            return _make_error_state(state, "evaluate", exc)
 
     return node
 
@@ -323,27 +401,29 @@ def make_route_or_retry_node(
     """
 
     def node(state: GraphState) -> GraphState:
+        if state.get("error"):
+            return state
         trace_id = state.get("trace_id", "unknown-trace-id")
-        q = state.get("quality_score")
-        r = state.get("relevance_score")
-        iteration = state.get("iteration", 0)
-        max_iter = state.get("max_iterations", 2)
+        try:
+            q = state.get("quality_score")
+            r = state.get("relevance_score")
+            iteration = state.get("iteration", 0)
+            max_iter = state.get("max_iterations", 2)
 
-        if q is None or r is None:
-            route = "human"
-        elif q >= min_quality and r >= min_relevance:
-            route = "auto"
-        elif iteration < max_iter:
-            route = "retry"
-        else:
-            route = "human"
+            if q is None or r is None:
+                route = "human"
+            elif q >= min_quality and r >= min_relevance:
+                route = "auto"
+            elif iteration < max_iter:
+                route = "retry"
+            else:
+                route = "human"
 
-        new_state: GraphState = {
-            **state,
-            "route": route,
-        }
-        log_step(trace_id, "route_or_retry", new_state)
-        return new_state
+            new_state: GraphState = {**state, "route": route}
+            log_step(trace_id, "route_or_retry", new_state)
+            return new_state
+        except Exception as exc:
+            return _make_error_state(state, "route_or_retry", exc)
 
     return node
 
@@ -361,39 +441,36 @@ def make_rewrite_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Graph
     """
 
     def node(state: GraphState) -> GraphState:
+        if state.get("error"):
+            return state
         trace_id = state.get("trace_id", "unknown-trace-id")
-        question = state.get("question", "")
-        previous_answer = state.get("answer") or ""
-        quality_score = state.get("quality_score") or 50
-        iteration = state.get("iteration", 0)
-
-        prompt = build_query_rewrite_prompt(
-            question=question,
-            previous_answer=previous_answer,
-            quality_score=quality_score,
-        )
-
         try:
-            new_query = llm.invoke(prompt).strip()
-            if not new_query or len(new_query) < 3:
+            question = state.get("question", "")
+            previous_answer = state.get("answer") or ""
+            quality_score = state.get("quality_score") or 50
+            iteration = state.get("iteration", 0)
+            prompt = build_query_rewrite_prompt(question=question, previous_answer=previous_answer, quality_score=quality_score)
+            try:
+                new_query = llm.invoke(prompt).strip()
+                if not new_query or len(new_query) < 3:
+                    new_query = question
+            except Exception as exc:
+                logger.warning("[rewrite_query] LLM error: %s", exc, extra={"trace_id": trace_id})
                 new_query = question
+            new_state: GraphState = {
+                **state,
+                "search_query": new_query,
+                "iteration": iteration + 1,
+                "context_docs": [],
+                "graded_docs": [],
+                "answer": None,
+                "quality_score": None,
+                "relevance_score": None,
+            }
+            log_step(trace_id, "rewrite_query", new_state)
+            return new_state
         except Exception as exc:
-            print(f"[rewrite_query] LLM error: {exc}")
-            new_query = question
-
-        new_state: GraphState = {
-            **state,
-            "search_query": new_query,
-            "iteration": iteration + 1,
-            # Сбрасываем промежуточные результаты для нового цикла
-            "context_docs": [],
-            "graded_docs": [],
-            "answer": None,
-            "quality_score": None,
-            "relevance_score": None,
-        }
-        log_step(trace_id, "rewrite_query", new_state)
-        return new_state
+            return _make_error_state(state, "rewrite_query", exc)
 
     return node
 
@@ -423,10 +500,13 @@ def _should_retry(state: GraphState) -> str:
     """Conditional edge: определяет, куда идти после route_or_retry.
 
     Returns:
-        "retry" → rewrite_query → retrieve → grade_docs → generate → evaluate → ...
-        "end"   → log → END
+        "error" → handle_error → END  (необработанное исключение)
+        "retry" → rewrite_query → retrieve → ...  (Self-RAG loop)
+        "end"   → log → END  (auto / human, финал)
     """
     route = state.get("route", "human")
+    if state.get("error") or route == "error":
+        return "error"
     if route == "retry":
         return "retry"
     return "end"
@@ -464,6 +544,7 @@ def build_support_graph(
     workflow.add_node("route_or_retry", make_route_or_retry_node(min_quality=min_quality))
     workflow.add_node("rewrite_query", make_rewrite_query_node(llm))
     workflow.add_node("log", make_log_node())
+    workflow.add_node("handle_error", make_handle_error_node())
 
     # Основной путь
     workflow.set_entry_point("transform_query")
@@ -478,10 +559,12 @@ def build_support_graph(
         "route_or_retry",
         _should_retry,
         {
+            "error": "handle_error",
             "retry": "rewrite_query",
             "end": "log",
         },
     )
+    workflow.add_edge("handle_error", END)
 
     # Retry path: rewrite → retrieve → grade → generate → evaluate → route_or_retry
     workflow.add_edge("rewrite_query", "retrieve")

@@ -30,10 +30,12 @@ agent/state.py
     Оценка качества ответа по шкале 1–100 (чем выше, тем лучше). Эти
     значения выставляет узел evaluate (self-evaluation LLM).
 
-- route: Literal["auto","human"] | None
+- route: Literal["auto","human","retry","error"] | None
     Решение маршрутизации:
         "auto"  → ответ достаточно хороший, можно отдать пользователю;
-        "human" → лучше эскалировать на человека (оператор поддержки).
+        "human" → лучше эскалировать на человека (оператор поддержки);
+        "retry" → Self-RAG: переформулировать запрос и повторить;
+        "error" → необработанное исключение в пайплайне, эскалировать.
     До узла route — None.
 
 - trace_id: str
@@ -44,7 +46,7 @@ agent/state.py
 
 from __future__ import annotations
 
-from typing import Any, List, Literal, Optional, TypedDict
+from typing import List, Literal, Optional, TypedDict
 import uuid
 
 
@@ -75,8 +77,11 @@ class GraphState(TypedDict, total=False):
     answer: Optional[str]
     relevance_score: Optional[float]
     quality_score: Optional[int]
-    route: Optional[Literal["auto", "human"]]
+    route: Optional[Literal["auto", "human", "retry", "error"]]
     trace_id: str
+    error: bool
+    error_message: str
+    error_node: str
     iteration: int
     max_iterations: int
     chat_history: List[dict]
@@ -111,6 +116,9 @@ def create_initial_state(question: str, trace_id: Optional[str] = None) -> Graph
         quality_score=None,
         route=None,
         trace_id=trace_id,
+        error=False,
+        error_message="",
+        error_node="",
         iteration=0,
         max_iterations=2,
         chat_history=[],

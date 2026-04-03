@@ -11,6 +11,7 @@ IngestPipeline: end-to-end document ingestion.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -30,6 +31,7 @@ except ImportError:
 
 from ingestion.loader import DocumentLoader
 
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Resolve project paths
@@ -149,7 +151,7 @@ class IngestPipeline:
 
         new_docs = self.loader.load_single_file(file_path)
         if not new_docs:
-            print(f"[IngestPipeline] No content extracted from {file_path}")
+            logger.warning("[IngestPipeline] No content extracted from %s", file_path)
             return self._store, self._chunks
 
         self._documents.extend(new_docs)
@@ -209,7 +211,7 @@ class IngestPipeline:
             json.dumps(entry, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        print(f"[IngestPipeline] Log written to {self.log_path}")
+        logger.info("[IngestPipeline] Log written to %s", self.log_path)
 
     def _append_log_entry(
         self,
@@ -247,7 +249,7 @@ class IngestPipeline:
             json.dumps(existing, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        print(f"[IngestPipeline] Log updated at {self.log_path}")
+        logger.info("[IngestPipeline] Log updated at %s", self.log_path)
 
     @staticmethod
     def _build_log_entry(

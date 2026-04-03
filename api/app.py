@@ -8,21 +8,26 @@ Endpoints:
     POST /api/upload       - Upload a document (PDF/DOCX/TXT)
     GET  /api/sessions/{session_id}/history - Get conversation history
     DELETE /api/sessions/{session_id}       - Clear a session
-    GET  /api/health       - Health check
+    GET  /api/health       - Health check (real dependency probes)
 """
 
 from __future__ import annotations
 
-import os
+import logging
 import sys
+import time
 import uuid
-import tempfile
-import traceback
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+import httpx
+from fastapi import APIRouter, FastAPI, HTTPException, Request, UploadFile, File
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 # ---------------------------------------------------------------------------
 # Ensure project root is on sys.path
@@ -30,6 +35,22 @@ from pydantic import BaseModel, Field
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+# ---------------------------------------------------------------------------
+# Logging — JSON structured, set up before anything else
+# ---------------------------------------------------------------------------
+try:
+    from config.logging_config import setup_logging
+    setup_logging()
+except Exception:
+    logging.basicConfig(level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Rate limiter
+# ---------------------------------------------------------------------------
+limiter = Limiter(key_func=get_remote_address)
 
 # ---------------------------------------------------------------------------
 # Safe imports with fallbacks
@@ -111,6 +132,9 @@ except ImportError:
             project_root = PROJECT_ROOT
             data_dir = PROJECT_ROOT / "data"
             vectordb_chroma_dir = PROJECT_ROOT / "data" / "vectordb" / "chroma"
+            ollama_base_url = "http://localhost:11434"
+            tracing_db_path = PROJECT_ROOT / "data" / "tracing" / "traces.db"
+            require_ollama = False
         return _S()
 
 
@@ -146,8 +170,15 @@ class HistoryResponse(BaseModel):
     messages: List[HistoryMessage]
 
 
+class ComponentStatus(BaseModel):
+    status: str
+    latency_ms: Optional[float] = None
+    detail: Optional[str] = None
+
+
 class HealthResponse(BaseModel):
     status: str
+    components: Dict[str, ComponentStatus]
     vector_store_loaded: bool
     sessions_count: int
     pipeline_available: bool
@@ -163,10 +194,7 @@ class UploadResponse(BaseModel):
 # Global state
 # ---------------------------------------------------------------------------
 
-# In-memory session store: session_id -> ConversationSession
 _sessions: Dict[str, Any] = {}
-
-# Vector store + retriever (loaded on startup)
 _vector_store: Any = None
 _retriever: Any = None
 _chunks: List[Any] = []
@@ -174,7 +202,6 @@ _llm: Any = None
 
 
 def _get_or_create_session(session_id: Optional[str]) -> tuple:
-    """Get existing session or create a new one. Returns (session_id, session)."""
     global _retriever, _llm
 
     if not session_id:
@@ -189,7 +216,6 @@ def _get_or_create_session(session_id: Optional[str]) -> tuple:
                 max_history=20,
             )
         else:
-            # Fallback: store history manually without real pipeline
             _sessions[session_id] = {"history": []}
 
     return session_id, _sessions[session_id]
@@ -200,19 +226,17 @@ def _get_or_create_session(session_id: Optional[str]) -> tuple:
 # ---------------------------------------------------------------------------
 
 def initialize_vector_store() -> None:
-    """Try to load existing vector store on startup."""
     global _vector_store, _retriever, _chunks
 
     settings = get_settings()
     chroma_dir = settings.vectordb_chroma_dir
 
-    # Try to load existing Chroma DB
     if _Chroma is not None and chroma_dir.exists() and any(chroma_dir.iterdir()):
         try:
             if _get_embeddings is not None:
                 embeddings = _get_embeddings()
             else:
-                print("[api/app] WARNING: get_embeddings not available, skipping vector store load")
+                logger.warning("get_embeddings not available, skipping vector store load")
                 return
 
             _vector_store = _Chroma(
@@ -224,24 +248,21 @@ def initialize_vector_store() -> None:
             if _get_retriever is not None:
                 _retriever = _get_retriever(_vector_store, chunks=None)
             else:
-                # Simple fallback retriever
                 _retriever = _vector_store.as_retriever(search_kwargs={"k": 5})
 
-            print(f"[api/app] Vector store loaded from {chroma_dir}")
+            logger.info("Vector store loaded from %s", chroma_dir)
             return
         except Exception as exc:
-            print(f"[api/app] Failed to load existing Chroma: {exc}")
-            traceback.print_exc()
+            logger.error("Failed to load existing Chroma: %s", exc, exc_info=True)
 
-    print("[api/app] No existing vector store found. Upload documents via /api/upload to create one.")
+    logger.info("No existing vector store found. Upload documents via /api/upload to create one.")
 
 
 def _rebuild_vector_store_from_docs(docs: List[Any]) -> bool:
-    """Rebuild vector store after new documents are uploaded."""
     global _vector_store, _retriever, _chunks
 
     if _build_vector_store is None:
-        print("[api/app] build_vector_store not available")
+        logger.warning("build_vector_store not available")
         return False
 
     try:
@@ -253,17 +274,78 @@ def _rebuild_vector_store_from_docs(docs: List[Any]) -> bool:
         elif hasattr(_vector_store, "as_retriever"):
             _retriever = _vector_store.as_retriever(search_kwargs={"k": 5})
 
-        # Update all existing sessions with the new retriever
         for sid, session in _sessions.items():
             if hasattr(session, "_retriever"):
                 session._retriever = _retriever
 
-        print(f"[api/app] Vector store rebuilt: {len(_chunks)} chunks")
+        logger.info("Vector store rebuilt: %d chunks", len(_chunks))
         return True
     except Exception as exc:
-        print(f"[api/app] Failed to rebuild vector store: {exc}")
-        traceback.print_exc()
+        logger.error("Failed to rebuild vector store: %s", exc, exc_info=True)
         return False
+
+
+# ---------------------------------------------------------------------------
+# Health probe helpers
+# ---------------------------------------------------------------------------
+
+async def _probe_ollama(base_url: str) -> ComponentStatus:
+    t0 = time.monotonic()
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.get(f"{base_url}/api/tags")
+            resp.raise_for_status()
+        return ComponentStatus(status="ok", latency_ms=round((time.monotonic() - t0) * 1000, 1))
+    except Exception as exc:
+        return ComponentStatus(status="error", latency_ms=round((time.monotonic() - t0) * 1000, 1), detail=str(exc))
+
+
+async def _probe_chromadb(chroma_dir: Path) -> ComponentStatus:
+    t0 = time.monotonic()
+    try:
+        import chromadb  # type: ignore
+        client = chromadb.PersistentClient(path=str(chroma_dir))
+        client.list_collections()
+        return ComponentStatus(status="ok", latency_ms=round((time.monotonic() - t0) * 1000, 1))
+    except Exception as exc:
+        return ComponentStatus(status="error", latency_ms=round((time.monotonic() - t0) * 1000, 1), detail=str(exc))
+
+
+async def _probe_sqlite(db_path: Path) -> ComponentStatus:
+    t0 = time.monotonic()
+    try:
+        import sqlite3
+        conn = sqlite3.connect(str(db_path), timeout=1)
+        conn.execute("SELECT 1")
+        conn.close()
+        return ComponentStatus(status="ok", latency_ms=round((time.monotonic() - t0) * 1000, 1))
+    except Exception as exc:
+        return ComponentStatus(status="error", latency_ms=round((time.monotonic() - t0) * 1000, 1), detail=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Lifespan
+# ---------------------------------------------------------------------------
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    # Startup
+    settings = get_settings()
+    settings.ensure_dirs()
+
+    try:
+        settings.validate()
+    except RuntimeError as exc:
+        logger.error("Startup validation failed: %s", exc)
+        raise SystemExit(1) from exc
+
+    initialize_vector_store()
+    logger.info("RAG Support Assistant started")
+
+    yield
+
+    # Shutdown
+    logger.info("RAG Support Assistant shutting down")
 
 
 # ---------------------------------------------------------------------------
@@ -274,15 +356,15 @@ router = APIRouter(prefix="/api", tags=["RAG API"])
 
 
 @router.post("/ask", response_model=AskResponse)
-async def ask(request: AskRequest) -> AskResponse:
+@limiter.limit("60/minute")
+async def ask(request: Request, body: AskRequest) -> AskResponse:
     """Ask a question to the RAG assistant."""
-    question = request.question.strip()
+    question = body.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="question is empty")
 
-    session_id, session = _get_or_create_session(request.session_id)
+    session_id, session = _get_or_create_session(body.session_id)
 
-    # If we have a real ConversationSession
     if hasattr(session, "ask"):
         try:
             result = session.ask(question)
@@ -291,10 +373,9 @@ async def ask(request: AskRequest) -> AskResponse:
             quality = result.get("quality_score") or 50
             route = result.get("route") or "auto"
 
-            # Extract sources from context_docs or graded_docs
             sources_list = []
             docs = result.get("graded_docs") or result.get("context_docs") or []
-            for doc in docs[:5]:  # Top 5 sources
+            for doc in docs[:5]:
                 if isinstance(doc, dict):
                     src = doc.get("metadata", {}).get("source", "")
                     content = doc.get("page_content", "")[:200]
@@ -311,23 +392,17 @@ async def ask(request: AskRequest) -> AskResponse:
                 session_id=session_id,
             )
         except Exception as exc:
-            print(f"[api/ask] Pipeline error: {exc}")
-            traceback.print_exc()
-            # Fallback
+            logger.error("Pipeline error in /ask: %s", exc, exc_info=True)
             return AskResponse(
-                answer=f"[ERROR] Pipeline error: {exc}",
+                answer="Не удалось обработать запрос автоматически. Ваш вопрос передан оператору.",
                 quality_score=0,
                 route="human",
                 sources=[],
                 session_id=session_id,
             )
     else:
-        # Fallback: no pipeline available, just echo
         session["history"].append({"role": "user", "content": question})
-        fallback_answer = (
-            f"[DEMO] Pipeline not available. "
-            f"Question received: {question}"
-        )
+        fallback_answer = f"[DEMO] Pipeline not available. Question received: {question}"
         session["history"].append({"role": "assistant", "content": fallback_answer})
         return AskResponse(
             answer=fallback_answer,
@@ -339,12 +414,12 @@ async def ask(request: AskRequest) -> AskResponse:
 
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
+@limiter.limit("10/minute")
+async def upload_document(request: Request, file: UploadFile = File(...)) -> UploadResponse:
     """Upload a document (PDF/DOCX/TXT/MD) and ingest it into the vector store."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
-    # Check extension
     ext = Path(file.filename).suffix.lower()
     allowed = {".pdf", ".docx", ".txt", ".md", ".html"}
     if ext not in allowed:
@@ -353,7 +428,6 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
             detail=f"Unsupported file type: {ext}. Allowed: {', '.join(sorted(allowed))}",
         )
 
-    # Save to temp file, then process
     upload_dir = PROJECT_ROOT / "data" / "uploads"
     upload_dir.mkdir(parents=True, exist_ok=True)
 
@@ -364,7 +438,6 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to save file: {exc}")
 
-    # Try to load and ingest the document
     if _DocumentLoader is not None and _build_vector_store is not None:
         try:
             loader = _DocumentLoader(recursive=False)
@@ -390,8 +463,7 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
                     message="File saved but no text content could be extracted.",
                 )
         except Exception as exc:
-            print(f"[api/upload] Ingestion error: {exc}")
-            traceback.print_exc()
+            logger.error("Ingestion error for %s: %s", file.filename, exc, exc_info=True)
             return UploadResponse(
                 status="partial",
                 filename=file.filename,
@@ -407,14 +479,11 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
 
 @router.get("/sessions/{session_id}/history", response_model=HistoryResponse)
 async def get_session_history(session_id: str) -> HistoryResponse:
-    """Get conversation history for a session."""
     if session_id not in _sessions:
         raise HTTPException(status_code=404, detail="Session not found")
 
     session = _sessions[session_id]
-
     if hasattr(session, "history"):
-        # ConversationSession object
         history = session.history
     elif isinstance(session, dict):
         history = session.get("history", [])
@@ -425,30 +494,58 @@ async def get_session_history(session_id: str) -> HistoryResponse:
         HistoryMessage(role=msg.get("role", ""), content=msg.get("content", ""))
         for msg in history
     ]
-
     return HistoryResponse(session_id=session_id, messages=messages)
 
 
 @router.delete("/sessions/{session_id}")
 async def clear_session(session_id: str) -> Dict[str, str]:
-    """Clear a session and its history."""
     if session_id not in _sessions:
         raise HTTPException(status_code=404, detail="Session not found")
 
     session = _sessions[session_id]
     if hasattr(session, "clear"):
         session.clear()
-
     del _sessions[session_id]
     return {"status": "ok", "message": f"Session {session_id} cleared"}
 
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
-    """Health check endpoint."""
-    return HealthResponse(
-        status="ok",
+    """Health check — actively probes all dependencies."""
+    settings = get_settings()
+
+    ollama_status, chroma_status, sqlite_status = (
+        await _probe_ollama(settings.ollama_base_url),
+        await _probe_chromadb(settings.vectordb_chroma_dir),
+        await _probe_sqlite(settings.tracing_db_path),
+    )
+
+    critical_down = ollama_status.status == "error" or chroma_status.status == "error"
+    overall = "unhealthy" if critical_down else (
+        "degraded" if sqlite_status.status == "error" else "ok"
+    )
+
+    response = HealthResponse(
+        status=overall,
+        components={
+            "ollama": ollama_status,
+            "chromadb": chroma_status,
+            "sqlite": sqlite_status,
+        },
         vector_store_loaded=_vector_store is not None,
         sessions_count=len(_sessions),
         pipeline_available=_run_qa_pipeline is not None,
     )
+
+    status_code = 503 if critical_down else 200
+    return JSONResponse(content=response.model_dump(), status_code=status_code)
+
+
+# ---------------------------------------------------------------------------
+# App
+# ---------------------------------------------------------------------------
+
+app = FastAPI(title="RAG Support Assistant API", version="0.3.0", lifespan=_lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.include_router(router)
