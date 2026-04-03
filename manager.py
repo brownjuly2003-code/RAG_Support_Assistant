@@ -453,7 +453,7 @@ class ParentDocumentStore:
         texts = [c.page_content for c in self._children]
         self._vectors = embeddings.embed_documents(texts)
 
-        print(f"ParentDocumentStore: {len(self._parents)} parents, {len(self._children)} children")
+        logger.debug("ParentDocumentStore: %d parents, %d children", len(self._parents), len(self._children))
 
     @staticmethod
     def _cosine(a: List[float], b: List[float]) -> float:
@@ -636,7 +636,7 @@ def _build_chroma(docs: Sequence[Document], embeddings: Any) -> Any:
         )
     chroma_dir = _data_dir() / "chroma"
     chroma_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Building Chroma in {chroma_dir}")
+    logger.info("Building Chroma in %s", chroma_dir)
     store = Chroma.from_documents(
         documents=list(docs),
         embedding=embeddings,
@@ -645,17 +645,17 @@ def _build_chroma(docs: Sequence[Document], embeddings: Any) -> Any:
     )
     if hasattr(store, "persist"):
         store.persist()
-    print(f"Chroma ready: {len(docs)} chunks")
+    logger.info("Chroma ready: %d chunks", len(docs))
     return store
 
 
 def _build_qdrant(docs: Sequence[Document], embeddings: Any) -> Any:
     if not HAS_QDRANT:
-        print("Qdrant unavailable — using in-memory stub")
+        logger.warning("Qdrant unavailable — using in-memory stub")
         return QdrantStubStore(docs, embeddings)
     qdrant_dir = _data_dir() / "qdrant"
     qdrant_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Building local Qdrant in {qdrant_dir}")
+    logger.info("Building local Qdrant in %s", qdrant_dir)
     try:
         client = QdrantClient(path=str(qdrant_dir))
         store = QdrantVectorStore.from_documents(
@@ -664,10 +664,10 @@ def _build_qdrant(docs: Sequence[Document], embeddings: Any) -> Any:
             client=client,
             collection_name="documents",
         )
-        print(f"Qdrant ready: {len(docs)} chunks")
+        logger.info("Qdrant ready: %d chunks", len(docs))
         return store
     except Exception as e:
-        print(f"Qdrant init error: {e!r}, falling back to in-memory stub")
+        logger.error("Qdrant init error: %r, falling back to in-memory stub", e)
         return QdrantStubStore(docs, embeddings)
 
 
@@ -702,7 +702,7 @@ def build_vector_store(
     semantic_chunking_enabled = settings.semantic_chunking or use_semantic_chunking
 
     if semantic_chunking_enabled:
-        print("Using semantic chunking (Level 2)...")
+        logger.info("Using semantic chunking (Level 2)")
         chunks = semantic_split(
             list(docs), embeddings,
             min_chunk_size=chunk_overlap,
@@ -714,7 +714,7 @@ def build_vector_store(
 
     backend = _get_backend()
     mode = "semantic" if semantic_chunking_enabled else f"fixed(size={chunk_size}, overlap={chunk_overlap})"
-    print(f"Backend: {backend.upper()}, chunks: {len(chunks)}, mode: {mode}")
+    logger.info("Backend: %s, chunks: %d, mode: %s", backend.upper(), len(chunks), mode)
 
     if backend == "qdrant":
         store = _build_qdrant(chunks, embeddings)
