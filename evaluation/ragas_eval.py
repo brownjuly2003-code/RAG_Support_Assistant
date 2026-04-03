@@ -164,6 +164,32 @@ def answer_relevancy(question: str, answer: str) -> float:
     return found / len(q_words)
 
 
+def answer_relevancy_embedding(
+    question: str,
+    answer: str,
+    model_name: str = "paraphrase-multilingual-MiniLM-L12-v2",
+) -> float:
+    """Semantic similarity between question and answer using sentence embeddings.
+
+    Falls back to keyword-based answer_relevancy if sentence-transformers
+    is not installed or encoding fails.
+
+    Returns float in [0, 1].
+    """
+    if not question or not answer:
+        return 0.0
+    try:
+        from sentence_transformers import SentenceTransformer, util  # noqa: PLC0415
+
+        _model = SentenceTransformer(model_name)
+        q_emb = _model.encode(question, convert_to_tensor=True)
+        a_emb = _model.encode(answer, convert_to_tensor=True)
+        score = float(util.cos_sim(q_emb, a_emb)[0][0])
+        return max(0.0, min(1.0, score))
+    except Exception:
+        return answer_relevancy(question, answer)
+
+
 def context_precision(
     question: str,
     context_docs: Any,
@@ -325,6 +351,7 @@ class RAGEvaluator:
         answer: str,
         context_docs: Any,
         expected_keywords: Optional[List[str]] = None,
+        use_embeddings: bool = False,
     ) -> Dict[str, float]:
         """Evaluate a single question-answer pair.
 
@@ -344,6 +371,8 @@ class RAGEvaluator:
         # Answer relevancy
         if self._llm is not None:
             relevancy = _llm_answer_relevancy(question, answer, self._llm)
+        elif use_embeddings:
+            relevancy = answer_relevancy_embedding(question, answer)
         else:
             relevancy = answer_relevancy(question, answer)
 
@@ -369,6 +398,7 @@ class RAGEvaluator:
         test_cases: Sequence[TestCase],
         answers: Optional[List[str]] = None,
         context_docs_list: Optional[List[Any]] = None,
+        use_embeddings: bool = False,
     ) -> Dict[str, Any]:
         """Evaluate a batch of test cases.
 
@@ -411,6 +441,7 @@ class RAGEvaluator:
                 answer=answer,
                 context_docs=ctx,
                 expected_keywords=tc.expected_keywords,
+                use_embeddings=use_embeddings,
             )
 
             per_question.append({
@@ -442,6 +473,7 @@ class RAGEvaluator:
         llm: Any,
         test_cases: Sequence[TestCase],
         save: bool = True,
+        use_embeddings: bool = False,
     ) -> Dict[str, Any]:
         """Run full RAG pipeline evaluation: retrieve + generate + evaluate.
 
@@ -522,7 +554,12 @@ class RAGEvaluator:
                     normalised.append({"page_content": str(doc), "metadata": {}})
             context_docs_list.append(normalised)
 
-        result = self.evaluate_batch(test_cases, answers, context_docs_list)
+        result = self.evaluate_batch(
+            test_cases,
+            answers,
+            context_docs_list,
+            use_embeddings=use_embeddings,
+        )
 
         # Enrich per-question results with answers and docs
         for i, pq in enumerate(result["per_question"]):

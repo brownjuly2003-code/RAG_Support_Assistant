@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>О системе - RAG Support Assistant</title>
+    <style>
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-chat: #0f1729;
+            --bg-bot-msg: #1e2a4a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a4b8;
+            --border-color: #2a3550;
+            --accent: #5b9ee6;
+            --accent-hover: #4a90d9;
+            --badge-quality: #10b981;
+            --badge-human: #ef4444;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 32px 20px 48px;
+        }
+
+        .page {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero,
+        section {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+        }
+
+        section {
+            margin-top: 16px;
+        }
+
+        h1,
+        h2 {
+            color: var(--accent);
+            margin: 0 0 12px;
+        }
+
+        h1 {
+            font-size: 32px;
+            line-height: 1.2;
+        }
+
+        h2 {
+            font-size: 20px;
+        }
+
+        p {
+            margin: 0 0 12px;
+        }
+
+        p:last-child {
+            margin-bottom: 0;
+        }
+
+        pre,
+        code {
+            font-family: Consolas, "Courier New", monospace;
+        }
+
+        pre {
+            margin: 0;
+            padding: 16px;
+            background: var(--bg-chat);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow-x: auto;
+            color: var(--text-primary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-bot-msg);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 12px 14px;
+            text-align: left;
+            vertical-align: top;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        th {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .badge-quality {
+            background: var(--badge-quality);
+        }
+
+        .badge-human {
+            background: var(--badge-human);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            color: var(--accent-hover);
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 20px 12px 32px;
+            }
+
+            .hero,
+            section {
+                padding: 18px;
+            }
+
+            h1 {
+                font-size: 26px;
+            }
+
+            table,
+            tbody,
+            tr,
+            td,
+            th {
+                display: block;
+            }
+
+            th {
+                padding-bottom: 6px;
+                border-bottom: none;
+            }
+
+            td {
+                padding-top: 0;
+            }
+
+            tr {
+                padding: 10px 0;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            tr:last-child {
+                border-bottom: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="hero">
+            <h1>RAG Support Assistant</h1>
+            <p>Система отвечает на вопросы по базе знаний, оценивает надёжность ответа и передаёт диалог оператору, если автоматический режим рискует ошибиться.</p>
+        </div>
+
+        <section>
+            <h2>Как это работает</h2>
+            <pre>Вопрос пользователя
+        |
+        v
+[Поиск по базе знаний]
+ChromaDB + BM25 + RRF
+        |
+        v
+[Переоценка кандидатов]
+cross-encoder reranker
+        |
+        v
+[Генерация ответа]
+Ollama / Mistral
+        |
+        v
+[Оценка качества и маршрутизация]
+quality score + route auto/human
+        |
+        +--> auto: ответ сразу в чате
+        \--> human: эскалация оператору</pre>
+        </section>
+
+        <section>
+            <h2>Технологии</h2>
+            <table>
+                <tr>
+                    <th>Компонент</th>
+                    <th>Технология</th>
+                    <th>Зачем</th>
+                </tr>
+                <tr>
+                    <td>Оркестрация</td>
+                    <td>LangGraph</td>
+                    <td>Граф делает шаги пайплайна явными: проще ветвить сценарии auto и human, хранить состояние и разбирать, на каком узле система приняла решение.</td>
+                </tr>
+                <tr>
+                    <td>Поиск документов</td>
+                    <td>ChromaDB + BM25</td>
+                    <td>Гибридный поиск сочетает семантику и точные совпадения по ключевым словам, поэтому лучше находит и свободные формулировки, и конкретные артикулы, коды ошибок или названия функций.</td>
+                </tr>
+                <tr>
+                    <td>Эмбеддинги</td>
+                    <td>BGE-M3</td>
+                    <td>Модель хорошо работает с многоязычными документами, включая русский, и позволяет держать поиск локально без внешнего API и дополнительных платежей за каждый запрос.</td>
+                </tr>
+                <tr>
+                    <td>Reranking</td>
+                    <td>ms-marco cross-encoder</td>
+                    <td>После первичного поиска модель сравнивает вопрос с каждым кандидатом и поднимает наверх документы, которые действительно отвечают на запрос, а не просто содержат похожие слова.</td>
+                </tr>
+                <tr>
+                    <td>Генерация</td>
+                    <td>Ollama / Mistral</td>
+                    <td>Локальная LLM уменьшает зависимость от внешних сервисов, помогает с приватностью данных и даёт предсказуемую стоимость эксплуатации.</td>
+                </tr>
+                <tr>
+                    <td>Трейсинг</td>
+                    <td>SQLite</td>
+                    <td>В журнал попадают trace_id, шаги графа, route, quality и latency, поэтому спорные ответы и эскалации можно разбирать постфактум без отдельной тяжёлой observability-платформы.</td>
+                </tr>
+            </table>
+        </section>
+
+        <section>
+            <h2>Что означают бейджи</h2>
+            <p><span class="badge badge-quality">Качество: 85</span> — внутренняя оценка того, насколько ответ опирается на найденный контекст и подходит под вопрос. Чем выше число, тем безопаснее автоматический ответ.</p>
+            <p><span class="badge badge-quality">Маршрут: auto</span> — система ответила сама, потому что нашла достаточно контекста и не увидела причин передавать запрос оператору.</p>
+            <p><span class="badge badge-human">Маршрут: human</span> — вопрос передан человеку: обычно это происходит, когда данных мало, риск ошибки высок или запрос требует ручного решения.</p>
+        </section>
+
+        <section>
+            <h2>Как загружать документы</h2>
+            <p>В чат можно загружать файлы PDF, DOCX, TXT, MD и HTML через кнопку со скрепкой. После загрузки документ разбивается на фрагменты, индексируется в поиске и становится доступен для следующих ответов ассистента.</p>
+        </section>
+
+        <a href="/chat" class="back-link">← Вернуться в чат</a>
+    </div>
+</body>
+</html>
