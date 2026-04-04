@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Метрики - RAG Support Assistant</title>
+    <style>
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-chat: #0f1729;
+            --bg-bot-msg: #1e2a4a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a4b8;
+            --border-color: #2a3550;
+            --accent: #5b9ee6;
+            --accent-hover: #4a90d9;
+            --badge-quality: #10b981;
+            --badge-human: #ef4444;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 32px 20px 48px;
+        }
+
+        .page {
+            max-width: 980px;
+            margin: 0 auto;
+        }
+
+        .hero,
+        section {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+        }
+
+        section {
+            margin-top: 16px;
+        }
+
+        h1,
+        h2 {
+            color: var(--accent);
+            margin: 0 0 12px;
+        }
+
+        h1 {
+            font-size: 32px;
+            line-height: 1.2;
+        }
+
+        h2 {
+            font-size: 20px;
+        }
+
+        p {
+            margin: 0 0 12px;
+        }
+
+        p:last-child {
+            margin-bottom: 0;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .metric-card {
+            background: var(--bg-bot-msg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .metric-unit {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .status-ok {
+            color: #10b981;
+        }
+
+        .status-warn {
+            color: #f59e0b;
+        }
+
+        .status-alert {
+            color: #ef4444;
+        }
+
+        .refresh-ts {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: right;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            color: var(--accent-hover);
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 20px 12px 32px;
+            }
+
+            .hero,
+            section {
+                padding: 18px;
+            }
+
+            h1 {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="hero">
+            <h1>Метрики системы</h1>
+            <p class="refresh-ts" id="refreshTs">Загрузка...</p>
+        </div>
+
+        <section>
+            <h2>Latency (24h)</h2>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-label">p50</div>
+                    <div class="metric-value" id="p50">—</div>
+                    <div class="metric-unit">сек</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">p95</div>
+                    <div class="metric-value" id="p95">—</div>
+                    <div class="metric-unit">сек / порог 12</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">p99</div>
+                    <div class="metric-value" id="p99">—</div>
+                    <div class="metric-unit">сек</div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Качество и маршрутизация</h2>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Avg quality (7d)</div>
+                    <div class="metric-value" id="avgQuality">—</div>
+                    <div class="metric-unit">/ 100 · порог ≥65</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Escalation rate (24h)</div>
+                    <div class="metric-value" id="escalationRate">—</div>
+                    <div class="metric-unit">% · порог ≤35%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Thumbs-down (7d)</div>
+                    <div class="metric-value" id="thumbsDown">—</div>
+                    <div class="metric-unit">% · порог ≤20%</div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Ошибки</h2>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Likely failures (24h)</div>
+                    <div class="metric-value" id="failureRate">—</div>
+                    <div class="metric-unit">%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Всего трасс (24h)</div>
+                    <div class="metric-value" id="totalTraces">—</div>
+                    <div class="metric-unit">запросов</div>
+                </div>
+            </div>
+        </section>
+
+        <a href="/chat" class="back-link">← Вернуться в чат</a>
+    </div>
+
+    <script>
+        const THRESHOLDS = {
+            p95: 12,
+            avgQuality: 65,
+            escalationRate: 35,
+            thumbsDown: 20,
+            failureRate: 5,
+        };
+
+        function colorClass(value, threshold, lowerIsBetter = false) {
+            if (value === null || value === undefined) return "";
+            const bad = lowerIsBetter ? value < threshold : value > threshold;
+            const warn = lowerIsBetter ? value < threshold * 1.1 : value > threshold * 0.8;
+            if (bad) return "status-alert";
+            if (warn) return "status-warn";
+            return "status-ok";
+        }
+
+        function formatValue(value) {
+            if (value === null || value === undefined) return "—";
+            if (typeof value === "number" && Number.isInteger(value)) return String(value);
+            if (typeof value === "number") return value.toFixed(1).replace(/\.0$/, "");
+            return String(value);
+        }
+
+        function setMetric(id, value, cssClass) {
+            const element = document.getElementById(id);
+            if (!element) return;
+            element.textContent = formatValue(value);
+            element.className = cssClass ? `metric-value ${cssClass}` : "metric-value";
+        }
+
+        async function refresh() {
+            try {
+                const response = await fetch("/api/metrics");
+                if (!response.ok) throw new Error(String(response.status));
+                const metrics = await response.json();
+
+                const latency = metrics.latency || {};
+                setMetric("p50", latency.p50_sec, colorClass(latency.p50_sec, 6));
+                setMetric("p95", latency.p95_sec, colorClass(latency.p95_sec, THRESHOLDS.p95));
+                setMetric("p99", latency.p99_sec, colorClass(latency.p99_sec, 20));
+
+                const quality = metrics.quality || {};
+                setMetric(
+                    "avgQuality",
+                    quality.avg_quality,
+                    colorClass(quality.avg_quality, THRESHOLDS.avgQuality, true)
+                );
+
+                const escalation = metrics.escalation || {};
+                setMetric(
+                    "escalationRate",
+                    escalation.rate_pct,
+                    colorClass(escalation.rate_pct, THRESHOLDS.escalationRate)
+                );
+                setMetric("totalTraces", escalation.total_traces);
+
+                const feedback = metrics.feedback || {};
+                setMetric(
+                    "thumbsDown",
+                    feedback.thumbs_down_rate_pct,
+                    colorClass(feedback.thumbs_down_rate_pct, THRESHOLDS.thumbsDown)
+                );
+
+                const errors = metrics.errors || {};
+                setMetric(
+                    "failureRate",
+                    errors.likely_failure_rate_pct,
+                    colorClass(errors.likely_failure_rate_pct, THRESHOLDS.failureRate)
+                );
+
+                document.getElementById("refreshTs").textContent =
+                    "Обновлено: " + new Date().toLocaleTimeString("ru-RU");
+            } catch (error) {
+                document.getElementById("refreshTs").textContent =
+                    "Ошибка загрузки: " + error.message;
+            }
+        }
+
+        refresh();
+        setInterval(refresh, 30000);
+    </script>
+</body>
+</html>

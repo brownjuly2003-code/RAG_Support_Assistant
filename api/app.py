@@ -734,6 +734,18 @@ async def feedback_stats(days: int = 30) -> dict:
         }
 
 
+@router.get("/metrics")
+async def get_metrics() -> dict:
+    """Агрегированный JSON-снапшот метрик здоровья системы."""
+    try:
+        from sqlite_trace import get_metrics_snapshot  # noqa: PLC0415
+
+        return get_metrics_snapshot()
+    except Exception as exc:
+        logger.warning("Failed to get metrics: %s", exc)
+        return {"error": str(exc), "generated_at": ""}
+
+
 @router.post("/upload", response_model=UploadResponse)
 @limiter.limit("10/minute")
 async def upload_document(

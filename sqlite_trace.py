@@ -360,3 +360,145 @@ def get_feedback_stats(days: int = 30) -> dict:
         "by_route": by_route,
         "period_days": days,
     }
+
+
+def get_metrics_snapshot() -> dict:
+    """Агрегированный снапшот метрик здоровья сервиса."""
+    with _get_connection() as conn:
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+            WITH latencies AS (
+                SELECT (julianday(finished_at) - julianday(started_at)) * 86400.0 AS s
+                FROM traces
+                WHERE finished_at IS NOT NULL
+                  AND julianday(started_at) >= julianday('now', '-1 day')
+            ),
+            ranked AS (
+                SELECT s, ROW_NUMBER() OVER (ORDER BY s) AS rn, COUNT(*) OVER () AS total
+                FROM latencies
+            )
+            SELECT
+                ROUND(MIN(CASE WHEN rn >= total * 0.50 THEN s END), 2) AS p50,
+                ROUND(MIN(CASE WHEN rn >= total * 0.95 THEN s END), 2) AS p95,
+                ROUND(MIN(CASE WHEN rn >= total * 0.99 THEN s END), 2) AS p99
+            FROM ranked
+            """
+        )
+        row = cur.fetchone()
+        latency = {
+            "p50_sec": row[0] if row and row[0] is not None else None,
+            "p95_sec": row[1] if row and row[1] is not None else None,
+            "p99_sec": row[2] if row and row[2] is not None else None,
+            "window": "24h",
+        }
+
+        cur.execute(
+            """
+            SELECT
+                COUNT(*) AS total,
+                SUM(CASE WHEN final_route = 'human' THEN 1 ELSE 0 END) AS escalated,
+                ROUND(
+                    100.0 * SUM(CASE WHEN final_route = 'human' THEN 1 ELSE 0 END)
+                    / NULLIF(COUNT(*), 0),
+                    1
+                ) AS rate_pct
+            FROM traces
+            WHERE julianday(started_at) >= julianday('now', '-1 day')
+            """
+        )
+        row = cur.fetchone()
+        escalation = {
+            "total_traces": row[0] if row and row[0] is not None else 0,
+            "escalated": row[1] if row and row[1] is not None else 0,
+            "rate_pct": row[2] if row and row[2] is not None else None,
+            "window": "24h",
+        }
+
+        cur.execute(
+            """
+            SELECT
+                COUNT(final_quality) AS scored,
+                ROUND(AVG(final_quality), 1) AS avg_q,
+                ROUND(
+                    100.0 * SUM(CASE WHEN final_quality < 60 THEN 1 ELSE 0 END)
+                    / NULLIF(COUNT(final_quality), 0),
+                    1
+                ) AS low_share
+            FROM traces
+            WHERE final_quality IS NOT NULL
+              AND julianday(started_at) >= julianday('now', '-7 day')
+            """
+        )
+        row = cur.fetchone()
+        quality = {
+            "scored_traces": row[0] if row and row[0] is not None else 0,
+            "avg_quality": row[1] if row and row[1] is not None else None,
+            "low_quality_share_pct": row[2] if row and row[2] is not None else None,
+            "window": "7d",
+        }
+
+        cur.execute(
+            """
+            SELECT
+                COUNT(*) AS total,
+                SUM(
+                    CASE
+                        WHEN finished_at IS NULL
+                         AND julianday(started_at) < julianday('now', '-15 minute')
+                        THEN 1 ELSE 0
+                    END
+                ) AS failed,
+                ROUND(
+                    100.0 * SUM(
+                        CASE
+                            WHEN finished_at IS NULL
+                             AND julianday(started_at) < julianday('now', '-15 minute')
+                            THEN 1 ELSE 0
+                        END
+                    ) / NULLIF(COUNT(*), 0),
+                    1
+                ) AS rate
+            FROM traces
+            WHERE julianday(started_at) >= julianday('now', '-1 day')
+            """
+        )
+        row = cur.fetchone()
+        errors = {
+            "total_started": row[0] if row and row[0] is not None else 0,
+            "likely_failed": row[1] if row and row[1] is not None else 0,
+            "likely_failure_rate_pct": row[2] if row and row[2] is not None else None,
+            "window": "24h",
+        }
+
+        cur.execute(
+            """
+            SELECT
+                COUNT(*) AS total,
+                SUM(CASE WHEN rating = 'down' THEN 1 ELSE 0 END) AS thumbs_down,
+                ROUND(
+                    100.0 * SUM(CASE WHEN rating = 'down' THEN 1 ELSE 0 END)
+                    / NULLIF(COUNT(*), 0),
+                    1
+                ) AS rate
+            FROM feedback
+            WHERE julianday(ts) >= julianday('now', '-7 day')
+            """
+        )
+        row = cur.fetchone()
+        feedback = {
+            "total": row[0] if row and row[0] is not None else 0,
+            "thumbs_down": row[1] if row and row[1] is not None else 0,
+            "thumbs_down_rate_pct": row[2] if row and row[2] is not None else None,
+            "window": "7d",
+        }
+
+    return {
+        "latency": latency,
+        "escalation": escalation,
+        "quality": quality,
+        "errors": errors,
+        "feedback": feedback,
+        "generated_at": _now_iso(),
+    }
