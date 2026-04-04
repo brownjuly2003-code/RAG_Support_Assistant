@@ -40,9 +40,9 @@ except ImportError:
 
 
 try:
-    import PyPDF2
+    import pypdf
 except ImportError:
-    PyPDF2 = None
+    pypdf = None
 
 try:
     from docx import Document as DocxDocument
@@ -145,11 +145,11 @@ class DocumentLoader:
         raise ValueError(f"Неподдерживаемый формат: {ext}")
 
     def _read_pdf(self, path: Path) -> str:
-        if PyPDF2 is None:
-            raise ImportError("Для чтения PDF установите PyPDF2: pip install PyPDF2")
+        if pypdf is None:
+            raise ImportError("Для чтения PDF установите pypdf: pip install pypdf")
         text_parts: List[str] = []
         with path.open("rb") as f:
-            reader = PyPDF2.PdfReader(f)
+            reader = pypdf.PdfReader(f)
             for page in reader.pages:
                 try:
                     page_text = page.extract_text() or ""
