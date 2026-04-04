@@ -71,6 +71,7 @@ class GraphState(TypedDict, total=False):
 
     question: str
     search_query: Optional[str]
+    hyde_query: Optional[str]
     context_docs: List[dict]
     graded_docs: List[dict]
     doc_grade_reason: Optional[str]
@@ -108,6 +109,7 @@ def create_initial_state(question: str, trace_id: Optional[str] = None) -> Graph
     state: GraphState = GraphState(
         question=question,
         search_query=None,
+        hyde_query=None,
         context_docs=[],
         graded_docs=[],
         doc_grade_reason=None,

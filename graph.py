@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Callable, Dict, List, Protocol
+from typing import Any, Callable, Dict, List, Optional, Protocol
 
 from langgraph.graph import END, StateGraph
 
@@ -190,6 +190,14 @@ def _parse_int_score(text: str, default: int = 50) -> int:
     return max(1, min(100, value))
 
 
+def _build_hyde_prompt(question: str) -> str:
+    return (
+        "You are a helpful assistant. Write a short hypothetical answer (2-3 sentences) "
+        "to the following support question. Write only the answer, no intro or meta-text.\n\n"
+        f"Question: {question}\n\nHypothetical answer:"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Level 2: Query Transform node
 # ---------------------------------------------------------------------------
@@ -226,7 +234,24 @@ def make_transform_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Gra
                 logger.warning("[transform_query] LLM error: %s", exc, extra={"trace_id": trace_id})
                 search_query = question
 
-            new_state: GraphState = {**state, "search_query": search_query}
+            from config.settings import get_settings  # noqa: PLC0415
+
+            settings = get_settings()
+            hyde_query: Optional[str] = None
+            if settings.hyde:
+                try:
+                    hyde_doc = llm.invoke(_build_hyde_prompt(question)).strip()
+                    if hyde_doc and len(hyde_doc) > 10:
+                        hyde_query = hyde_doc
+                        logger.debug("[transform_query] HyDE generated (%d chars)", len(hyde_doc))
+                except Exception as exc:
+                    logger.warning("[transform_query] HyDE failed, fallback to search_query: %s", exc)
+
+            new_state: GraphState = {
+                **state,
+                "search_query": search_query,
+                "hyde_query": hyde_query,
+            }
             log_step(trace_id, "transform_query", new_state)
             return new_state
         except Exception as exc:
@@ -248,7 +273,7 @@ def make_retrieve_node(retriever: Any) -> Callable[[GraphState], GraphState]:
             return state
         trace_id = state.get("trace_id", "unknown-trace-id")
         try:
-            query = state.get("search_query") or state.get("question", "")
+            query = state.get("hyde_query") or state.get("search_query") or state.get("question", "")
             try:
                 docs = retriever.get_relevant_documents(query)
             except Exception as exc:
@@ -460,6 +485,7 @@ def make_rewrite_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Graph
             new_state: GraphState = {
                 **state,
                 "search_query": new_query,
+                "hyde_query": None,
                 "iteration": iteration + 1,
                 "context_docs": [],
                 "graded_docs": [],

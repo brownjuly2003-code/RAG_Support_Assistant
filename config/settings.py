@@ -28,7 +28,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -98,6 +98,16 @@ class Settings:
 
     # --- Level 2: Semantic Chunking ---
     semantic_chunking: bool = os.getenv("RAG_SEMANTIC_CHUNKING", "false").strip().lower() in ("1", "true", "yes")
+
+    # --- HyDE (Hypothetical Document Embeddings) ---
+    hyde: bool = field(
+        default_factory=lambda: os.getenv("RAG_HYDE", "false").strip().lower() in ("1", "true", "yes")
+    )
+
+    # --- Parent-Child Chunking ---
+    parent_child: bool = field(
+        default_factory=lambda: os.getenv("RAG_PARENT_CHILD", "false").strip().lower() in ("1", "true", "yes")
+    )
 
     # --- Level 2: Self-RAG ---
     self_rag_max_iterations: int = int(os.getenv("RAG_SELF_RAG_MAX_ITER", "2"))

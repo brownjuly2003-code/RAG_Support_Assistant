@@ -1,0 +1,74 @@
+[
+  {
+    "question": "Что означает ошибка E401?",
+    "expected_keywords": ["авторизация", "доступ", "токен"],
+    "expected_answer": null,
+    "category": "error_codes"
+  },
+  {
+    "question": "Почему появляется код 503?",
+    "expected_keywords": ["сервер", "недоступен", "повторите"],
+    "expected_answer": null,
+    "category": "error_codes"
+  },
+  {
+    "question": "Как исправить E20?",
+    "expected_keywords": ["ошибка", "проверьте", "устройство"],
+    "expected_answer": null,
+    "category": "error_codes"
+  },
+  {
+    "question": "Как сбросить пароль?",
+    "expected_keywords": ["пароль", "сброс", "email"],
+    "expected_answer": null,
+    "category": "reset_password"
+  },
+  {
+    "question": "Восстановление доступа к аккаунту",
+    "expected_keywords": ["доступ", "аккаунт", "подтверждение"],
+    "expected_answer": null,
+    "category": "reset_password"
+  },
+  {
+    "question": "Сколько длится гарантия?",
+    "expected_keywords": ["гарантия", "срок", "месяцев"],
+    "expected_answer": null,
+    "category": "warranty"
+  },
+  {
+    "question": "Условия гарантийного обслуживания",
+    "expected_keywords": ["гарантия", "условия", "ремонт"],
+    "expected_answer": null,
+    "category": "warranty"
+  },
+  {
+    "question": "Как установить приложение?",
+    "expected_keywords": ["установка", "скачайте", "запустите"],
+    "expected_answer": null,
+    "category": "installation"
+  },
+  {
+    "question": "Инструкция по установке на Windows",
+    "expected_keywords": ["windows", "установка", "инсталлятор"],
+    "expected_answer": null,
+    "category": "installation"
+  },
+  {
+    "question": "Как отменить подписку?",
+    "expected_keywords": ["подписка", "отмена", "тариф"],
+    "expected_answer": null,
+    "category": "billing"
+  },
+  {
+    "question": "Изменить способ оплаты",
+    "expected_keywords": ["оплата", "карта", "обновить"],
+    "expected_answer": null,
+    "category": "billing"
+  },
+  {
+    "question": "Как связаться с поддержкой?",
+    "expected_keywords": ["поддержка", "чат", "email"],
+    "expected_answer": null,
+    "category": "general"
+  }
+]

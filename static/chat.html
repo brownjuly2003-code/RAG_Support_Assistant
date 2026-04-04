@@ -56,6 +56,80 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+        }
+
+        .app-layout {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-pane {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar {
+            width: 220px;
+            min-width: 220px;
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.2s, min-width 0.2s;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: 0;
+            min-width: 0;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .session-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .session-item {
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 2px;
+        }
+
+        .session-item:hover {
+            background: var(--bg-secondary);
+        }
+
+        .session-item.active {
+            background: var(--bg-secondary);
+            font-weight: 600;
+        }
+
+        .session-empty {
+            padding: 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
         }
 
         /* Header */
@@ -151,6 +225,7 @@
         /* Chat area */
         .chat-container {
             flex: 1;
+            min-height: 0;
             overflow-y: auto;
             padding: 20px;
             background: var(--bg-chat);
@@ -297,6 +372,27 @@
         .message-sources li {
             margin-top: 2px;
         }
+
+        .msg-feedback {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            justify-content: flex-end;
+        }
+
+        .btn-feedback {
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .btn-feedback:hover { background: var(--bg-secondary); }
+        .btn-feedback.voted { opacity: 0.5; pointer-events: none; }
 
         /* Typing indicator */
         .typing-indicator {
@@ -574,6 +670,7 @@
 
         /* Responsive */
         @media (max-width: 600px) {
+            .sidebar { display: none; }
             .header h1 { font-size: 15px; }
             .header-subtitle { display: none; }
             .message { max-width: 95%; }
@@ -582,6 +679,15 @@
     </style>
 </head>
 <body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span>Sessions</span>
+                <button class="btn-icon" id="sidebarToggle" title="Hide sidebar">‹</button>
+            </div>
+            <div id="sessionList" class="session-list"></div>
+        </aside>
+        <div class="main-pane">
     <!-- Header -->
     <div class="header">
         <div class="header-left">
@@ -654,6 +760,8 @@
             </button>
         </div>
     </div>
+        </div>
+    </div>
 
     <!-- Upload overlay -->
     <div class="upload-overlay" id="uploadOverlay">
@@ -696,6 +804,9 @@
         const sendBtn = document.getElementById('sendBtn');
         const typingIndicator = document.getElementById('typingIndicator');
         const welcomeBlock = document.getElementById('welcomeBlock');
+        const sessionList = document.getElementById('sessionList');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
         const themeToggle = document.getElementById('themeToggle');
         const themeIcon = document.getElementById('themeIcon');
         const statusDot = document.getElementById('statusDot');
@@ -731,6 +842,51 @@
             themeIcon.innerHTML = isDark
                 ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
                 : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+        }
+
+        async function loadSessions() {
+            try {
+                const resp = await fetch(API_BASE + '/sessions');
+                if (!resp.ok || !sessionList) return;
+                const sessions = await resp.json();
+                sessionList.innerHTML = '';
+                if (sessions.length === 0) {
+                    sessionList.innerHTML = '<div class="session-empty">No sessions</div>';
+                    return;
+                }
+                sessions.forEach(function(s) {
+                    const item = document.createElement('div');
+                    item.className = 'session-item' + (s.session_id === sessionId ? ' active' : '');
+                    item.textContent = s.session_id.slice(0, 8) + '... (' + s.message_count + ')';
+                    item.title = s.session_id;
+                    item.addEventListener('click', function() {
+                        switchSession(s.session_id);
+                    });
+                    sessionList.appendChild(item);
+                });
+            } catch (_) {}
+        }
+
+        async function switchSession(newSessionId) {
+            if (newSessionId === sessionId) return;
+            sessionId = newSessionId;
+            localStorage.setItem('rag_session_id', sessionId);
+            chatMessages.innerHTML = '';
+            try {
+                const resp = await fetch(API_BASE + '/sessions/' + sessionId + '/history');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.messages && data.messages.length > 0) {
+                        data.messages.forEach(function(msg) {
+                            addMessage(msg.role === 'user' ? 'user' : 'bot', msg.content);
+                        });
+                    } else {
+                        chatMessages.innerHTML = '<div class="welcome" id="welcomeBlock"><h2>RAG Support Assistant</h2><p>New session. Ask your question.</p></div>';
+                    }
+                }
+            } catch (_) {}
+            loadSessions();
+            scrollToBottom();
         }
 
         // ---------------------------------------------------------------------------
@@ -785,7 +941,8 @@
             if (!question || isLoading) return;
 
             // Hide welcome
-            if (welcomeBlock) welcomeBlock.style.display = 'none';
+            const currentWelcome = document.getElementById('welcomeBlock');
+            if (currentWelcome) currentWelcome.style.display = 'none';
 
             // Add user message
             addMessage('user', question);
@@ -802,18 +959,52 @@
                 const body = { question: question };
                 if (sessionId) body.session_id = sessionId;
 
-                const res = await fetch(API_BASE + '/ask', {
+                const res = await fetch(API_BASE + '/ask/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body),
                 });
 
                 if (!res.ok) {
-                    const err = await res.json().catch(() => ({ detail: res.statusText }));
-                    throw new Error(err.detail || 'Ошибка сервера');
+                    throw new Error('HTTP ' + res.status);
                 }
 
-                const data = await res.json();
+                if (!res.body) {
+                    throw new Error('No stream body');
+                }
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let data = null;
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            let event;
+                            try {
+                                event = JSON.parse(line.slice(6));
+                            } catch (_) {
+                                continue;
+                            }
+                            if (event.type === 'error') {
+                                throw new Error(event.detail || 'Streaming error');
+                            }
+                            if (event.type === 'result') {
+                                data = event;
+                            }
+                        }
+                    }
+                }
+
+                if (!data) {
+                    throw new Error('No result received');
+                }
 
                 // Save session
                 if (data.session_id) {
@@ -826,7 +1017,10 @@
                     quality: data.quality_score,
                     route: data.route,
                     sources: data.sources,
+                    trace_id: data.trace_id,
+                    session_id: data.session_id,
                 });
+                loadSessions();
             } catch (err) {
                 addMessage('bot', 'Ошибка: ' + err.message, { quality: 0, route: 'error' });
             } finally {
@@ -896,6 +1090,33 @@
                     srcBlock.appendChild(ul);
                     content.appendChild(srcBlock);
                 }
+
+                if (meta.trace_id || meta.session_id) {
+                    const fbDiv = document.createElement('div');
+                    fbDiv.className = 'msg-feedback';
+                    fbDiv.innerHTML = `
+                        <button class="btn-feedback" data-rating="up" title="ÐžÑ‚Ð²ÐµÑ‚ Ð¿Ð¾Ð»ÐµÐ·ÐµÐ½">👍</button>
+                        <button class="btn-feedback" data-rating="down" title="ÐžÑ‚Ð²ÐµÑ‚ Ð½Ðµ Ð¿Ð¾Ð¼Ð¾Ð³">👎</button>
+                    `;
+                    fbDiv.querySelectorAll('.btn-feedback').forEach(btn => {
+                        btn.addEventListener('click', async () => {
+                            const rating = btn.dataset.rating;
+                            fbDiv.querySelectorAll('.btn-feedback').forEach(b => b.classList.add('voted'));
+                            try {
+                                await fetch(API_BASE + '/feedback', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        trace_id: meta.trace_id || '',
+                                        session_id: meta.session_id || sessionId || '',
+                                        rating: rating,
+                                    }),
+                                });
+                            } catch (_) {}
+                        });
+                    });
+                    content.appendChild(fbDiv);
+                }
             }
 
             msg.appendChild(avatar);
@@ -929,6 +1150,7 @@
             welcome.id = 'welcomeBlock';
             welcome.innerHTML = '<h2>RAG Support Assistant</h2><p>Новая сессия. Задайте ваш вопрос.</p>';
             chatMessages.appendChild(welcome);
+            loadSessions();
         });
 
         // ---------------------------------------------------------------------------
@@ -1040,7 +1262,8 @@
                 }
                 var data = await res.json();
                 if (data.messages && data.messages.length > 0) {
-                    if (welcomeBlock) welcomeBlock.style.display = 'none';
+                    const currentWelcome = document.getElementById('welcomeBlock');
+                    if (currentWelcome) currentWelcome.style.display = 'none';
                     data.messages.forEach(function(msg) {
                         addMessage(msg.role === 'user' ? 'user' : 'bot', msg.content);
                     });
@@ -1049,6 +1272,12 @@
                 // Server not running
             }
         }
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function() {
+                if (sidebar) sidebar.classList.toggle('collapsed');
+            });
+        }
+        loadSessions();
         loadHistory();
     </script>
 </body>

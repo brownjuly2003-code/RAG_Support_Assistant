@@ -491,6 +491,11 @@ class ParentDocumentStore:
 
         return results
 
+    def get_relevant_documents(self, query: str) -> List[Document]:
+        from config.settings import get_settings  # noqa: PLC0415
+
+        return self.similarity_search(query, k=get_settings().rerank_top_k)
+
     def get_children(self) -> List[Document]:
         """Возвращает child-чанки (для BM25 индекса)."""
         return self._children
@@ -728,7 +733,88 @@ def build_vector_store(
     else:
         store = _build_chroma(chunks, embeddings)
 
+    try:
+        setattr(store, "_source_docs", list(docs))
+        setattr(store, "_source_embeddings", embeddings)
+    except Exception:
+        pass
+
     return store, chunks
+
+
+# ---------------------------------------------------------------------------
+# Build retriever
+# ---------------------------------------------------------------------------
+
+
+def build_retriever(
+    docs: List[Document],
+    embeddings: Any,
+    vector_store: Any | None = None,
+    chunks: List[Document] | None = None,
+    k: int | None = None,
+) -> Any:
+    """Builds a retriever according to current settings."""
+    from config.settings import get_settings
+
+    settings = get_settings()
+
+    if settings.parent_child:
+        logger.info("Retriever: ParentDocumentStore (parent_child=true)")
+        return ParentDocumentStore(
+            docs=docs,
+            embeddings=embeddings,
+            child_chunk_size=300,
+            child_overlap=50,
+            parent_chunk_size=1200,
+            parent_overlap=200,
+        )
+
+    retrieval_k = k or settings.retrieval_top_k
+    rerank_k = settings.rerank_top_k
+
+    if vector_store is None or chunks is None:
+        if settings.semantic_chunking:
+            chunks = semantic_split(
+                list(docs),
+                embeddings,
+                min_chunk_size=200,
+                max_chunk_size=800,
+            )
+        else:
+            splitter = _build_text_splitter(chunk_size=800, chunk_overlap=200)
+            chunks = splitter.split_documents(list(docs))
+        vector_store = QdrantStubStore(chunks, embeddings)
+
+    use_bm25 = settings.hybrid_search and chunks is not None
+    reranker = get_reranker() if settings.reranker_model else None
+    logger.info("Retriever: HybridRetriever (parent_child=false)")
+
+    if use_bm25 or reranker:
+        return HybridRetriever(
+            vector_store=vector_store,
+            chunks=chunks or [],
+            retrieval_k=retrieval_k,
+            rerank_k=rerank_k,
+            reranker=reranker,
+            use_bm25=use_bm25,
+        )
+
+    if hasattr(vector_store, "as_retriever"):
+        return vector_store.as_retriever(search_kwargs={"k": rerank_k})
+
+    class _SimpleRetriever:
+        def __init__(self, store: Any, top_k: int):
+            self._store = store
+            self._k = top_k
+
+        def get_relevant_documents(self, query: str) -> List[Document]:
+            return self._store.similarity_search(query, k=self._k)
+
+        def invoke(self, query: str) -> List[Document]:
+            return self.get_relevant_documents(query)
+
+    return _SimpleRetriever(vector_store, rerank_k)
 
 
 # ---------------------------------------------------------------------------
@@ -750,6 +836,17 @@ def get_retriever(
     Returns:
         HybridRetriever если доступны BM25/reranker, иначе простой vector retriever.
     """
+    source_docs = getattr(vector_store, "_source_docs", None)
+    source_embeddings = getattr(vector_store, "_source_embeddings", None)
+    if source_docs is not None and source_embeddings is not None:
+        return build_retriever(
+            docs=list(source_docs),
+            embeddings=source_embeddings,
+            vector_store=vector_store,
+            chunks=chunks,
+            k=k,
+        )
+
     from config.settings import get_settings
     settings = get_settings()
 

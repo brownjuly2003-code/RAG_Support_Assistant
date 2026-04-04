@@ -90,7 +90,7 @@ def _get_project_root() -> Path:
                 tracing/
                     traces.db
     """
-    return Path(__file__).resolve().parent.parent
+    return Path(__file__).resolve().parent
 
 
 def _get_db_path() -> Path:
@@ -145,6 +145,19 @@ def _init_db() -> None:
                 step_order  INTEGER,
                 node_name   TEXT,
                 state_json  TEXT,
+                ts          TEXT
+            );
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS feedback (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                trace_id    TEXT,
+                session_id  TEXT,
+                rating      TEXT CHECK(rating IN ('up','down')),
+                reason      TEXT,
                 ts          TEXT
             );
             """
@@ -282,5 +295,23 @@ def finish_trace(trace_id: str, final_state: Any) -> None:
             WHERE trace_id = ?
             """,
             (finished_at, final_route, final_quality, final_relevance, trace_id),
+        )
+        conn.commit()
+
+
+def save_feedback(
+    trace_id: str,
+    session_id: str,
+    rating: str,
+    reason: str = "",
+) -> None:
+    """Сохраняет пользовательский фидбек на ответ ассистента."""
+    with _get_connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO feedback (trace_id, session_id, rating, reason, ts)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (trace_id, session_id, rating, reason, _now_iso()),
         )
         conn.commit()

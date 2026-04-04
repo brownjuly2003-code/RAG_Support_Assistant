@@ -14,6 +14,7 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import json as _json
 import logging
 import sys
 import time
@@ -24,7 +25,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import httpx
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, UploadFile, File
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 try:
     from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -198,6 +199,19 @@ class AskResponse(BaseModel):
     route: str = "auto"
     sources: List[SourceInfo] = Field(default_factory=list)
     session_id: str = ""
+    trace_id: str = ""
+
+
+class FeedbackRequest(BaseModel):
+    trace_id: str
+    session_id: str
+    rating: str
+    reason: Optional[str] = ""
+
+
+class SessionInfo(BaseModel):
+    session_id: str
+    message_count: int
 
 
 class HistoryMessage(BaseModel):
@@ -450,6 +464,7 @@ async def ask(
                 route=route,
                 sources=sources_list,
                 session_id=session_id,
+                trace_id=result.get("trace_id") or "",
             )
         except Exception as exc:
             logger.error("Pipeline error in /ask: %s", exc, exc_info=True)
@@ -459,6 +474,7 @@ async def ask(
                 route="human",
                 sources=[],
                 session_id=session_id,
+                trace_id="",
             )
     else:
         session["history"].append({"role": "user", "content": question})
@@ -470,7 +486,96 @@ async def ask(
             route="human",
             sources=[],
             session_id=session_id,
+            trace_id="",
         )
+
+
+@router.post("/ask/stream")
+@limiter.limit("60/minute")
+async def ask_stream(
+    request: Request,
+    body: AskRequest,
+    _auth: None = Depends(_require_api_key),
+) -> StreamingResponse:
+    """SSE endpoint â€” Ð½ÐµÐ¼ÐµÐ´Ð»ÐµÐ½Ð½Ð¾ Ð¾Ñ‚Ð´Ð°Ñ‘Ñ‚ ÑÑ‚Ð°Ñ‚ÑƒÑ, Ð·Ð°Ñ‚ÐµÐ¼ Ñ„Ð¸Ð½Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ð¾Ñ‚Ð²ÐµÑ‚."""
+    _ = request, _auth
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        yield "data: " + _json.dumps({"type": "status", "node": "processing"}) + "\n\n"
+
+        session_id, session = _get_or_create_session(body.session_id)
+        question = (body.question or "").strip()
+
+        if not question:
+            yield "data: " + _json.dumps({
+                "type": "error",
+                "detail": "question is required",
+            }) + "\n\n"
+            return
+
+        try:
+            if hasattr(session, "ask"):
+                result = await asyncio.get_running_loop().run_in_executor(
+                    None, session.ask, question
+                )
+                quality = result.get("quality_score") or 50
+                route = result.get("route") or "auto"
+                answer = result.get("answer") or "ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ Ð¿Ð¾Ð»ÑƒÑ‡Ð¸Ñ‚ÑŒ Ð¾Ñ‚Ð²ÐµÑ‚."
+                sources = result.get("graded_docs") or result.get("context_docs") or []
+                trace_id = result.get("trace_id") or ""
+            else:
+                answer = "Ð¡ÐµÑÑÐ¸Ñ Ð½Ðµ Ð¸Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð°."
+                session["history"].append({"role": "user", "content": question})
+                session["history"].append({"role": "assistant", "content": answer})
+                quality, route, sources, trace_id = 0, "human", [], ""
+
+            yield "data: " + _json.dumps({
+                "type": "result",
+                "answer": answer,
+                "quality_score": quality,
+                "route": route,
+                "session_id": session_id,
+                "sources": sources,
+                "trace_id": trace_id,
+            }) + "\n\n"
+        except Exception as exc:
+            logger.error("SSE pipeline error: %s", exc, exc_info=True)
+            yield "data: " + _json.dumps({
+                "type": "result",
+                "answer": "ÐŸÑ€Ð¾Ð¸Ð·Ð¾ÑˆÐ»Ð° Ð¾ÑˆÐ¸Ð±ÐºÐ°. Ð—Ð°Ð¿Ñ€Ð¾Ñ Ð¿ÐµÑ€ÐµÐ´Ð°Ð½ Ð¾Ð¿ÐµÑ€Ð°Ñ‚Ð¾Ñ€Ñƒ.",
+                "quality_score": 0,
+                "route": "human",
+                "session_id": session_id,
+                "sources": [],
+                "trace_id": "",
+            }) + "\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.post("/feedback", status_code=204)
+async def post_feedback(body: FeedbackRequest) -> None:
+    """Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ Ñ„Ð¸Ð´Ð±ÐµÐº Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ Ð½Ð° Ð¾Ñ‚Ð²ÐµÑ‚."""
+    if body.rating not in ("up", "down"):
+        raise HTTPException(status_code=422, detail="rating must be 'up' or 'down'")
+    try:
+        from sqlite_trace import save_feedback  # noqa: PLC0415
+
+        save_feedback(
+            trace_id=body.trace_id,
+            session_id=body.session_id,
+            rating=body.rating,
+            reason=body.reason or "",
+        )
+    except Exception as exc:
+        logger.warning("Failed to save feedback: %s", exc)
 
 
 @router.post("/upload", response_model=UploadResponse)
@@ -562,6 +667,22 @@ async def get_session_history(session_id: str) -> HistoryResponse:
     return HistoryResponse(session_id=session_id, messages=messages)
 
 
+@router.get("/sessions", response_model=list[SessionInfo])
+async def list_sessions() -> list[SessionInfo]:
+    result: list[SessionInfo] = []
+    for sid, session in list(_sessions.items()):
+        if hasattr(session, "_history"):
+            count = len(session._history)
+        elif hasattr(session, "history"):
+            count = len(session.history)
+        elif isinstance(session, dict):
+            count = len(session.get("history", []))
+        else:
+            count = 0
+        result.append(SessionInfo(session_id=sid, message_count=count))
+    return result
+
+
 @router.delete("/sessions/{session_id}")
 async def clear_session(session_id: str) -> Dict[str, str]:
     if session_id not in _sessions:
@@ -620,7 +741,7 @@ async def _log_requests(request: Request, call_next: Any) -> Any:
     response = await call_next(request)
     duration_ms = round((time.monotonic() - t0) * 1000, 1)
     logger.info(
-        "%s %s → %d (%.1fms)",
+        "%s %s -> %d (%.1fms)",
         request.method,
         request.url.path,
         response.status_code,
