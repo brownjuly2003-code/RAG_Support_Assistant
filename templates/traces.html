@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=\"ru\">
+  <head>
+    <meta charset=\"utf-8\" />
+    <title>Трассы — RAG PoC</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 20px; background: #f7fafc; }
+      .container { max-width: 960px; margin: 0 auto; }
+      .card {
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
+      a { color: #2b6cb0; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #e2e8f0; padding: 6px 8px; font-size: 13px; }
+      th { background: #edf2f7; }
+      code {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class=\"container\">
+      <p><a href=\"/\">← На главную</a></p>
+      <div class=\"card\">
+        <h1>Трассы</h1>
+        {% if traces %}
+        <table>
+          <thead>
+            <tr>
+              <th>trace_id</th>
+              <th>started_at</th>
+              <th>finished_at</th>
+              <th>route</th>
+              <th>quality</th>
+              <th>relevance</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for t in traces %}
+            <tr>
+              <td><a href=\"/traces-ui/{{ t.trace_id }}\"><code>{{ t.trace_id }}</code></a></td>
+              <td>{{ t.started_at }}</td>
+              <td>{{ t.finished_at or \"\\" }}</td>
+              <td>{{ t.final_route or \"\\" }}</td>
+              <td>{{ t.final_quality if t.final_quality is not none else \"\\" }}</td>
+              <td>{{ t.final_relevance if t.final_relevance is not none else \"\\" }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p>Трассы не найдены.</p>
+        {% endif %}
+      </div>
+    </div>
+  </body>
+</html>

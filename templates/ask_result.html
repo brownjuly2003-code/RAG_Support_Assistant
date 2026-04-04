@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=\"ru\">
+  <head>
+    <meta charset=\"utf-8\" />
+    <title>Результат запроса — RAG PoC</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 20px; background: #f7fafc; }
+      .container { max-width: 720px; margin: 0 auto; }
+      .card {
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
+      a { color: #2b6cb0; }
+      pre {
+        background: #edf2f7;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+      code {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class=\"container\">
+      <p><a href=\"/\">← На главную</a></p>
+      <div class=\"card\">
+        <h1>Результат запроса</h1>
+
+        <h3>Вопрос</h3>
+        <pre>{{ question }}</pre>
+
+        <h3>Ответ</h3>
+        <pre>{{ response.answer }}</pre>
+
+        <p>
+          <b>route:</b> {{ response.route }}<br />
+          <b>quality:</b> {{ response.quality if response.quality is not none else \"—\" }}<br />
+          <b>relevance:</b> {{ response.relevance if response.relevance is not none else \"—\" }}<br />
+          <b>trace_id:</b> <a href=\"/traces-ui/{{ response.trace_id }}\"><code>{{ response.trace_id }}</code></a>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

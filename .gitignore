@@ -1,7 +1,18 @@
 __pycache__/
+*.py[cod]
 *.pyc
 *.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .env
+*.env.local
 data/
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+Сброс настрок COMET.py
 *.db
 .claude/

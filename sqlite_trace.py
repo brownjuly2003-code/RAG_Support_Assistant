@@ -71,7 +71,7 @@ import json
 import sqlite3
 import uuid
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict
 
@@ -315,3 +315,48 @@ def save_feedback(
             (trace_id, session_id, rating, reason, _now_iso()),
         )
         conn.commit()
+
+
+def get_feedback_stats(days: int = 30) -> dict:
+    """Aggregated feedback stats for the last N days."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    with _get_connection() as conn:
+        cur = conn.cursor()
+
+        cur.execute(
+            "SELECT rating, COUNT(*) FROM feedback WHERE ts >= ? GROUP BY rating",
+            (cutoff,),
+        )
+        counts = dict(cur.fetchall())
+        up = counts.get("up", 0)
+        down = counts.get("down", 0)
+        total = up + down
+        up_pct = round(up / total * 100, 1) if total else 0.0
+
+        cur.execute(
+            """
+            SELECT t.final_route, f.rating, COUNT(*)
+            FROM feedback f
+            LEFT JOIN traces t ON f.trace_id = t.trace_id
+            WHERE f.ts >= ?
+            GROUP BY t.final_route, f.rating
+            """,
+            (cutoff,),
+        )
+        by_route: Dict[str, Dict[str, int]] = {}
+        for route, rating, count in cur.fetchall():
+            route_key = route or "unknown"
+            if route_key not in by_route:
+                by_route[route_key] = {"up": 0, "down": 0}
+            if rating in ("up", "down"):
+                by_route[route_key][rating] += count
+
+    return {
+        "total": total,
+        "up": up,
+        "down": down,
+        "up_pct": up_pct,
+        "by_route": by_route,
+        "period_days": days,
+    }

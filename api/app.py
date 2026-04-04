@@ -73,6 +73,31 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
+
+async def _stream_ollama(
+    prompt: str,
+    model: str,
+    base_url: str,
+) -> AsyncGenerator[str, None]:
+    """Стримит токены из Ollama /api/generate."""
+    payload = {"model": model, "prompt": prompt, "stream": True}
+    timeout = httpx.Timeout(120.0, connect=5.0)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        async with client.stream("POST", f"{base_url}/api/generate", json=payload) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if not line:
+                    continue
+                try:
+                    chunk = _json.loads(line)
+                except Exception:
+                    continue
+                token = chunk.get("response", "")
+                if token:
+                    yield token
+                if chunk.get("done"):
+                    break
+
 # ---------------------------------------------------------------------------
 # Rate limiter
 # ---------------------------------------------------------------------------
@@ -497,7 +522,7 @@ async def ask_stream(
     body: AskRequest,
     _auth: None = Depends(_require_api_key),
 ) -> StreamingResponse:
-    """SSE endpoint â€” Ð½ÐµÐ¼ÐµÐ´Ð»ÐµÐ½Ð½Ð¾ Ð¾Ñ‚Ð´Ð°Ñ‘Ñ‚ ÑÑ‚Ð°Ñ‚ÑƒÑ, Ð·Ð°Ñ‚ÐµÐ¼ Ñ„Ð¸Ð½Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ð¾Ñ‚Ð²ÐµÑ‚."""
+    """SSE endpoint с реальным стримингом токенов из Ollama."""
     _ = request, _auth
 
     async def event_generator() -> AsyncGenerator[str, None]:
@@ -514,41 +539,153 @@ async def ask_stream(
             return
 
         try:
-            if hasattr(session, "ask"):
-                result = await asyncio.get_running_loop().run_in_executor(
-                    None, session.ask, question
-                )
-                quality = result.get("quality_score") or 50
-                route = result.get("route") or "auto"
-                answer = result.get("answer") or "ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ Ð¿Ð¾Ð»ÑƒÑ‡Ð¸Ñ‚ÑŒ Ð¾Ñ‚Ð²ÐµÑ‚."
-                sources = result.get("graded_docs") or result.get("context_docs") or []
-                trace_id = result.get("trace_id") or ""
-            else:
-                answer = "Ð¡ÐµÑÑÐ¸Ñ Ð½Ðµ Ð¸Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð°."
-                session["history"].append({"role": "user", "content": question})
-                session["history"].append({"role": "assistant", "content": answer})
-                quality, route, sources, trace_id = 0, "human", [], ""
+            prompt = ""
+            docs: List[Any] = []
+            chat_history: List[Dict[str, str]] = []
 
+            if hasattr(session, "_retriever") and session._retriever is not None:
+                docs = await asyncio.get_running_loop().run_in_executor(
+                    None,
+                    session._retriever.get_relevant_documents,
+                    question,
+                )
+
+                if hasattr(session, "history"):
+                    chat_history = session.history
+                elif isinstance(session, dict):
+                    chat_history = session.get("history", [])
+
+                try:
+                    from prompts import build_qa_prompt, build_conversational_qa_prompt  # noqa: PLC0415
+                except ImportError:
+                    from agent.prompts import build_qa_prompt, build_conversational_qa_prompt  # type: ignore[no-redef]  # noqa: PLC0415
+
+                plain_docs = []
+                for doc in docs[:5]:
+                    if hasattr(doc, "page_content"):
+                        plain_docs.append({
+                            "page_content": getattr(doc, "page_content", ""),
+                            "metadata": getattr(doc, "metadata", {}) or {},
+                        })
+                    elif isinstance(doc, dict):
+                        plain_docs.append(doc)
+
+                if chat_history:
+                    prompt = build_conversational_qa_prompt(
+                        question=question,
+                        context_docs=plain_docs,
+                        chat_history=chat_history,
+                    )
+                else:
+                    prompt = build_qa_prompt(question=question, context_docs=plain_docs)
+
+            if not prompt:
+                raise RuntimeError("streaming prompt unavailable")
+
+            settings = get_settings()
+            full_answer = ""
+
+            yield "data: " + _json.dumps({"type": "token_start"}) + "\n\n"
+            try:
+                async for token in _stream_ollama(
+                    prompt,
+                    settings.ollama_model_name,
+                    settings.ollama_base_url,
+                ):
+                    full_answer += token
+                    yield "data: " + _json.dumps({
+                        "type": "token",
+                        "token": token,
+                    }) + "\n\n"
+            except Exception as exc:
+                logger.warning("Streaming error in /ask/stream: %s", exc)
+                if not full_answer:
+                    raise
+
+            if not full_answer:
+                raise RuntimeError("empty streaming answer")
+
+            if hasattr(session, "_history"):
+                session._history.append({"role": "user", "content": question})
+                session._history.append({"role": "assistant", "content": full_answer})
+                max_history = getattr(session, "_max_history", 20)
+                if len(session._history) > max_history * 2:
+                    session._history = session._history[-(max_history * 2):]
+            elif isinstance(session, dict):
+                session["history"].append({"role": "user", "content": question})
+                session["history"].append({"role": "assistant", "content": full_answer})
+
+            sources = []
+            for doc in docs[:5]:
+                if hasattr(doc, "page_content"):
+                    metadata = getattr(doc, "metadata", {}) or {}
+                    sources.append({
+                        "source": metadata.get("source") or metadata.get("file_name") or "",
+                        "page_content": getattr(doc, "page_content", ""),
+                    })
+                elif isinstance(doc, dict):
+                    metadata = doc.get("metadata", {}) or {}
+                    sources.append({
+                        "source": metadata.get("source") or metadata.get("file_name") or "",
+                        "page_content": doc.get("page_content", ""),
+                    })
+
+            quality = 70 if len(full_answer.strip()) > 20 else 40
+            route = "auto" if quality >= 70 else "human"
             yield "data: " + _json.dumps({
                 "type": "result",
-                "answer": answer,
+                "answer": full_answer,
                 "quality_score": quality,
                 "route": route,
                 "session_id": session_id,
                 "sources": sources,
-                "trace_id": trace_id,
-            }) + "\n\n"
-        except Exception as exc:
-            logger.error("SSE pipeline error: %s", exc, exc_info=True)
-            yield "data: " + _json.dumps({
-                "type": "result",
-                "answer": "ÐŸÑ€Ð¾Ð¸Ð·Ð¾ÑˆÐ»Ð° Ð¾ÑˆÐ¸Ð±ÐºÐ°. Ð—Ð°Ð¿Ñ€Ð¾Ñ Ð¿ÐµÑ€ÐµÐ´Ð°Ð½ Ð¾Ð¿ÐµÑ€Ð°Ñ‚Ð¾Ñ€Ñƒ.",
-                "quality_score": 0,
-                "route": "human",
-                "session_id": session_id,
-                "sources": [],
                 "trace_id": "",
             }) + "\n\n"
+        except Exception as exc:
+            logger.warning("SSE streaming path failed, fallback to sync pipeline: %s", exc, exc_info=True)
+            try:
+                if hasattr(session, "ask"):
+                    result = await asyncio.get_running_loop().run_in_executor(
+                        None, session.ask, question
+                    )
+                    answer = result.get("answer") or "Не удалось получить ответ."
+                    quality = result.get("quality_score") or 50
+                    route = result.get("route") or "auto"
+                    raw_sources = result.get("graded_docs") or result.get("context_docs") or []
+                    sources = []
+                    for item in raw_sources:
+                        metadata = item.get("metadata", {}) if isinstance(item, dict) else {}
+                        sources.append({
+                            "source": metadata.get("source") or metadata.get("file_name") or "",
+                            "page_content": item.get("page_content", "") if isinstance(item, dict) else "",
+                        })
+                    trace_id = result.get("trace_id") or ""
+                else:
+                    answer = "Сессия не инициализирована."
+                    session["history"].append({"role": "user", "content": question})
+                    session["history"].append({"role": "assistant", "content": answer})
+                    quality, route, sources, trace_id = 0, "human", [], ""
+
+                yield "data: " + _json.dumps({
+                    "type": "result",
+                    "answer": answer,
+                    "quality_score": quality,
+                    "route": route,
+                    "session_id": session_id,
+                    "sources": sources,
+                    "trace_id": trace_id,
+                }) + "\n\n"
+            except Exception as sync_exc:
+                logger.error("SSE fallback error: %s", sync_exc, exc_info=True)
+                yield "data: " + _json.dumps({
+                    "type": "result",
+                    "answer": "Ошибка обработки запроса.",
+                    "quality_score": 0,
+                    "route": "human",
+                    "session_id": session_id,
+                    "sources": [],
+                    "trace_id": "",
+                }) + "\n\n"
 
     return StreamingResponse(
         event_generator(),
@@ -576,6 +713,25 @@ async def post_feedback(body: FeedbackRequest) -> None:
         )
     except Exception as exc:
         logger.warning("Failed to save feedback: %s", exc)
+
+
+@router.get("/feedback/stats")
+async def feedback_stats(days: int = 30) -> dict:
+    """Feedback stats for the last N days."""
+    try:
+        from sqlite_trace import get_feedback_stats  # noqa: PLC0415
+
+        return get_feedback_stats(days=days)
+    except Exception as exc:
+        logger.warning("Failed to get feedback stats: %s", exc)
+        return {
+            "total": 0,
+            "up": 0,
+            "down": 0,
+            "up_pct": 0.0,
+            "by_route": {},
+            "period_days": days,
+        }
 
 
 @router.post("/upload", response_model=UploadResponse)

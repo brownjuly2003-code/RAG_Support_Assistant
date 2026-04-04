@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang=\"ru\">
+  <head>
+    <meta charset=\"utf-8\" />
+    <title>Трасса {{ trace.trace_id }} — RAG PoC</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 20px; background: #f7fafc; }
+      .container { max-width: 960px; margin: 0 auto; }
+      .card {
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
+      a { color: #2b6cb0; }
+      pre {
+        background: #1a202c;
+        color: #e2e8f0;
+        padding: 8px;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
+      .meta span { display: inline-block; margin-right: 16px; font-size: 13px; }
+      .step {
+        border-left: 3px solid #2b6cb0;
+        padding-left: 8px;
+        margin-bottom: 12px;
+      }
+      .step-header {
+        font-size: 13px;
+        color: #4a5568;
+        margin-bottom: 4px;
+      }
+      code {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class=\"container\">
+      <p>
+        <a href=\"/traces-ui\">← К списку трасс</a> |
+        <a href=\"/\">На главную</a>
+      </p>
+
+      <div class=\"card\">
+        <h1>Трасса <code>{{ trace.trace_id }}</code></h1>
+        <div class=\"meta\">
+          <span><b>started_at:</b> {{ trace.started_at }}</span>
+          <span><b>finished_at:</b> {{ trace.finished_at or \"—\" }}</span>
+          <span><b>route:</b> {{ trace.final_route or \"—\" }}</span>
+          <span><b>quality:</b> {{ trace.final_quality if trace.final_quality is not none else \"—\" }}</span>
+          <span><b>relevance:</b> {{ trace.final_relevance if trace.final_relevance is not none else \"—\" }}</span>
+        </div>
+      </div>
+
+      <div class=\"card\">
+        <h2>Шаги графа ({{ steps|length }})</h2>
+        {% if steps %}
+          {% for s in steps %}
+          <div class=\"step\">
+            <div class=\"step-header\">
+              Шаг {{ s.step_order }} — узел <b>{{ s.node_name }}</b> @ {{ s.ts }}
+            </div>
+            <pre>{{ s.state_pretty }}</pre>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p>Шаги не найдены.</p>
+        {% endif %}
+      </div>
+    </div>
+  </body>
+</html>

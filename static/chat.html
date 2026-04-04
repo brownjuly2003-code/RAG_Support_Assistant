@@ -954,6 +954,8 @@
             sendBtn.disabled = true;
             typingIndicator.classList.add('active');
             scrollToBottom();
+            let streamingMsg = null;
+            let streamingBubble = null;
 
             try {
                 const body = { question: question };
@@ -995,7 +997,63 @@
                             if (event.type === 'error') {
                                 throw new Error(event.detail || 'Streaming error');
                             }
+                            if (event.type === 'token_start') {
+                                typingIndicator.classList.remove('active');
+                                if (!streamingMsg) {
+                                    streamingMsg = document.createElement('div');
+                                    streamingMsg.className = 'message bot';
+
+                                    const avatar = document.createElement('div');
+                                    avatar.className = 'message-avatar';
+                                    avatar.textContent = 'A';
+
+                                    const content = document.createElement('div');
+                                    content.className = 'message-content';
+
+                                    streamingBubble = document.createElement('div');
+                                    streamingBubble.className = 'message-bubble';
+                                    content.appendChild(streamingBubble);
+
+                                    streamingMsg.appendChild(avatar);
+                                    streamingMsg.appendChild(content);
+                                    chatMessages.appendChild(streamingMsg);
+                                    scrollToBottom();
+                                }
+                                continue;
+                            }
+                            if (event.type === 'token') {
+                                typingIndicator.classList.remove('active');
+                                if (!streamingMsg) {
+                                    streamingMsg = document.createElement('div');
+                                    streamingMsg.className = 'message bot';
+
+                                    const avatar = document.createElement('div');
+                                    avatar.className = 'message-avatar';
+                                    avatar.textContent = 'A';
+
+                                    const content = document.createElement('div');
+                                    content.className = 'message-content';
+
+                                    streamingBubble = document.createElement('div');
+                                    streamingBubble.className = 'message-bubble';
+                                    content.appendChild(streamingBubble);
+
+                                    streamingMsg.appendChild(avatar);
+                                    streamingMsg.appendChild(content);
+                                    chatMessages.appendChild(streamingMsg);
+                                }
+                                if (streamingBubble) {
+                                    streamingBubble.textContent += event.token || '';
+                                    scrollToBottom();
+                                }
+                                continue;
+                            }
                             if (event.type === 'result') {
+                                if (streamingMsg) {
+                                    streamingMsg.remove();
+                                    streamingMsg = null;
+                                    streamingBubble = null;
+                                }
                                 data = event;
                             }
                         }
@@ -1022,6 +1080,9 @@
                 });
                 loadSessions();
             } catch (err) {
+                if (streamingMsg) {
+                    streamingMsg.remove();
+                }
                 addMessage('bot', 'Ошибка: ' + err.message, { quality: 0, route: 'error' });
             } finally {
                 isLoading = false;

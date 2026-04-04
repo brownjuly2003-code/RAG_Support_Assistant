@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=\"ru\">
+  <head>
+    <meta charset=\"utf-8\" />
+    <title>Эскалации — RAG PoC</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 20px; background: #f7fafc; }
+      .container { max-width: 960px; margin: 0 auto; }
+      .card {
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
+      a { color: #2b6cb0; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #e2e8f0; padding: 6px 8px; font-size: 13px; vertical-align: top; }
+      th { background: #edf2f7; }
+      code {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class=\"container\">
+      <p><a href=\"/\">← На главную</a></p>
+      <div class=\"card\">
+        <h1>Эскалации (mock inbox)</h1>
+        <p>Всего записей: <b>{{ total }}</b></p>
+        {% if items %}
+        <table>
+          <thead>
+            <tr>
+              <th>ts</th>
+              <th>entity_id</th>
+              <th>question</th>
+              <th>answer</th>
+              <th>route</th>
+              <th>quality</th>
+              <th>relevance</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for e in items %}
+            <tr>
+              <td>{{ e.ts if e.ts is defined else e.get(\"ts\",\"\") }}</td>
+              <td><code>{{ e.entity_id if e.entity_id is defined else e.get(\"entity_id\",\"\") }}</code></td>
+              <td>{{ e.question if e.question is defined else e.get(\"question\",\"\") }}</td>
+              <td>{{ e.answer if e.answer is defined else e.get(\"answer\",\"\") }}</td>
+              <td>{{ e.route if e.route is defined else e.get(\"route\",\"\") }}</td>
+              <td>{{ e.quality if e.quality is defined else e.get(\"quality\",\"\") }}</td>
+              <td>{{ e.relevance if e.relevance is defined else e.get(\"relevance\",\"\") }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p>Эскалаций пока нет.</p>
+        {% endif %}
+      </div>
+    </div>
+  </body>
+</html>
