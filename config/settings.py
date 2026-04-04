@@ -74,7 +74,7 @@ class Settings:
 
     # --- Настройки LLM (Ollama / локальная модель) ---
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    ollama_model_name: str = os.getenv("OLLAMA_MODEL_NAME", "mistral")
+    ollama_model_name: str = os.getenv("OLLAMA_MODEL_NAME", "qwen2.5:7b")
 
     # --- Embedding Model ---
     # "BAAI/bge-m3"                           — лучший universal (100+ языков, 1024d, 570M)

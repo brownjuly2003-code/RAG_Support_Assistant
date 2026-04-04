@@ -17,7 +17,7 @@ RAG Support Assistant отвечает на вопросы поддержки п
 
 - **Retrieval**: ChromaDB (vector) + BM25 hybrid search, Reciprocal Rank Fusion, cross-encoder reranking
 - **Embeddings**: BGE-M3 (`BAAI/bge-m3`) — multilingual, 1024d
-- **Generation**: Ollama/Mistral (локальная LLM, без внешних API)
+- **Generation**: Ollama/Qwen2.5 7B (локальная LLM, без внешних API)
 - **Evaluation**: `quality_score` (0–100), маршрут `auto` / `human` / `retry` / `error`
 - **Escalation**: при `route=human` или `route=error` вопрос уходит в JSONL inbox или Bitrix24 webhook
 - **Tracing**: каждый запрос логируется в SQLite (trace_id, nodes, scores, latency)
@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 # 2. Start Ollama and pull model
 ollama serve
-ollama pull mistral
+ollama pull qwen2.5:7b
 
 # 3. Run
 python main.py
@@ -47,7 +47,7 @@ Copy `.env.example` to `.env` and adjust:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | URL локального Ollama API |
-| `OLLAMA_MODEL_NAME` | `mistral` | модель генерации ответов |
+| `OLLAMA_MODEL_NAME` | `qwen2.5:7b` | модель генерации ответов |
 | `RAG_EMBEDDING_MODEL` | `BAAI/bge-m3` | embedding model |
 | `RAG_RERANKER_MODEL` | `cross-encoder/ms-marco-MiniLM-L-6-v2` | cross-encoder reranker |
 | `RAG_HYBRID_SEARCH` | `true` | BM25 + vector hybrid search |

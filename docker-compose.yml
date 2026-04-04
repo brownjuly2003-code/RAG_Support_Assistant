@@ -21,7 +21,7 @@ services:
         condition: service_healthy
     volumes:
       - ollama_data:/root/.ollama
-    entrypoint: ["ollama", "pull", "mistral"]
+    entrypoint: ["ollama", "pull", "qwen2.5:7b"]
     environment:
       - OLLAMA_HOST=http://ollama:11434
     restart: "no"
