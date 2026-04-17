@@ -479,6 +479,74 @@ async def _probe_sqlite(db_path: Path) -> ComponentStatus:
         return ComponentStatus(status="error", latency_ms=round((time.monotonic() - t0) * 1000, 1), detail=str(exc))
 
 
+async def _probe_postgres() -> ComponentStatus:
+    t0 = time.monotonic()
+    try:
+        import os
+
+        if not os.getenv("DATABASE_URL"):
+            return ComponentStatus(
+                status="unavailable",
+                latency_ms=round((time.monotonic() - t0) * 1000, 1),
+                detail="DATABASE_URL not configured",
+            )
+
+        from db.engine import async_session
+        from sqlalchemy import text
+
+        async with async_session() as db:
+            await asyncio.wait_for(db.execute(text("SELECT 1")), timeout=1.0)
+        return ComponentStatus(status="ok", latency_ms=round((time.monotonic() - t0) * 1000, 1))
+    except ImportError as exc:
+        return ComponentStatus(
+            status="unavailable",
+            latency_ms=round((time.monotonic() - t0) * 1000, 1),
+            detail=f"driver missing: {exc}",
+        )
+    except Exception as exc:
+        return ComponentStatus(status="error", latency_ms=round((time.monotonic() - t0) * 1000, 1), detail=str(exc))
+
+
+async def _probe_redis() -> ComponentStatus:
+    t0 = time.monotonic()
+    try:
+        import os
+        import redis
+
+        from config.settings import get_settings
+
+        if not os.getenv("REDIS_URL"):
+            return ComponentStatus(
+                status="unavailable",
+                latency_ms=round((time.monotonic() - t0) * 1000, 1),
+                detail="REDIS_URL not configured",
+            )
+
+        settings = get_settings()
+        client = redis.Redis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_connect_timeout=1,
+            socket_timeout=1,
+        )
+        ok = await asyncio.wait_for(asyncio.to_thread(client.ping), timeout=1.5)
+        if ok:
+            return ComponentStatus(status="ok", latency_ms=round((time.monotonic() - t0) * 1000, 1))
+        return ComponentStatus(
+            status="error",
+            latency_ms=round((time.monotonic() - t0) * 1000, 1),
+            detail="PING returned falsy",
+        )
+    except ImportError as exc:
+        return ComponentStatus(
+            status="unavailable",
+            latency_ms=round((time.monotonic() - t0) * 1000, 1),
+            detail=f"redis lib missing: {exc}",
+        )
+    except Exception as exc:
+        return ComponentStatus(status="error", latency_ms=round((time.monotonic() - t0) * 1000, 1), detail=str(exc))
+
+
 # ---------------------------------------------------------------------------
 # Lifespan
 # ---------------------------------------------------------------------------
@@ -1397,16 +1465,21 @@ async def health_check() -> HealthResponse:
     """Health check — actively probes all dependencies."""
     settings = get_settings()
 
-    ollama_status, chroma_status, sqlite_status = (
-        await _probe_ollama(settings.ollama_base_url),
-        await _probe_chromadb(settings.vectordb_chroma_dir),
-        await _probe_sqlite(settings.tracing_db_path),
+    ollama_status, chroma_status, sqlite_status, postgres_status, redis_status = await asyncio.gather(
+        _probe_ollama(settings.ollama_base_url),
+        _probe_chromadb(settings.vectordb_chroma_dir),
+        _probe_sqlite(settings.tracing_db_path),
+        _probe_postgres(),
+        _probe_redis(),
     )
 
     critical_down = ollama_status.status == "error" or chroma_status.status == "error"
-    overall = "unhealthy" if critical_down else (
-        "degraded" if sqlite_status.status == "error" else "ok"
+    non_critical_error = (
+        sqlite_status.status == "error"
+        or postgres_status.status == "error"
+        or redis_status.status == "error"
     )
+    overall = "unhealthy" if critical_down else ("degraded" if non_critical_error else "ok")
     breakers_snap: List[Dict[str, Any]] = []
     try:
         from graph import get_default_breaker
@@ -1427,6 +1500,8 @@ async def health_check() -> HealthResponse:
             "ollama": ollama_status,
             "chromadb": chroma_status,
             "sqlite": sqlite_status,
+            "postgres": postgres_status,
+            "redis": redis_status,
         },
         vector_store_loaded=_vector_store is not None,
         sessions_count=len(_sessions),
