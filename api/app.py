@@ -200,6 +200,8 @@ except ImportError:
             ollama_base_url = "http://localhost:11434"
             tracing_db_path = PROJECT_ROOT / "data" / "tracing" / "traces.db"
             session_ttl_seconds = 7200
+            trace_retention_days = 90
+            trace_purge_interval_sec = 86400
             shutdown_ready_delay_sec = 5.0
             api_key = ""
             require_ollama = False
@@ -603,7 +605,38 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             if stale:
                 logger.info("Cleaned up %d stale sessions", len(stale))
 
+    async def _purge_old_traces_periodically() -> None:
+        settings = get_settings()
+        interval = max(60, getattr(settings, "trace_purge_interval_sec", 86400))
+        retention = getattr(settings, "trace_retention_days", 90)
+        if retention <= 0:
+            logger.info("Trace retention disabled (TRACE_RETENTION_DAYS=0)")
+            return
+
+        while True:
+            await asyncio.sleep(interval)
+            try:
+                from sqlite_trace import purge_old_traces
+
+                result = await asyncio.to_thread(purge_old_traces, retention)
+                for table, count in (
+                    ("traces", result["traces_deleted"]),
+                    ("trace_steps", result["steps_deleted"]),
+                    ("feedback", result["feedback_deleted"]),
+                ):
+                    prometheus_metrics.record_traces_purged(table, count)
+                if result["traces_deleted"]:
+                    logger.info(
+                        "Trace retention purge: traces=%d steps=%d feedback=%d",
+                        result["traces_deleted"],
+                        result["steps_deleted"],
+                        result["feedback_deleted"],
+                    )
+            except Exception as exc:
+                logger.warning("Trace retention purge failed: %s", exc)
+
     cleanup_task = asyncio.create_task(_cleanup_sessions())
+    purge_task = asyncio.create_task(_purge_old_traces_periodically())
     logger.info("RAG Support Assistant started")
     try:
         yield
@@ -620,6 +653,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             except asyncio.CancelledError:
                 pass
         cleanup_task.cancel()
+        purge_task.cancel()
         logger.info("RAG Support Assistant shutting down")
 
 
@@ -1205,6 +1239,40 @@ async def admin_reset_circuit_breaker(
             "current": current,
         },
     )
+
+
+@router.delete("/admin/traces")
+async def admin_purge_traces(
+    request: Request,
+    older_than_days: int = 30,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    if older_than_days < 0 or older_than_days > 3650:
+        raise HTTPException(
+            status_code=400,
+            detail="older_than_days must be in [0, 3650]",
+        )
+
+    from sqlite_trace import purge_old_traces
+
+    result = await asyncio.to_thread(purge_old_traces, older_than_days)
+
+    for table, count in (
+        ("traces", result["traces_deleted"]),
+        ("trace_steps", result["steps_deleted"]),
+        ("feedback", result["feedback_deleted"]),
+    ):
+        prometheus_metrics.record_traces_purged(table, count)
+
+    await log_audit(
+        actor=_user.get("sub", "anonymous"),
+        action="trace_purge",
+        resource=f"traces/older_than={older_than_days}d",
+        detail=result,
+        ip_address=request.client.host if request.client else None,
+    )
+
+    return JSONResponse(status_code=200, content=result)
 
 
 @router.post("/upload", response_model=UploadResponse)

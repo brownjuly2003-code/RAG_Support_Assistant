@@ -65,6 +65,8 @@ Copy `.env.example` to `.env` and adjust:
 | `API_KEY` | — | X-API-Key header для аутентификации |
 | `REQUIRE_OLLAMA` | `false` | fail-fast если Ollama недоступна |
 | `SESSION_TTL_SECONDS` | `7200` | TTL API-сессий |
+| `TRACE_RETENTION_DAYS` | `90` | retention SQLite traces; 0 = не чистить |
+| `TRACE_PURGE_INTERVAL_SEC` | `86400` | интервал фоновой очистки traces |
 | `SHUTDOWN_READY_DELAY_SEC` | `5` | задержка flip-а readiness→503 при SIGTERM для drain k8s LB |
 | `ALERT_WEBHOOK_URL` | — | Slack/Telegram webhook для алертов |
 | `ALERT_ESCALATION_PCT` | `35` | порог % эскалаций (24h) |
@@ -98,6 +100,7 @@ Copy `.env.example` to `.env` and adjust:
 | GET | `/api/sessions` | список активных сессий |
 | GET | `/api/sessions/{id}/history` | история сессии |
 | DELETE | `/api/sessions/{id}` | удалить сессию |
+| DELETE | `/api/admin/traces?older_than_days=N` | ручная очистка старых traces (admin) |
 | GET | `/api/feedback/stats` | агрегированная статистика обратной связи |
 
 Rate limits: 60 req/min на `/api/ask`, 10 req/min на `/api/upload`.

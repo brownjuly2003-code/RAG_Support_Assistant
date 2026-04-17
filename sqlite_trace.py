@@ -98,10 +98,16 @@ def _get_db_path() -> Path:
     Строит путь к SQLite-базе для трейсинга и гарантирует, что
     директория существует.
     """
-    root = _get_project_root()
-    db_dir = root / "data" / "tracing"
-    db_dir.mkdir(parents=True, exist_ok=True)
-    return db_dir / "traces.db"
+    try:
+        from config.settings import get_settings
+
+        db_path = Path(get_settings().tracing_db_path)
+    except Exception:
+        root = _get_project_root()
+        db_path = root / "data" / "tracing" / "traces.db"
+
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    return db_path
 
 
 @contextmanager
@@ -168,6 +174,13 @@ def _init_db() -> None:
             """
             CREATE INDEX IF NOT EXISTS idx_trace_steps_trace
             ON trace_steps(trace_id, step_order);
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_traces_started_at
+            ON traces(started_at);
             """
         )
 
@@ -316,6 +329,54 @@ def save_feedback(
             (trace_id, session_id, rating, reason, _now_iso()),
         )
         conn.commit()
+
+
+def purge_old_traces(retention_days: int) -> dict[str, int]:
+    """Удаляет traces старше retention_days и связанные steps/feedback."""
+    if retention_days <= 0:
+        return {"traces_deleted": 0, "steps_deleted": 0, "feedback_deleted": 0}
+
+    cutoff_iso = (datetime.now(timezone.utc) - timedelta(days=retention_days)).isoformat()
+
+    with _get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT trace_id FROM traces WHERE started_at < ?",
+            (cutoff_iso,),
+        )
+        old_trace_ids = [row[0] for row in cur.fetchall()]
+
+        if not old_trace_ids:
+            return {"traces_deleted": 0, "steps_deleted": 0, "feedback_deleted": 0}
+
+        def _batch(seq: list[str], size: int = 500):
+            for index in range(0, len(seq), size):
+                yield seq[index:index + size]
+
+        steps_deleted = 0
+        feedback_deleted = 0
+        for batch in _batch(old_trace_ids):
+            placeholders = ",".join("?" for _ in batch)
+            cur.execute(
+                f"DELETE FROM trace_steps WHERE trace_id IN ({placeholders})",
+                batch,
+            )
+            steps_deleted += cur.rowcount
+            cur.execute(
+                f"DELETE FROM feedback WHERE trace_id IN ({placeholders})",
+                batch,
+            )
+            feedback_deleted += cur.rowcount
+
+        cur.execute("DELETE FROM traces WHERE started_at < ?", (cutoff_iso,))
+        traces_deleted = cur.rowcount
+        conn.commit()
+
+    return {
+        "traces_deleted": traces_deleted,
+        "steps_deleted": steps_deleted,
+        "feedback_deleted": feedback_deleted,
+    }
 
 
 def get_feedback_stats(days: int = 30) -> dict:

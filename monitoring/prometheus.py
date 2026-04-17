@@ -20,6 +20,7 @@ __all__ = [
     "REQUEST_COUNT",
     "REQUEST_DURATION",
     "REQUEST_TIMEOUTS",
+    "TRACES_PURGED",
     "INFLIGHT_PIPELINES",
     "VECTOR_STORE_DOCS",
     "generate_latest",
@@ -29,6 +30,7 @@ __all__ = [
     "record_pipeline_rejection",
     "record_rate_limit_rejection",
     "record_request_timeout",
+    "record_traces_purged",
 ]
 
 PROMETHEUS_AVAILABLE = False
@@ -81,6 +83,7 @@ except ImportError:
     REQUEST_TIMEOUTS = _NoopMetric()
     INFLIGHT_PIPELINES = _NoopMetric()
     PIPELINE_REJECTIONS = _NoopMetric()
+    TRACES_PURGED = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     REGISTRY = CollectorRegistry()
@@ -186,6 +189,13 @@ else:
         registry=REGISTRY,
     )
 
+    TRACES_PURGED = Counter(
+        "rag_traces_purged_total",
+        "SQLite rows deleted by retention purge",
+        ["table"],
+        registry=REGISTRY,
+    )
+
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
 
@@ -221,3 +231,8 @@ def record_request_timeout(endpoint: str) -> None:
 
 def record_pipeline_rejection(reason: str) -> None:
     PIPELINE_REJECTIONS.labels(reason=reason).inc()
+
+
+def record_traces_purged(table: str, count: int) -> None:
+    if count > 0:
+        TRACES_PURGED.labels(table=table).inc(count)

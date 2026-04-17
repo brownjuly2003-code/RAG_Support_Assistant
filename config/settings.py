@@ -64,7 +64,11 @@ class Settings:
     vectordb_chroma_dir: Path = data_dir / "vectordb" / "chroma"
 
     # Трейсинг (SQLite)
-    tracing_db_path: Path = data_dir / "tracing" / "traces.db"
+    tracing_db_path: Path = field(
+        default_factory=lambda: Path(
+            os.getenv("TRACING_DB_PATH", str(PROJECT_ROOT / "data" / "tracing" / "traces.db"))
+        )
+    )
 
     # Mock inbox (локальный "ящик входящих")
     inbox_file: Path = data_dir / "inbox" / "support_inbox.jsonl"
@@ -155,6 +159,12 @@ class Settings:
         default_factory=lambda: float(os.getenv("OLLAMA_REQUEST_TIMEOUT_SEC", "60"))
     )
     session_ttl_seconds: int = int(os.getenv("SESSION_TTL_SECONDS", "7200"))
+    trace_retention_days: int = field(
+        default_factory=lambda: int(os.getenv("TRACE_RETENTION_DAYS", "90"))
+    )
+    trace_purge_interval_sec: int = field(
+        default_factory=lambda: int(os.getenv("TRACE_PURGE_INTERVAL_SEC", "86400"))
+    )
     request_timeout_sec: float = float(
         os.getenv("REQUEST_TIMEOUT_SEC", "30")
     )
