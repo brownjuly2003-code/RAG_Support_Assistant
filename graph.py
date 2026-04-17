@@ -823,6 +823,7 @@ def run_qa_pipeline(
     llm: SupportsInvoke | None = None,
     max_iterations: int = 2,
     chat_history: List[Dict[str, str]] | None = None,
+    trace_id: str | None = None,
 ) -> GraphState:
     """Обрабатывает один вопрос через граф.
 
@@ -833,7 +834,7 @@ def run_qa_pipeline(
         max_iterations: макс. итераций Self-RAG.
         chat_history: история диалога (Level 3).
     """
-    trace_id = start_trace()
+    trace_id = start_trace(trace_id=trace_id)
     initial_state = create_initial_state(question=question, trace_id=trace_id)
     initial_state["max_iterations"] = max_iterations
     if chat_history:
@@ -887,7 +888,7 @@ class ConversationSession:
     def history(self) -> List[Dict[str, str]]:
         return list(self._history)
 
-    def ask(self, question: str) -> GraphState:
+    def ask(self, question: str, trace_id: Optional[str] = None) -> GraphState:
         """Задаёт вопрос с учётом истории диалога."""
         result = run_qa_pipeline(
             question=question,
@@ -895,6 +896,7 @@ class ConversationSession:
             llm=self._llm,
             max_iterations=self._max_iterations,
             chat_history=self._history,
+            trace_id=trace_id,
         )
 
         # Сохраняем в историю

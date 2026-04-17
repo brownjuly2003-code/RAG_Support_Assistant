@@ -206,14 +206,15 @@ def _state_to_dict(state: Any) -> Dict[str, Any]:
     return {"value": repr(state)}
 
 
-def start_trace() -> str:
+def start_trace(trace_id: str | None = None) -> str:
     """
     Начинает новую трассу: создаёт запись в таблице traces и возвращает trace_id.
 
     :return: trace_id (строка UUID4), который нужно хранить в состоянии и
              использовать при логировании шагов.
     """
-    trace_id = str(uuid.uuid4())
+    if trace_id is None:
+        trace_id = str(uuid.uuid4())
     started_at = _now_iso()
 
     with _get_connection() as conn:
