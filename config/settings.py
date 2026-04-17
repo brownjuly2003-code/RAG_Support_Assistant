@@ -155,6 +155,9 @@ class Settings:
         default_factory=lambda: float(os.getenv("OLLAMA_REQUEST_TIMEOUT_SEC", "60"))
     )
     session_ttl_seconds: int = int(os.getenv("SESSION_TTL_SECONDS", "7200"))
+    request_timeout_sec: float = float(
+        os.getenv("REQUEST_TIMEOUT_SEC", "30")
+    )
     shutdown_ready_delay_sec: float = float(
         os.getenv("SHUTDOWN_READY_DELAY_SEC", "5")
     )

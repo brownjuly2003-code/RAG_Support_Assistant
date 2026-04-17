@@ -638,8 +638,14 @@ async def ask(
         session_id, session = session_result
 
     if hasattr(session, "ask"):
+        settings = get_settings()
+        timeout = float(getattr(settings, "request_timeout_sec", 30.0))
+        request_id = get_request_id()
         try:
-            result = session.ask(question, trace_id=get_request_id())
+            result = await asyncio.wait_for(
+                asyncio.to_thread(session.ask, question, request_id),
+                timeout=timeout,
+            )
 
             answer = result.get("answer") or ""
             quality = result.get("quality_score") or 50
@@ -664,6 +670,20 @@ async def ask(
                 session_id=session_id,
                 trace_id=result.get("trace_id") or "",
                 suggested_questions=result.get("suggested_questions") or [],
+            )
+        except asyncio.TimeoutError:
+            try:
+                prometheus_metrics.record_request_timeout("/api/ask")
+            except Exception:
+                pass
+            logger.warning(
+                "req_id=%s /api/ask exceeded timeout=%.1fs",
+                request_id or "-",
+                timeout,
+            )
+            raise HTTPException(
+                status_code=504,
+                detail=f"Request exceeded {timeout:.0f}s wall-time limit",
             )
         except Exception as exc:
             logger.error("Pipeline error in /ask: %s", exc, exc_info=True)

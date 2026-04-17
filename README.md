@@ -79,6 +79,7 @@ Copy `.env.example` to `.env` and adjust:
 | `OLLAMA_RETRY_MAX_DELAY_SEC` | `5.0` | верхняя граница задержки |
 | `OLLAMA_RETRY_JITTER` | `true` | случайный jitter ±50% в задержке |
 | `OLLAMA_REQUEST_TIMEOUT_SEC` | `60` | timeout одного HTTP-вызова Ollama; ReadTimeout → retry → breaker |
+| `REQUEST_TIMEOUT_SEC` | `30` | total wall-time limit для `/api/ask`; 504 при превышении |
 
 ## API
 

@@ -18,12 +18,14 @@ __all__ = [
     "REGISTRY",
     "REQUEST_COUNT",
     "REQUEST_DURATION",
+    "REQUEST_TIMEOUTS",
     "VECTOR_STORE_DOCS",
     "generate_latest",
     "record_component_health",
     "record_circuit_breaker_change",
     "record_ollama_retry_event",
     "record_rate_limit_rejection",
+    "record_request_timeout",
 ]
 
 PROMETHEUS_AVAILABLE = False
@@ -70,6 +72,7 @@ except ImportError:
     COMPONENT_UP = _NoopMetric()
     OLLAMA_RETRY_EVENTS = _NoopMetric()
     RATE_LIMIT_REJECTIONS = _NoopMetric()
+    REQUEST_TIMEOUTS = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     REGISTRY = CollectorRegistry()
@@ -155,6 +158,13 @@ else:
         registry=REGISTRY,
     )
 
+    REQUEST_TIMEOUTS = Counter(
+        "rag_request_timeouts_total",
+        "Requests exceeding REQUEST_TIMEOUT_SEC wall-time",
+        ["endpoint"],
+        registry=REGISTRY,
+    )
+
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
 
@@ -182,3 +192,7 @@ def record_ollama_retry_event(event: str) -> None:
 def record_rate_limit_rejection(endpoint: str) -> None:
     """Increment the rate-limit rejection counter for the request path."""
     RATE_LIMIT_REJECTIONS.labels(endpoint=endpoint).inc()
+
+
+def record_request_timeout(endpoint: str) -> None:
+    REQUEST_TIMEOUTS.labels(endpoint=endpoint).inc()
