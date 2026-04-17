@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json as _json
 import logging
+import re
 import sys
 import time
 import uuid
@@ -25,8 +26,12 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import httpx
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, UploadFile, File
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
+from auth.dependencies import get_current_user, require_role
+from db.audit import log_audit
+from monitoring import prometheus as prometheus_metrics
 try:
     from slowapi import Limiter, _rate_limit_exceeded_handler
     from slowapi.errors import RateLimitExceeded
@@ -68,7 +73,7 @@ if str(PROJECT_ROOT) not in sys.path:
 try:
     from config.logging_config import setup_logging
     setup_logging()
-except Exception:
+except ImportError:
     logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
@@ -90,7 +95,7 @@ async def _stream_ollama(
                     continue
                 try:
                     chunk = _json.loads(line)
-                except Exception:
+                except (ValueError, _json.JSONDecodeError):
                     continue
                 token = chunk.get("response", "")
                 if token:
@@ -102,19 +107,6 @@ async def _stream_ollama(
 # Rate limiter
 # ---------------------------------------------------------------------------
 limiter = Limiter(key_func=get_remote_address)
-
-
-def _require_api_key(request: Request) -> None:
-    """FastAPI dependency — validates X-API-Key header if API_KEY is configured."""
-    settings = get_settings()
-    expected = getattr(settings, "api_key", "")
-    if not expected:
-        return
-    provided = request.headers.get("X-API-Key", "")
-    if not provided:
-        raise HTTPException(status_code=401, detail="X-API-Key header required")
-    if provided != expected:
-        raise HTTPException(status_code=403, detail="Invalid API key")
 
 # ---------------------------------------------------------------------------
 # Safe imports with fallbacks
@@ -141,13 +133,13 @@ try:
     from graph import ConversationSession, run_qa_pipeline
     _ConversationSession = ConversationSession
     _run_qa_pipeline = run_qa_pipeline
-except Exception:
+except ImportError:
     try:
         from agent.graph import ConversationSession, run_qa_pipeline
         _ConversationSession = ConversationSession
         _run_qa_pipeline = run_qa_pipeline
-    except Exception:
-        pass
+    except ImportError:
+        logger.info("RAG pipeline not available - graph module not found")
 
 # manager.py - vector store utilities
 _build_vector_store = None
@@ -201,6 +193,7 @@ except ImportError:
             session_ttl_seconds = 7200
             api_key = ""
             require_ollama = False
+            cors_origins = ["*"]
         return _S()
 
 
@@ -209,8 +202,8 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 class AskRequest(BaseModel):
-    question: str
-    session_id: Optional[str] = None
+    question: str = Field(..., min_length=1, max_length=2000)
+    session_id: Optional[str] = Field(default=None, max_length=100)
 
 
 class SourceInfo(BaseModel):
@@ -225,13 +218,20 @@ class AskResponse(BaseModel):
     sources: List[SourceInfo] = Field(default_factory=list)
     session_id: str = ""
     trace_id: str = ""
+    suggested_questions: List[str] = Field(default_factory=list)
 
 
 class FeedbackRequest(BaseModel):
-    trace_id: str
-    session_id: str
-    rating: str
-    reason: Optional[str] = ""
+    trace_id: str = Field(..., max_length=100)
+    session_id: str = Field(..., max_length=100)
+    rating: str = Field(..., pattern=r"^(up|down)$")
+    reason: Optional[str] = Field(default="", max_length=500)
+
+
+class EscalateRequest(BaseModel):
+    session_id: str = Field(..., max_length=100)
+    question: str = Field(default="", max_length=2000)
+    reason: str = Field(default="user_request", max_length=200)
 
 
 class SessionInfo(BaseModel):
@@ -269,38 +269,111 @@ class UploadResponse(BaseModel):
     message: str
 
 
+class TaskStatusResponse(BaseModel):
+    task_id: str
+    status: str
+    result: Optional[dict] = None
+    meta: Optional[dict] = None
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(..., max_length=100)
+    password: str = Field(..., max_length=200)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
 # ---------------------------------------------------------------------------
 # Global state
 # ---------------------------------------------------------------------------
 
-_sessions: Dict[str, Any] = {}
+_session_llm_state: Dict[str, Any] = {}
+_sessions = _session_llm_state
 _session_last_access: Dict[str, float] = {}
+_db_retry_after: float = 0.0
 _vector_store: Any = None
 _retriever: Any = None
 _chunks: List[Any] = []
 _llm: Any = None
 
 
-def _get_or_create_session(session_id: Optional[str]) -> tuple:
-    global _retriever, _llm
+async def _get_or_create_session(session_id: Optional[str]) -> tuple:
+    global _retriever, _llm, _db_retry_after
 
     if not session_id:
         session_id = uuid.uuid4().hex
+    else:
+        try:
+            session_id = uuid.UUID(session_id).hex
+        except (TypeError, ValueError, AttributeError):
+            pass
 
-    if session_id not in _sessions:
+    db_history: List[Dict[str, str]] = []
+    if time.monotonic() >= _db_retry_after:
+        try:
+            from datetime import datetime, timezone
+
+            from sqlalchemy import select
+
+            from db.engine import async_session
+            from db.models import Message, Session as DBSession
+
+            async with async_session() as db:
+                session_uuid = uuid.UUID(session_id)
+                result = await asyncio.wait_for(
+                    db.execute(select(DBSession).where(DBSession.id == session_uuid)),
+                    timeout=0.5,
+                )
+                db_session = result.scalar_one_or_none()
+                if db_session is None:
+                    db.add(DBSession(id=session_uuid))
+                else:
+                    db_session.last_access = datetime.now(timezone.utc)
+                await asyncio.wait_for(db.commit(), timeout=0.5)
+
+                history_result = await asyncio.wait_for(
+                    db.execute(
+                        select(Message.role, Message.content)
+                        .where(Message.session_id == session_uuid)
+                        .order_by(Message.created_at)
+                    ),
+                    timeout=0.5,
+                )
+                db_history = [
+                    {"role": role, "content": content}
+                    for role, content in history_result.all()
+                ]
+                _db_retry_after = 0.0
+        except Exception as exc:
+            _db_retry_after = time.monotonic() + 60.0
+            logger.warning("DB session fallback to memory: %s", exc)
+
+    if session_id not in _session_llm_state:
         if _ConversationSession is not None and _retriever is not None:
-            _sessions[session_id] = _ConversationSession(
+            session = _ConversationSession(
                 retriever=_retriever,
                 llm=_llm,
                 max_iterations=2,
                 max_history=20,
             )
+            if db_history and hasattr(session, "_history"):
+                max_history = getattr(session, "_max_history", 20)
+                session._history = db_history[-(max_history * 2):]
+            _session_llm_state[session_id] = session
         else:
-            _sessions[session_id] = {"history": []}
+            _session_llm_state[session_id] = {"history": list(db_history)}
 
     import time as _time
     _session_last_access[session_id] = _time.monotonic()
-    return session_id, _sessions[session_id]
+    return session_id, _session_llm_state[session_id]
 
 
 # ---------------------------------------------------------------------------
@@ -413,6 +486,7 @@ async def _probe_sqlite(db_path: Path) -> ComponentStatus:
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     settings = get_settings()
+    app.state.settings = settings
     settings.ensure_dirs()
 
     try:
@@ -454,15 +528,19 @@ router = APIRouter(prefix="/api", tags=["RAG API"])
 async def ask(
     request: Request,
     body: AskRequest,
-    _auth: None = Depends(_require_api_key),
+    _user: dict = Depends(get_current_user),
 ) -> AskResponse:
     """Ask a question to the RAG assistant."""
-    _ = _auth
+    t0 = time.monotonic()
     question = body.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="question is empty")
 
-    session_id, session = _get_or_create_session(body.session_id)
+    session_result = _get_or_create_session(body.session_id)
+    if asyncio.iscoroutine(session_result):
+        session_id, session = await session_result
+    else:
+        session_id, session = session_result
 
     if hasattr(session, "ask"):
         try:
@@ -483,36 +561,79 @@ async def ask(
                     content = getattr(doc, "page_content", "")[:200]
                 sources_list.append(SourceInfo(source=src, page_content=content))
 
-            return AskResponse(
+            response = AskResponse(
                 answer=answer,
                 quality_score=quality,
                 route=route,
                 sources=sources_list,
                 session_id=session_id,
                 trace_id=result.get("trace_id") or "",
+                suggested_questions=result.get("suggested_questions") or [],
             )
         except Exception as exc:
             logger.error("Pipeline error in /ask: %s", exc, exc_info=True)
-            return AskResponse(
-                answer="Не удалось обработать запрос автоматически. Ваш вопрос передан оператору.",
+            answer = "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору."
+            if hasattr(session, "_history"):
+                session._history.append({"role": "user", "content": question})
+                session._history.append({"role": "assistant", "content": answer})
+            elif isinstance(session, dict):
+                session["history"].append({"role": "user", "content": question})
+                session["history"].append({"role": "assistant", "content": answer})
+            response = AskResponse(
+                answer=answer,
                 quality_score=0,
                 route="human",
                 sources=[],
                 session_id=session_id,
                 trace_id="",
+                suggested_questions=[],
             )
     else:
         session["history"].append({"role": "user", "content": question})
         fallback_answer = f"[DEMO] Pipeline not available. Question received: {question}"
         session["history"].append({"role": "assistant", "content": fallback_answer})
-        return AskResponse(
+        response = AskResponse(
             answer=fallback_answer,
             quality_score=0,
             route="human",
             sources=[],
             session_id=session_id,
             trace_id="",
+            suggested_questions=[],
         )
+
+    global _db_retry_after
+    if time.monotonic() >= _db_retry_after:
+        try:
+            from db.engine import async_session as db_session_factory
+            from db.models import Message
+
+            async with db_session_factory() as db:
+                session_uuid = uuid.UUID(session_id)
+                db.add(Message(session_id=session_uuid, role="user", content=question))
+                db.add(Message(session_id=session_uuid, role="assistant", content=response.answer))
+                await asyncio.wait_for(db.commit(), timeout=0.5)
+                _db_retry_after = 0.0
+        except Exception as exc:
+            _db_retry_after = time.monotonic() + 60.0
+            logger.warning("Failed to persist messages: %s", exc)
+
+    await log_audit(
+        actor=_user.get("sub", "anonymous"),
+        action="ask",
+        resource=f"session:{session_id}",
+        detail={"question_length": len(body.question)},
+        ip_address=request.client.host if request.client else None,
+    )
+    duration = time.monotonic() - t0
+    prometheus_metrics.REQUEST_DURATION.observe(duration)
+    prometheus_metrics.REQUEST_COUNT.labels(route=response.route).inc()
+    if response.quality_score:
+        prometheus_metrics.QUALITY_SCORE.observe(response.quality_score)
+    if response.route == "human":
+        prometheus_metrics.ESCALATION_TOTAL.inc()
+    prometheus_metrics.ACTIVE_SESSIONS.set(len(_sessions))
+    return response
 
 
 @router.post("/ask/stream")
@@ -520,15 +641,18 @@ async def ask(
 async def ask_stream(
     request: Request,
     body: AskRequest,
-    _auth: None = Depends(_require_api_key),
+    _user: dict = Depends(get_current_user),
 ) -> StreamingResponse:
     """SSE endpoint с реальным стримингом токенов из Ollama."""
-    _ = request, _auth
-
     async def event_generator() -> AsyncGenerator[str, None]:
+        global _db_retry_after
         yield "data: " + _json.dumps({"type": "status", "node": "processing"}) + "\n\n"
 
-        session_id, session = _get_or_create_session(body.session_id)
+        session_result = _get_or_create_session(body.session_id)
+        if asyncio.iscoroutine(session_result):
+            session_id, session = await session_result
+        else:
+            session_id, session = session_result
         question = (body.question or "").strip()
 
         if not question:
@@ -537,6 +661,14 @@ async def ask_stream(
                 "detail": "question is required",
             }) + "\n\n"
             return
+
+        await log_audit(
+            actor=_user.get("sub", "anonymous"),
+            action="ask",
+            resource=f"session:{session_id}",
+            detail={"question_length": len(body.question)},
+            ip_address=request.client.host if request.client else None,
+        )
 
         try:
             prompt = ""
@@ -632,6 +764,61 @@ async def ask_stream(
 
             quality = 70 if len(full_answer.strip()) > 20 else 40
             route = "auto" if quality >= 70 else "human"
+            suggested_questions: List[str] = []
+            if route == "auto":
+                try:
+                    try:
+                        from prompts import build_suggested_questions_prompt  # noqa: PLC0415
+                    except ImportError:
+                        from agent.prompts import build_suggested_questions_prompt  # type: ignore[no-redef]  # noqa: PLC0415
+
+                    question_llm = getattr(session, "_llm", None)
+                    if question_llm is None:
+                        try:
+                            from graph import LocalOllamaLLM  # noqa: PLC0415
+                        except ImportError:
+                            from agent.graph import LocalOllamaLLM  # type: ignore[no-redef]  # noqa: PLC0415
+                        question_llm = LocalOllamaLLM(model_name=settings.ollama_model_name)
+
+                    context_snippet = "\n\n".join(
+                        source.get("page_content", "")
+                        for source in sources[:2]
+                        if source.get("page_content")
+                    )[:500]
+                    prompt = build_suggested_questions_prompt(
+                        question=question,
+                        answer=full_answer,
+                        context_snippet=context_snippet,
+                    )
+                    raw_questions = await asyncio.get_running_loop().run_in_executor(
+                        None,
+                        question_llm.invoke,
+                        prompt,
+                    )
+                    suggested_questions = [
+                        re.sub(r"^\s*(?:[-*]|\d+[.)])\s*", "", line).strip()
+                        for line in raw_questions.strip().splitlines()
+                        if line.strip()
+                    ][:3]
+                except Exception as suggest_exc:
+                    logger.warning(
+                        "Failed to generate streaming suggested questions: %s",
+                        suggest_exc,
+                    )
+            if time.monotonic() >= _db_retry_after:
+                try:
+                    from db.engine import async_session as db_session_factory
+                    from db.models import Message
+
+                    async with db_session_factory() as db:
+                        session_uuid = uuid.UUID(session_id)
+                        db.add(Message(session_id=session_uuid, role="user", content=question))
+                        db.add(Message(session_id=session_uuid, role="assistant", content=full_answer))
+                        await asyncio.wait_for(db.commit(), timeout=0.5)
+                        _db_retry_after = 0.0
+                except Exception as db_exc:
+                    _db_retry_after = time.monotonic() + 60.0
+                    logger.warning("Failed to persist streaming messages: %s", db_exc)
             yield "data: " + _json.dumps({
                 "type": "result",
                 "answer": full_answer,
@@ -640,6 +827,7 @@ async def ask_stream(
                 "session_id": session_id,
                 "sources": sources,
                 "trace_id": "",
+                "suggested_questions": suggested_questions,
             }) + "\n\n"
         except Exception as exc:
             logger.warning("SSE streaming path failed, fallback to sync pipeline: %s", exc, exc_info=True)
@@ -660,11 +848,27 @@ async def ask_stream(
                             "page_content": item.get("page_content", "") if isinstance(item, dict) else "",
                         })
                     trace_id = result.get("trace_id") or ""
+                    suggested_questions = result.get("suggested_questions") or []
                 else:
                     answer = "Сессия не инициализирована."
                     session["history"].append({"role": "user", "content": question})
                     session["history"].append({"role": "assistant", "content": answer})
-                    quality, route, sources, trace_id = 0, "human", [], ""
+                    quality, route, sources, trace_id, suggested_questions = 0, "human", [], "", []
+
+                if time.monotonic() >= _db_retry_after:
+                    try:
+                        from db.engine import async_session as db_session_factory
+                        from db.models import Message
+
+                        async with db_session_factory() as db:
+                            session_uuid = uuid.UUID(session_id)
+                            db.add(Message(session_id=session_uuid, role="user", content=question))
+                            db.add(Message(session_id=session_uuid, role="assistant", content=answer))
+                            await asyncio.wait_for(db.commit(), timeout=0.5)
+                            _db_retry_after = 0.0
+                    except Exception as db_exc:
+                        _db_retry_after = time.monotonic() + 60.0
+                        logger.warning("Failed to persist streamed fallback messages: %s", db_exc)
 
                 yield "data: " + _json.dumps({
                     "type": "result",
@@ -674,6 +878,7 @@ async def ask_stream(
                     "session_id": session_id,
                     "sources": sources,
                     "trace_id": trace_id,
+                    "suggested_questions": suggested_questions,
                 }) + "\n\n"
             except Exception as sync_exc:
                 logger.error("SSE fallback error: %s", sync_exc, exc_info=True)
@@ -685,6 +890,7 @@ async def ask_stream(
                     "session_id": session_id,
                     "sources": [],
                     "trace_id": "",
+                    "suggested_questions": [],
                 }) + "\n\n"
 
     return StreamingResponse(
@@ -698,10 +904,15 @@ async def ask_stream(
 
 
 @router.post("/feedback", status_code=204)
-async def post_feedback(body: FeedbackRequest) -> None:
+async def post_feedback(
+    request: Request,
+    body: FeedbackRequest,
+    _user: dict = Depends(get_current_user),
+) -> None:
     """Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ Ñ„Ð¸Ð´Ð±ÐµÐº Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ Ð½Ð° Ð¾Ñ‚Ð²ÐµÑ‚."""
     if body.rating not in ("up", "down"):
         raise HTTPException(status_code=422, detail="rating must be 'up' or 'down'")
+    prometheus_metrics.FEEDBACK_COUNT.labels(rating=body.rating).inc()
     try:
         from sqlite_trace import save_feedback  # noqa: PLC0415
 
@@ -714,9 +925,60 @@ async def post_feedback(body: FeedbackRequest) -> None:
     except Exception as exc:
         logger.warning("Failed to save feedback: %s", exc)
 
+    await log_audit(
+        actor=_user.get("sub", "anonymous"),
+        action="feedback",
+        resource=f"trace:{body.trace_id}",
+        detail={"rating": body.rating},
+        ip_address=request.client.host if request.client else None,
+    )
+
+
+@router.post("/escalate")
+async def escalate_to_human(
+    request: Request,
+    body: EscalateRequest,
+    _user: dict = Depends(get_current_user),
+) -> dict:
+    """Ручная эскалация: пользователь хочет оператора."""
+    from datetime import datetime, timezone
+
+    record = {
+        "entity_id": body.session_id,
+        "question": body.question,
+        "route": "human_request",
+        "reason": body.reason,
+        "ts": datetime.now(timezone.utc).isoformat(),
+    }
+
+    try:
+        inbox_path = PROJECT_ROOT / "data" / "inbox" / "support_inbox.jsonl"
+        inbox_path.parent.mkdir(parents=True, exist_ok=True)
+        with inbox_path.open("a", encoding="utf-8", newline="\n") as f:
+            f.write(_json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception as exc:
+        logger.error("Failed to write escalation: %s", exc)
+        raise HTTPException(status_code=500, detail="Escalation failed")
+
+    await log_audit(
+        actor=_user.get("sub", "anonymous"),
+        action="escalate",
+        resource=f"session:{body.session_id}",
+        detail={"reason": body.reason},
+        ip_address=request.client.host if request.client else None,
+    )
+
+    return {
+        "status": "ok",
+        "message": "Ваш запрос передан оператору. Мы ответим в ближайшее время.",
+    }
+
 
 @router.get("/feedback/stats")
-async def feedback_stats(days: int = 30) -> dict:
+async def feedback_stats(
+    days: int = 30,
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> dict:
     """Feedback stats for the last N days."""
     try:
         from sqlite_trace import get_feedback_stats  # noqa: PLC0415
@@ -735,7 +997,9 @@ async def feedback_stats(days: int = 30) -> dict:
 
 
 @router.get("/metrics")
-async def get_metrics() -> dict:
+async def get_metrics(
+    _user: dict = Depends(require_role("admin")),
+) -> dict:
     """Агрегированный JSON-снапшот метрик здоровья системы."""
     try:
         from sqlite_trace import get_metrics_snapshot  # noqa: PLC0415
@@ -751,10 +1015,9 @@ async def get_metrics() -> dict:
 async def upload_document(
     request: Request,
     file: UploadFile = File(...),
-    _auth: None = Depends(_require_api_key),
+    _user: dict = Depends(require_role("agent", "admin")),
 ) -> UploadResponse:
     """Upload a document (PDF/DOCX/TXT/MD) and ingest it into the vector store."""
-    _ = _auth
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
@@ -766,15 +1029,41 @@ async def upload_document(
             detail=f"Unsupported file type: {ext}. Allowed: {', '.join(sorted(allowed))}",
         )
 
+    import re as _re
+
+    safe_name = Path(file.filename.replace("\\", "/")).name
+    safe_name = _re.sub(r"[^\w\-.]", "_", safe_name)
+    if not safe_name or safe_name.startswith("."):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
     upload_dir = PROJECT_ROOT / "data" / "uploads"
     upload_dir.mkdir(parents=True, exist_ok=True)
 
-    file_path = upload_dir / file.filename
+    file_path = upload_dir / safe_name
     try:
         content = await file.read()
         file_path.write_bytes(content)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to save file: {exc}")
+
+    await log_audit(
+        actor=_user.get("sub", "anonymous"),
+        action="upload",
+        resource=f"document:{safe_name}",
+        ip_address=request.client.host if request.client else None,
+    )
+
+    try:
+        from tasks.ingest_task import ingest_document
+
+        task = ingest_document.delay(str(file_path))
+        return UploadResponse(
+            status="accepted",
+            filename=safe_name,
+            message=f"File uploaded. Processing in background. task_id={task.id}",
+        )
+    except Exception as exc:
+        logger.info("Celery async upload unavailable, falling back to sync: %s", exc)
 
     if _DocumentLoader is not None and _build_vector_store is not None:
         try:
@@ -785,59 +1074,215 @@ async def upload_document(
                 if success:
                     return UploadResponse(
                         status="ok",
-                        filename=file.filename,
+                        filename=safe_name,
                         message=f"File uploaded and indexed. {len(docs)} document(s) processed.",
                     )
                 else:
                     return UploadResponse(
                         status="partial",
-                        filename=file.filename,
+                        filename=safe_name,
                         message="File saved but indexing failed. Check server logs.",
                     )
             else:
                 return UploadResponse(
                     status="partial",
-                    filename=file.filename,
+                    filename=safe_name,
                     message="File saved but no text content could be extracted.",
                 )
         except Exception as exc:
             logger.error("Ingestion error for %s: %s", file.filename, exc, exc_info=True)
             return UploadResponse(
                 status="partial",
-                filename=file.filename,
+                filename=safe_name,
                 message=f"File saved but ingestion failed: {exc}",
             )
     else:
         return UploadResponse(
             status="partial",
-            filename=file.filename,
+            filename=safe_name,
             message="File saved. Document loader or vector store builder not available for indexing.",
         )
 
 
+@router.get("/tasks/{task_id}", response_model=TaskStatusResponse)
+async def get_task_status(
+    task_id: str,
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> TaskStatusResponse:
+    """Check background task status."""
+    try:
+        from tasks.celery_app import celery_app
+
+        result = celery_app.AsyncResult(task_id)
+        result_payload: Optional[dict] = None
+        meta_payload: Optional[dict] = None
+
+        if result.ready():
+            if isinstance(result.result, dict):
+                result_payload = result.result
+            elif result.result is not None:
+                result_payload = {"detail": str(result.result)}
+            if result.status == "SUCCESS" and result_payload and result_payload.get("status") == "ok":
+                initialize_vector_store()
+        elif isinstance(result.info, dict):
+            meta_payload = result.info
+        elif result.info is not None:
+            meta_payload = {"detail": str(result.info)}
+
+        return TaskStatusResponse(
+            task_id=task_id,
+            status=result.status,
+            result=result_payload,
+            meta=meta_payload,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Task backend error: {exc}")
+
+
+@router.post("/auth/login", response_model=TokenResponse)
+async def login(request: Request, body: LoginRequest) -> TokenResponse:
+    """Authenticate and return JWT tokens."""
+    from auth.jwt_handler import create_access_token, create_refresh_token
+
+    import os
+
+    admin_user = os.getenv("ADMIN_USERNAME", "admin")
+    admin_hash = os.getenv("ADMIN_PASSWORD_HASH", "")
+
+    if not admin_hash:
+        if body.username == "admin" and body.password == "admin":
+            response = TokenResponse(
+                access_token=create_access_token("admin", "admin"),
+                refresh_token=create_refresh_token("admin", "admin"),
+            )
+            await log_audit(
+                actor=body.username,
+                action="login",
+                resource="auth",
+                ip_address=request.client.host if request.client else None,
+            )
+            return response
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    from passlib.hash import bcrypt
+
+    if body.username != admin_user or not bcrypt.verify(body.password, admin_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    response = TokenResponse(
+        access_token=create_access_token(body.username, "admin"),
+        refresh_token=create_refresh_token(body.username, "admin"),
+    )
+    await log_audit(
+        actor=body.username,
+        action="login",
+        resource="auth",
+        ip_address=request.client.host if request.client else None,
+    )
+    return response
+
+
+@router.post("/auth/refresh", response_model=TokenResponse)
+async def refresh_token(body: RefreshRequest) -> TokenResponse:
+    """Refresh access token."""
+    from auth.jwt_handler import create_access_token, create_refresh_token, verify_token
+
+    payload = verify_token(body.refresh_token, expected_type="refresh")
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+    return TokenResponse(
+        access_token=create_access_token(payload["sub"], payload.get("role", "viewer")),
+        refresh_token=create_refresh_token(payload["sub"], payload.get("role", "viewer")),
+    )
+
+
 @router.get("/sessions/{session_id}/history", response_model=HistoryResponse)
-async def get_session_history(session_id: str) -> HistoryResponse:
-    if session_id not in _sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
+async def get_session_history(
+    session_id: str,
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> HistoryResponse:
+    global _db_retry_after
+    if time.monotonic() >= _db_retry_after:
+        try:
+            from sqlalchemy import select
 
-    session = _sessions[session_id]
-    if hasattr(session, "history"):
-        history = session.history
-    elif isinstance(session, dict):
-        history = session.get("history", [])
-    else:
-        history = []
+            from db.engine import async_session
+            from db.models import Message
 
-    messages = [
-        HistoryMessage(role=msg.get("role", ""), content=msg.get("content", ""))
-        for msg in history
-    ]
-    return HistoryResponse(session_id=session_id, messages=messages)
+            async with async_session() as db:
+                result = await asyncio.wait_for(
+                    db.execute(
+                        select(Message)
+                        .where(Message.session_id == uuid.UUID(session_id))
+                        .order_by(Message.created_at)
+                    ),
+                    timeout=0.5,
+                )
+                messages = [
+                    HistoryMessage(role=message.role, content=message.content)
+                    for message in result.scalars()
+                ]
+                _db_retry_after = 0.0
+                if messages:
+                    return HistoryResponse(session_id=session_id, messages=messages)
+        except Exception as exc:
+            _db_retry_after = time.monotonic() + 60.0
+            logger.warning("DB history fallback: %s", exc)
+
+    if session_id in _sessions:
+        session = _sessions[session_id]
+        if hasattr(session, "history"):
+            history = session.history
+        elif isinstance(session, dict):
+            history = session.get("history", [])
+        else:
+            history = []
+
+        messages = [
+            HistoryMessage(role=msg.get("role", ""), content=msg.get("content", ""))
+            for msg in history
+        ]
+        if messages:
+            return HistoryResponse(session_id=session_id, messages=messages)
+
+    raise HTTPException(status_code=404, detail="Session not found")
 
 
 @router.get("/sessions", response_model=list[SessionInfo])
-async def list_sessions() -> list[SessionInfo]:
-    result: list[SessionInfo] = []
+async def list_sessions(
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> list[SessionInfo]:
+    result: dict[str, SessionInfo] = {}
+
+    global _db_retry_after
+    if time.monotonic() >= _db_retry_after:
+        try:
+            from sqlalchemy import func, select
+
+            from db.engine import async_session
+            from db.models import Message, Session as DBSession
+
+            async with async_session() as db:
+                db_result = await asyncio.wait_for(
+                    db.execute(
+                        select(DBSession.id, func.count(Message.id))
+                        .outerjoin(Message, Message.session_id == DBSession.id)
+                        .group_by(DBSession.id)
+                        .order_by(DBSession.last_access.desc())
+                    ),
+                    timeout=0.5,
+                )
+                for session_uuid, message_count in db_result.all():
+                    result[session_uuid.hex] = SessionInfo(
+                        session_id=session_uuid.hex,
+                        message_count=message_count,
+                    )
+                _db_retry_after = 0.0
+        except Exception as exc:
+            _db_retry_after = time.monotonic() + 60.0
+            logger.warning("DB sessions fallback: %s", exc)
+
     for sid, session in list(_sessions.items()):
         if hasattr(session, "_history"):
             count = len(session._history)
@@ -847,20 +1292,59 @@ async def list_sessions() -> list[SessionInfo]:
             count = len(session.get("history", []))
         else:
             count = 0
-        result.append(SessionInfo(session_id=sid, message_count=count))
-    return result
+        if sid not in result:
+            result[sid] = SessionInfo(session_id=sid, message_count=count)
+    return list(result.values())
 
 
 @router.delete("/sessions/{session_id}")
-async def clear_session(session_id: str) -> Dict[str, str]:
-    if session_id not in _sessions:
+async def clear_session(
+    request: Request,
+    session_id: str,
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> Dict[str, str]:
+    global _db_retry_after
+    found = False
+
+    if session_id in _sessions:
+        session = _sessions[session_id]
+        if hasattr(session, "clear"):
+            session.clear()
+        del _sessions[session_id]
+        found = True
+    _session_last_access.pop(session_id, None)
+
+    if time.monotonic() >= _db_retry_after:
+        try:
+            from sqlalchemy import select
+
+            from db.engine import async_session
+            from db.models import Session as DBSession
+
+            async with async_session() as db:
+                db_result = await asyncio.wait_for(
+                    db.execute(select(DBSession).where(DBSession.id == uuid.UUID(session_id))),
+                    timeout=0.5,
+                )
+                db_session = db_result.scalar_one_or_none()
+                if db_session is not None:
+                    await db.delete(db_session)
+                    await asyncio.wait_for(db.commit(), timeout=0.5)
+                    found = True
+                _db_retry_after = 0.0
+        except Exception as exc:
+            _db_retry_after = time.monotonic() + 60.0
+            logger.warning("DB clear session fallback: %s", exc)
+
+    if not found:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    session = _sessions[session_id]
-    if hasattr(session, "clear"):
-        session.clear()
-    del _sessions[session_id]
-    _session_last_access.pop(session_id, None)
+    await log_audit(
+        actor=_user.get("sub", "anonymous"),
+        action="delete_session",
+        resource=f"session:{session_id}",
+        ip_address=request.client.host if request.client else None,
+    )
     return {"status": "ok", "message": f"Session {session_id} cleared"}
 
 
@@ -902,6 +1386,16 @@ async def health_check() -> HealthResponse:
 
 app = FastAPI(title="RAG Support Assistant API", version="0.3.0", lifespan=_lifespan)
 
+# CORS
+_cors_settings = get_settings()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["X-API-Key", "Content-Type", "Authorization"],
+)
+
 
 @app.middleware("http")
 async def _log_requests(request: Request, call_next: Any) -> Any:
@@ -921,3 +1415,18 @@ async def _log_requests(request: Request, call_next: Any) -> Any:
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.include_router(router)
+
+
+@app.get("/metrics")
+async def prometheus_metrics_endpoint() -> Response:
+    if not getattr(prometheus_metrics, "PROMETHEUS_AVAILABLE", False):
+        return JSONResponse(
+            status_code=501,
+            content={"detail": "prometheus-client is not installed"},
+        )
+
+    prometheus_metrics.ACTIVE_SESSIONS.set(len(_sessions))
+    return Response(
+        content=prometheus_metrics.generate_latest(prometheus_metrics.REGISTRY),
+        media_type=prometheus_metrics.CONTENT_TYPE_LATEST,
+    )

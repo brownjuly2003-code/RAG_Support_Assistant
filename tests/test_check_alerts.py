@@ -2,24 +2,11 @@ from __future__ import annotations
 
 import json
 import sys
-import types
 import uuid
 from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-
-def _install_sqlite_trace_stub() -> None:
-    module = sys.modules.get("sqlite_trace")
-    if module is None:
-        module = types.ModuleType("sqlite_trace")
-        sys.modules["sqlite_trace"] = module
-
-    module.get_metrics_snapshot = getattr(module, "get_metrics_snapshot", lambda: {})
-
-
-_install_sqlite_trace_stub()
 
 import scripts.check_alerts as ca
 

@@ -2,44 +2,27 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>RAG Support Assistant</title>
+    <link rel="stylesheet" href="/static/styles/tokens.css">
+    <link rel="stylesheet" href="/static/styles/components.css">
     <style>
         :root {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f0f2f5;
-            --bg-chat: #e8ecf1;
             --bg-user-msg: #4a90d9;
             --bg-bot-msg: #ffffff;
-            --text-primary: #1a1a2e;
-            --text-secondary: #555770;
             --text-user-msg: #ffffff;
             --text-bot-msg: #1a1a2e;
-            --border-color: #d1d5db;
-            --accent: #4a90d9;
-            --accent-hover: #357abd;
             --badge-quality: #10b981;
             --badge-route: #8b5cf6;
-            --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             --shadow-msg: 0 1px 3px rgba(0, 0, 0, 0.06);
-            --radius: 12px;
             --radius-msg: 16px;
         }
 
         [data-theme="dark"] {
-            --bg-primary: #1a1a2e;
-            --bg-secondary: #16213e;
-            --bg-chat: #0f1729;
             --bg-user-msg: #4a90d9;
             --bg-bot-msg: #1e2a4a;
-            --text-primary: #e0e0e0;
-            --text-secondary: #a0a4b8;
             --text-user-msg: #ffffff;
             --text-bot-msg: #e0e0e0;
-            --border-color: #2a3550;
-            --accent: #5b9ee6;
-            --accent-hover: #4a90d9;
-            --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             --shadow-msg: 0 1px 3px rgba(0, 0, 0, 0.2);
         }
 
@@ -201,6 +184,77 @@
         .btn-icon svg {
             width: 18px;
             height: 18px;
+        }
+
+        .btn-escalate {
+            color: var(--warning, #ffc107);
+        }
+
+        .btn-escalate:hover {
+            color: var(--warning, #ffc107);
+        }
+
+        .escalate-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 200;
+        }
+
+        .escalate-modal.active {
+            display: flex;
+        }
+
+        .escalate-dialog {
+            background: var(--bg-primary, #fff);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .escalate-dialog h3 {
+            margin-bottom: 12px;
+        }
+
+        .escalate-dialog p {
+            margin-bottom: 16px;
+            color: var(--text-secondary, #555);
+            font-size: 14px;
+        }
+
+        .escalate-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .escalate-actions button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-confirm-escalate {
+            background: var(--accent, #4a90d9);
+            color: #fff;
+        }
+
+        .btn-cancel-escalate {
+            background: var(--bg-secondary, #f0f2f5);
+        }
+
+        .escalate-success {
+            text-align: center;
+            padding: 16px;
+            background: var(--bg-secondary, #f0f2f5);
+            border-radius: 8px;
+            margin: 8px 0;
         }
 
         /* Status indicator */
@@ -373,6 +427,132 @@
             margin-top: 2px;
         }
 
+        .suggested-questions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .btn-suggested {
+            padding: 6px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            background: transparent;
+            color: var(--accent, #4a90d9);
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .btn-suggested:hover {
+            background: var(--bg-secondary, #f0f2f5);
+            border-color: var(--accent, #4a90d9);
+        }
+
+        .citation-ref {
+            display: inline;
+            color: var(--accent, #4a90d9);
+            cursor: pointer;
+            font-size: 0.85em;
+            vertical-align: super;
+            font-weight: 600;
+            padding: 0 2px;
+        }
+
+        .citation-ref:hover {
+            text-decoration: underline;
+        }
+
+        .citation-tooltip {
+            position: absolute;
+            background: var(--bg-primary, #fff);
+            border: 1px solid var(--border-color, #e0e0e0);
+            border-radius: 8px;
+            padding: 8px 12px;
+            max-width: 300px;
+            font-size: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+        }
+
+        .citation-tooltip.visible {
+            display: block;
+        }
+
+        .citation-tooltip .source-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .citation-tooltip .source-excerpt {
+            color: var(--text-secondary, #555);
+        }
+
+        .msg-actions {
+            display: flex;
+            gap: 4px;
+            margin-top: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            align-self: flex-end;
+        }
+
+        .message:hover .msg-actions {
+            opacity: 1;
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 4px;
+            background: transparent;
+            color: var(--text-secondary, #999);
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .btn-action:hover {
+            background: var(--bg-secondary, #f0f2f5);
+            color: var(--text-primary, #333);
+        }
+
+        .btn-action:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .btn-retry {
+            width: auto;
+            padding: 4px 12px;
+            font-size: 12px;
+            border: 1px solid var(--border-color, #e0e0e0);
+            border-radius: 4px;
+            color: var(--accent, #4a90d9);
+        }
+
+        .btn-escalate-action {
+            width: auto;
+            padding: 4px 12px;
+            font-size: 12px;
+            border: 1px solid var(--border-color, #e0e0e0);
+            border-radius: 4px;
+            color: #b45309;
+        }
+
+        .msg-timestamp {
+            font-size: 11px;
+            color: var(--text-secondary, #999);
+            margin-top: 4px;
+            text-align: right;
+        }
+
         .msg-feedback {
             display: flex;
             gap: 6px;
@@ -503,6 +683,17 @@
 
         .input-group textarea::placeholder {
             color: var(--text-secondary);
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
         }
 
         .btn-upload {
@@ -668,13 +859,88 @@
             box-shadow: var(--shadow);
         }
 
-        /* Responsive */
-        @media (max-width: 600px) {
-            .sidebar { display: none; }
-            .header h1 { font-size: 15px; }
-            .header-subtitle { display: none; }
-            .message { max-width: 95%; }
-            .chat-container { padding: 12px; }
+        .sidebar-overlay {
+            display: none;
+        }
+
+        /* Tablet */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                top: 0;
+                width: 280px;
+                min-width: 280px;
+                height: 100vh;
+                z-index: 100;
+                transition: left var(--transition, 0.2s ease);
+                box-shadow: var(--shadow);
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 99;
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+
+            .sidebar-collapse {
+                display: none;
+            }
+
+            .header {
+                padding: 12px 16px;
+            }
+
+            .chat-container {
+                padding: 16px;
+            }
+        }
+
+        /* Phone */
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 16px;
+            }
+
+            .header-subtitle {
+                display: none;
+            }
+
+            .header-actions .btn-icon {
+                width: 40px;
+                height: 40px;
+            }
+
+            .input-wrapper {
+                padding: 8px;
+            }
+
+            .chat-container {
+                padding: 12px;
+            }
+
+            .message {
+                max-width: 95%;
+            }
+
+            .message-content {
+                max-width: 90%;
+            }
+
+            .msg-feedback .btn-feedback {
+                min-width: 44px;
+                min-height: 44px;
+            }
         }
     </style>
 </head>
@@ -682,35 +948,50 @@
     <div class="app-layout">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <span>Sessions</span>
-                <button class="btn-icon" id="sidebarToggle" title="Hide sidebar">‹</button>
+                <span>Сессии</span>
+                <button class="btn-icon sidebar-collapse" id="sidebarCollapseToggle" title="Скрыть боковую панель" aria-label="Скрыть боковую панель">‹</button>
             </div>
             <div id="sessionList" class="session-list"></div>
         </aside>
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
         <div class="main-pane">
     <!-- Header -->
     <div class="header">
         <div class="header-left">
+            <button class="btn-icon sidebar-toggle" id="sidebarToggle" aria-label="Открыть меню"
+                    style="display:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </button>
             <div class="header-logo">R</div>
             <div>
                 <h1>RAG Support Assistant</h1>
                 <div class="header-subtitle">
                     <span class="status-dot" id="statusDot"></span>
-                    <span class="status-text" id="statusText">Connecting...</span>
+                    <span class="status-text" id="statusText">Подключение...</span>
                 </div>
             </div>
         </div>
         <div class="header-actions">
-            <a href="/static/help.html" target="_blank" rel="noopener noreferrer" class="btn-icon" title="О системе" style="text-decoration: none; font-weight: 700;">?</a>
-            <a href="/static/metrics.html" target="_blank" class="btn-icon" title="Метрики" style="text-decoration:none;font-size:12px;font-weight:700;">M</a>
+            <button class="btn-icon btn-escalate" id="escalateBtn" title="Связаться с оператором" aria-label="Связаться с оператором">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+            </button>
+            <a href="/static/help.html" target="_blank" rel="noopener noreferrer" class="btn-icon" title="О системе" aria-label="О системе" style="text-decoration: none; font-weight: 700;">?</a>
+            <a href="/static/metrics.html" target="_blank" class="btn-icon" title="Метрики" aria-label="Метрики" style="text-decoration:none;font-size:12px;font-weight:700;">M</a>
             <!-- Dark mode toggle -->
-            <button class="btn-icon" id="themeToggle" title="Toggle dark mode">
+            <button class="btn-icon" id="themeToggle" title="Переключить тему" aria-label="Переключить тему">
                 <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                 </svg>
             </button>
             <!-- New session -->
-            <button class="btn-icon" id="newSessionBtn" title="New session">
+            <button class="btn-icon" id="newSessionBtn" title="Новая сессия" aria-label="Новая сессия">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 5v14M5 12h14"/>
                 </svg>
@@ -738,29 +1019,31 @@
     </div>
 
     <!-- Input area -->
-    <div class="input-area">
+    <form class="input-area" id="chatForm" role="search" aria-label="Задать вопрос">
         <div class="input-wrapper">
             <div class="input-group">
-                <button class="btn-upload" id="uploadBtn" title="Upload document">
+                <button class="btn-upload" id="uploadBtn" type="button" title="Загрузить документ" aria-label="Загрузить документ">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
                     </svg>
                 </button>
+                <label for="questionInput" class="sr-only">Введите ваш вопрос</label>
                 <textarea
                     id="questionInput"
                     placeholder="Напишите ваш вопрос..."
                     rows="1"
                     autofocus
+                    aria-label="Введите ваш вопрос"
                 ></textarea>
             </div>
-            <button class="btn-send" id="sendBtn" title="Отправить">
+            <button class="btn-send" id="sendBtn" type="submit" title="Отправить" aria-label="Отправить">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="22" y1="2" x2="11" y2="13"/>
                     <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                 </svg>
             </button>
         </div>
-    </div>
+    </form>
         </div>
     </div>
 
@@ -788,6 +1071,17 @@
         <div class="drag-overlay-text">Перетащите файл для загрузки</div>
     </div>
 
+    <div class="escalate-modal" id="escalateModal">
+        <div class="escalate-dialog" role="dialog" aria-modal="true" aria-label="Подтверждение эскалации">
+            <h3>Связаться с оператором</h3>
+            <p>Ваш текущий диалог будет передан оператору поддержки. Мы ответим в ближайшее время.</p>
+            <div class="escalate-actions">
+                <button class="btn-cancel-escalate" id="escalateCancel" type="button">Отмена</button>
+                <button class="btn-confirm-escalate" id="escalateConfirm" type="button">Подтвердить</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ---------------------------------------------------------------------------
         // State
@@ -801,6 +1095,7 @@
         // ---------------------------------------------------------------------------
         const chatContainer = document.getElementById('chatContainer');
         const chatMessages = document.getElementById('chatMessages');
+        const chatForm = document.getElementById('chatForm');
         const questionInput = document.getElementById('questionInput');
         const sendBtn = document.getElementById('sendBtn');
         const typingIndicator = document.getElementById('typingIndicator');
@@ -808,6 +1103,8 @@
         const sessionList = document.getElementById('sessionList');
         const sidebar = document.getElementById('sidebar');
         const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebarCollapseToggle = document.getElementById('sidebarCollapseToggle');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
         const themeToggle = document.getElementById('themeToggle');
         const themeIcon = document.getElementById('themeIcon');
         const statusDot = document.getElementById('statusDot');
@@ -820,6 +1117,47 @@
         const uploadClose = document.getElementById('uploadClose');
         const uploadStatus = document.getElementById('uploadStatus');
         const dragOverlay = document.getElementById('dragOverlay');
+        const escalateBtn = document.getElementById('escalateBtn');
+        const escalateModal = document.getElementById('escalateModal');
+        const escalateConfirm = document.getElementById('escalateConfirm');
+        const escalateCancel = document.getElementById('escalateCancel');
+
+        function getErrorMessage(error, context) {
+            if (error && error.message && error.message.includes('Failed to fetch')) {
+                return {
+                    text: 'Сервер недоступен. Проверьте подключение к интернету.',
+                    actions: ['retry', 'escalate'],
+                };
+            }
+            if (error && error.status === 429) {
+                return {
+                    text: 'Слишком много запросов. Подождите минуту и попробуйте снова.',
+                    actions: ['retry'],
+                };
+            }
+            if (error && error.status === 503) {
+                return {
+                    text: 'Сервис временно недоступен. Ollama может перезагружаться.',
+                    actions: ['retry', 'escalate'],
+                };
+            }
+            if (context === 'escalate') {
+                return {
+                    text: 'Не удалось передать запрос оператору. Попробуйте позже или повторите запрос.',
+                    actions: ['retry', 'escalate'],
+                };
+            }
+            if (context === 'stream' || (error && error.context === 'stream')) {
+                return {
+                    text: 'Потоковая передача прервана. Попробуйте отправить вопрос заново.',
+                    actions: ['retry'],
+                };
+            }
+            return {
+                text: 'Произошла ошибка: ' + ((error && error.message) || error || 'неизвестная ошибка'),
+                actions: ['retry', 'escalate'],
+            };
+        }
 
         // ---------------------------------------------------------------------------
         // Theme
@@ -845,6 +1183,56 @@
                 : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
         }
 
+        const sidebarMobileMQ = window.matchMedia('(max-width: 768px)');
+
+        function setSidebarOpen(isOpen) {
+            if (!sidebar || !sidebarOverlay || !sidebarToggle) return;
+            sidebar.classList.toggle('open', isOpen);
+            sidebarOverlay.classList.toggle('active', isOpen);
+            sidebarToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            document.body.style.overflow = isOpen ? 'hidden' : '';
+        }
+
+        function handleSidebarMQ(e) {
+            if (!sidebar || !sidebarToggle) return;
+            const isMobile = e.matches;
+            sidebarToggle.style.display = isMobile ? 'flex' : 'none';
+            if (isMobile) {
+                sidebar.classList.remove('collapsed');
+                sidebarToggle.setAttribute('aria-expanded', sidebar.classList.contains('open') ? 'true' : 'false');
+            } else {
+                setSidebarOpen(false);
+            }
+        }
+
+        chatMessages.addEventListener('click', async function(e) {
+            const btn = e.target.closest('.btn-feedback');
+            if (!btn) return;
+
+            const fbDiv = btn.closest('.msg-feedback');
+            if (!fbDiv) return;
+
+            const rating = btn.dataset.rating;
+            const traceId = fbDiv.dataset.traceId || '';
+            const feedbackSessionId = fbDiv.dataset.sessionId || '';
+
+            fbDiv.querySelectorAll('.btn-feedback').forEach(b => b.classList.add('voted'));
+
+            try {
+                await fetch(API_BASE + '/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        trace_id: traceId,
+                        session_id: feedbackSessionId,
+                        rating: rating,
+                    }),
+                });
+            } catch (err) {
+                console.warn('Feedback submission failed:', err);
+            }
+        });
+
         async function loadSessions() {
             try {
                 const resp = await fetch(API_BASE + '/sessions');
@@ -852,7 +1240,7 @@
                 const sessions = await resp.json();
                 sessionList.innerHTML = '';
                 if (sessions.length === 0) {
-                    sessionList.innerHTML = '<div class="session-empty">No sessions</div>';
+                    sessionList.innerHTML = '<div class="session-empty">Нет сессий</div>';
                     return;
                 }
                 sessions.forEach(function(s) {
@@ -865,7 +1253,9 @@
                     });
                     sessionList.appendChild(item);
                 });
-            } catch (_) {}
+            } catch (err) {
+                console.warn('Failed to load sessions:', err);
+            }
         }
 
         async function switchSession(newSessionId) {
@@ -882,10 +1272,12 @@
                             addMessage(msg.role === 'user' ? 'user' : 'bot', msg.content);
                         });
                     } else {
-                        chatMessages.innerHTML = '<div class="welcome" id="welcomeBlock"><h2>RAG Support Assistant</h2><p>New session. Ask your question.</p></div>';
+                        chatMessages.innerHTML = '<div class="welcome" id="welcomeBlock"><h2>RAG Support Assistant</h2><p>Новая сессия. Задайте ваш вопрос.</p></div>';
                     }
                 }
-            } catch (_) {}
+            } catch (err) {
+                console.warn('Failed to switch session:', err);
+            }
             loadSessions();
             scrollToBottom();
         }
@@ -900,11 +1292,11 @@
                     const data = await res.json();
                     statusDot.classList.remove('offline');
                     if (data.vector_store_loaded && data.pipeline_available) {
-                        statusText.textContent = 'Online';
+                        statusText.textContent = 'Онлайн';
                     } else if (data.pipeline_available) {
-                        statusText.textContent = 'Online (нет векторной БД)';
+                        statusText.textContent = 'Онлайн (нет векторной БД)';
                     } else {
-                        statusText.textContent = 'Online (демо-режим)';
+                        statusText.textContent = 'Онлайн (демо-режим)';
                     }
                 } else {
                     statusDot.classList.add('offline');
@@ -929,11 +1321,64 @@
         // ---------------------------------------------------------------------------
         // Send message
         // ---------------------------------------------------------------------------
-        sendBtn.addEventListener('click', sendMessage);
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            sendMessage();
+        });
         questionInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
+            }
+        });
+
+        escalateBtn.addEventListener('click', function() {
+            escalateModal.classList.add('active');
+        });
+
+        escalateCancel.addEventListener('click', function() {
+            escalateModal.classList.remove('active');
+        });
+
+        escalateConfirm.addEventListener('click', async function() {
+            escalateModal.classList.remove('active');
+            const typedQuestion = questionInput.value.trim();
+            const questionToEscalate = typedQuestion || '(пользователь запросил оператора)';
+            try {
+                const resp = await fetch(API_BASE + '/escalate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId || 'manual-escalation',
+                        question: questionToEscalate,
+                        reason: 'user_request',
+                    }),
+                });
+                if (!resp.ok) {
+                    const httpError = new Error('HTTP ' + resp.status);
+                    httpError.status = resp.status;
+                    throw httpError;
+                }
+                const data = await resp.json();
+                const currentWelcome = document.getElementById('welcomeBlock');
+                if (currentWelcome) currentWelcome.style.display = 'none';
+                addMessage('bot', data.message || 'Запрос передан оператору.', { route: 'human' });
+            } catch (err) {
+                const currentWelcome = document.getElementById('welcomeBlock');
+                if (currentWelcome) currentWelcome.style.display = 'none';
+                const errInfo = getErrorMessage(err, 'escalate');
+                addMessage('bot', errInfo.text, {
+                    error: true,
+                    actions: typedQuestion ? errInfo.actions : ['escalate'],
+                    originalQuestion: typedQuestion,
+                });
+                console.warn('Escalation error:', err);
+            }
+        });
+
+        escalateModal.addEventListener('click', function(e) {
+            if (e.target === escalateModal) {
+                escalateModal.classList.remove('active');
             }
         });
 
@@ -969,11 +1414,15 @@
                 });
 
                 if (!res.ok) {
-                    throw new Error('HTTP ' + res.status);
+                    const httpError = new Error('HTTP ' + res.status);
+                    httpError.status = res.status;
+                    throw httpError;
                 }
 
                 if (!res.body) {
-                    throw new Error('No stream body');
+                    const streamBodyError = new Error('Поток данных не получен');
+                    streamBodyError.context = 'stream';
+                    throw streamBodyError;
                 }
 
                 const reader = res.body.getReader();
@@ -992,11 +1441,14 @@
                             let event;
                             try {
                                 event = JSON.parse(line.slice(6));
-                            } catch (_) {
+                            } catch (err) {
+                                console.warn('Operation failed:', err);
                                 continue;
                             }
                             if (event.type === 'error') {
-                                throw new Error(event.detail || 'Streaming error');
+                                const streamError = new Error(event.detail || 'Ошибка потоковой передачи');
+                                streamError.context = 'stream';
+                                throw streamError;
                             }
                             if (event.type === 'token_start') {
                                 typingIndicator.classList.remove('active');
@@ -1062,7 +1514,9 @@
                 }
 
                 if (!data) {
-                    throw new Error('No result received');
+                    const resultError = new Error('Ответ не был получен');
+                    resultError.context = 'stream';
+                    throw resultError;
                 }
 
                 // Save session
@@ -1078,13 +1532,15 @@
                     sources: data.sources,
                     trace_id: data.trace_id,
                     session_id: data.session_id,
+                    suggested_questions: data.suggested_questions,
                 });
                 loadSessions();
             } catch (err) {
                 if (streamingMsg) {
                     streamingMsg.remove();
                 }
-                addMessage('bot', 'Ошибка: ' + err.message, { quality: 0, route: 'error' });
+                const errInfo = getErrorMessage(err, (err && err.context) || 'send');
+                addMessage('bot', errInfo.text, { error: true, actions: errInfo.actions, originalQuestion: question });
             } finally {
                 isLoading = false;
                 sendBtn.disabled = false;
@@ -1112,6 +1568,73 @@
             bubble.textContent = text;
             content.appendChild(bubble);
 
+            let actionsDiv = null;
+            if (role === 'bot' && text) {
+                actionsDiv = document.createElement('div');
+                actionsDiv.className = 'msg-actions';
+
+                if (!meta || !meta.error) {
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'btn-action';
+                    copyBtn.title = 'Копировать';
+                    copyBtn.setAttribute('aria-label', 'Копировать ответ');
+                    copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+                    copyBtn.addEventListener('click', async function() {
+                        try {
+                            await navigator.clipboard.writeText(text);
+                            copyBtn.innerHTML = '✓';
+                            setTimeout(function() {
+                                copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+                            }, 2000);
+                        } catch (copyErr) {
+                            console.warn('Copy failed:', copyErr);
+                        }
+                    });
+                    actionsDiv.appendChild(copyBtn);
+                }
+
+                if (meta && meta.actions && meta.actions.length > 0) {
+                    meta.actions.forEach(function(action) {
+                        if (action === 'retry') {
+                            const retryBtn = document.createElement('button');
+                            retryBtn.className = 'btn-action btn-retry';
+                            retryBtn.type = 'button';
+                            retryBtn.textContent = 'Повторить';
+                            retryBtn.setAttribute('aria-label', 'Повторить отправку');
+                            retryBtn.addEventListener('click', function() {
+                                const questionToRetry = meta.originalQuestion || '';
+                                if (!questionToRetry) return;
+                                msg.remove();
+                                questionInput.value = questionToRetry;
+                                sendMessage();
+                            });
+                            actionsDiv.appendChild(retryBtn);
+                        }
+
+                        if (action === 'escalate') {
+                            const escalateActionBtn = document.createElement('button');
+                            escalateActionBtn.className = 'btn-action btn-escalate-action';
+                            escalateActionBtn.type = 'button';
+                            escalateActionBtn.textContent = 'Передать оператору';
+                            escalateActionBtn.setAttribute('aria-label', 'Передать запрос оператору');
+                            escalateActionBtn.addEventListener('click', function() {
+                                const questionToEscalate = (meta && meta.originalQuestion) || '';
+                                if (!questionToEscalate) return;
+                                questionInput.value = questionToEscalate;
+                                escalateModal.classList.add('active');
+                            });
+                            actionsDiv.appendChild(escalateActionBtn);
+                        }
+                    });
+                }
+
+                if (!actionsDiv.childElementCount) {
+                    actionsDiv = null;
+                } else if (meta && meta.error) {
+                    actionsDiv.style.opacity = '1';
+                }
+            }
+
             // Badges (bot only)
             if (role === 'bot' && meta) {
                 const badges = document.createElement('div');
@@ -1138,6 +1661,16 @@
 
                 // Sources
                 if (meta.sources && meta.sources.length > 0) {
+                    let bubbleHtml = bubble.innerHTML;
+                    meta.sources.forEach(function(s, i) {
+                        const num = i + 1;
+                        const ref = '<span class="citation-ref" data-citation="' + num + '" role="button" tabindex="0">[' + num + ']</span>';
+                        bubbleHtml = bubbleHtml.replace(new RegExp('\\[' + num + '\\]', 'g'), ref);
+                    });
+                    if (bubbleHtml !== bubble.innerHTML) {
+                        bubble.innerHTML = bubbleHtml;
+                    }
+
                     const srcBlock = document.createElement('details');
                     srcBlock.className = 'message-sources';
                     const summary = document.createElement('summary');
@@ -1151,35 +1684,94 @@
                     });
                     srcBlock.appendChild(ul);
                     content.appendChild(srcBlock);
+
+                    bubble.querySelectorAll('.citation-ref').forEach(function(ref) {
+                        ref.addEventListener('mouseenter', function() {
+                            const idx = parseInt(ref.dataset.citation, 10) - 1;
+                            const src = meta.sources[idx];
+                            if (!src) return;
+
+                            let tooltip = document.getElementById('citationTooltip');
+                            if (!tooltip) {
+                                tooltip = document.createElement('div');
+                                tooltip.id = 'citationTooltip';
+                                tooltip.className = 'citation-tooltip';
+                                document.body.appendChild(tooltip);
+                            }
+
+                            const title = document.createElement('div');
+                            title.className = 'source-title';
+                            title.textContent = src.source || 'Источник';
+
+                            const excerpt = document.createElement('div');
+                            excerpt.className = 'source-excerpt';
+                            const excerptText = src.page_content || '';
+                            excerpt.textContent = excerptText.length > 150 ? excerptText.substring(0, 150) + '...' : excerptText;
+
+                            tooltip.replaceChildren(title, excerpt);
+                            tooltip.classList.add('visible');
+
+                            const rect = ref.getBoundingClientRect();
+                            tooltip.style.left = window.scrollX + rect.left + 'px';
+                            tooltip.style.top = window.scrollY + rect.bottom + 4 + 'px';
+                        });
+
+                        ref.addEventListener('mouseleave', function() {
+                            const tooltip = document.getElementById('citationTooltip');
+                            if (tooltip) tooltip.classList.remove('visible');
+                        });
+
+                        ref.addEventListener('click', function() {
+                            srcBlock.open = true;
+                        });
+
+                        ref.addEventListener('keydown', function(e) {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                srcBlock.open = true;
+                            }
+                        });
+                    });
+                }
+
+                if (meta.suggested_questions && meta.suggested_questions.length > 0) {
+                    const sqDiv = document.createElement('div');
+                    sqDiv.className = 'suggested-questions';
+                    meta.suggested_questions.forEach(function(q) {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn-suggested';
+                        btn.type = 'button';
+                        btn.textContent = q;
+                        btn.addEventListener('click', function() {
+                            questionInput.value = q;
+                            sendMessage();
+                        });
+                        sqDiv.appendChild(btn);
+                    });
+                    content.appendChild(sqDiv);
                 }
 
                 if (meta.trace_id || meta.session_id) {
                     const fbDiv = document.createElement('div');
                     fbDiv.className = 'msg-feedback';
+                    fbDiv.dataset.traceId = meta.trace_id || '';
+                    fbDiv.dataset.sessionId = meta.session_id || sessionId || '';
                     fbDiv.innerHTML = `
-                        <button class="btn-feedback" data-rating="up" title="ÐžÑ‚Ð²ÐµÑ‚ Ð¿Ð¾Ð»ÐµÐ·ÐµÐ½">👍</button>
-                        <button class="btn-feedback" data-rating="down" title="ÐžÑ‚Ð²ÐµÑ‚ Ð½Ðµ Ð¿Ð¾Ð¼Ð¾Ð³">👎</button>
+                        <button class="btn-feedback" data-rating="up" title="Ответ полезен">👍</button>
+                        <button class="btn-feedback" data-rating="down" title="Ответ не помог">👎</button>
                     `;
-                    fbDiv.querySelectorAll('.btn-feedback').forEach(btn => {
-                        btn.addEventListener('click', async () => {
-                            const rating = btn.dataset.rating;
-                            fbDiv.querySelectorAll('.btn-feedback').forEach(b => b.classList.add('voted'));
-                            try {
-                                await fetch(API_BASE + '/feedback', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        trace_id: meta.trace_id || '',
-                                        session_id: meta.session_id || sessionId || '',
-                                        rating: rating,
-                                    }),
-                                });
-                            } catch (_) {}
-                        });
-                    });
                     content.appendChild(fbDiv);
                 }
             }
+
+            if (actionsDiv) {
+                content.appendChild(actionsDiv);
+            }
+
+            const timestamp = document.createElement('div');
+            timestamp.className = 'msg-timestamp';
+            timestamp.textContent = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            content.appendChild(timestamp);
 
             msg.appendChild(avatar);
             msg.appendChild(content);
@@ -1200,8 +1792,8 @@
             if (sessionId) {
                 try {
                     await fetch(API_BASE + '/sessions/' + sessionId, { method: 'DELETE' });
-                } catch (e) {
-                    // ignore
+                } catch (err) {
+                    console.warn('Failed to delete session:', err);
                 }
             }
             sessionId = null;
@@ -1303,7 +1895,8 @@
                     uploadStatus.className = 'upload-status error';
                 }
             } catch (err) {
-                uploadStatus.textContent = 'Ошибка: ' + err.message;
+                const errInfo = getErrorMessage(err, 'upload');
+                uploadStatus.textContent = errInfo.text;
                 uploadStatus.className = 'upload-status error';
             }
 
@@ -1330,15 +1923,31 @@
                         addMessage(msg.role === 'user' ? 'user' : 'bot', msg.content);
                     });
                 }
-            } catch (e) {
-                // Server not running
+            } catch (err) {
+                console.warn('Failed to load history:', err);
             }
+        }
+        if (sidebarCollapseToggle) {
+            sidebarCollapseToggle.addEventListener('click', function() {
+                if (sidebar && !sidebarMobileMQ.matches) {
+                    sidebar.classList.toggle('collapsed');
+                }
+            });
         }
         if (sidebarToggle) {
             sidebarToggle.addEventListener('click', function() {
-                if (sidebar) sidebar.classList.toggle('collapsed');
+                if (sidebar && sidebarMobileMQ.matches) {
+                    setSidebarOpen(!sidebar.classList.contains('open'));
+                }
             });
         }
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', function() {
+                setSidebarOpen(false);
+            });
+        }
+        sidebarMobileMQ.addEventListener('change', handleSidebarMQ);
+        handleSidebarMQ(sidebarMobileMQ);
         loadSessions();
         loadHistory();
     </script>

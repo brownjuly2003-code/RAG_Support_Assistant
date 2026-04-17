@@ -12,6 +12,27 @@ import logging
 import sys
 from datetime import datetime, timezone
 
+from utils.pii import redact_pii
+
+
+class PIIRedactionFilter(logging.Filter):
+    """Redact PII from log records."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.msg, str):
+            record.msg = redact_pii(record.msg)
+        if record.args:
+            if isinstance(record.args, dict):
+                record.args = {
+                    key: redact_pii(value) if isinstance(value, str) else value
+                    for key, value in record.args.items()
+                }
+            elif isinstance(record.args, tuple):
+                record.args = tuple(
+                    redact_pii(arg) if isinstance(arg, str) else arg for arg in record.args
+                )
+        return True
+
 
 class _JsonFormatter(logging.Formatter):
     """Форматирует лог-запись как однострочный JSON для stdout."""
@@ -62,6 +83,9 @@ def setup_logging(level: str = "INFO") -> None:
     # Не дублируем хэндлеры при повторных вызовах
     root.handlers.clear()
     root.addHandler(handler)
+    pii_filter = PIIRedactionFilter()
+    for root_handler in root.handlers:
+        root_handler.addFilter(pii_filter)
 
     # Подавляем лишний шум от библиотек
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)

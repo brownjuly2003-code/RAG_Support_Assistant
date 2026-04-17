@@ -26,3 +26,10 @@ jobs:
 
       - name: Test
         run: pytest tests/ -v --tb=short
+
+      - name: RAG Evaluation Gate
+        if: github.event_name == 'pull_request'
+        run: python scripts/eval_gate.py
+        continue-on-error: true
+        env:
+          OLLAMA_BASE_URL: "http://localhost:11434"

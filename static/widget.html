@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Поддержка</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg-shell: radial-gradient(circle at top, #f9fbff 0%, #eef3fb 48%, #e6edf8 100%);
+            --panel: rgba(255, 255, 255, 0.92);
+            --panel-strong: #ffffff;
+            --panel-border: rgba(104, 128, 168, 0.18);
+            --text-primary: #10203a;
+            --text-secondary: #576783;
+            --brand-start: #1957c2;
+            --brand-end: #2e8cf3;
+            --brand-soft: rgba(25, 87, 194, 0.12);
+            --assistant-bg: #f3f6fb;
+            --shadow-main: 0 20px 60px rgba(15, 30, 61, 0.12);
+            --shadow-soft: 0 12px 30px rgba(32, 57, 98, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+        }
+
+        body {
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-shell);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        .shell {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 10px;
+        }
+
+        .card {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            flex-direction: column;
+            border-radius: 20px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.98));
+            border: 1px solid var(--panel-border);
+            box-shadow: var(--shadow-main);
+            overflow: hidden;
+        }
+
+        .widget-header {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 18px 14px;
+            background:
+                radial-gradient(circle at top left, rgba(255, 255, 255, 0.22), transparent 42%),
+                linear-gradient(135deg, var(--brand-start), var(--brand-end));
+            color: #ffffff;
+        }
+
+        .widget-header::after {
+            content: "";
+            position: absolute;
+            inset: auto 16px 0;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .widget-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .widget-logo {
+            display: grid;
+            place-items: center;
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.18);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.16);
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .widget-title-group {
+            min-width: 0;
+        }
+
+        .widget-title {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .widget-subtitle {
+            margin-top: 3px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.84);
+        }
+
+        .widget-close {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.16);
+            color: #ffffff;
+            cursor: pointer;
+            transition: background 160ms ease, transform 160ms ease;
+        }
+
+        .widget-close:hover {
+            background: rgba(255, 255, 255, 0.24);
+            transform: translateY(-1px);
+        }
+
+        .widget-close[hidden] {
+            display: none;
+        }
+
+        .widget-body {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            flex-direction: column;
+            padding: 0 10px 10px;
+        }
+
+        .widget-messages {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 14px 8px 18px;
+            scroll-behavior: smooth;
+        }
+
+        .widget-msg {
+            max-width: 88%;
+            margin-bottom: 12px;
+            padding: 11px 14px;
+            border-radius: 16px;
+            font-size: 13px;
+            line-height: 1.5;
+            box-shadow: var(--shadow-soft);
+            word-break: break-word;
+        }
+
+        .widget-msg.assistant {
+            border-top-left-radius: 6px;
+            background: var(--assistant-bg);
+            color: var(--text-primary);
+        }
+
+        .widget-msg.user {
+            margin-left: auto;
+            border-top-right-radius: 6px;
+            background: linear-gradient(135deg, var(--brand-start), var(--brand-end));
+            color: #ffffff;
+        }
+
+        .widget-status {
+            min-height: 18px;
+            padding: 0 10px 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .widget-status.error {
+            color: #c2410c;
+        }
+
+        .typing {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 2px;
+            color: var(--text-secondary);
+        }
+
+        .typing span {
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: currentColor;
+            opacity: 0.35;
+            animation: widget-bounce 1.2s infinite ease-in-out;
+        }
+
+        .typing span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .typing span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        @keyframes widget-bounce {
+            0%,
+            80%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.35;
+            }
+            40% {
+                transform: translateY(-3px);
+                opacity: 1;
+            }
+        }
+
+        .widget-input-wrap {
+            padding: 10px;
+            border-radius: 18px;
+            border: 1px solid rgba(104, 128, 168, 0.16);
+            background: var(--panel);
+            box-shadow: 0 10px 24px rgba(31, 51, 84, 0.06);
+        }
+
+        .widget-input-label {
+            display: block;
+            margin: 0 0 8px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #70809b;
+        }
+
+        .widget-input-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .widget-input {
+            flex: 1;
+            min-height: 44px;
+            max-height: 108px;
+            resize: none;
+            padding: 11px 12px;
+            border: 1px solid rgba(104, 128, 168, 0.18);
+            border-radius: 14px;
+            outline: none;
+            background: var(--panel-strong);
+            color: var(--text-primary);
+            font: inherit;
+            line-height: 1.45;
+            transition: border-color 160ms ease, box-shadow 160ms ease;
+        }
+
+        .widget-input:focus {
+            border-color: rgba(25, 87, 194, 0.4);
+            box-shadow: 0 0 0 4px var(--brand-soft);
+        }
+
+        .widget-send {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 46px;
+            height: 46px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--brand-start), var(--brand-end));
+            color: #ffffff;
+            cursor: pointer;
+            box-shadow: 0 14px 34px rgba(25, 87, 194, 0.2);
+            transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+        }
+
+        .widget-send:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 36px rgba(25, 87, 194, 0.24);
+        }
+
+        .widget-send:disabled {
+            opacity: 0.55;
+            cursor: default;
+            box-shadow: none;
+        }
+
+        @media (max-width: 480px) {
+            .shell {
+                padding: 0;
+            }
+
+            .card {
+                border-radius: 0;
+                border: none;
+            }
+
+            .widget-body {
+                padding-inline: 8px;
+                padding-bottom: 8px;
+            }
+
+            .widget-input-wrap {
+                border-radius: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <div class="card">
+            <header class="widget-header">
+                <div class="widget-brand">
+                    <div class="widget-logo" aria-hidden="true">R</div>
+                    <div class="widget-title-group">
+                        <h1 class="widget-title" id="widgetTitle">Поддержка</h1>
+                        <div class="widget-subtitle">Обычно отвечаем в течение пары секунд</div>
+                    </div>
+                </div>
+                <button class="widget-close" id="closeBtn" type="button" aria-label="Закрыть чат" hidden>
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                        <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"/>
+                    </svg>
+                </button>
+            </header>
+
+            <div class="widget-body">
+                <div class="widget-messages" id="messages" aria-live="polite">
+                    <div class="widget-msg assistant">Здравствуйте! Задайте вопрос, и я попробую помочь.</div>
+                </div>
+                <div class="widget-status" id="status"></div>
+                <div class="widget-input-wrap">
+                    <label class="widget-input-label" for="input">Ваш вопрос</label>
+                    <div class="widget-input-row">
+                        <textarea
+                            class="widget-input"
+                            id="input"
+                            rows="1"
+                            placeholder="Напишите вопрос..."
+                            aria-label="Ваш вопрос"
+                        ></textarea>
+                        <button class="widget-send" id="sendBtn" type="button" aria-label="Отправить">
+                            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                                <path d="M4 12h13M11 5l7 7-7 7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            var apiBase = window.location.origin.replace(/\/+$/, '');
+            var widgetTitle = 'Поддержка';
+            var embedded = window.parent !== window;
+            var parentOrigin = '*';
+            var messages = document.getElementById('messages');
+            var input = document.getElementById('input');
+            var sendBtn = document.getElementById('sendBtn');
+            var status = document.getElementById('status');
+            var titleNode = document.getElementById('widgetTitle');
+            var closeBtn = document.getElementById('closeBtn');
+            var typingNode = null;
+            var isSending = false;
+
+            function resolveParentOrigin(value) {
+                return value && value !== 'null' ? value : '*';
+            }
+
+            try {
+                if (document.referrer) {
+                    parentOrigin = resolveParentOrigin(new URL(document.referrer).origin);
+                }
+            } catch (err) {
+                parentOrigin = '*';
+            }
+
+            function postToParent(message) {
+                if (!embedded) {
+                    return;
+                }
+                window.parent.postMessage(message, parentOrigin);
+            }
+
+            function scheduleResize() {
+                requestAnimationFrame(function() {
+                    var scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 520;
+                    postToParent({
+                        type: 'rag-widget-resize',
+                        height: Math.min(Math.max(scrollHeight, 420), 580)
+                    });
+                });
+            }
+
+            function updateTitle(nextTitle) {
+                widgetTitle = nextTitle || widgetTitle;
+                document.title = widgetTitle;
+                titleNode.textContent = widgetTitle;
+            }
+
+            function setStatus(message, isError) {
+                status.textContent = message || '';
+                status.className = isError ? 'widget-status error' : 'widget-status';
+                scheduleResize();
+            }
+
+            function autoSizeInput() {
+                input.style.height = 'auto';
+                input.style.height = Math.min(input.scrollHeight, 108) + 'px';
+                scheduleResize();
+            }
+
+            function scrollMessages() {
+                messages.scrollTop = messages.scrollHeight;
+            }
+
+            function addMessage(role, text) {
+                var node = document.createElement('div');
+                node.className = 'widget-msg ' + role;
+                node.textContent = text;
+                messages.appendChild(node);
+                scrollMessages();
+                scheduleResize();
+            }
+
+            function setTyping(active) {
+                if (active && !typingNode) {
+                    typingNode = document.createElement('div');
+                    typingNode.className = 'widget-msg assistant';
+                    typingNode.innerHTML = '<div class="typing" aria-label="Ассистент печатает"><span></span><span></span><span></span></div>';
+                    messages.appendChild(typingNode);
+                    scrollMessages();
+                    scheduleResize();
+                    return;
+                }
+
+                if (!active && typingNode) {
+                    typingNode.remove();
+                    typingNode = null;
+                    scheduleResize();
+                }
+            }
+
+            async function send() {
+                var question = input.value.trim();
+                if (!question || isSending) {
+                    return;
+                }
+
+                isSending = true;
+                sendBtn.disabled = true;
+                setStatus('', false);
+                addMessage('user', question);
+                input.value = '';
+                autoSizeInput();
+                setTyping(true);
+
+                try {
+                    var response = await fetch(apiBase + '/api/ask', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ question: question })
+                    });
+
+                    var data = await response.json().catch(function() {
+                        return {};
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(data.detail || 'Не удалось получить ответ.');
+                    }
+
+                    addMessage('assistant', data.answer || 'Нет ответа');
+                } catch (err) {
+                    setStatus(err && err.message ? err.message : 'Ошибка подключения. Попробуйте позже.', true);
+                    addMessage('assistant', 'Не удалось подключиться к сервису. Попробуйте ещё раз чуть позже.');
+                } finally {
+                    setTyping(false);
+                    isSending = false;
+                    sendBtn.disabled = false;
+                    input.focus();
+                }
+            }
+
+            closeBtn.addEventListener('click', function() {
+                postToParent({ type: 'rag-widget-close' });
+            });
+
+            sendBtn.addEventListener('click', send);
+
+            input.addEventListener('input', autoSizeInput);
+            input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    send();
+                }
+            });
+
+            window.addEventListener('message', function(event) {
+                if (!event.data) {
+                    return;
+                }
+
+                if (event.data.type === 'rag-widget-init') {
+                    parentOrigin = resolveParentOrigin(event.origin) || parentOrigin;
+                    if (event.data.apiBase) {
+                        apiBase = String(event.data.apiBase).replace(/\/+$/, '');
+                    }
+                    if (event.data.title) {
+                        updateTitle(String(event.data.title));
+                    }
+                    if (event.data.isEmbedded) {
+                        embedded = true;
+                        closeBtn.hidden = false;
+                    }
+                    scheduleResize();
+                    return;
+                }
+
+                if (event.data.type === 'rag-widget-focus') {
+                    input.focus();
+                }
+            });
+
+            if (embedded) {
+                closeBtn.hidden = false;
+                postToParent({ type: 'rag-widget-ready' });
+            }
+
+            updateTitle(widgetTitle);
+            autoSizeInput();
+            scheduleResize();
+            input.focus();
+        })();
+    </script>
+</body>
+</html>

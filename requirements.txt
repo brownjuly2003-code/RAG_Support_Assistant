@@ -21,7 +21,7 @@ rank-bm25>=0.2.2
 # (uses sentence-transformers, no extra package needed)
 
 # === Document Loaders ===
-PyPDF2>=3.0.0
+pypdf>=3.0.0
 python-docx>=1.0.0
 
 # === Web Framework ===
@@ -29,6 +29,7 @@ fastapi>=0.100.0
 uvicorn[standard]>=0.20.0
 pydantic>=2.0.0
 jinja2>=3.1.0
+prometheus-client>=0.20.0
 
 # === Text Splitting ===
 langchain-text-splitters>=0.2.0
@@ -36,12 +37,22 @@ langchain-experimental>=0.0.50
 
 # === Web Server extras ===
 python-multipart>=0.0.6
+sqlalchemy[asyncio]>=2.0.0
+asyncpg>=0.29.0
+psycopg2-binary>=2.9.0
+redis[hiredis]>=5.0.0
+celery[redis]>=5.3.0
+alembic>=1.13.0
 
 # === Rate Limiting ===
 slowapi>=0.1.9
 
 # === HTTP client (health checks) ===
 httpx>=0.24.0
+PyJWT>=2.8.0
+passlib[bcrypt]>=1.7.4
+langfuse>=2.0.0
+python-telegram-bot>=21.0
 
 # === Optional: Qdrant ===
 # langchain-qdrant>=0.1.0

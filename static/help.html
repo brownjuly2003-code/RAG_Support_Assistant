@@ -2,7 +2,9 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/static/styles/tokens.css">
+    <link rel="stylesheet" href="/static/styles/components.css">
     <title>О системе - RAG Support Assistant</title>
     <style>
         :root {
@@ -144,7 +146,26 @@
             color: var(--accent-hover);
         }
 
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
+            body {
+                padding: 24px 16px 40px;
+            }
+
+            .hero,
+            section {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            pre {
+                font-size: 13px;
+            }
+        }
+
+        @media (max-width: 480px) {
             body {
                 padding: 20px 12px 32px;
             }

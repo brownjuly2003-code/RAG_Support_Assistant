@@ -87,6 +87,7 @@ class GraphState(TypedDict, total=False):
     max_iterations: int
     chat_history: List[dict]
     sub_queries: List[str]
+    suggested_questions: List[str]
 
 
 def create_initial_state(question: str, trace_id: Optional[str] = None) -> GraphState:
@@ -125,5 +126,6 @@ def create_initial_state(question: str, trace_id: Optional[str] = None) -> Graph
         max_iterations=2,
         chat_history=[],
         sub_queries=[],
+        suggested_questions=[],
     )
     return state

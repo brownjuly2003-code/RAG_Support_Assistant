@@ -4,7 +4,7 @@ ingestion/loader.py
 DocumentLoader: loads documents from a directory or a single file.
 
 Supported formats:
-    .txt, .md, .pdf (PyPDF2), .docx (python-docx), .json, .csv
+    .txt, .md, .pdf (pypdf), .docx (python-docx), .json, .csv
 
 Each document gets metadata:
     - source: filename
@@ -42,9 +42,9 @@ except ImportError:
 
 
 try:
-    import PyPDF2
+    import pypdf
 except ImportError:
-    PyPDF2 = None  # type: ignore[assignment]
+    pypdf = None  # type: ignore[assignment]
 
 try:
     from docx import Document as DocxDocument
@@ -180,11 +180,11 @@ class DocumentLoader:
     # ------------------------------------------------------------------
 
     def _read_pdf(self, path: Path) -> List[Document]:
-        if PyPDF2 is None:
-            raise ImportError("PyPDF2 is required for PDF files: pip install PyPDF2")
+        if pypdf is None:
+            raise ImportError("pypdf is required for PDF files: pip install pypdf")
         docs: List[Document] = []
         with path.open("rb") as fh:
-            reader = PyPDF2.PdfReader(fh)
+            reader = pypdf.PdfReader(fh)
             for page_num, page in enumerate(reader.pages, start=1):
                 try:
                     text = page.extract_text() or ""

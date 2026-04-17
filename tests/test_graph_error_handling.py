@@ -1,5 +1,4 @@
 import importlib
-import sys
 import types
 from contextlib import nullcontext
 from unittest.mock import Mock, patch
@@ -7,20 +6,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 from state import create_initial_state
-
-
-def _install_sqlite_trace_stub() -> None:
-    if "sqlite_trace" in sys.modules:
-        return
-
-    sqlite_trace_module = types.ModuleType("sqlite_trace")
-    sqlite_trace_module.start_trace = lambda: "trace-stub"
-    sqlite_trace_module.log_step = lambda *args, **kwargs: None
-    sqlite_trace_module.finish_trace = lambda *args, **kwargs: None
-    sys.modules["sqlite_trace"] = sqlite_trace_module
-
-
-_install_sqlite_trace_stub()
 
 graph = importlib.import_module("graph")
 

@@ -101,6 +101,9 @@ def build_qa_prompt(question: str, context_docs: List[Dict[str, Any]]) -> str:
 ВОПРОС:
 {question}
 
+Если ты используешь информацию из контекста, ссылайся на источники в формате [1], [2] и т.д.
+Нумерация соответствует порядку документов в контексте.
+
 Сформулируй понятный, краткий и точный ответ для пользователя:
 """
     return prompt
@@ -174,6 +177,28 @@ def build_self_eval_prompt(
 Выведи только целое число от 1 до 100:
 """
     return prompt
+
+
+def build_suggested_questions_prompt(
+    question: str,
+    answer: str,
+    context_snippet: str = "",
+) -> str:
+    """Prompt for generating short follow-up questions."""
+    context_block = ""
+    if context_snippet:
+        context_block = f"\n\nCONTEXT:\n{context_snippet[:500]}"
+
+    return f"""Based on the user question and the assistant answer, propose 3 short follow-up questions.
+The questions must:
+- stay on topic
+- be short (up to 60 characters)
+- help the user go one step deeper
+
+QUESTION: {question}
+ANSWER: {answer[:500]}{context_block}
+
+Return ONLY 3 questions, one per line. No numbering. No bullets."""
 
 
 # ---------------------------------------------------------------------------

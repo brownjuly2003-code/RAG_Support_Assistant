@@ -12,11 +12,16 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Callable, Dict, List, Optional, Protocol
+import time
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Protocol
 
 from langgraph.graph import END, StateGraph
+from tracing.langfuse_trace import trace_llm_call
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from utils.circuit_breaker import CircuitBreaker
 
 # Support both package-style and root-level imports
 try:
@@ -24,6 +29,7 @@ try:
     from agent.prompts import (
         build_qa_prompt,
         build_self_eval_prompt,
+        build_suggested_questions_prompt,
         build_query_transform_prompt,
         build_doc_grade_prompt,
         build_query_rewrite_prompt,
@@ -36,6 +42,7 @@ except ImportError:
     from prompts import (
         build_qa_prompt,
         build_self_eval_prompt,
+        build_suggested_questions_prompt,
         build_query_transform_prompt,
         build_doc_grade_prompt,
         build_query_rewrite_prompt,
@@ -72,8 +79,10 @@ def _escalate_to_inbox(state: GraphState) -> None:
         from mock_inbox import get_support_sink  # type: ignore[import-not-found]
         get_support_sink().send(trace_id, _json.dumps(record, ensure_ascii=False))
         return
-    except Exception:
-        pass
+    except ImportError:
+        logger.debug("mock_inbox not available, falling back to JSONL")
+    except Exception as exc:
+        logger.warning("Failed to send to support sink: %s", exc)
 
     # Fallback: прямая запись в JSONL
     try:
@@ -121,8 +130,8 @@ def make_handle_error_node() -> Callable[[GraphState], GraphState]:
 
         try:
             log_step(trace_id, "handle_error", state)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to log handle_error step: %s", exc, extra={"trace_id": trace_id})
 
         return {
             **state,  # type: ignore[misc]
@@ -148,15 +157,65 @@ class SupportsInvoke(Protocol):
         ...
 
 
+_USE_DEFAULT_BREAKER = object()
+
+
 class LocalOllamaLLM:
     """Обёртка над локальной моделью Ollama."""
 
-    def __init__(self, model_name: str = "mistral"):
+    def __init__(
+        self,
+        model_name: str = "mistral",
+        breaker: CircuitBreaker | None | object = _USE_DEFAULT_BREAKER,
+    ):
         from langchain_community.llms import Ollama
-        self._llm = Ollama(model=model_name)
+        from config.settings import get_settings
+        from utils.retry import retry_with_backoff
+
+        settings = get_settings()
+        timeout_sec = getattr(settings, "ollama_request_timeout_sec", 60.0)
+        try:
+            self._llm = Ollama(model=model_name, timeout=timeout_sec)
+        except TypeError:
+            self._llm = Ollama(model=model_name, request_timeout=timeout_sec)
+        self._breaker = get_default_breaker() if breaker is _USE_DEFAULT_BREAKER else breaker
+        self._invoke_with_retry = retry_with_backoff(
+            self._llm.invoke,
+            max_attempts=getattr(settings, "ollama_retry_max_attempts", 3),
+            base_delay_sec=getattr(settings, "ollama_retry_base_delay_sec", 0.5),
+            max_delay_sec=getattr(settings, "ollama_retry_max_delay_sec", 5.0),
+            jitter=getattr(settings, "ollama_retry_jitter", True),
+        )
 
     def invoke(self, prompt: str) -> str:
-        return self._llm.invoke(prompt)
+        invoke_with_retry = getattr(self, "_invoke_with_retry", self._llm.invoke)
+        if self._breaker is None:
+            return invoke_with_retry(prompt)
+        return self._breaker.call(invoke_with_retry, prompt)
+
+
+_default_breaker: CircuitBreaker | None = None
+
+
+def get_default_breaker() -> CircuitBreaker | None:
+    """Return the shared Ollama breaker, or None when disabled in settings."""
+    global _default_breaker
+    if _default_breaker is not None:
+        return _default_breaker
+
+    from config.settings import get_settings
+    from utils.circuit_breaker import CircuitBreaker
+
+    settings = get_settings()
+    if not getattr(settings, "circuit_breaker_enabled", True):
+        return None
+
+    _default_breaker = CircuitBreaker(
+        failure_threshold=getattr(settings, "circuit_breaker_failure_threshold", 5),
+        reset_timeout_sec=getattr(settings, "circuit_breaker_reset_timeout_sec", 30.0),
+        name="ollama",
+    )
+    return _default_breaker
 
 
 # ---------------------------------------------------------------------------
@@ -225,9 +284,20 @@ def make_transform_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Gra
                 prompt = build_conversational_query_transform_prompt(question, chat_history)
             else:
                 prompt = build_query_transform_prompt(question)
+            model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
 
             try:
-                search_query = llm.invoke(prompt).strip()
+                t0 = time.monotonic()
+                raw_search_query = llm.invoke(prompt).strip()
+                trace_llm_call(
+                    trace_id=trace_id,
+                    node_name="transform_query",
+                    prompt=prompt,
+                    response=raw_search_query,
+                    model=model,
+                    duration_ms=(time.monotonic() - t0) * 1000,
+                )
+                search_query = raw_search_query
                 if not search_query or len(search_query) < 3:
                     search_query = question
             except Exception as exc:
@@ -240,7 +310,17 @@ def make_transform_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Gra
             hyde_query: Optional[str] = None
             if settings.hyde:
                 try:
-                    hyde_doc = llm.invoke(_build_hyde_prompt(question)).strip()
+                    hyde_prompt = _build_hyde_prompt(question)
+                    t0 = time.monotonic()
+                    hyde_doc = llm.invoke(hyde_prompt).strip()
+                    trace_llm_call(
+                        trace_id=trace_id,
+                        node_name="hyde",
+                        prompt=hyde_prompt,
+                        response=hyde_doc,
+                        model=model,
+                        duration_ms=(time.monotonic() - t0) * 1000,
+                    )
                     if hyde_doc and len(hyde_doc) > 10:
                         hyde_query = hyde_doc
                         logger.debug("[transform_query] HyDE generated (%d chars)", len(hyde_doc))
@@ -308,6 +388,7 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
         try:
             question = state.get("question", "")
             context_docs = state.get("context_docs", []) or []
+            model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
 
             if not context_docs:
                 new_state: GraphState = {**state, "graded_docs": [], "doc_grade_reason": "No documents retrieved"}
@@ -319,8 +400,17 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
             for doc in context_docs:
                 prompt = build_doc_grade_prompt(question=question, document=doc)
                 try:
-                    verdict = llm.invoke(prompt).strip().upper()
-                    is_relevant = verdict.startswith("YES")
+                    t0 = time.monotonic()
+                    raw_verdict = llm.invoke(prompt).strip()
+                    trace_llm_call(
+                        trace_id=trace_id,
+                        node_name="grade_docs",
+                        prompt=prompt,
+                        response=raw_verdict,
+                        model=model,
+                        duration_ms=(time.monotonic() - t0) * 1000,
+                    )
+                    is_relevant = raw_verdict.upper().startswith("YES")
                 except Exception as exc:
                     logger.warning("[grade_docs] LLM error: %s", exc, extra={"trace_id": trace_id})
                     is_relevant = True
@@ -355,6 +445,7 @@ def make_generate_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState
             question = state.get("question", "")
             docs = state.get("graded_docs") or state.get("context_docs", []) or []
             chat_history = state.get("chat_history", [])
+            model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
 
             if chat_history:
                 prompt = build_conversational_qa_prompt(question=question, context_docs=docs, chat_history=chat_history)
@@ -362,7 +453,16 @@ def make_generate_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState
                 prompt = build_qa_prompt(question=question, context_docs=docs)
 
             try:
+                t0 = time.monotonic()
                 answer = llm.invoke(prompt)
+                trace_llm_call(
+                    trace_id=trace_id,
+                    node_name="generate",
+                    prompt=prompt,
+                    response=answer,
+                    model=model,
+                    duration_ms=(time.monotonic() - t0) * 1000,
+                )
             except Exception as exc:
                 logger.warning("[generate] LLM error: %s", exc, extra={"trace_id": trace_id})
                 answer = "Извините, при обработке запроса произошла внутренняя ошибка."
@@ -393,8 +493,18 @@ def make_evaluate_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState
             answer = state.get("answer") or ""
             docs = state.get("graded_docs") or state.get("context_docs", []) or []
             prompt = build_self_eval_prompt(question=question, answer=answer, context_docs=docs)
+            model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
             try:
+                t0 = time.monotonic()
                 raw = llm.invoke(prompt)
+                trace_llm_call(
+                    trace_id=trace_id,
+                    node_name="evaluate",
+                    prompt=prompt,
+                    response=raw,
+                    model=model,
+                    duration_ms=(time.monotonic() - t0) * 1000,
+                )
             except Exception as exc:
                 logger.warning("[evaluate] LLM error: %s", exc, extra={"trace_id": trace_id})
                 raw = ""
@@ -404,6 +514,66 @@ def make_evaluate_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState
             return new_state
         except Exception as exc:
             return _make_error_state(state, "evaluate", exc)
+
+    return node
+
+
+# ---------------------------------------------------------------------------
+# Suggested questions node
+# ---------------------------------------------------------------------------
+
+
+def make_suggest_questions_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState]:
+    """Generate 2-3 follow-up questions after an answer."""
+
+    def node(state: GraphState) -> GraphState:
+        if state.get("error"):
+            return state
+        if state.get("route") != "auto":
+            return {**state, "suggested_questions": []}
+
+        trace_id = state.get("trace_id", "unknown-trace-id")
+        docs = state.get("graded_docs") or state.get("context_docs", []) or []
+        context_snippet = "\n\n".join(
+            str(doc.get("page_content", ""))
+            for doc in docs[:2]
+            if isinstance(doc, dict)
+        )[:500]
+        model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
+
+        try:
+            prompt = build_suggested_questions_prompt(
+                state.get("question", ""),
+                state.get("answer") or "",
+                context_snippet=context_snippet,
+            )
+            t0 = time.monotonic()
+            raw = llm.invoke(prompt)
+            trace_llm_call(
+                trace_id=trace_id,
+                node_name="suggest_questions",
+                prompt=prompt,
+                response=raw,
+                model=model,
+                duration_ms=(time.monotonic() - t0) * 1000,
+            )
+            questions = [
+                re.sub(r"^\s*(?:[-*]|\d+[.)])\s*", "", line).strip()
+                for line in raw.strip().splitlines()
+                if line.strip()
+            ][:3]
+            new_state: GraphState = {**state, "suggested_questions": questions}
+            log_step(trace_id, "suggest_questions", new_state)
+            return new_state
+        except Exception as exc:
+            logger.warning(
+                "Failed to generate suggested questions: %s",
+                exc,
+                extra={"trace_id": trace_id},
+            )
+            new_state: GraphState = {**state, "suggested_questions": []}
+            log_step(trace_id, "suggest_questions", new_state)
+            return new_state
 
     return node
 
@@ -475,8 +645,19 @@ def make_rewrite_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Graph
             quality_score = state.get("quality_score") or 50
             iteration = state.get("iteration", 0)
             prompt = build_query_rewrite_prompt(question=question, previous_answer=previous_answer, quality_score=quality_score)
+            model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
             try:
-                new_query = llm.invoke(prompt).strip()
+                t0 = time.monotonic()
+                raw_new_query = llm.invoke(prompt).strip()
+                trace_llm_call(
+                    trace_id=trace_id,
+                    node_name="rewrite_query",
+                    prompt=prompt,
+                    response=raw_new_query,
+                    model=model,
+                    duration_ms=(time.monotonic() - t0) * 1000,
+                )
+                new_query = raw_new_query
                 if not new_query or len(new_query) < 3:
                     new_query = question
             except Exception as exc:
@@ -535,6 +716,8 @@ def _should_retry(state: GraphState) -> str:
         return "error"
     if route == "retry":
         return "retry"
+    if route == "auto":
+        return "suggest"
     return "end"
 
 
@@ -557,7 +740,7 @@ def build_support_graph(
                                └─ (end)   → log → END
     """
     if llm is None:
-        llm = LocalOllamaLLM(model_name="mistral")
+        llm = LocalOllamaLLM(model_name="mistral", breaker=get_default_breaker())
 
     workflow = StateGraph(GraphState)
 
@@ -568,6 +751,7 @@ def build_support_graph(
     workflow.add_node("generate", make_generate_node(llm))
     workflow.add_node("evaluate", make_evaluate_node(llm))
     workflow.add_node("route_or_retry", make_route_or_retry_node(min_quality=min_quality))
+    workflow.add_node("suggest_questions", make_suggest_questions_node(llm))
     workflow.add_node("rewrite_query", make_rewrite_query_node(llm))
     workflow.add_node("log", make_log_node())
     workflow.add_node("handle_error", make_handle_error_node())
@@ -587,6 +771,7 @@ def build_support_graph(
         {
             "error": "handle_error",
             "retry": "rewrite_query",
+            "suggest": "suggest_questions",
             "end": "log",
         },
     )
@@ -596,6 +781,7 @@ def build_support_graph(
     workflow.add_edge("rewrite_query", "retrieve")
 
     # Финал
+    workflow.add_edge("suggest_questions", "log")
     workflow.add_edge("log", END)
 
     return workflow.compile()

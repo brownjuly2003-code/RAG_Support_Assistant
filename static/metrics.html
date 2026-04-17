@@ -2,7 +2,9 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/static/styles/tokens.css">
+    <link rel="stylesheet" href="/static/styles/components.css">
     <title>Метрики - RAG Support Assistant</title>
     <style>
         :root {
@@ -135,6 +137,25 @@
             color: var(--accent-hover);
         }
 
+        @media (min-width: 641px) and (max-width: 1024px) {
+            body {
+                padding: 24px 16px 40px;
+            }
+
+            .hero,
+            section {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .metric-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
         @media (max-width: 640px) {
             body {
                 padding: 20px 12px 32px;
@@ -147,6 +168,14 @@
 
             h1 {
                 font-size: 26px;
+            }
+
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metric-value {
+                font-size: 24px;
             }
         }
     </style>

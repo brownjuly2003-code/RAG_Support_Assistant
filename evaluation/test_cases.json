@@ -2,73 +2,73 @@
   {
     "question": "Что означает ошибка E401?",
     "expected_keywords": ["авторизация", "доступ", "токен"],
-    "expected_answer": null,
+    "expected_answer": "Ошибка E401 означает проблему с авторизацией: проверьте права доступа и действительность токена.",
     "category": "error_codes"
   },
   {
     "question": "Почему появляется код 503?",
     "expected_keywords": ["сервер", "недоступен", "повторите"],
-    "expected_answer": null,
+    "expected_answer": "Код 503 означает, что сервер временно недоступен. Подождите и повторите запрос позже.",
     "category": "error_codes"
   },
   {
     "question": "Как исправить E20?",
     "expected_keywords": ["ошибка", "проверьте", "устройство"],
-    "expected_answer": null,
+    "expected_answer": "Ошибка E20 обычно связана с устройством или перегревом. Перезапустите устройство и проверьте подключение.",
     "category": "error_codes"
   },
   {
     "question": "Как сбросить пароль?",
     "expected_keywords": ["пароль", "сброс", "email"],
-    "expected_answer": null,
+    "expected_answer": "Чтобы сбросить пароль, откройте форму входа, нажмите «Забыли пароль?» и подтвердите сброс по email.",
     "category": "reset_password"
   },
   {
     "question": "Восстановление доступа к аккаунту",
     "expected_keywords": ["доступ", "аккаунт", "подтверждение"],
-    "expected_answer": null,
+    "expected_answer": "Для восстановления доступа к аккаунту подтвердите личность через почту или код подтверждения и задайте новый пароль.",
     "category": "reset_password"
   },
   {
     "question": "Сколько длится гарантия?",
     "expected_keywords": ["гарантия", "срок", "месяцев"],
-    "expected_answer": null,
+    "expected_answer": "Стандартная гарантия действует 12 месяцев с даты покупки, если иное не указано в документах.",
     "category": "warranty"
   },
   {
     "question": "Условия гарантийного обслуживания",
     "expected_keywords": ["гарантия", "условия", "ремонт"],
-    "expected_answer": null,
+    "expected_answer": "Гарантийное обслуживание покрывает заводские дефекты при соблюдении условий эксплуатации и не включает механические повреждения.",
     "category": "warranty"
   },
   {
     "question": "Как установить приложение?",
     "expected_keywords": ["установка", "скачайте", "запустите"],
-    "expected_answer": null,
+    "expected_answer": "Чтобы установить приложение, скачайте установщик с официального сайта, запустите его и следуйте шагам мастера.",
     "category": "installation"
   },
   {
     "question": "Инструкция по установке на Windows",
     "expected_keywords": ["windows", "установка", "инсталлятор"],
-    "expected_answer": null,
+    "expected_answer": "На Windows скачайте инсталлятор, запустите .exe и завершите установку по подсказкам мастера.",
     "category": "installation"
   },
   {
     "question": "Как отменить подписку?",
     "expected_keywords": ["подписка", "отмена", "тариф"],
-    "expected_answer": null,
+    "expected_answer": "Чтобы отменить подписку, откройте настройки тарифа, выберите текущую подписку и подтвердите отмену автопродления.",
     "category": "billing"
   },
   {
     "question": "Изменить способ оплаты",
     "expected_keywords": ["оплата", "карта", "обновить"],
-    "expected_answer": null,
+    "expected_answer": "Изменить способ оплаты можно в разделе биллинга: добавьте новую карту и назначьте её основной.",
     "category": "billing"
   },
   {
     "question": "Как связаться с поддержкой?",
     "expected_keywords": ["поддержка", "чат", "email"],
-    "expected_answer": null,
+    "expected_answer": "Связаться с поддержкой можно через чат в приложении или по email, указанному в разделе контактов.",
     "category": "general"
   }
 ]

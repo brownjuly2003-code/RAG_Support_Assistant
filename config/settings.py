@@ -97,7 +97,7 @@ class Settings:
     rerank_top_k: int = int(os.getenv("RAG_RERANK_TOP_K", "5"))          # final docs after reranking
 
     # --- Level 2: Semantic Chunking ---
-    semantic_chunking: bool = os.getenv("RAG_SEMANTIC_CHUNKING", "false").strip().lower() in ("1", "true", "yes")
+    semantic_chunking: bool = os.getenv("RAG_SEMANTIC_CHUNKING", "true").strip().lower() in ("1", "true", "yes")
 
     # --- HyDE (Hypothetical Document Embeddings) ---
     hyde: bool = field(
@@ -124,13 +124,51 @@ class Settings:
     # Полный URL вебхука Bitrix24, например:
     # https://example.bitrix24.ru/rest/123/abcdefg123456/crm.timeline.comment.add.json
     bitrix_webhook_url: Optional[str] = os.getenv("BITRIX_WEBHOOK_URL") or None
+    telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
     # --- Продакшн-режим ---
     # REQUIRE_OLLAMA=true → fail fast если Ollama недоступна при старте.
     # По умолчанию false, чтобы не ломать локальную разработку без LLM.
     require_ollama: bool = os.getenv("REQUIRE_OLLAMA", "false").strip().lower() in ("1", "true", "yes")
+    circuit_breaker_enabled: bool = os.getenv(
+        "CIRCUIT_BREAKER_ENABLED", "true"
+    ).strip().lower() in ("1", "true", "yes")
+    circuit_breaker_failure_threshold: int = int(
+        os.getenv("CIRCUIT_BREAKER_FAILURE_THRESHOLD", "5")
+    )
+    circuit_breaker_reset_timeout_sec: float = float(
+        os.getenv("CIRCUIT_BREAKER_RESET_TIMEOUT_SEC", "30")
+    )
+    ollama_retry_max_attempts: int = int(
+        os.getenv("OLLAMA_RETRY_MAX_ATTEMPTS", "3")
+    )
+    ollama_retry_base_delay_sec: float = float(
+        os.getenv("OLLAMA_RETRY_BASE_DELAY_SEC", "0.5")
+    )
+    ollama_retry_max_delay_sec: float = float(
+        os.getenv("OLLAMA_RETRY_MAX_DELAY_SEC", "5.0")
+    )
+    ollama_retry_jitter: bool = os.getenv(
+        "OLLAMA_RETRY_JITTER", "true"
+    ).strip().lower() in ("1", "true", "yes")
+    ollama_request_timeout_sec: float = field(
+        default_factory=lambda: float(os.getenv("OLLAMA_REQUEST_TIMEOUT_SEC", "60"))
+    )
     session_ttl_seconds: int = int(os.getenv("SESSION_TTL_SECONDS", "7200"))
     api_key: str = os.getenv("API_KEY", "")
+    langfuse_public_key: str = os.getenv("LANGFUSE_PUBLIC_KEY", "")
+    langfuse_secret_key: str = os.getenv("LANGFUSE_SECRET_KEY", "")
+    langfuse_host: str = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+    redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    # CORS: список допустимых origins через запятую.
+    # "*" = разрешить всё (только для dev). Пример: "https://app.example.com,https://admin.example.com"
+    cors_origins: list[str] = field(
+        default_factory=lambda: [
+            o.strip()
+            for o in os.getenv("CORS_ORIGINS", "*").split(",")
+            if o.strip()
+        ]
+    )
 
     def ensure_dirs(self) -> None:
         """

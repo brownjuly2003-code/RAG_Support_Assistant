@@ -70,6 +70,14 @@ Copy `.env.example` to `.env` and adjust:
 | `ALERT_QUALITY_MIN` | `65` | минимальный avg quality (7d) |
 | `ALERT_P95_LATENCY_SEC` | `12` | порог p95 latency в секундах (24h) |
 | `ALERT_THUMBS_DOWN_PCT` | `20` | порог % thumbs-down (7d) |
+| `CIRCUIT_BREAKER_ENABLED` | `true` | circuit breaker around Ollama calls |
+| `CIRCUIT_BREAKER_FAILURE_THRESHOLD` | `5` | consecutive failures before OPEN |
+| `CIRCUIT_BREAKER_RESET_TIMEOUT_SEC` | `30` | seconds before HALF_OPEN probe |
+| `OLLAMA_RETRY_MAX_ATTEMPTS` | `3` | попыток включая первую; 1 = без retry |
+| `OLLAMA_RETRY_BASE_DELAY_SEC` | `0.5` | базовая задержка между попытками |
+| `OLLAMA_RETRY_MAX_DELAY_SEC` | `5.0` | верхняя граница задержки |
+| `OLLAMA_RETRY_JITTER` | `true` | случайный jitter ±50% в задержке |
+| `OLLAMA_REQUEST_TIMEOUT_SEC` | `60` | timeout одного HTTP-вызова Ollama; ReadTimeout → retry → breaker |
 
 ## API
 

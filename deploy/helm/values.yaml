@@ -1,0 +1,57 @@
+replicaCount: 2
+
+image:
+  repository: rag-support-assistant
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: false
+  className: nginx
+  hosts:
+    - host: support.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70
+
+env:
+  OLLAMA_BASE_URL: "http://ollama:11434"
+  DATABASE_URL: "postgresql://rag:changeme@postgres:5432/rag_assistant"
+  REDIS_URL: "redis://redis:6379/0"
+  REQUIRE_OLLAMA: "true"
+  RAG_SEMANTIC_CHUNKING: "true"
+
+postgresql:
+  enabled: true
+  auth:
+    database: rag_assistant
+    username: rag
+    password: changeme
+
+redis:
+  enabled: true
+
+ollama:
+  enabled: true
+  model: "qwen2.5:7b"
+  resources:
+    limits:
+      nvidia.com/gpu: 1

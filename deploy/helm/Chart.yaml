@@ -1,0 +1,5 @@
+apiVersion: v2
+name: rag-support-assistant
+description: RAG Support Assistant - AI-powered knowledge base Q&A
+version: 0.1.0
+appVersion: "0.3.0"
