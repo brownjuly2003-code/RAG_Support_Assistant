@@ -5,6 +5,7 @@ from typing import Any
 
 __all__ = [
     "ACTIVE_SESSIONS",
+    "COMPONENT_UP",
     "CIRCUIT_BREAKER_STATE",
     "CIRCUIT_BREAKER_TRANSITIONS",
     "CONTENT_TYPE_LATEST",
@@ -18,6 +19,7 @@ __all__ = [
     "REQUEST_DURATION",
     "VECTOR_STORE_DOCS",
     "generate_latest",
+    "record_component_health",
     "record_circuit_breaker_change",
     "record_ollama_retry_event",
 ]
@@ -63,6 +65,7 @@ except ImportError:
     VECTOR_STORE_DOCS = _NoopMetric()
     CIRCUIT_BREAKER_STATE = _NoopMetric()
     CIRCUIT_BREAKER_TRANSITIONS = _NoopMetric()
+    COMPONENT_UP = _NoopMetric()
     OLLAMA_RETRY_EVENTS = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
@@ -127,6 +130,14 @@ else:
         registry=REGISTRY,
     )
 
+    COMPONENT_UP = Gauge(
+        "rag_component_up",
+        "Health status of a dependency component: 1=ok, 0=error. "
+        "Absent when the component is not configured/installed (unavailable).",
+        ["component"],
+        registry=REGISTRY,
+    )
+
     OLLAMA_RETRY_EVENTS = Counter(
         "rag_ollama_retry_events_total",
         "Retry wrapper events around Ollama calls",
@@ -136,6 +147,15 @@ else:
 
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
+
+
+def record_component_health(component: str, status: str) -> None:
+    """Update the component health gauge."""
+    if status == "unavailable":
+        return
+
+    value = 1 if status == "ok" else 0
+    COMPONENT_UP.labels(component=component).set(value)
 
 
 def record_circuit_breaker_change(name: str, from_state: str, to_state: str) -> None:

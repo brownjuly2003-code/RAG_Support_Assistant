@@ -1472,6 +1472,14 @@ async def health_check() -> HealthResponse:
         _probe_postgres(),
         _probe_redis(),
     )
+    try:
+        prometheus_metrics.record_component_health("ollama", ollama_status.status)
+        prometheus_metrics.record_component_health("chromadb", chroma_status.status)
+        prometheus_metrics.record_component_health("sqlite", sqlite_status.status)
+        prometheus_metrics.record_component_health("postgres", postgres_status.status)
+        prometheus_metrics.record_component_health("redis", redis_status.status)
+    except Exception:
+        pass
 
     critical_down = ollama_status.status == "error" or chroma_status.status == "error"
     non_critical_error = (
