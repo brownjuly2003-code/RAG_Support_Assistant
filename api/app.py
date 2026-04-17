@@ -1011,6 +1011,49 @@ async def get_metrics(
         return {"error": str(exc), "generated_at": ""}
 
 
+@router.post("/admin/circuit-breaker/reset")
+async def admin_reset_circuit_breaker(
+    request: Request,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from graph import get_default_breaker
+
+    breaker = get_default_breaker()
+    if breaker is None:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "status": "disabled",
+                "detail": "circuit breaker disabled via CIRCUIT_BREAKER_ENABLED=false",
+            },
+        )
+
+    previous = breaker.snapshot()
+    breaker.reset()
+    current = breaker.snapshot()
+
+    await log_audit(
+        actor=_user.get("sub", "anonymous"),
+        action="circuit_breaker_reset",
+        resource=f"breaker/{breaker.name}",
+        detail={
+            "previous_state": previous["state"],
+            "previous_consecutive_failures": previous["consecutive_failures"],
+        },
+        ip_address=request.client.host if request.client else None,
+    )
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "reset",
+            "breaker": breaker.name,
+            "previous": previous,
+            "current": current,
+        },
+    )
+
+
 @router.post("/upload", response_model=UploadResponse)
 @limiter.limit("10/minute")
 async def upload_document(
