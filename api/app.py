@@ -1460,6 +1460,19 @@ async def clear_session(
     return {"status": "ok", "message": f"Session {session_id} cleared"}
 
 
+@router.get("/health/live")
+async def health_liveness() -> JSONResponse:
+    return JSONResponse(
+        status_code=200,
+        content={"status": "alive", "service": "rag-support-assistant"},
+    )
+
+
+@router.get("/health/ready", response_model=HealthResponse)
+async def health_readiness() -> JSONResponse:
+    return await health_check()
+
+
 @router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
     """Health check — actively probes all dependencies."""

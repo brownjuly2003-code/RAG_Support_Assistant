@@ -87,7 +87,9 @@ Copy `.env.example` to `.env` and adjust:
 | POST | `/api/ask/stream` | задать вопрос (SSE streaming) |
 | POST | `/api/upload` | загрузить документ и переиндексировать |
 | POST | `/api/feedback` | оставить оценку (up/down) для ответа |
-| GET | `/api/health` | проверить Ollama, ChromaDB, SQLite (503 при сбое) |
+| GET | `/api/health` | alias readiness: полная проверка зависимостей (503 при сбое) |
+| GET | `/api/health/live` | liveness probe (k8s): 200 всегда, пока процесс отвечает |
+| GET | `/api/health/ready` | readiness probe (k8s): полная проверка зависимостей, 503 при падении Ollama/ChromaDB |
 | GET | `/api/metrics` | JSON-снапшот метрик системы (latency, quality, escalation) |
 | GET | `/api/sessions` | список активных сессий |
 | GET | `/api/sessions/{id}/history` | история сессии |
