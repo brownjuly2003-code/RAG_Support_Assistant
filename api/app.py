@@ -29,6 +29,7 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, UploadF
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
+from api.correlation import generate_request_id, get_request_id, sanitize_request_id, set_request_id
 from auth.dependencies import get_current_user, require_role
 from db.audit import log_audit
 from monitoring import prometheus as prometheus_metrics
@@ -613,7 +614,7 @@ async def ask(
 
     if hasattr(session, "ask"):
         try:
-            result = session.ask(question)
+            result = session.ask(question, trace_id=get_request_id())
 
             answer = result.get("answer") or ""
             quality = result.get("quality_score") or 50
@@ -1547,7 +1548,8 @@ app.add_middleware(
     allow_origins=_cors_settings.cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["X-API-Key", "Content-Type", "Authorization"],
+    allow_headers=["X-API-Key", "Content-Type", "Authorization", "X-Request-Id"],
+    expose_headers=["X-Request-Id"],
 )
 
 
@@ -1557,13 +1559,28 @@ async def _log_requests(request: Request, call_next: Any) -> Any:
     response = await call_next(request)
     duration_ms = round((time.monotonic() - t0) * 1000, 1)
     logger.info(
-        "%s %s -> %d (%.1fms)",
+        "req_id=%s %s %s -> %d (%.1fms)",
+        get_request_id() or "-",
         request.method,
         request.url.path,
         response.status_code,
         duration_ms,
     )
     return response
+
+
+@app.middleware("http")
+async def _request_id(request: Request, call_next: Any) -> Any:
+    incoming = sanitize_request_id(request.headers.get("X-Request-Id"))
+    req_id = incoming or generate_request_id()
+    set_request_id(req_id)
+
+    try:
+        response = await call_next(request)
+        response.headers["X-Request-Id"] = get_request_id() or req_id
+        return response
+    finally:
+        set_request_id(None)
 
 
 app.state.limiter = limiter
