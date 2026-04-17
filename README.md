@@ -65,6 +65,7 @@ Copy `.env.example` to `.env` and adjust:
 | `API_KEY` | — | X-API-Key header для аутентификации |
 | `REQUIRE_OLLAMA` | `false` | fail-fast если Ollama недоступна |
 | `SESSION_TTL_SECONDS` | `7200` | TTL API-сессий |
+| `SHUTDOWN_READY_DELAY_SEC` | `5` | задержка flip-а readiness→503 при SIGTERM для drain k8s LB |
 | `ALERT_WEBHOOK_URL` | — | Slack/Telegram webhook для алертов |
 | `ALERT_ESCALATION_PCT` | `35` | порог % эскалаций (24h) |
 | `ALERT_QUALITY_MIN` | `65` | минимальный avg quality (7d) |

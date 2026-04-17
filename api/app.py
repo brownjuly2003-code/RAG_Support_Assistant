@@ -192,6 +192,7 @@ except ImportError:
             ollama_base_url = "http://localhost:11434"
             tracing_db_path = PROJECT_ROOT / "data" / "tracing" / "traces.db"
             session_ttl_seconds = 7200
+            shutdown_ready_delay_sec = 5.0
             api_key = ""
             require_ollama = False
             cors_origins = ["*"]
@@ -299,6 +300,7 @@ class RefreshRequest(BaseModel):
 
 _session_llm_state: Dict[str, Any] = {}
 _sessions = _session_llm_state
+_shutting_down: bool = False
 _session_last_access: Dict[str, float] = {}
 _db_retry_after: float = 0.0
 _vector_store: Any = None
@@ -555,6 +557,7 @@ async def _probe_redis() -> ComponentStatus:
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
+    global _shutting_down
     settings = get_settings()
     app.state.settings = settings
     settings.ensure_dirs()
@@ -565,6 +568,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error("Startup validation failed: %s", exc)
         raise SystemExit(1) from exc
 
+    _shutting_down = False
     initialize_vector_store()
     async def _cleanup_sessions() -> None:
         import time as _time
@@ -581,9 +585,22 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     cleanup_task = asyncio.create_task(_cleanup_sessions())
     logger.info("RAG Support Assistant started")
-    yield
-    cleanup_task.cancel()
-    logger.info("RAG Support Assistant shutting down")
+    try:
+        yield
+    finally:
+        _shutting_down = True
+        delay = float(getattr(settings, "shutdown_ready_delay_sec", 0.0))
+        if delay > 0:
+            logger.info(
+                "Shutdown: flipping readiness to 503, draining for %.1fs",
+                delay,
+            )
+            try:
+                await asyncio.sleep(delay)
+            except asyncio.CancelledError:
+                pass
+        cleanup_task.cancel()
+        logger.info("RAG Support Assistant shutting down")
 
 
 # ---------------------------------------------------------------------------
@@ -1471,12 +1488,27 @@ async def health_liveness() -> JSONResponse:
 
 @router.get("/health/ready", response_model=HealthResponse)
 async def health_readiness() -> JSONResponse:
+    if _shutting_down:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "shutting_down",
+                "detail": "process is draining - stop sending traffic",
+            },
+        )
     return await health_check()
 
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
-    """Health check — actively probes all dependencies."""
+    if _shutting_down:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "shutting_down",
+                "detail": "process is draining - stop sending traffic",
+            },
+        )
     settings = get_settings()
 
     ollama_status, chroma_status, sqlite_status, postgres_status, redis_status = await asyncio.gather(

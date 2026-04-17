@@ -155,6 +155,9 @@ class Settings:
         default_factory=lambda: float(os.getenv("OLLAMA_REQUEST_TIMEOUT_SEC", "60"))
     )
     session_ttl_seconds: int = int(os.getenv("SESSION_TTL_SECONDS", "7200"))
+    shutdown_ready_delay_sec: float = float(
+        os.getenv("SHUTDOWN_READY_DELAY_SEC", "5")
+    )
     api_key: str = os.getenv("API_KEY", "")
     langfuse_public_key: str = os.getenv("LANGFUSE_PUBLIC_KEY", "")
     langfuse_secret_key: str = os.getenv("LANGFUSE_SECRET_KEY", "")
