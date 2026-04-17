@@ -158,6 +158,12 @@ class Settings:
     request_timeout_sec: float = float(
         os.getenv("REQUEST_TIMEOUT_SEC", "30")
     )
+    max_concurrent_pipelines: int = int(
+        os.getenv("MAX_CONCURRENT_PIPELINES", "8")
+    )
+    pipeline_acquire_timeout_sec: float = float(
+        os.getenv("PIPELINE_ACQUIRE_TIMEOUT_SEC", "0.5")
+    )
     shutdown_ready_delay_sec: float = float(
         os.getenv("SHUTDOWN_READY_DELAY_SEC", "5")
     )

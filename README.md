@@ -80,6 +80,8 @@ Copy `.env.example` to `.env` and adjust:
 | `OLLAMA_RETRY_JITTER` | `true` | случайный jitter ±50% в задержке |
 | `OLLAMA_REQUEST_TIMEOUT_SEC` | `60` | timeout одного HTTP-вызова Ollama; ReadTimeout → retry → breaker |
 | `REQUEST_TIMEOUT_SEC` | `30` | total wall-time limit для `/api/ask`; 504 при превышении |
+| `MAX_CONCURRENT_PIPELINES` | `8` | upper bound на concurrent `/api/ask`; 503 при saturation |
+| `PIPELINE_ACQUIRE_TIMEOUT_SEC` | `0.5` | время ожидания слота до 503 |
 
 ## API
 

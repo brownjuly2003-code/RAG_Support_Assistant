@@ -13,17 +13,20 @@ __all__ = [
     "FEEDBACK_COUNT",
     "OLLAMA_RETRY_EVENTS",
     "PROMETHEUS_AVAILABLE",
+    "PIPELINE_REJECTIONS",
     "QUALITY_SCORE",
     "RATE_LIMIT_REJECTIONS",
     "REGISTRY",
     "REQUEST_COUNT",
     "REQUEST_DURATION",
     "REQUEST_TIMEOUTS",
+    "INFLIGHT_PIPELINES",
     "VECTOR_STORE_DOCS",
     "generate_latest",
     "record_component_health",
     "record_circuit_breaker_change",
     "record_ollama_retry_event",
+    "record_pipeline_rejection",
     "record_rate_limit_rejection",
     "record_request_timeout",
 ]
@@ -40,6 +43,9 @@ class _NoopMetric:
         return self
 
     def inc(self, amount: float = 1.0) -> None:
+        _ = amount
+
+    def dec(self, amount: float = 1.0) -> None:
         _ = amount
 
     def observe(self, value: float) -> None:
@@ -73,6 +79,8 @@ except ImportError:
     OLLAMA_RETRY_EVENTS = _NoopMetric()
     RATE_LIMIT_REJECTIONS = _NoopMetric()
     REQUEST_TIMEOUTS = _NoopMetric()
+    INFLIGHT_PIPELINES = _NoopMetric()
+    PIPELINE_REJECTIONS = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     REGISTRY = CollectorRegistry()
@@ -165,6 +173,19 @@ else:
         registry=REGISTRY,
     )
 
+    INFLIGHT_PIPELINES = Gauge(
+        "rag_inflight_pipelines",
+        "Number of /api/ask pipelines currently running",
+        registry=REGISTRY,
+    )
+
+    PIPELINE_REJECTIONS = Counter(
+        "rag_pipeline_rejections_total",
+        "Requests rejected due to pipeline saturation",
+        ["reason"],
+        registry=REGISTRY,
+    )
+
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
 
@@ -196,3 +217,7 @@ def record_rate_limit_rejection(endpoint: str) -> None:
 
 def record_request_timeout(endpoint: str) -> None:
     REQUEST_TIMEOUTS.labels(endpoint=endpoint).inc()
+
+
+def record_pipeline_rejection(reason: str) -> None:
+    PIPELINE_REJECTIONS.labels(reason=reason).inc()

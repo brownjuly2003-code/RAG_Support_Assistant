@@ -315,6 +315,18 @@ _vector_store: Any = None
 _retriever: Any = None
 _chunks: List[Any] = []
 _llm: Any = None
+_pipeline_semaphore: asyncio.Semaphore | None = None
+
+
+def _get_pipeline_semaphore() -> asyncio.Semaphore:
+    global _pipeline_semaphore
+
+    if _pipeline_semaphore is None:
+        settings = get_settings()
+        size = int(getattr(settings, "max_concurrent_pipelines", 8))
+        _pipeline_semaphore = asyncio.Semaphore(size)
+
+    return _pipeline_semaphore
 
 
 async def _get_or_create_session(session_id: Optional[str]) -> tuple:
@@ -640,69 +652,96 @@ async def ask(
     if hasattr(session, "ask"):
         settings = get_settings()
         timeout = float(getattr(settings, "request_timeout_sec", 30.0))
+        acquire_timeout = float(
+            getattr(settings, "pipeline_acquire_timeout_sec", 0.5)
+        )
         request_id = get_request_id()
+        semaphore = _get_pipeline_semaphore()
         try:
-            result = await asyncio.wait_for(
-                asyncio.to_thread(session.ask, question, request_id),
-                timeout=timeout,
-            )
-
-            answer = result.get("answer") or ""
-            quality = result.get("quality_score") or 50
-            route = result.get("route") or "auto"
-
-            sources_list = []
-            docs = result.get("graded_docs") or result.get("context_docs") or []
-            for doc in docs[:5]:
-                if isinstance(doc, dict):
-                    src = doc.get("metadata", {}).get("source", "")
-                    content = doc.get("page_content", "")[:200]
-                else:
-                    src = getattr(doc, "metadata", {}).get("source", "")
-                    content = getattr(doc, "page_content", "")[:200]
-                sources_list.append(SourceInfo(source=src, page_content=content))
-
-            response = AskResponse(
-                answer=answer,
-                quality_score=quality,
-                route=route,
-                sources=sources_list,
-                session_id=session_id,
-                trace_id=result.get("trace_id") or "",
-                suggested_questions=result.get("suggested_questions") or [],
-            )
+            await asyncio.wait_for(semaphore.acquire(), timeout=acquire_timeout)
         except asyncio.TimeoutError:
             try:
-                prometheus_metrics.record_request_timeout("/api/ask")
+                prometheus_metrics.record_pipeline_rejection("busy")
             except Exception:
                 pass
             logger.warning(
-                "req_id=%s /api/ask exceeded timeout=%.1fs",
+                "req_id=%s /api/ask rejected: pipeline pool saturated",
                 request_id or "-",
-                timeout,
             )
             raise HTTPException(
-                status_code=504,
-                detail=f"Request exceeded {timeout:.0f}s wall-time limit",
+                status_code=503,
+                detail="Server is busy processing other requests - retry in a moment",
             )
-        except Exception as exc:
-            logger.error("Pipeline error in /ask: %s", exc, exc_info=True)
-            answer = "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору."
-            if hasattr(session, "_history"):
-                session._history.append({"role": "user", "content": question})
-                session._history.append({"role": "assistant", "content": answer})
-            elif isinstance(session, dict):
-                session["history"].append({"role": "user", "content": question})
-                session["history"].append({"role": "assistant", "content": answer})
-            response = AskResponse(
-                answer=answer,
-                quality_score=0,
-                route="human",
-                sources=[],
-                session_id=session_id,
-                trace_id="",
-                suggested_questions=[],
-            )
+        try:
+            prometheus_metrics.INFLIGHT_PIPELINES.inc()
+            try:
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(session.ask, question, request_id),
+                    timeout=timeout,
+                )
+
+                answer = result.get("answer") or ""
+                quality = result.get("quality_score") or 50
+                route = result.get("route") or "auto"
+
+                sources_list = []
+                docs = result.get("graded_docs") or result.get("context_docs") or []
+                for doc in docs[:5]:
+                    if isinstance(doc, dict):
+                        src = doc.get("metadata", {}).get("source", "")
+                        content = doc.get("page_content", "")[:200]
+                    else:
+                        src = getattr(doc, "metadata", {}).get("source", "")
+                        content = getattr(doc, "page_content", "")[:200]
+                    sources_list.append(SourceInfo(source=src, page_content=content))
+
+                response = AskResponse(
+                    answer=answer,
+                    quality_score=quality,
+                    route=route,
+                    sources=sources_list,
+                    session_id=session_id,
+                    trace_id=result.get("trace_id") or "",
+                    suggested_questions=result.get("suggested_questions") or [],
+                )
+            except asyncio.TimeoutError:
+                try:
+                    prometheus_metrics.record_request_timeout("/api/ask")
+                except Exception:
+                    pass
+                logger.warning(
+                    "req_id=%s /api/ask exceeded timeout=%.1fs",
+                    request_id or "-",
+                    timeout,
+                )
+                raise HTTPException(
+                    status_code=504,
+                    detail=f"Request exceeded {timeout:.0f}s wall-time limit",
+                )
+            except Exception as exc:
+                logger.error("Pipeline error in /ask: %s", exc, exc_info=True)
+                answer = "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору."
+                if hasattr(session, "_history"):
+                    session._history.append({"role": "user", "content": question})
+                    session._history.append({"role": "assistant", "content": answer})
+                elif isinstance(session, dict):
+                    session["history"].append({"role": "user", "content": question})
+                    session["history"].append({"role": "assistant", "content": answer})
+                response = AskResponse(
+                    answer=answer,
+                    quality_score=0,
+                    route="human",
+                    sources=[],
+                    session_id=session_id,
+                    trace_id="",
+                    suggested_questions=[],
+                )
+        finally:
+            try:
+                prometheus_metrics.INFLIGHT_PIPELINES.dec()
+            except Exception:
+                pass
+            semaphore.release()
     else:
         session["history"].append({"role": "user", "content": question})
         fallback_answer = f"[DEMO] Pipeline not available. Question received: {question}"

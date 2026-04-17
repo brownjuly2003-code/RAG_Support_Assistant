@@ -156,6 +156,7 @@ def _clear_api_state() -> None:
     api_app._retriever = None
     api_app._llm = None
     api_app._db_retry_after = 0.0
+    api_app._pipeline_semaphore = None
     api_app.app.state.settings = None
 
     limiter_storage = getattr(api_app.app.state.limiter, "_storage", None)
@@ -173,8 +174,10 @@ def _reset_settings():
     import config.settings as settings_module
 
     settings_module._settings = None
+    api_app._pipeline_semaphore = None
     yield
     settings_module._settings = None
+    api_app._pipeline_semaphore = None
 
 
 @pytest.fixture(autouse=True)
