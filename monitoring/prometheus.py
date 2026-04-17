@@ -5,6 +5,8 @@ from typing import Any
 
 __all__ = [
     "ACTIVE_SESSIONS",
+    "CIRCUIT_BREAKER_STATE",
+    "CIRCUIT_BREAKER_TRANSITIONS",
     "CONTENT_TYPE_LATEST",
     "ESCALATION_TOTAL",
     "FEEDBACK_COUNT",
@@ -15,6 +17,7 @@ __all__ = [
     "REQUEST_DURATION",
     "VECTOR_STORE_DOCS",
     "generate_latest",
+    "record_circuit_breaker_change",
 ]
 
 PROMETHEUS_AVAILABLE = False
@@ -56,6 +59,8 @@ except ImportError:
     FEEDBACK_COUNT = _NoopMetric()
     ACTIVE_SESSIONS = _NoopMetric()
     VECTOR_STORE_DOCS = _NoopMetric()
+    CIRCUIT_BREAKER_STATE = _NoopMetric()
+    CIRCUIT_BREAKER_TRANSITIONS = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     REGISTRY = CollectorRegistry()
@@ -104,3 +109,26 @@ else:
         "Number of documents in vector store",
         registry=REGISTRY,
     )
+
+    CIRCUIT_BREAKER_STATE = Gauge(
+        "rag_circuit_breaker_state",
+        "Current circuit breaker state: 0=closed, 1=half_open, 2=open",
+        ["name"],
+        registry=REGISTRY,
+    )
+
+    CIRCUIT_BREAKER_TRANSITIONS = Counter(
+        "rag_circuit_breaker_transitions_total",
+        "Total circuit breaker state transitions",
+        ["name", "to_state"],
+        registry=REGISTRY,
+    )
+
+
+_STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
+
+
+def record_circuit_breaker_change(name: str, from_state: str, to_state: str) -> None:
+    CIRCUIT_BREAKER_STATE.labels(name=name).set(_STATE_VALUE.get(to_state, 0))
+    if from_state != to_state:
+        CIRCUIT_BREAKER_TRANSITIONS.labels(name=name, to_state=to_state).inc()

@@ -261,6 +261,7 @@ class HealthResponse(BaseModel):
     vector_store_loaded: bool
     sessions_count: int
     pipeline_available: bool
+    circuit_breakers: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class UploadResponse(BaseModel):
@@ -1363,6 +1364,19 @@ async def health_check() -> HealthResponse:
     overall = "unhealthy" if critical_down else (
         "degraded" if sqlite_status.status == "error" else "ok"
     )
+    breakers_snap: List[Dict[str, Any]] = []
+    try:
+        from graph import get_default_breaker
+    except ImportError:
+        try:
+            from agent.graph import get_default_breaker
+        except ImportError:
+            get_default_breaker = None  # type: ignore[assignment]
+
+    if get_default_breaker is not None:
+        breaker = get_default_breaker()
+        if breaker is not None:
+            breakers_snap.append(breaker.snapshot())
 
     response = HealthResponse(
         status=overall,
@@ -1374,6 +1388,7 @@ async def health_check() -> HealthResponse:
         vector_store_loaded=_vector_store is not None,
         sessions_count=len(_sessions),
         pipeline_available=_run_qa_pipeline is not None,
+        circuit_breakers=breakers_snap,
     )
 
     status_code = 503 if critical_down else 200

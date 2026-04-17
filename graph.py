@@ -210,11 +210,26 @@ def get_default_breaker() -> CircuitBreaker | None:
     if not getattr(settings, "circuit_breaker_enabled", True):
         return None
 
+    def _prom_hook(name: str, old_state, new_state) -> None:
+        try:
+            from monitoring.prometheus import record_circuit_breaker_change
+
+            record_circuit_breaker_change(name, old_state.value, new_state.value)
+        except Exception:
+            pass
+
     _default_breaker = CircuitBreaker(
         failure_threshold=getattr(settings, "circuit_breaker_failure_threshold", 5),
         reset_timeout_sec=getattr(settings, "circuit_breaker_reset_timeout_sec", 30.0),
         name="ollama",
+        on_state_change=_prom_hook,
     )
+    try:
+        from monitoring.prometheus import record_circuit_breaker_change
+
+        record_circuit_breaker_change("ollama", "closed", "closed")
+    except Exception:
+        pass
     return _default_breaker
 
 
