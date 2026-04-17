@@ -48,6 +48,22 @@ groups:
             Requests succeed but only after retries - p95 latency will be
             elevated. Consider investigating Ollama stability.
 
+      - alert: AuthFailureSpike
+        expr: |
+          sum(rate(rag_auth_failures_total[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: auth
+        annotations:
+          summary: ">60 failed login attempts per 5-minute window"
+          description: |
+            rag_auth_failures_total is averaging >1/sec over 5 minutes.
+            With a 5/min per-IP rate limit this means multiple IPs are
+            hammering /auth/login - likely a credential-stuffing campaign.
+            Check audit_log for action="login_failed" and consider
+            temporary IP-level blocks at the edge.
+
   - name: rag-health
     interval: 30s
     rules:

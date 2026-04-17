@@ -106,7 +106,7 @@ Copy `.env.example` to `.env` and adjust:
 | DELETE | `/api/admin/audit-log?older_than_days=N` | ручная очистка audit_log (admin) |
 | GET | `/api/feedback/stats` | агрегированная статистика обратной связи |
 
-Rate limits: 60 req/min на `/api/ask`, 10 req/min на `/api/upload`.
+Rate limits: 60 req/min на `/api/ask`, 10 req/min на `/api/upload`, 5 req/min на `/api/auth/login` (per client IP, anti-brute-force).
 
 ## Web UI
 

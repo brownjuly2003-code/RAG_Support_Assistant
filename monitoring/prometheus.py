@@ -5,6 +5,7 @@ from typing import Any
 
 __all__ = [
     "ACTIVE_SESSIONS",
+    "AUTH_FAILURES",
     "AUDIT_PURGED",
     "COMPONENT_UP",
     "CIRCUIT_BREAKER_STATE",
@@ -27,6 +28,7 @@ __all__ = [
     "generate_latest",
     "record_component_health",
     "record_audit_purged",
+    "record_auth_failure",
     "record_circuit_breaker_change",
     "record_ollama_retry_event",
     "record_pipeline_rejection",
@@ -87,6 +89,7 @@ except ImportError:
     PIPELINE_REJECTIONS = _NoopMetric()
     TRACES_PURGED = _NoopMetric()
     AUDIT_PURGED = _NoopMetric()
+    AUTH_FAILURES = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     REGISTRY = CollectorRegistry()
@@ -205,6 +208,13 @@ else:
         registry=REGISTRY,
     )
 
+    AUTH_FAILURES = Counter(
+        "rag_auth_failures_total",
+        "Failed /auth/login attempts",
+        ["reason"],
+        registry=REGISTRY,
+    )
+
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
 
@@ -250,3 +260,7 @@ def record_traces_purged(table: str, count: int) -> None:
 def record_audit_purged(count: int) -> None:
     if count > 0:
         AUDIT_PURGED.inc(count)
+
+
+def record_auth_failure(reason: str) -> None:
+    AUTH_FAILURES.labels(reason=reason).inc()

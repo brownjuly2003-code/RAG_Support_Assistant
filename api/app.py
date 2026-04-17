@@ -1461,6 +1461,7 @@ async def get_task_status(
 
 
 @router.post("/auth/login", response_model=TokenResponse)
+@limiter.limit("5/minute")
 async def login(request: Request, body: LoginRequest) -> TokenResponse:
     """Authenticate and return JWT tokens."""
     from auth.jwt_handler import create_access_token, create_refresh_token
@@ -1469,6 +1470,20 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
 
     admin_user = os.getenv("ADMIN_USERNAME", "admin")
     admin_hash = os.getenv("ADMIN_PASSWORD_HASH", "")
+    client_ip = request.client.host if request.client else None
+
+    async def _record_failure(reason: str) -> None:
+        try:
+            prometheus_metrics.record_auth_failure(reason)
+        except Exception:
+            pass
+        await log_audit(
+            actor=body.username or "<anonymous>",
+            action="login_failed",
+            resource="auth",
+            detail={"reason": reason},
+            ip_address=client_ip,
+        )
 
     if not admin_hash:
         if body.username == "admin" and body.password == "admin":
@@ -1480,14 +1495,20 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
                 actor=body.username,
                 action="login",
                 resource="auth",
-                ip_address=request.client.host if request.client else None,
+                ip_address=client_ip,
             )
             return response
+        await _record_failure("bad_credentials_dev")
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     from passlib.hash import bcrypt
 
-    if body.username != admin_user or not bcrypt.verify(body.password, admin_hash):
+    if body.username != admin_user:
+        await _record_failure("unknown_user")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if not bcrypt.verify(body.password, admin_hash):
+        await _record_failure("bad_password")
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     response = TokenResponse(
@@ -1498,7 +1519,7 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
         actor=body.username,
         action="login",
         resource="auth",
-        ip_address=request.client.host if request.client else None,
+        ip_address=client_ip,
     )
     return response
 
