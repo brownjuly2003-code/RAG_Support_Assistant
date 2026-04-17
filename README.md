@@ -60,6 +60,9 @@ Copy `.env.example` to `.env` and adjust:
 | `RAG_SELF_RAG_MIN_QUALITY` | `70` | минимальный quality score |
 | `RAG_HYDE` | `false` | Hypothetical Document Embeddings |
 | `RAG_PARENT_CHILD` | `false` | parent-child chunking |
+| `RAG_ENV` | `development` | environment: development/staging/production |
+| `CORS_ORIGINS` | `*` | comma-separated list of allowed origins. With RAG_ENV=production, `*` is rejected. |
+| `CORS_MAX_AGE_SEC` | `600` | browser preflight cache TTL |
 | `SUPPORT_SINK_BACKEND` | `local` | канал эскалации: local или bitrix |
 | `BITRIX_WEBHOOK_URL` | — | URL вебхука Bitrix24 |
 | `API_KEY` | — | X-API-Key header для аутентификации |

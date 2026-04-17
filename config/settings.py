@@ -188,6 +188,9 @@ class Settings:
     langfuse_secret_key: str = os.getenv("LANGFUSE_SECRET_KEY", "")
     langfuse_host: str = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    rag_env: str = field(
+        default_factory=lambda: os.getenv("RAG_ENV", "development").strip().lower()
+    )
     # CORS: список допустимых origins через запятую.
     # "*" = разрешить всё (только для dev). Пример: "https://app.example.com,https://admin.example.com"
     cors_origins: list[str] = field(
@@ -196,6 +199,9 @@ class Settings:
             for o in os.getenv("CORS_ORIGINS", "*").split(",")
             if o.strip()
         ]
+    )
+    cors_max_age_sec: int = field(
+        default_factory=lambda: int(os.getenv("CORS_MAX_AGE_SEC", "600"))
     )
 
     def ensure_dirs(self) -> None:
@@ -223,6 +229,14 @@ class Settings:
         import urllib.error
 
         log = logging.getLogger(__name__)
+
+        if self.rag_env == "production" and ("*" in self.cors_origins or self.cors_origins == []):
+            raise RuntimeError(
+                "\nERROR: CORS_ORIGINS='*' (or empty) is not allowed in production.\n"
+                "       Set CORS_ORIGINS to an explicit comma-separated list of allowed origins,\n"
+                "       e.g. CORS_ORIGINS='https://app.example.com,https://admin.example.com'\n"
+                f"       Current RAG_ENV={self.rag_env}, CORS_ORIGINS={self.cors_origins}"
+            )
 
         # Проверка Ollama
         ollama_ok = False

@@ -1787,6 +1787,17 @@ app = FastAPI(title="RAG Support Assistant API", version="0.3.0", lifespan=_life
 
 # CORS
 _cors_settings = get_settings()
+if "*" in _cors_settings.cors_origins:
+    if _cors_settings.rag_env == "development":
+        logger.warning(
+            "CORS_ORIGINS='*' - OK for development, but set explicit origins "
+            "before deploying to production (RAG_ENV=production will refuse to start)."
+        )
+    else:
+        logger.error(
+            "CORS_ORIGINS='*' in RAG_ENV=%s - tighten before production",
+            _cors_settings.rag_env,
+        )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_settings.cors_origins,
@@ -1794,6 +1805,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["X-API-Key", "Content-Type", "Authorization", "X-Request-Id"],
     expose_headers=["X-Request-Id"],
+    max_age=_cors_settings.cors_max_age_sec,
 )
 
 
