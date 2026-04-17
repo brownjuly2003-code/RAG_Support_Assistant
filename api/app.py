@@ -14,6 +14,7 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json as _json
 import logging
 import re
@@ -30,7 +31,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from api.correlation import generate_request_id, get_request_id, sanitize_request_id, set_request_id
+from api.correlation import (
+    generate_request_id,
+    get_current_tenant,
+    get_request_id,
+    sanitize_request_id,
+    set_current_tenant,
+    set_request_id,
+)
 from auth.dependencies import get_current_user, require_role
 from db.audit import log_audit
 from monitoring import prometheus as prometheus_metrics
@@ -524,11 +532,24 @@ async def _probe_postgres() -> ComponentStatus:
                 detail="DATABASE_URL not configured",
             )
 
-        from db.engine import async_session
+        from db.engine import async_session, get_pool_stats
         from sqlalchemy import text
 
         async with async_session() as db:
             await asyncio.wait_for(db.execute(text("SELECT 1")), timeout=1.0)
+
+        try:
+            stats = get_pool_stats()
+            from monitoring.prometheus import record_db_pool_stats
+
+            record_db_pool_stats(
+                stats["size"],
+                stats["checked_out"],
+                stats["overflow"],
+            )
+        except Exception:
+            pass
+
         return ComponentStatus(status="ok", latency_ms=round((time.monotonic() - t0) * 1000, 1))
     except ImportError as exc:
         return ComponentStatus(
@@ -723,6 +744,17 @@ async def ask(
             getattr(settings, "pipeline_acquire_timeout_sec", 0.5)
         )
         request_id = get_request_id()
+        tenant = get_current_tenant() or _user.get("tenant", "default")
+        ask_params = inspect.signature(session.ask).parameters
+        ask_args = (
+            (question, request_id, tenant)
+            if len(ask_params) >= 3
+            or any(
+                param.kind == inspect.Parameter.VAR_POSITIONAL
+                for param in ask_params.values()
+            )
+            else (question, request_id)
+        )
         semaphore = _get_pipeline_semaphore()
         try:
             await asyncio.wait_for(semaphore.acquire(), timeout=acquire_timeout)
@@ -743,7 +775,7 @@ async def ask(
             prometheus_metrics.INFLIGHT_PIPELINES.inc()
             try:
                 result = await asyncio.wait_for(
-                    asyncio.to_thread(session.ask, question, request_id),
+                    asyncio.to_thread(session.ask, *ask_args),
                     timeout=timeout,
                 )
 
@@ -843,7 +875,10 @@ async def ask(
         actor=_user.get("sub", "anonymous"),
         action="ask",
         resource=f"session:{session_id}",
-        detail={"question_length": len(body.question)},
+        detail={
+            "question_length": len(body.question),
+            "tenant": _user.get("tenant", "default"),
+        },
         ip_address=request.client.host if request.client else None,
     )
     duration = time.monotonic() - t0
@@ -883,11 +918,16 @@ async def ask_stream(
             }) + "\n\n"
             return
 
+        tenant = get_current_tenant() or _user.get("tenant", "default")
+
         await log_audit(
             actor=_user.get("sub", "anonymous"),
             action="ask",
             resource=f"session:{session_id}",
-            detail={"question_length": len(body.question)},
+            detail={
+                "question_length": len(body.question),
+                "tenant": _user.get("tenant", "default"),
+            },
             ip_address=request.client.host if request.client else None,
         )
 
@@ -895,6 +935,16 @@ async def ask_stream(
             prompt = ""
             docs: List[Any] = []
             chat_history: List[Dict[str, str]] = []
+            ask_params = inspect.signature(session.ask).parameters if hasattr(session, "ask") else {}
+            ask_args = (
+                (question, get_request_id(), tenant)
+                if len(ask_params) >= 3
+                or any(
+                    param.kind == inspect.Parameter.VAR_POSITIONAL
+                    for param in ask_params.values()
+                )
+                else (question, get_request_id())
+            )
 
             if hasattr(session, "_retriever") and session._retriever is not None:
                 docs = await asyncio.get_running_loop().run_in_executor(
@@ -1055,7 +1105,7 @@ async def ask_stream(
             try:
                 if hasattr(session, "ask"):
                     result = await asyncio.get_running_loop().run_in_executor(
-                        None, session.ask, question
+                        None, session.ask, *ask_args
                     )
                     answer = result.get("answer") or "Не удалось получить ответ."
                     quality = result.get("quality_score") or 50
@@ -1150,7 +1200,10 @@ async def post_feedback(
         actor=_user.get("sub", "anonymous"),
         action="feedback",
         resource=f"trace:{body.trace_id}",
-        detail={"rating": body.rating},
+        detail={
+            "rating": body.rating,
+            "tenant": _user.get("tenant", "default"),
+        },
         ip_address=request.client.host if request.client else None,
     )
 
@@ -1185,7 +1238,10 @@ async def escalate_to_human(
         actor=_user.get("sub", "anonymous"),
         action="escalate",
         resource=f"session:{body.session_id}",
-        detail={"reason": body.reason},
+        detail={
+            "reason": body.reason,
+            "tenant": _user.get("tenant", "default"),
+        },
         ip_address=request.client.host if request.client else None,
     )
 
@@ -1257,6 +1313,7 @@ async def admin_reset_circuit_breaker(
         action="circuit_breaker_reset",
         resource=f"breaker/{breaker.name}",
         detail={
+            "tenant": _user.get("tenant", "default"),
             "previous_state": previous["state"],
             "previous_consecutive_failures": previous["consecutive_failures"],
         },
@@ -1375,7 +1432,11 @@ async def admin_purge_traces(
         actor=_user.get("sub", "anonymous"),
         action="trace_purge",
         resource=f"traces/older_than={older_than_days}d",
-        detail=result,
+        detail=(
+            result
+            if _user.get("tenant", "default") == "default"
+            else {**result, "tenant": _user.get("tenant", "default")}
+        ),
         ip_address=request.client.host if request.client else None,
     )
 
@@ -1406,7 +1467,10 @@ async def admin_purge_audit(
         actor=_user.get("sub", "anonymous"),
         action="audit_purge",
         resource=f"audit_log/older_than={older_than_days}d",
-        detail={"deleted": deleted},
+        detail={
+            "deleted": deleted,
+            "tenant": _user.get("tenant", "default"),
+        },
         ip_address=request.client.host if request.client else None,
     )
 
@@ -1471,6 +1535,7 @@ async def upload_document(
         actor=_user.get("sub", "anonymous"),
         action="upload",
         resource=f"document:{safe_name}",
+        detail={"tenant": _user.get("tenant", "default")},
         ip_address=request.client.host if request.client else None,
     )
 
@@ -1570,6 +1635,8 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
 
     admin_user = os.getenv("ADMIN_USERNAME", "admin")
     admin_hash = os.getenv("ADMIN_PASSWORD_HASH", "")
+    admin_default_tenant = os.getenv("ADMIN_DEFAULT_TENANT", "default") or "default"
+    login_tenant = "default" if not admin_hash else admin_default_tenant
     client_ip = request.client.host if request.client else None
 
     async def _record_failure(reason: str) -> None:
@@ -1581,20 +1648,21 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
             actor=body.username or "<anonymous>",
             action="login_failed",
             resource="auth",
-            detail={"reason": reason},
+            detail={"reason": reason, "tenant": login_tenant},
             ip_address=client_ip,
         )
 
     if not admin_hash:
         if body.username == "admin" and body.password == "admin":
             response = TokenResponse(
-                access_token=create_access_token("admin", "admin"),
-                refresh_token=create_refresh_token("admin", "admin"),
+                access_token=create_access_token("admin", "admin", login_tenant),
+                refresh_token=create_refresh_token("admin", "admin", login_tenant),
             )
             await log_audit(
                 actor=body.username,
                 action="login",
                 resource="auth",
+                detail={"tenant": login_tenant},
                 ip_address=client_ip,
             )
             return response
@@ -1612,13 +1680,14 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     response = TokenResponse(
-        access_token=create_access_token(body.username, "admin"),
-        refresh_token=create_refresh_token(body.username, "admin"),
+        access_token=create_access_token(body.username, "admin", login_tenant),
+        refresh_token=create_refresh_token(body.username, "admin", login_tenant),
     )
     await log_audit(
         actor=body.username,
         action="login",
         resource="auth",
+        detail={"tenant": login_tenant},
         ip_address=client_ip,
     )
     return response
@@ -1634,8 +1703,16 @@ async def refresh_token(body: RefreshRequest) -> TokenResponse:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
 
     return TokenResponse(
-        access_token=create_access_token(payload["sub"], payload.get("role", "viewer")),
-        refresh_token=create_refresh_token(payload["sub"], payload.get("role", "viewer")),
+        access_token=create_access_token(
+            payload["sub"],
+            payload.get("role", "viewer"),
+            payload.get("tenant", "default"),
+        ),
+        refresh_token=create_refresh_token(
+            payload["sub"],
+            payload.get("role", "viewer"),
+            payload.get("tenant", "default"),
+        ),
     )
 
 
@@ -1785,6 +1862,7 @@ async def clear_session(
         actor=_user.get("sub", "anonymous"),
         action="delete_session",
         resource=f"session:{session_id}",
+        detail={"tenant": _user.get("tenant", "default")},
         ip_address=request.client.host if request.client else None,
     )
     return {"status": "ok", "message": f"Session {session_id} cleared"}
@@ -2010,6 +2088,28 @@ async def _body_size_limit(request: Request, call_next: Any) -> Any:
             )
 
     return await call_next(request)
+
+
+@app.middleware("http")
+async def _tenant_context(request: Request, call_next: Any) -> Any:
+    tenant = "default"
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        try:
+            from auth.jwt_handler import verify_token
+
+            token = auth_header[7:]
+            payload = verify_token(token, expected_type="access")
+            if payload is not None:
+                tenant = payload.get("tenant", "default")
+        except Exception:
+            pass
+
+    set_current_tenant(tenant)
+    try:
+        return await call_next(request)
+    finally:
+        set_current_tenant(None)
 
 
 app.state.limiter = limiter

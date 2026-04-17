@@ -81,6 +81,7 @@ class GraphState(TypedDict, total=False):
     claims: List[dict]
     factuality_score: int
     fact_verification_skipped: bool
+    complexity: Literal["simple", "complex", "unknown"]
     route: Optional[Literal["auto", "human", "retry", "error"]]
     trace_id: str
     tenant_id: str
@@ -128,6 +129,7 @@ def create_initial_state(
         claims=[],
         factuality_score=0,
         fact_verification_skipped=False,
+        complexity="unknown",
         route=None,
         trace_id=trace_id,
         tenant_id=tenant_id,

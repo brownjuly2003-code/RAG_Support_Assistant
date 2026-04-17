@@ -91,6 +91,41 @@ groups:
             {{ $labels.component }} is flapping (uptime 95-99% over 1h).
             Not fully down but unstable - investigate.
 
+      - alert: DbPoolSaturationHigh
+        expr: |
+          rag_db_pool_checked_out
+          / (rag_db_pool_size + rag_db_pool_overflow + 0.001)
+          > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: postgres
+        annotations:
+          summary: "DB pool >80% saturated over 5min"
+          description: |
+            Postgres connection pool has been >80% in use for 5 minutes.
+            If this trend continues, /api/auth/login, audit writes and
+            admin endpoints will start blocking on get_db() dependency.
+            Check for slow queries (pg_stat_activity) and connection leaks
+            in custom endpoints.
+
+      - alert: DbPoolExhausted
+        expr: |
+          rag_db_pool_checked_out
+          / (rag_db_pool_size + rag_db_pool_overflow + 0.001)
+          >= 0.95
+        for: 1m
+        labels:
+          severity: critical
+          component: postgres
+        annotations:
+          summary: "DB pool exhausted - new connections blocking"
+          description: |
+            >=95% of SQLAlchemy pool connections are checked out. New
+            requests are likely blocking on pool acquisition. Mitigate
+            immediately: identify slow queries or a connection leak,
+            consider raising pool_size/max_overflow as a temporary fix.
+
   - name: rag-quality
     interval: 1m
     rules:

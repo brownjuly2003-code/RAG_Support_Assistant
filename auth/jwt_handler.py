@@ -13,20 +13,30 @@ ACCESS_TOKEN_TTL = int(os.getenv("JWT_ACCESS_TTL", "3600"))
 REFRESH_TOKEN_TTL = int(os.getenv("JWT_REFRESH_TTL", "604800"))
 
 
-def create_access_token(user_id: str, role: str = "viewer") -> str:
+def create_access_token(
+    user_id: str,
+    role: str = "viewer",
+    tenant: str = "default",
+) -> str:
     payload = {
         "sub": user_id,
         "role": role,
+        "tenant": tenant,
         "exp": int(time.time()) + ACCESS_TOKEN_TTL,
         "type": "access",
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
-def create_refresh_token(user_id: str, role: str = "viewer") -> str:
+def create_refresh_token(
+    user_id: str,
+    role: str = "viewer",
+    tenant: str = "default",
+) -> str:
     payload = {
         "sub": user_id,
         "role": role,
+        "tenant": tenant,
         "exp": int(time.time()) + REFRESH_TOKEN_TTL,
         "type": "refresh",
     }

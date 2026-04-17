@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 try:
     from agent.state import GraphState, create_initial_state
     from agent.prompts import (
+        build_classify_complexity_prompt,
         build_extract_claims_prompt,
         build_qa_prompt,
         build_self_eval_prompt,
@@ -42,6 +43,7 @@ try:
 except ImportError:
     from state import GraphState, create_initial_state
     from prompts import (
+        build_classify_complexity_prompt,
         build_extract_claims_prompt,
         build_qa_prompt,
         build_self_eval_prompt,
@@ -287,6 +289,54 @@ def _build_hyde_prompt(question: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Model routing node
+# ---------------------------------------------------------------------------
+
+
+def make_classify_complexity_node(
+    classifier_llm: SupportsInvoke,
+) -> Callable[[GraphState], GraphState]:
+    def node(state: GraphState) -> GraphState:
+        if state.get("error"):
+            return state
+        trace_id = state.get("trace_id", "unknown")
+        try:
+            from config.settings import get_settings
+
+            settings = get_settings()
+            if not getattr(settings, "model_routing_enabled", False):
+                new_state: GraphState = {**state, "complexity": "unknown"}
+                log_step(trace_id, "classify_complexity", new_state)
+                return new_state
+
+            question = state.get("question", "")
+            prompt = build_classify_complexity_prompt(question)
+            raw = classifier_llm.invoke(prompt).strip().upper()
+            if raw.startswith("SIMPLE"):
+                complexity = "simple"
+            elif raw.startswith("COMPLEX"):
+                complexity = "complex"
+            else:
+                complexity = "complex"
+
+            new_state = {**state, "complexity": complexity}
+
+            try:
+                from monitoring.prometheus import record_model_routing
+
+                record_model_routing(complexity)
+            except Exception:
+                pass
+
+            log_step(trace_id, "classify_complexity", new_state)
+            return new_state
+        except Exception as exc:
+            return _make_error_state(state, "classify_complexity", exc)
+
+    return node
+
+
+# ---------------------------------------------------------------------------
 # Level 2: Query Transform node
 # ---------------------------------------------------------------------------
 
@@ -463,7 +513,10 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
 # ---------------------------------------------------------------------------
 
 
-def make_generate_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState]:
+def make_generate_node(
+    llm_fast: SupportsInvoke,
+    llm_strong: SupportsInvoke,
+) -> Callable[[GraphState], GraphState]:
     """Узел generate: формирует ответ. Level 3: учитывает chat_history."""
 
     def node(state: GraphState) -> GraphState:
@@ -474,6 +527,8 @@ def make_generate_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState
             question = state.get("question", "")
             docs = state.get("graded_docs") or state.get("context_docs", []) or []
             chat_history = state.get("chat_history", [])
+            complexity = state.get("complexity", "unknown")
+            llm = llm_fast if complexity == "simple" else llm_strong
             model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
 
             if chat_history:
@@ -621,7 +676,10 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
 # ---------------------------------------------------------------------------
 
 
-def make_evaluate_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState]:
+def make_evaluate_node(
+    llm_fast: SupportsInvoke,
+    llm_strong: SupportsInvoke,
+) -> Callable[[GraphState], GraphState]:
     """Узел evaluate: самооценка качества ответа (1-100)."""
 
     def node(state: GraphState) -> GraphState:
@@ -633,6 +691,8 @@ def make_evaluate_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState
             answer = state.get("answer") or ""
             docs = state.get("graded_docs") or state.get("context_docs", []) or []
             prompt = build_self_eval_prompt(question=question, answer=answer, context_docs=docs)
+            complexity = state.get("complexity", "unknown")
+            llm = llm_fast if complexity == "simple" else llm_strong
             model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
             try:
                 t0 = time.monotonic()
@@ -878,30 +938,43 @@ def build_support_graph(
     """Собирает и компилирует граф LangGraph Level 2.
 
     Граф:
-        transform_query → retrieve → grade_docs → generate → verify_facts → evaluate
-            → route_or_retry ─┬─ (retry) → rewrite_query → retrieve → ...
-                               └─ (end)   → log → END
+        classify_complexity → transform_query → retrieve → grade_docs → generate
+            → verify_facts → evaluate → route_or_retry
+                ├─ (retry) → rewrite_query → retrieve → ...
+                └─ (end)   → log → END
     """
     if llm is None:
-        llm = LocalOllamaLLM(model_name="mistral", breaker=get_default_breaker())
+        from config.settings import get_settings
+
+        settings = get_settings()
+        llm_strong = LocalOllamaLLM(model_name=settings.ollama_model_name)
+        if getattr(settings, "model_routing_enabled", False):
+            llm_fast = LocalOllamaLLM(model_name=settings.ollama_fast_model_name)
+        else:
+            llm_fast = llm_strong
+    else:
+        llm_fast = llm
+        llm_strong = llm
 
     workflow = StateGraph(GraphState)
 
     # Регистрируем узлы
-    workflow.add_node("transform_query", make_transform_query_node(llm))
+    workflow.add_node("classify_complexity", make_classify_complexity_node(llm_fast))
+    workflow.add_node("transform_query", make_transform_query_node(llm_fast))
     workflow.add_node("retrieve", make_retrieve_node(retriever))
-    workflow.add_node("grade_docs", make_grade_docs_node(llm))
-    workflow.add_node("generate", make_generate_node(llm))
-    workflow.add_node("verify_facts", make_verify_facts_node(llm))
-    workflow.add_node("evaluate", make_evaluate_node(llm))
+    workflow.add_node("grade_docs", make_grade_docs_node(llm_fast))
+    workflow.add_node("generate", make_generate_node(llm_fast, llm_strong))
+    workflow.add_node("verify_facts", make_verify_facts_node(llm_fast))
+    workflow.add_node("evaluate", make_evaluate_node(llm_fast, llm_strong))
     workflow.add_node("route_or_retry", make_route_or_retry_node(min_quality=min_quality))
-    workflow.add_node("suggest_questions", make_suggest_questions_node(llm))
-    workflow.add_node("rewrite_query", make_rewrite_query_node(llm))
+    workflow.add_node("suggest_questions", make_suggest_questions_node(llm_strong))
+    workflow.add_node("rewrite_query", make_rewrite_query_node(llm_strong))
     workflow.add_node("log", make_log_node())
     workflow.add_node("handle_error", make_handle_error_node())
 
     # Основной путь
-    workflow.set_entry_point("transform_query")
+    workflow.set_entry_point("classify_complexity")
+    workflow.add_edge("classify_complexity", "transform_query")
     workflow.add_edge("transform_query", "retrieve")
     workflow.add_edge("retrieve", "grade_docs")
     workflow.add_edge("grade_docs", "generate")
@@ -944,6 +1017,7 @@ def run_qa_pipeline(
     max_iterations: int = 2,
     chat_history: List[Dict[str, str]] | None = None,
     trace_id: str | None = None,
+    tenant_id: str = "default",
 ) -> GraphState:
     """Обрабатывает один вопрос через граф.
 
@@ -954,8 +1028,12 @@ def run_qa_pipeline(
         max_iterations: макс. итераций Self-RAG.
         chat_history: история диалога (Level 3).
     """
-    trace_id = start_trace(trace_id=trace_id)
-    initial_state = create_initial_state(question=question, trace_id=trace_id)
+    trace_id = start_trace(trace_id=trace_id, tenant_id=tenant_id)
+    initial_state = create_initial_state(
+        question=question,
+        trace_id=trace_id,
+        tenant_id=tenant_id,
+    )
     initial_state["max_iterations"] = max_iterations
     if chat_history:
         initial_state["chat_history"] = chat_history
@@ -1008,7 +1086,12 @@ class ConversationSession:
     def history(self) -> List[Dict[str, str]]:
         return list(self._history)
 
-    def ask(self, question: str, trace_id: Optional[str] = None) -> GraphState:
+    def ask(
+        self,
+        question: str,
+        trace_id: Optional[str] = None,
+        tenant_id: str = "default",
+    ) -> GraphState:
         """Задаёт вопрос с учётом истории диалога."""
         result = run_qa_pipeline(
             question=question,
@@ -1017,6 +1100,7 @@ class ConversationSession:
             max_iterations=self._max_iterations,
             chat_history=self._history,
             trace_id=trace_id,
+            tenant_id=tenant_id,
         )
 
         # Сохраняем в историю

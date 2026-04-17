@@ -12,6 +12,9 @@ __all__ = [
     "CIRCUIT_BREAKER_STATE",
     "CIRCUIT_BREAKER_TRANSITIONS",
     "CONTENT_TYPE_LATEST",
+    "DB_POOL_CHECKED_OUT",
+    "DB_POOL_OVERFLOW",
+    "DB_POOL_SIZE",
     "ESCALATION_TOTAL",
     "FACTUALITY_SCORE",
     "FEEDBACK_COUNT",
@@ -28,6 +31,7 @@ __all__ = [
     "REQUEST_TIMEOUTS",
     "TRACES_PURGED",
     "INFLIGHT_PIPELINES",
+    "MODEL_ROUTING",
     "VECTOR_STORE_DOCS",
     "generate_latest",
     "record_component_health",
@@ -35,8 +39,10 @@ __all__ = [
     "record_audit_purged",
     "record_auth_failure",
     "record_body_size_rejection",
+    "record_db_pool_stats",
     "record_circuit_breaker_change",
     "record_ollama_retry_event",
+    "record_model_routing",
     "record_pipeline_rejection",
     "record_rate_limit_rejection",
     "record_request_timeout",
@@ -91,7 +97,11 @@ except ImportError:
     CIRCUIT_BREAKER_STATE = _NoopMetric()
     CIRCUIT_BREAKER_TRANSITIONS = _NoopMetric()
     COMPONENT_UP = _NoopMetric()
+    DB_POOL_SIZE = _NoopMetric()
+    DB_POOL_CHECKED_OUT = _NoopMetric()
+    DB_POOL_OVERFLOW = _NoopMetric()
     OLLAMA_RETRY_EVENTS = _NoopMetric()
+    MODEL_ROUTING = _NoopMetric()
     RATE_LIMIT_REJECTIONS = _NoopMetric()
     REQUEST_TIMEOUTS = _NoopMetric()
     INFLIGHT_PIPELINES = _NoopMetric()
@@ -192,10 +202,35 @@ else:
         registry=REGISTRY,
     )
 
+    DB_POOL_SIZE = Gauge(
+        "rag_db_pool_size",
+        "SQLAlchemy pool size (permanent connections)",
+        registry=REGISTRY,
+    )
+
+    DB_POOL_CHECKED_OUT = Gauge(
+        "rag_db_pool_checked_out",
+        "SQLAlchemy pool connections currently in use",
+        registry=REGISTRY,
+    )
+
+    DB_POOL_OVERFLOW = Gauge(
+        "rag_db_pool_overflow",
+        "SQLAlchemy pool overflow connections beyond pool_size",
+        registry=REGISTRY,
+    )
+
     OLLAMA_RETRY_EVENTS = Counter(
         "rag_ollama_retry_events_total",
         "Retry wrapper events around Ollama calls",
         ["event"],
+        registry=REGISTRY,
+    )
+
+    MODEL_ROUTING = Counter(
+        "rag_model_routing_total",
+        "Classifier decisions: simple routes to fast, complex routes to strong",
+        ["complexity"],
         registry=REGISTRY,
     )
 
@@ -266,6 +301,15 @@ def record_component_health(component: str, status: str) -> None:
     COMPONENT_UP.labels(component=component).set(value)
 
 
+def record_db_pool_stats(size: int, checked_out: int, overflow: int) -> None:
+    if size >= 0:
+        DB_POOL_SIZE.set(size)
+    if checked_out >= 0:
+        DB_POOL_CHECKED_OUT.set(checked_out)
+    if overflow >= 0:
+        DB_POOL_OVERFLOW.set(overflow)
+
+
 def record_http_request(method: str, endpoint: str, status: int, duration_sec: float) -> None:
     HTTP_REQUESTS.labels(
         method=method,
@@ -287,6 +331,10 @@ def record_circuit_breaker_change(name: str, from_state: str, to_state: str) -> 
 def record_ollama_retry_event(event: str) -> None:
     """Bump the retry counter for a retry wrapper event."""
     OLLAMA_RETRY_EVENTS.labels(event=event).inc()
+
+
+def record_model_routing(complexity: str) -> None:
+    MODEL_ROUTING.labels(complexity=complexity).inc()
 
 
 def record_rate_limit_rejection(endpoint: str) -> None:

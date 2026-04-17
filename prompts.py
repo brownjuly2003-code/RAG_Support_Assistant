@@ -201,6 +201,20 @@ def build_verify_claim_prompt(claim: str, context: str) -> str:
     )
 
 
+def build_classify_complexity_prompt(question: str) -> str:
+    return (
+        "Classify the user question as SIMPLE or COMPLEX.\n\n"
+        "SIMPLE: factual lookup, single concept, short answer (<5 sentences).\n"
+        "  Examples: 'How to reset password?', 'What is X?', 'Where is the Y button?'\n\n"
+        "COMPLEX: multi-step reasoning, comparison, analysis, inference,\n"
+        "or synthesis across documents.\n"
+        "  Examples: 'Compare A and B', 'Explain why X causes Y',\n"
+        "            'Analyze this contract against policy Z'\n\n"
+        "Output strictly one word: SIMPLE or COMPLEX.\n\n"
+        f"Question: {question}\n\nClassification:"
+    )
+
+
 def build_suggested_questions_prompt(
     question: str,
     answer: str,

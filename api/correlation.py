@@ -11,6 +11,9 @@ _VALID_REQUEST_ID = re.compile(r"^[A-Za-z0-9_\-:.]{1,128}$")
 _current_request_id: ContextVar[Optional[str]] = ContextVar(
     "request_id", default=None
 )
+_current_tenant: ContextVar[Optional[str]] = ContextVar(
+    "current_tenant", default=None
+)
 
 
 def generate_request_id() -> str:
@@ -35,3 +38,11 @@ def get_request_id() -> Optional[str]:
 def set_request_id(value: Optional[str]) -> None:
     """Установить request ID для текущего request-scope."""
     _current_request_id.set(value)
+
+
+def get_current_tenant() -> Optional[str]:
+    return _current_tenant.get()
+
+
+def set_current_tenant(value: Optional[str]) -> None:
+    _current_tenant.set(value)

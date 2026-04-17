@@ -49,6 +49,8 @@ Copy `.env.example` to `.env` and adjust:
 |----------|---------|-------------|
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | URL локального Ollama API |
 | `OLLAMA_MODEL_NAME` | `qwen2.5:7b` | модель генерации ответов |
+| `MODEL_ROUTING_ENABLED` | `false` | включить классификатор и routing simple/complex на разные модели |
+| `OLLAMA_FAST_MODEL_NAME` | `llama3.2:3b` | быстрая модель для простых вопросов и utility-узлов |
 | `RAG_EMBEDDING_MODEL` | `BAAI/bge-m3` | embedding model |
 | `RAG_RERANKER_MODEL` | `cross-encoder/ms-marco-MiniLM-L-6-v2` | cross-encoder reranker |
 | `RAG_HYBRID_SEARCH` | `true` | BM25 + vector hybrid search |
