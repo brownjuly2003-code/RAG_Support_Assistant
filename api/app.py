@@ -1361,9 +1361,27 @@ async def upload_document(
     upload_dir.mkdir(parents=True, exist_ok=True)
 
     file_path = upload_dir / safe_name
+    settings = get_settings()
+    upload_limit = getattr(settings, "max_upload_bytes", 50 * 1024 * 1024)
     try:
-        content = await file.read()
-        file_path.write_bytes(content)
+        content = bytearray()
+        while True:
+            chunk = await file.read(8192)
+            if not chunk:
+                break
+            content.extend(chunk)
+            if len(content) > upload_limit:
+                try:
+                    prometheus_metrics.record_body_size_rejection("upload_too_large")
+                except Exception:
+                    pass
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Upload exceeds limit of {upload_limit} bytes",
+                )
+        file_path.write_bytes(bytes(content))
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to save file: {exc}")
 
@@ -1837,6 +1855,32 @@ async def _request_id(request: Request, call_next: Any) -> Any:
         return response
     finally:
         set_request_id(None)
+
+
+@app.middleware("http")
+async def _body_size_limit(request: Request, call_next: Any) -> Any:
+    if request.url.path == "/api/upload":
+        return await call_next(request)
+
+    settings = get_settings()
+    limit = getattr(settings, "max_request_body_bytes", 1024 * 1024)
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            size = int(content_length)
+        except ValueError:
+            size = -1
+        if size > limit:
+            try:
+                prometheus_metrics.record_body_size_rejection("content_length_too_large")
+            except Exception:
+                pass
+            return JSONResponse(
+                status_code=413,
+                content={"detail": f"Request body too large ({size} bytes, limit {limit})"},
+            )
+
+    return await call_next(request)
 
 
 app.state.limiter = limiter

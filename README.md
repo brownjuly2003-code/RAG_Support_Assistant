@@ -63,6 +63,8 @@ Copy `.env.example` to `.env` and adjust:
 | `RAG_ENV` | `development` | environment: development/staging/production |
 | `CORS_ORIGINS` | `*` | comma-separated list of allowed origins. With RAG_ENV=production, `*` is rejected. |
 | `CORS_MAX_AGE_SEC` | `600` | browser preflight cache TTL |
+| `MAX_REQUEST_BODY_BYTES` | `1048576` | 1 MiB limit for request bodies except `/api/upload` |
+| `MAX_UPLOAD_BYTES` | `52428800` | 50 MiB limit for `/api/upload` |
 | `SUPPORT_SINK_BACKEND` | `local` | канал эскалации: local или bitrix |
 | `BITRIX_WEBHOOK_URL` | — | URL вебхука Bitrix24 |
 | `API_KEY` | — | X-API-Key header для аутентификации |

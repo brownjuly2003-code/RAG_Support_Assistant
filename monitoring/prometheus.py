@@ -7,6 +7,7 @@ __all__ = [
     "ACTIVE_SESSIONS",
     "AUTH_FAILURES",
     "AUDIT_PURGED",
+    "BODY_SIZE_REJECTIONS",
     "COMPONENT_UP",
     "CIRCUIT_BREAKER_STATE",
     "CIRCUIT_BREAKER_TRANSITIONS",
@@ -29,6 +30,7 @@ __all__ = [
     "record_component_health",
     "record_audit_purged",
     "record_auth_failure",
+    "record_body_size_rejection",
     "record_circuit_breaker_change",
     "record_ollama_retry_event",
     "record_pipeline_rejection",
@@ -90,6 +92,7 @@ except ImportError:
     TRACES_PURGED = _NoopMetric()
     AUDIT_PURGED = _NoopMetric()
     AUTH_FAILURES = _NoopMetric()
+    BODY_SIZE_REJECTIONS = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     REGISTRY = CollectorRegistry()
@@ -215,6 +218,13 @@ else:
         registry=REGISTRY,
     )
 
+    BODY_SIZE_REJECTIONS = Counter(
+        "rag_body_size_rejections_total",
+        "Requests rejected due to body size limits",
+        ["reason"],
+        registry=REGISTRY,
+    )
+
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
 
@@ -264,3 +274,7 @@ def record_audit_purged(count: int) -> None:
 
 def record_auth_failure(reason: str) -> None:
     AUTH_FAILURES.labels(reason=reason).inc()
+
+
+def record_body_size_rejection(reason: str) -> None:
+    BODY_SIZE_REJECTIONS.labels(reason=reason).inc()

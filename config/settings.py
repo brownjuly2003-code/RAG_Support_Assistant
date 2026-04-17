@@ -203,6 +203,12 @@ class Settings:
     cors_max_age_sec: int = field(
         default_factory=lambda: int(os.getenv("CORS_MAX_AGE_SEC", "600"))
     )
+    max_request_body_bytes: int = field(
+        default_factory=lambda: int(os.getenv("MAX_REQUEST_BODY_BYTES", str(1 * 1024 * 1024)))
+    )
+    max_upload_bytes: int = field(
+        default_factory=lambda: int(os.getenv("MAX_UPLOAD_BYTES", str(50 * 1024 * 1024)))
+    )
 
     def ensure_dirs(self) -> None:
         """
