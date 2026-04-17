@@ -8,7 +8,7 @@ RAG Support Assistant отвечает на вопросы поддержки п
 Пользователь → POST /api/ask
                      ↓
               LangGraph pipeline:
-  transform_query → retrieve → grade_docs → generate → evaluate → route_or_retry
+  transform_query → retrieve → grade_docs → generate → verify_facts → evaluate → route_or_retry
                                                                         ↓        ↓
                                                                     log      handle_error
                                                                     ↓              ↓
@@ -18,7 +18,7 @@ RAG Support Assistant отвечает на вопросы поддержки п
 - **Retrieval**: ChromaDB (vector) + BM25 hybrid search, Reciprocal Rank Fusion, cross-encoder reranking
 - **Embeddings**: BGE-M3 (`BAAI/bge-m3`) — multilingual, 1024d
 - **Generation**: Ollama/Qwen2.5 7B (локальная LLM, без внешних API)
-- **Evaluation**: `quality_score` (0–100), маршрут `auto` / `human` / `retry` / `error`
+- **Evaluation**: `quality_score` (0–100), `factuality_score` (0–100), маршрут `auto` / `human` / `retry` / `error`
 - **Escalation**: при `route=human` или `route=error` вопрос уходит в JSONL inbox или Bitrix24 webhook
 - **Tracing**: каждый запрос логируется в SQLite (trace_id, nodes, scores, latency)
 - **Monitoring**: агрегированные метрики (latency p50/p95/p99, escalation rate, quality scores, thumbs-down) из SQLite
@@ -58,6 +58,8 @@ Copy `.env.example` to `.env` and adjust:
 | `RAG_SEMANTIC_CHUNKING` | `false` | семантический chunking |
 | `RAG_SELF_RAG_MAX_ITER` | `2` | макс. итераций Self-RAG |
 | `RAG_SELF_RAG_MIN_QUALITY` | `70` | минимальный quality score |
+| `FACT_VERIFICATION_ENABLED` | `true` | включить узел `verify_facts` после `generate` |
+| `FACT_VERIFICATION_MIN_SCORE` | `70` | минимальный `factuality_score` для route=auto |
 | `RAG_HYDE` | `false` | Hypothetical Document Embeddings |
 | `RAG_PARENT_CHILD` | `false` | parent-child chunking |
 | `RAG_ENV` | `development` | environment: development/staging/production |

@@ -29,6 +29,12 @@ class Session(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
     )
+    tenant_id: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        server_default="default",
+        index=True,
+    )
 
     messages: Mapped[list["Message"]] = relationship(
         back_populates="session",
@@ -147,3 +153,9 @@ class AuditLog(Base):
     resource: Mapped[str] = mapped_column(String(200))
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    tenant_id: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        server_default="default",
+        index=True,
+    )

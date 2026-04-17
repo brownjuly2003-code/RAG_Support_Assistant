@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAG Admin</title>
+<link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+<header>
+  <div class="heading">
+    <h1>RAG Support Assistant - Admin</h1>
+    <p class="muted">Minimal operator access to breaker, traces, audit, and metrics endpoints.</p>
+  </div>
+  <div class="auth">
+    <label for="token">Bearer Token</label>
+    <div class="auth-row">
+      <input id="token" type="password" autocomplete="off" spellcheck="false">
+      <button id="save-token" type="button">Save</button>
+    </div>
+    <p id="token-status" class="status" aria-live="polite"></p>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="Admin sections">
+  <button type="button" data-tab="breaker" class="active">Circuit Breaker</button>
+  <button type="button" data-tab="traces">Traces</button>
+  <button type="button" data-tab="audit">Audit Log</button>
+  <button type="button" data-tab="metrics">Metrics</button>
+</nav>
+
+<main>
+  <section id="tab-breaker" class="active">
+    <h2>Circuit Breaker</h2>
+    <div class="controls">
+      <button id="btn-reset" type="button">Reset Breaker</button>
+    </div>
+    <pre id="breaker-output"></pre>
+  </section>
+
+  <section id="tab-traces">
+    <h2>Traces</h2>
+    <div class="controls">
+      <label>Limit <input id="traces-limit" type="number" value="50" min="1" max="500"></label>
+      <button id="btn-load-traces" type="button">Load</button>
+    </div>
+    <div class="controls">
+      <label>Delete older than days <input id="traces-purge-days" type="number" value="30" min="0" max="3650"></label>
+      <button id="btn-purge-traces" type="button">Purge</button>
+    </div>
+    <table id="traces-table">
+      <thead>
+        <tr>
+          <th>trace_id</th>
+          <th>started</th>
+          <th>finished</th>
+          <th>action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <pre id="traces-output"></pre>
+    <pre id="trace-detail"></pre>
+  </section>
+
+  <section id="tab-audit">
+    <h2>Audit Log</h2>
+    <div class="controls">
+      <label>Actor <input id="audit-actor" type="text"></label>
+      <label>Action <input id="audit-action" type="text"></label>
+      <label>Limit <input id="audit-limit" type="number" value="50" min="1" max="500"></label>
+      <button id="btn-load-audit" type="button">Load</button>
+    </div>
+    <div class="controls">
+      <label>Delete older than days <input id="audit-purge-days" type="number" value="90" min="0" max="3650"></label>
+      <button id="btn-purge-audit" type="button">Purge</button>
+    </div>
+    <table id="audit-table">
+      <thead>
+        <tr>
+          <th>ts</th>
+          <th>actor</th>
+          <th>action</th>
+          <th>resource</th>
+          <th>ip</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <pre id="audit-output"></pre>
+  </section>
+
+  <section id="tab-metrics">
+    <h2>Metrics</h2>
+    <p class="muted">Refreshes every 5 seconds while this tab is open.</p>
+    <pre id="metrics-output"></pre>
+  </section>
+</main>
+
+<script src="/static/admin.js"></script>
+</body>
+</html>

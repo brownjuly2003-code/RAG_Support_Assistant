@@ -151,3 +151,19 @@ groups:
             95th percentile request duration has exceeded 12 seconds for 10+
             minutes. Check Ollama CPU/GPU load, concurrent request count,
             and retry metrics (retries inflate latency).
+
+      - alert: High5xxErrorRate
+        expr: |
+          sum(rate(rag_http_requests_total{status=~"5.."}[5m]))
+          / sum(rate(rag_http_requests_total[5m]))
+          > 0.05
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "5xx error rate >5% over 10min"
+          description: |
+            More than 5% of HTTP responses are 5xx server errors. Check
+            application logs for unhandled exceptions and the recent
+            deploys. Correlate with rag_circuit_breaker_state and
+            rag_component_up.

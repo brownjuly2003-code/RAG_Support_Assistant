@@ -179,6 +179,28 @@ def build_self_eval_prompt(
     return prompt
 
 
+def build_extract_claims_prompt(answer: str) -> str:
+    return (
+        "You are an assistant that breaks a text into atomic factual claims.\n"
+        "A claim is a single, verifiable statement of fact.\n"
+        "Ignore greetings, meta-commentary, and hedges.\n"
+        "Output each claim on its own line, prefixed with '- '.\n"
+        "If there are no factual claims, output 'NONE'.\n\n"
+        f"Text:\n{answer}\n\nClaims:"
+    )
+
+
+def build_verify_claim_prompt(claim: str, context: str) -> str:
+    return (
+        "You are a fact-checker. Decide whether the CLAIM is DIRECTLY supported by the CONTEXT.\n"
+        "Answer strictly:\n"
+        "  SUPPORTED: <one-line quote or paraphrase from context>\n"
+        "  UNSUPPORTED\n"
+        "Do not use outside knowledge. If context is silent or ambiguous - UNSUPPORTED.\n\n"
+        f"CONTEXT:\n{context}\n\nCLAIM: {claim}\n\nAnswer:"
+    )
+
+
 def build_suggested_questions_prompt(
     question: str,
     answer: str,

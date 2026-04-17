@@ -78,8 +78,12 @@ class GraphState(TypedDict, total=False):
     answer: Optional[str]
     relevance_score: Optional[float]
     quality_score: Optional[int]
+    claims: List[dict]
+    factuality_score: int
+    fact_verification_skipped: bool
     route: Optional[Literal["auto", "human", "retry", "error"]]
     trace_id: str
+    tenant_id: str
     error: bool
     error_message: str
     error_node: str
@@ -90,7 +94,11 @@ class GraphState(TypedDict, total=False):
     suggested_questions: List[str]
 
 
-def create_initial_state(question: str, trace_id: Optional[str] = None) -> GraphState:
+def create_initial_state(
+    question: str,
+    trace_id: Optional[str] = None,
+    tenant_id: str = "default",
+) -> GraphState:
     """
     Удобная фабрика для создания начального состояния графа.
 
@@ -117,8 +125,12 @@ def create_initial_state(question: str, trace_id: Optional[str] = None) -> Graph
         answer=None,
         relevance_score=None,
         quality_score=None,
+        claims=[],
+        factuality_score=0,
+        fact_verification_skipped=False,
         route=None,
         trace_id=trace_id,
+        tenant_id=tenant_id,
         error=False,
         error_message="",
         error_node="",

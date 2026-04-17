@@ -13,7 +13,10 @@ __all__ = [
     "CIRCUIT_BREAKER_TRANSITIONS",
     "CONTENT_TYPE_LATEST",
     "ESCALATION_TOTAL",
+    "FACTUALITY_SCORE",
     "FEEDBACK_COUNT",
+    "HTTP_REQUESTS",
+    "HTTP_REQUEST_DURATION",
     "OLLAMA_RETRY_EVENTS",
     "PROMETHEUS_AVAILABLE",
     "PIPELINE_REJECTIONS",
@@ -28,6 +31,7 @@ __all__ = [
     "VECTOR_STORE_DOCS",
     "generate_latest",
     "record_component_health",
+    "record_http_request",
     "record_audit_purged",
     "record_auth_failure",
     "record_body_size_rejection",
@@ -76,7 +80,10 @@ try:
 except ImportError:
     REQUEST_COUNT = _NoopMetric()
     REQUEST_DURATION = _NoopMetric()
+    HTTP_REQUESTS = _NoopMetric()
+    HTTP_REQUEST_DURATION = _NoopMetric()
     QUALITY_SCORE = _NoopMetric()
+    FACTUALITY_SCORE = _NoopMetric()
     ESCALATION_TOTAL = _NoopMetric()
     FEEDBACK_COUNT = _NoopMetric()
     ACTIVE_SESSIONS = _NoopMetric()
@@ -111,9 +118,30 @@ else:
         registry=REGISTRY,
     )
 
+    HTTP_REQUESTS = Counter(
+        "rag_http_requests_total",
+        "HTTP requests by method, endpoint, status (all routes, not just /api/ask)",
+        ["method", "endpoint", "status"],
+        registry=REGISTRY,
+    )
+
+    HTTP_REQUEST_DURATION = Histogram(
+        "rag_http_request_duration_seconds",
+        "HTTP request duration by method and endpoint",
+        ["method", "endpoint"],
+        buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0),
+        registry=REGISTRY,
+    )
+
     QUALITY_SCORE = Summary(
         "rag_quality_score",
         "Quality scores from self-evaluation",
+        registry=REGISTRY,
+    )
+
+    FACTUALITY_SCORE = Summary(
+        "rag_factuality_score",
+        "Share of answer claims supported by retrieved context (0-100)",
         registry=REGISTRY,
     )
 
@@ -236,6 +264,18 @@ def record_component_health(component: str, status: str) -> None:
 
     value = 1 if status == "ok" else 0
     COMPONENT_UP.labels(component=component).set(value)
+
+
+def record_http_request(method: str, endpoint: str, status: int, duration_sec: float) -> None:
+    HTTP_REQUESTS.labels(
+        method=method,
+        endpoint=endpoint,
+        status=str(status),
+    ).inc()
+    HTTP_REQUEST_DURATION.labels(
+        method=method,
+        endpoint=endpoint,
+    ).observe(duration_sec)
 
 
 def record_circuit_breaker_change(name: str, from_state: str, to_state: str) -> None:

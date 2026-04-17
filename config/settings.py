@@ -116,6 +116,14 @@ class Settings:
     # --- Level 2: Self-RAG ---
     self_rag_max_iterations: int = int(os.getenv("RAG_SELF_RAG_MAX_ITER", "2"))
     self_rag_min_quality: int = int(os.getenv("RAG_SELF_RAG_MIN_QUALITY", "70"))
+    fact_verification_enabled: bool = field(
+        default_factory=lambda: os.getenv(
+            "FACT_VERIFICATION_ENABLED", "true"
+        ).strip().lower() in ("1", "true", "yes")
+    )
+    fact_verification_min_score: int = field(
+        default_factory=lambda: int(os.getenv("FACT_VERIFICATION_MIN_SCORE", "70"))
+    )
 
     # --- Backend векторного хранилища ---
     # "chroma" (по умолчанию) или "qdrant"

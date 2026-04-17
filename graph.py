@@ -27,12 +27,14 @@ if TYPE_CHECKING:
 try:
     from agent.state import GraphState, create_initial_state
     from agent.prompts import (
+        build_extract_claims_prompt,
         build_qa_prompt,
         build_self_eval_prompt,
         build_suggested_questions_prompt,
         build_query_transform_prompt,
         build_doc_grade_prompt,
         build_query_rewrite_prompt,
+        build_verify_claim_prompt,
         build_conversational_qa_prompt,
         build_conversational_query_transform_prompt,
     )
@@ -40,12 +42,14 @@ try:
 except ImportError:
     from state import GraphState, create_initial_state
     from prompts import (
+        build_extract_claims_prompt,
         build_qa_prompt,
         build_self_eval_prompt,
         build_suggested_questions_prompt,
         build_query_transform_prompt,
         build_doc_grade_prompt,
         build_query_rewrite_prompt,
+        build_verify_claim_prompt,
         build_conversational_qa_prompt,
         build_conversational_query_transform_prompt,
     )
@@ -502,6 +506,117 @@ def make_generate_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState
 
 
 # ---------------------------------------------------------------------------
+# Fact verification node
+# ---------------------------------------------------------------------------
+
+
+def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState]:
+    def node(state: GraphState) -> GraphState:
+        if state.get("error"):
+            return state
+        trace_id = state.get("trace_id", "unknown")
+        try:
+            from config.settings import get_settings
+
+            settings = get_settings()
+            if not getattr(settings, "fact_verification_enabled", True):
+                new_state: GraphState = {
+                    **state,
+                    "claims": [],
+                    "fact_verification_skipped": True,
+                    "factuality_score": 100,
+                }
+                log_step(trace_id, "verify_facts", new_state)
+                return new_state
+
+            answer = state.get("answer", "")
+            docs = state.get("graded_docs") or state.get("context_docs") or []
+            context_text = "\n\n".join(
+                str(
+                    d.get("page_content") if isinstance(d, dict) else getattr(d, "page_content", "")
+                )[:500]
+                for d in docs[:5]
+            )
+
+            if not answer or not context_text:
+                new_state = {
+                    **state,
+                    "claims": [],
+                    "fact_verification_skipped": True,
+                    "factuality_score": 100,
+                }
+                log_step(trace_id, "verify_facts", new_state)
+                return new_state
+
+            if len(re.findall(r"\w+", answer)) < 3:
+                new_state = {
+                    **state,
+                    "claims": [],
+                    "fact_verification_skipped": False,
+                    "factuality_score": 100,
+                }
+                log_step(trace_id, "verify_facts", new_state)
+                return new_state
+
+            raw_claims = llm.invoke(build_extract_claims_prompt(answer)).strip()
+            if raw_claims.upper().startswith("NONE"):
+                new_state = {
+                    **state,
+                    "claims": [],
+                    "fact_verification_skipped": False,
+                    "factuality_score": 100,
+                }
+                log_step(trace_id, "verify_facts", new_state)
+                return new_state
+
+            claim_lines = [
+                line.lstrip("- ").strip()
+                for line in raw_claims.splitlines()
+                if line.strip().startswith("-")
+            ]
+            claim_lines = claim_lines[:10]
+
+            claims_result: list[dict] = []
+            for claim in claim_lines:
+                verdict = llm.invoke(build_verify_claim_prompt(claim, context_text)).strip()
+                supported = verdict.upper().startswith("SUPPORTED")
+                evidence = ""
+                if supported and ":" in verdict:
+                    evidence = verdict.split(":", 1)[1].strip()[:200]
+                claims_result.append(
+                    {"text": claim, "supported": supported, "evidence": evidence}
+                )
+
+            if claims_result:
+                factuality = int(
+                    100 * sum(1 for claim in claims_result if claim["supported"]) / len(claims_result)
+                )
+            else:
+                factuality = 100
+
+            new_state = {
+                **state,
+                "claims": claims_result,
+                "fact_verification_skipped": False,
+                "factuality_score": factuality,
+            }
+
+            try:
+                from monitoring.prometheus import FACTUALITY_SCORE
+
+                FACTUALITY_SCORE.observe(factuality)
+            except Exception:
+                pass
+
+            log_step(trace_id, "verify_facts", new_state)
+            return new_state
+        except Exception as exc:
+            return _make_error_state(state, "verify_facts", exc)
+
+    return node
+
+
+# ---------------------------------------------------------------------------
 # Level 1: Evaluate node
 # ---------------------------------------------------------------------------
 
@@ -696,6 +811,9 @@ def make_rewrite_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Graph
                 "context_docs": [],
                 "graded_docs": [],
                 "answer": None,
+                "claims": [],
+                "factuality_score": 0,
+                "fact_verification_skipped": False,
                 "quality_score": None,
                 "relevance_score": None,
             }
@@ -760,7 +878,7 @@ def build_support_graph(
     """Собирает и компилирует граф LangGraph Level 2.
 
     Граф:
-        transform_query → retrieve → grade_docs → generate → evaluate
+        transform_query → retrieve → grade_docs → generate → verify_facts → evaluate
             → route_or_retry ─┬─ (retry) → rewrite_query → retrieve → ...
                                └─ (end)   → log → END
     """
@@ -774,6 +892,7 @@ def build_support_graph(
     workflow.add_node("retrieve", make_retrieve_node(retriever))
     workflow.add_node("grade_docs", make_grade_docs_node(llm))
     workflow.add_node("generate", make_generate_node(llm))
+    workflow.add_node("verify_facts", make_verify_facts_node(llm))
     workflow.add_node("evaluate", make_evaluate_node(llm))
     workflow.add_node("route_or_retry", make_route_or_retry_node(min_quality=min_quality))
     workflow.add_node("suggest_questions", make_suggest_questions_node(llm))
@@ -786,7 +905,8 @@ def build_support_graph(
     workflow.add_edge("transform_query", "retrieve")
     workflow.add_edge("retrieve", "grade_docs")
     workflow.add_edge("grade_docs", "generate")
-    workflow.add_edge("generate", "evaluate")
+    workflow.add_edge("generate", "verify_facts")
+    workflow.add_edge("verify_facts", "evaluate")
     workflow.add_edge("evaluate", "route_or_retry")
 
     # Conditional: retry или finish

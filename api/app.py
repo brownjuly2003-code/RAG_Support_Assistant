@@ -28,6 +28,7 @@ import httpx
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from api.correlation import generate_request_id, get_request_id, sanitize_request_id, set_request_id
 from auth.dependencies import get_current_user, require_role
@@ -216,6 +217,11 @@ except ImportError:
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     session_id: Optional[str] = Field(default=None, max_length=100)
+    tenant_id: str = Field(
+        default="default",
+        max_length=50,
+        pattern=r"^[a-zA-Z0-9_\-]+$",
+    )
 
 
 class SourceInfo(BaseModel):
@@ -259,6 +265,7 @@ class HistoryMessage(BaseModel):
 class HistoryResponse(BaseModel):
     session_id: str
     messages: List[HistoryMessage]
+    tenant_id: str = "default"
 
 
 class ComponentStatus(BaseModel):
@@ -280,6 +287,7 @@ class UploadResponse(BaseModel):
     status: str
     filename: str
     message: str
+    tenant_id: str = "default"
 
 
 class TaskStatusResponse(BaseModel):
@@ -1266,6 +1274,80 @@ async def admin_reset_circuit_breaker(
     )
 
 
+@router.get("/admin/audit")
+async def admin_list_audit(
+    limit: int = 50,
+    actor: str | None = None,
+    action: str | None = None,
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> JSONResponse:
+    limit = max(1, min(500, limit))
+
+    try:
+        from sqlalchemy import select  # noqa: PLC0415
+
+        from db.engine import async_session  # noqa: PLC0415
+        from db.models import AuditLog  # noqa: PLC0415
+
+        async with async_session() as db:
+            stmt = select(AuditLog).order_by(AuditLog.ts.desc()).limit(limit)
+            if actor:
+                stmt = stmt.where(AuditLog.actor == actor)
+            if action:
+                stmt = stmt.where(AuditLog.action == action)
+            result = await db.execute(stmt)
+            rows = result.scalars().all()
+    except Exception as exc:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": f"audit_log unavailable: {exc}"},
+        )
+
+    return JSONResponse(
+        content={
+            "entries": [
+                {
+                    "id": row.id,
+                    "ts": row.ts.isoformat() if row.ts else None,
+                    "actor": row.actor,
+                    "action": row.action,
+                    "resource": row.resource,
+                    "detail": row.detail,
+                    "ip_address": row.ip_address,
+                }
+                for row in rows
+            ]
+        }
+    )
+
+
+@router.get("/admin/traces")
+async def admin_list_traces(
+    limit: int = 50,
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> JSONResponse:
+    from sqlite_trace import list_recent_traces  # noqa: PLC0415
+
+    traces = await asyncio.to_thread(list_recent_traces, limit)
+    return JSONResponse(content={"traces": traces})
+
+
+@router.get("/admin/traces/{trace_id}")
+async def admin_get_trace(
+    trace_id: str,
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> JSONResponse:
+    if not re.fullmatch(r"[A-Za-z0-9\-]{8,64}", trace_id):
+        raise HTTPException(status_code=400, detail="invalid trace_id format")
+
+    from sqlite_trace import get_trace_detail  # noqa: PLC0415
+
+    trace = await asyncio.to_thread(get_trace_detail, trace_id)
+    if trace is None:
+        raise HTTPException(status_code=404, detail="trace not found")
+    return JSONResponse(content=trace)
+
+
 @router.delete("/admin/traces")
 async def admin_purge_traces(
     request: Request,
@@ -1843,6 +1925,53 @@ async def _log_requests(request: Request, call_next: Any) -> Any:
     return response
 
 
+def _extract_route_template(request: Request) -> str:
+    route = request.scope.get("route")
+    if route is not None:
+        path_format = getattr(route, "path_format", None)
+        if path_format:
+            return path_format
+
+        path = getattr(route, "path", None)
+        if path:
+            return path
+
+    return "unknown"
+
+
+@app.middleware("http")
+async def _http_metrics(request: Request, call_next: Any) -> Any:
+    import time as _time
+
+    t0 = _time.monotonic()
+    try:
+        response = await call_next(request)
+        status = response.status_code
+    except Exception:
+        try:
+            prometheus_metrics.record_http_request(
+                request.method,
+                _extract_route_template(request),
+                500,
+                _time.monotonic() - t0,
+            )
+        except Exception:
+            pass
+        raise
+
+    try:
+        prometheus_metrics.record_http_request(
+            request.method,
+            _extract_route_template(request),
+            status,
+            _time.monotonic() - t0,
+        )
+    except Exception:
+        pass
+
+    return response
+
+
 @app.middleware("http")
 async def _request_id(request: Request, call_next: Any) -> Any:
     incoming = sanitize_request_id(request.headers.get("X-Request-Id"))
@@ -1886,6 +2015,9 @@ async def _body_size_limit(request: Request, call_next: Any) -> Any:
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_rejected)
 app.include_router(router)
+_static_dir = PROJECT_ROOT / "static"
+if _static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 
 @app.get("/metrics")

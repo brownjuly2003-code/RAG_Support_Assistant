@@ -134,14 +134,25 @@ def _init_db() -> None:
             """
             CREATE TABLE IF NOT EXISTS traces (
                 trace_id        TEXT PRIMARY KEY,
-                started_at      TEXT,
+                started_at      TEXT NOT NULL,
                 finished_at     TEXT,
+                tenant_id       TEXT NOT NULL DEFAULT 'default',
                 final_route     TEXT,
                 final_quality   INTEGER,
                 final_relevance REAL
             );
             """
         )
+
+        cur.execute("PRAGMA table_info(traces)")
+        trace_columns = {row[1] for row in cur.fetchall()}
+        if "tenant_id" not in trace_columns:
+            cur.execute(
+                """
+                ALTER TABLE traces
+                ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'
+                """
+            )
 
         cur.execute(
             """
@@ -184,6 +195,13 @@ def _init_db() -> None:
             """
         )
 
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_traces_tenant_id
+            ON traces(tenant_id);
+            """
+        )
+
         conn.commit()
 
 
@@ -219,7 +237,7 @@ def _state_to_dict(state: Any) -> Dict[str, Any]:
     return {"value": repr(state)}
 
 
-def start_trace(trace_id: str | None = None) -> str:
+def start_trace(trace_id: str | None = None, tenant_id: str = "default") -> str:
     """
     Начинает новую трассу: создаёт запись в таблице traces и возвращает trace_id.
 
@@ -228,16 +246,14 @@ def start_trace(trace_id: str | None = None) -> str:
     """
     if trace_id is None:
         trace_id = str(uuid.uuid4())
-    started_at = _now_iso()
-
     with _get_connection() as conn:
         cur = conn.cursor()
         cur.execute(
             """
-            INSERT INTO traces (trace_id, started_at, finished_at, final_route, final_quality, final_relevance)
-            VALUES (?, ?, NULL, NULL, NULL, NULL)
+            INSERT INTO traces (trace_id, started_at, tenant_id)
+            VALUES (?, ?, ?)
             """,
-            (trace_id, started_at),
+            (trace_id, _now_iso(), tenant_id),
         )
         conn.commit()
 
@@ -329,6 +345,70 @@ def save_feedback(
             (trace_id, session_id, rating, reason, _now_iso()),
         )
         conn.commit()
+
+
+def list_recent_traces(limit: int = 50) -> list[dict[str, Any]]:
+    limit = max(1, min(500, limit))
+    with _get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT trace_id, started_at, finished_at
+            FROM traces
+            ORDER BY started_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+        return [
+            {"trace_id": row[0], "started_at": row[1], "finished_at": row[2]}
+            for row in cur.fetchall()
+        ]
+
+
+def get_trace_detail(trace_id: str) -> dict[str, Any] | None:
+    with _get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT trace_id, started_at, finished_at FROM traces WHERE trace_id = ?",
+            (trace_id,),
+        )
+        row = cur.fetchone()
+        if row is None:
+            return None
+
+        cur.execute(
+            """
+            SELECT step_order, node_name, state_json, ts
+            FROM trace_steps
+            WHERE trace_id = ?
+            ORDER BY step_order
+            """,
+            (trace_id,),
+        )
+        steps = [
+            {
+                "order": step[0],
+                "node": step[1],
+                "state": json.loads(step[2]) if step[2] else None,
+                "ts": step[3],
+            }
+            for step in cur.fetchall()
+        ]
+
+        cur.execute(
+            "SELECT rating, ts FROM feedback WHERE trace_id = ?",
+            (trace_id,),
+        )
+        feedback = [{"rating": item[0], "ts": item[1]} for item in cur.fetchall()]
+
+        return {
+            "trace_id": row[0],
+            "started_at": row[1],
+            "finished_at": row[2],
+            "steps": steps,
+            "feedback": feedback,
+        }
 
 
 def purge_old_traces(retention_days: int) -> dict[str, int]:
