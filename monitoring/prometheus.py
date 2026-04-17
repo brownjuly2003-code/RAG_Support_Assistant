@@ -5,6 +5,7 @@ from typing import Any
 
 __all__ = [
     "ACTIVE_SESSIONS",
+    "AUDIT_PURGED",
     "COMPONENT_UP",
     "CIRCUIT_BREAKER_STATE",
     "CIRCUIT_BREAKER_TRANSITIONS",
@@ -25,6 +26,7 @@ __all__ = [
     "VECTOR_STORE_DOCS",
     "generate_latest",
     "record_component_health",
+    "record_audit_purged",
     "record_circuit_breaker_change",
     "record_ollama_retry_event",
     "record_pipeline_rejection",
@@ -84,6 +86,7 @@ except ImportError:
     INFLIGHT_PIPELINES = _NoopMetric()
     PIPELINE_REJECTIONS = _NoopMetric()
     TRACES_PURGED = _NoopMetric()
+    AUDIT_PURGED = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     REGISTRY = CollectorRegistry()
@@ -196,6 +199,12 @@ else:
         registry=REGISTRY,
     )
 
+    AUDIT_PURGED = Counter(
+        "rag_audit_purged_total",
+        "audit_log rows deleted by retention purge",
+        registry=REGISTRY,
+    )
+
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
 
@@ -236,3 +245,8 @@ def record_pipeline_rejection(reason: str) -> None:
 def record_traces_purged(table: str, count: int) -> None:
     if count > 0:
         TRACES_PURGED.labels(table=table).inc(count)
+
+
+def record_audit_purged(count: int) -> None:
+    if count > 0:
+        AUDIT_PURGED.inc(count)

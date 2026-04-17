@@ -44,3 +44,29 @@ async def log_audit(
             )
 
     asyncio.create_task(_write_entry())
+
+
+async def purge_old_audit(retention_days: int) -> int:
+    """Delete audit_log entries older than retention_days and return deleted rows."""
+    if retention_days <= 0:
+        return 0
+
+    from datetime import datetime, timedelta, timezone
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+
+    try:
+        from sqlalchemy import delete
+
+        from db.engine import async_session
+        from db.models import AuditLog
+
+        async with async_session() as db:
+            result = await db.execute(
+                delete(AuditLog).where(AuditLog.ts < cutoff)
+            )
+            await db.commit()
+            return result.rowcount or 0
+    except Exception as exc:
+        logger.warning("Audit purge failed: %s", exc)
+        return 0

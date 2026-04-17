@@ -165,6 +165,12 @@ class Settings:
     trace_purge_interval_sec: int = field(
         default_factory=lambda: int(os.getenv("TRACE_PURGE_INTERVAL_SEC", "86400"))
     )
+    audit_retention_days: int = field(
+        default_factory=lambda: int(os.getenv("AUDIT_RETENTION_DAYS", "180"))
+    )
+    audit_purge_interval_sec: int = field(
+        default_factory=lambda: int(os.getenv("AUDIT_PURGE_INTERVAL_SEC", "86400"))
+    )
     request_timeout_sec: float = float(
         os.getenv("REQUEST_TIMEOUT_SEC", "30")
     )

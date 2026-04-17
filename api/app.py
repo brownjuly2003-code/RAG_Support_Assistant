@@ -635,8 +635,32 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             except Exception as exc:
                 logger.warning("Trace retention purge failed: %s", exc)
 
+    async def _purge_old_audit_periodically() -> None:
+        settings = get_settings()
+        interval = max(60, getattr(settings, "audit_purge_interval_sec", 86400))
+        retention = getattr(settings, "audit_retention_days", 180)
+        if retention <= 0:
+            logger.info("Audit retention disabled (AUDIT_RETENTION_DAYS=0)")
+            return
+
+        while True:
+            await asyncio.sleep(interval)
+            try:
+                from db.audit import purge_old_audit
+
+                deleted = await purge_old_audit(retention)
+                if deleted:
+                    try:
+                        prometheus_metrics.record_audit_purged(deleted)
+                    except Exception:
+                        pass
+                    logger.info("Audit retention purge: %d rows", deleted)
+            except Exception as exc:
+                logger.warning("Audit retention purge failed: %s", exc)
+
     cleanup_task = asyncio.create_task(_cleanup_sessions())
     purge_task = asyncio.create_task(_purge_old_traces_periodically())
+    audit_purge_task = asyncio.create_task(_purge_old_audit_periodically())
     logger.info("RAG Support Assistant started")
     try:
         yield
@@ -654,6 +678,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 pass
         cleanup_task.cancel()
         purge_task.cancel()
+        audit_purge_task.cancel()
         logger.info("RAG Support Assistant shutting down")
 
 
@@ -1273,6 +1298,37 @@ async def admin_purge_traces(
     )
 
     return JSONResponse(status_code=200, content=result)
+
+
+@router.delete("/admin/audit-log")
+async def admin_purge_audit(
+    request: Request,
+    older_than_days: int = 90,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    if older_than_days < 0 or older_than_days > 3650:
+        raise HTTPException(
+            status_code=400,
+            detail="older_than_days must be in [0, 3650]",
+        )
+
+    from db.audit import purge_old_audit
+
+    deleted = await purge_old_audit(older_than_days)
+    try:
+        prometheus_metrics.record_audit_purged(deleted)
+    except Exception:
+        pass
+
+    await log_audit(
+        actor=_user.get("sub", "anonymous"),
+        action="audit_purge",
+        resource=f"audit_log/older_than={older_than_days}d",
+        detail={"deleted": deleted},
+        ip_address=request.client.host if request.client else None,
+    )
+
+    return JSONResponse(status_code=200, content={"deleted": deleted})
 
 
 @router.post("/upload", response_model=UploadResponse)
