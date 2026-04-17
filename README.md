@@ -124,6 +124,8 @@ Rate limits: 60 req/min на `/api/ask`, 10 req/min на `/api/upload`.
 
 Страница `/static/metrics.html` показывает метрики в браузере с цветовой индикацией (зелёный/жёлтый/красный) и автообновлением каждые 30 сек.
 
+Prometheus alert rules упакованы в `monitoring/alert_rules.yml`. Подключаются через `rule_files` в `prometheus.yml`.
+
 Алертинг через `scripts/check_alerts.py` (cron каждые 5 минут):
 ```bash
 python scripts/check_alerts.py --dry-run

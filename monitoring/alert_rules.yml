@@ -1,0 +1,137 @@
+groups:
+  - name: rag-resilience
+    interval: 30s
+    rules:
+      - alert: CircuitBreakerOpen
+        expr: rag_circuit_breaker_state == 2
+        for: 5m
+        labels:
+          severity: warning
+          component: ollama
+        annotations:
+          summary: "Circuit breaker '{{ $labels.name }}' OPEN for 5m+"
+          description: |
+            Breaker has been OPEN for over 5 minutes, meaning Ollama has been
+            failing repeatedly. Automatic HALF_OPEN probes have not recovered.
+            Check Ollama logs and consider manual reset via
+            POST /api/admin/circuit-breaker/reset once upstream is healthy.
+          runbook_url: "internal://runbooks/ollama-down"
+
+      - alert: HighRetryExhaustion
+        expr: |
+          rate(rag_ollama_retry_events_total{event="exhausted"}[5m])
+          / ignoring(event) rate(rag_ollama_retry_events_total{event="attempt"}[5m])
+          > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          component: ollama
+        annotations:
+          summary: "Retry exhaustion >10% over 10min"
+          description: |
+            More than 10% of Ollama retry chains are exhausting all attempts.
+            Upstream is unstable - breaker may be about to open. Check network
+            latency to Ollama and model cold-start times.
+
+      - alert: HighRetryRecoveryRate
+        expr: |
+          rate(rag_ollama_retry_events_total{event="retry"}[5m])
+          / ignoring(event) rate(rag_ollama_retry_events_total{event="attempt"}[5m])
+          > 0.3
+        for: 15m
+        labels:
+          severity: info
+          component: ollama
+        annotations:
+          summary: "Ollama flapping: >30% requests need retry"
+          description: |
+            Requests succeed but only after retries - p95 latency will be
+            elevated. Consider investigating Ollama stability.
+
+  - name: rag-health
+    interval: 30s
+    rules:
+      - alert: ComponentDown
+        expr: rag_component_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Component {{ $labels.component }} is DOWN"
+          description: |
+            Health probe for {{ $labels.component }} has been failing for 2+
+            minutes. Check /api/health for details and component-specific
+            logs.
+
+      - alert: ComponentDegradedOften
+        expr: |
+          avg_over_time(rag_component_up[1h]) < 0.95
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Component {{ $labels.component }} uptime <95% over last 1h"
+          description: |
+            {{ $labels.component }} is flapping (uptime 95-99% over 1h).
+            Not fully down but unstable - investigate.
+
+  - name: rag-quality
+    interval: 1m
+    rules:
+      - alert: HighEscalationRate
+        expr: |
+          sum(rate(rag_escalation_total[15m]))
+          / sum(rate(rag_requests_total[15m]))
+          > 0.35
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Escalation rate >35% over 15min"
+          description: |
+            More than 35% of requests are being routed to human. Either
+            knowledge base is insufficient, or LLM quality has dropped.
+            Check quality_score trend and recent document ingestions.
+
+      - alert: LowQualityScoreAvg
+        expr: |
+          avg_over_time(rag_quality_score_sum[7d])
+          / avg_over_time(rag_quality_score_count[7d])
+          < 65
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Average answer quality <65 over 7d"
+          description: |
+            7-day average quality score has dropped below 65. Investigate
+            prompt changes, model changes, or knowledge-base drift.
+
+      - alert: ThumbsDownSpike
+        expr: |
+          rate(rag_feedback_total{rating="down"}[1h])
+          / rate(rag_feedback_total[1h])
+          > 0.2
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: ">20% negative feedback over 30min"
+
+  - name: rag-latency
+    interval: 30s
+    rules:
+      - alert: HighP95Latency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(rag_request_duration_seconds_bucket[5m])) by (le)
+          ) > 12
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 latency >12s over 10min"
+          description: |
+            95th percentile request duration has exceeded 12 seconds for 10+
+            minutes. Check Ollama CPU/GPU load, concurrent request count,
+            and retry metrics (retries inflate latency).
