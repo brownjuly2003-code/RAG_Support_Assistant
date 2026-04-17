@@ -179,12 +179,22 @@ class LocalOllamaLLM:
         except TypeError:
             self._llm = Ollama(model=model_name, request_timeout=timeout_sec)
         self._breaker = get_default_breaker() if breaker is _USE_DEFAULT_BREAKER else breaker
+
+        def _retry_prom_hook(event: str) -> None:
+            try:
+                from monitoring.prometheus import record_ollama_retry_event
+
+                record_ollama_retry_event(event)
+            except Exception:
+                pass
+
         self._invoke_with_retry = retry_with_backoff(
             self._llm.invoke,
             max_attempts=getattr(settings, "ollama_retry_max_attempts", 3),
             base_delay_sec=getattr(settings, "ollama_retry_base_delay_sec", 0.5),
             max_delay_sec=getattr(settings, "ollama_retry_max_delay_sec", 5.0),
             jitter=getattr(settings, "ollama_retry_jitter", True),
+            on_event=_retry_prom_hook,
         )
 
     def invoke(self, prompt: str) -> str:

@@ -10,6 +10,7 @@ __all__ = [
     "CONTENT_TYPE_LATEST",
     "ESCALATION_TOTAL",
     "FEEDBACK_COUNT",
+    "OLLAMA_RETRY_EVENTS",
     "PROMETHEUS_AVAILABLE",
     "QUALITY_SCORE",
     "REGISTRY",
@@ -18,6 +19,7 @@ __all__ = [
     "VECTOR_STORE_DOCS",
     "generate_latest",
     "record_circuit_breaker_change",
+    "record_ollama_retry_event",
 ]
 
 PROMETHEUS_AVAILABLE = False
@@ -61,6 +63,7 @@ except ImportError:
     VECTOR_STORE_DOCS = _NoopMetric()
     CIRCUIT_BREAKER_STATE = _NoopMetric()
     CIRCUIT_BREAKER_TRANSITIONS = _NoopMetric()
+    OLLAMA_RETRY_EVENTS = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     REGISTRY = CollectorRegistry()
@@ -124,6 +127,13 @@ else:
         registry=REGISTRY,
     )
 
+    OLLAMA_RETRY_EVENTS = Counter(
+        "rag_ollama_retry_events_total",
+        "Retry wrapper events around Ollama calls",
+        ["event"],
+        registry=REGISTRY,
+    )
+
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
 
@@ -132,3 +142,8 @@ def record_circuit_breaker_change(name: str, from_state: str, to_state: str) -> 
     CIRCUIT_BREAKER_STATE.labels(name=name).set(_STATE_VALUE.get(to_state, 0))
     if from_state != to_state:
         CIRCUIT_BREAKER_TRANSITIONS.labels(name=name, to_state=to_state).inc()
+
+
+def record_ollama_retry_event(event: str) -> None:
+    """Bump the retry counter for a retry wrapper event."""
+    OLLAMA_RETRY_EVENTS.labels(event=event).inc()
