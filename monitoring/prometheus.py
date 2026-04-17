@@ -14,6 +14,7 @@ __all__ = [
     "OLLAMA_RETRY_EVENTS",
     "PROMETHEUS_AVAILABLE",
     "QUALITY_SCORE",
+    "RATE_LIMIT_REJECTIONS",
     "REGISTRY",
     "REQUEST_COUNT",
     "REQUEST_DURATION",
@@ -22,6 +23,7 @@ __all__ = [
     "record_component_health",
     "record_circuit_breaker_change",
     "record_ollama_retry_event",
+    "record_rate_limit_rejection",
 ]
 
 PROMETHEUS_AVAILABLE = False
@@ -67,6 +69,7 @@ except ImportError:
     CIRCUIT_BREAKER_TRANSITIONS = _NoopMetric()
     COMPONENT_UP = _NoopMetric()
     OLLAMA_RETRY_EVENTS = _NoopMetric()
+    RATE_LIMIT_REJECTIONS = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     REGISTRY = CollectorRegistry()
@@ -145,6 +148,13 @@ else:
         registry=REGISTRY,
     )
 
+    RATE_LIMIT_REJECTIONS = Counter(
+        "rag_rate_limit_rejections_total",
+        "Requests rejected by slowapi rate limiter",
+        ["endpoint"],
+        registry=REGISTRY,
+    )
+
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
 
@@ -167,3 +177,8 @@ def record_circuit_breaker_change(name: str, from_state: str, to_state: str) -> 
 def record_ollama_retry_event(event: str) -> None:
     """Bump the retry counter for a retry wrapper event."""
     OLLAMA_RETRY_EVENTS.labels(event=event).inc()
+
+
+def record_rate_limit_rejection(endpoint: str) -> None:
+    """Increment the rate-limit rejection counter for the request path."""
+    RATE_LIMIT_REJECTIONS.labels(endpoint=endpoint).inc()

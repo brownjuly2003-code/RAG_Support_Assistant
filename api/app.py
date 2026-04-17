@@ -61,6 +61,14 @@ except ImportError:
             return "unknown"
         return request.client.host
 
+
+def _rate_limit_rejected(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    try:
+        prometheus_metrics.record_rate_limit_rejection(request.url.path)
+    except Exception:
+        pass
+    return _rate_limit_exceeded_handler(request, exc)
+
 # ---------------------------------------------------------------------------
 # Ensure project root is on sys.path
 # ---------------------------------------------------------------------------
@@ -1616,7 +1624,7 @@ async def _request_id(request: Request, call_next: Any) -> Any:
 
 
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_rejected)
 app.include_router(router)
 
 
