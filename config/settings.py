@@ -62,6 +62,9 @@ class Settings:
 
     # Векторная БД (Chroma)
     vectordb_chroma_dir: Path = data_dir / "vectordb" / "chroma"
+    vectordb_collection_prefix: str = field(
+        default_factory=lambda: os.getenv("VECTORDB_COLLECTION_PREFIX", "rag_docs")
+    )
 
     # Трейсинг (SQLite)
     tracing_db_path: Path = field(

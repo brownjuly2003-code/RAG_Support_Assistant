@@ -84,6 +84,7 @@ python main.py
 | `RAG_RETRIEVAL_TOP_K` | `20` | кандидаты до rerank |
 | `RAG_RERANK_TOP_K` | `5` | документы после rerank |
 | `RAG_VECTOR_BACKEND` | `chroma` | vector store |
+| `VECTORDB_COLLECTION_PREFIX` | `rag_docs` | префикс ChromaDB collection; полное имя = `{prefix}_{tenant_id}` |
 | `RAG_SEMANTIC_CHUNKING` | `false` | семантический chunking |
 | `RAG_SELF_RAG_MAX_ITER` | `2` | макс. итераций Self-RAG |
 | `RAG_SELF_RAG_MIN_QUALITY` | `70` | минимальный quality_score для route=auto |
@@ -250,20 +251,18 @@ python scripts/check_alerts.py --dry-run
 
 ## Multi-tenancy
 
-В проект встроена tenant-isolation. JWT access-token несёт claim `tenant`,
-который propagates через middleware (`current_tenant` ContextVar) в
-pipeline и audit/trace записи.
+В проект встроена tenant-isolation:
+- JWT access-token несёт claim `tenant`
+- traces, audit log и admin read/purge endpoints фильтруются по `tenant_id`
+- ChromaDB использует per-tenant collections вида `rag_docs_{tenant_id}`
+- retriever cache изолирован по tenant
 
-**Текущий статус:**
-- ✅ Schema готова: `tenant_id` column в `audit_log`, `sessions`,
-  `traces` с индексами (alembic migration `003_add_tenant_id.py`)
-- ✅ Propagation: JWT → ContextVar → GraphState → SQLite traces
-- ⏳ Query enforcement (read/purge по tenant) и per-tenant ChromaDB
-  collections — в работе (task-95, task-96)
+Для существующей legacy collection `rag_docs` используйте одноразовую
+миграцию:
 
-До завершения enforcement-фазы read-endpoint'ы возвращают данные всех
-tenants — **не** использовать multi-tenant в production до merge
-task-95 и task-96.
+```bash
+python scripts/migrate_default_collection.py
+```
 
 ## Web UI
 

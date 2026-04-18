@@ -347,32 +347,60 @@ def save_feedback(
         conn.commit()
 
 
-def list_recent_traces(limit: int = 50) -> list[dict[str, Any]]:
+def list_recent_traces(
+    limit: int = 50,
+    tenant_id: str | None = None,
+) -> list[dict[str, Any]]:
     limit = max(1, min(500, limit))
     with _get_connection() as conn:
         cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT trace_id, started_at, finished_at
-            FROM traces
-            ORDER BY started_at DESC
-            LIMIT ?
-            """,
-            (limit,),
-        )
+        if tenant_id is None:
+            cur.execute(
+                """
+                SELECT trace_id, started_at, finished_at
+                FROM traces
+                ORDER BY started_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT trace_id, started_at, finished_at
+                FROM traces
+                WHERE tenant_id = ?
+                ORDER BY started_at DESC
+                LIMIT ?
+                """,
+                (tenant_id, limit),
+            )
         return [
             {"trace_id": row[0], "started_at": row[1], "finished_at": row[2]}
             for row in cur.fetchall()
         ]
 
 
-def get_trace_detail(trace_id: str) -> dict[str, Any] | None:
+def get_trace_detail(
+    trace_id: str,
+    tenant_id: str | None = None,
+) -> dict[str, Any] | None:
     with _get_connection() as conn:
         cur = conn.cursor()
-        cur.execute(
-            "SELECT trace_id, started_at, finished_at FROM traces WHERE trace_id = ?",
-            (trace_id,),
-        )
+        if tenant_id is None:
+            cur.execute(
+                "SELECT trace_id, started_at, finished_at FROM traces WHERE trace_id = ?",
+                (trace_id,),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT trace_id, started_at, finished_at
+                FROM traces
+                WHERE trace_id = ? AND tenant_id = ?
+                """,
+                (trace_id, tenant_id),
+            )
         row = cur.fetchone()
         if row is None:
             return None
@@ -411,7 +439,10 @@ def get_trace_detail(trace_id: str) -> dict[str, Any] | None:
         }
 
 
-def purge_old_traces(retention_days: int) -> dict[str, int]:
+def purge_old_traces(
+    retention_days: int,
+    tenant_id: str | None = None,
+) -> dict[str, int]:
     """Удаляет traces старше retention_days и связанные steps/feedback."""
     if retention_days <= 0:
         return {"traces_deleted": 0, "steps_deleted": 0, "feedback_deleted": 0}
@@ -420,10 +451,16 @@ def purge_old_traces(retention_days: int) -> dict[str, int]:
 
     with _get_connection() as conn:
         cur = conn.cursor()
-        cur.execute(
-            "SELECT trace_id FROM traces WHERE started_at < ?",
-            (cutoff_iso,),
-        )
+        if tenant_id is None:
+            cur.execute(
+                "SELECT trace_id FROM traces WHERE started_at < ?",
+                (cutoff_iso,),
+            )
+        else:
+            cur.execute(
+                "SELECT trace_id FROM traces WHERE started_at < ? AND tenant_id = ?",
+                (cutoff_iso, tenant_id),
+            )
         old_trace_ids = [row[0] for row in cur.fetchall()]
 
         if not old_trace_ids:
@@ -448,7 +485,13 @@ def purge_old_traces(retention_days: int) -> dict[str, int]:
             )
             feedback_deleted += cur.rowcount
 
-        cur.execute("DELETE FROM traces WHERE started_at < ?", (cutoff_iso,))
+        if tenant_id is None:
+            cur.execute("DELETE FROM traces WHERE started_at < ?", (cutoff_iso,))
+        else:
+            cur.execute(
+                "DELETE FROM traces WHERE started_at < ? AND tenant_id = ?",
+                (cutoff_iso, tenant_id),
+            )
         traces_deleted = cur.rowcount
         conn.commit()
 
@@ -504,30 +547,53 @@ def get_feedback_stats(days: int = 30) -> dict:
     }
 
 
-def get_metrics_snapshot() -> dict:
+def get_metrics_snapshot(tenant_id: str | None = None) -> dict:
     """Агрегированный снапшот метрик здоровья сервиса."""
     with _get_connection() as conn:
         cur = conn.cursor()
 
-        cur.execute(
-            """
-            WITH latencies AS (
-                SELECT (julianday(finished_at) - julianday(started_at)) * 86400.0 AS s
-                FROM traces
-                WHERE finished_at IS NOT NULL
-                  AND julianday(started_at) >= julianday('now', '-1 day')
-            ),
-            ranked AS (
-                SELECT s, ROW_NUMBER() OVER (ORDER BY s) AS rn, COUNT(*) OVER () AS total
-                FROM latencies
+        if tenant_id is None:
+            cur.execute(
+                """
+                WITH latencies AS (
+                    SELECT (julianday(finished_at) - julianday(started_at)) * 86400.0 AS s
+                    FROM traces
+                    WHERE finished_at IS NOT NULL
+                      AND julianday(started_at) >= julianday('now', '-1 day')
+                ),
+                ranked AS (
+                    SELECT s, ROW_NUMBER() OVER (ORDER BY s) AS rn, COUNT(*) OVER () AS total
+                    FROM latencies
+                )
+                SELECT
+                    ROUND(MIN(CASE WHEN rn >= total * 0.50 THEN s END), 2) AS p50,
+                    ROUND(MIN(CASE WHEN rn >= total * 0.95 THEN s END), 2) AS p95,
+                    ROUND(MIN(CASE WHEN rn >= total * 0.99 THEN s END), 2) AS p99
+                FROM ranked
+                """
             )
-            SELECT
-                ROUND(MIN(CASE WHEN rn >= total * 0.50 THEN s END), 2) AS p50,
-                ROUND(MIN(CASE WHEN rn >= total * 0.95 THEN s END), 2) AS p95,
-                ROUND(MIN(CASE WHEN rn >= total * 0.99 THEN s END), 2) AS p99
-            FROM ranked
-            """
-        )
+        else:
+            cur.execute(
+                """
+                WITH latencies AS (
+                    SELECT (julianday(finished_at) - julianday(started_at)) * 86400.0 AS s
+                    FROM traces
+                    WHERE tenant_id = ?
+                      AND finished_at IS NOT NULL
+                      AND julianday(started_at) >= julianday('now', '-1 day')
+                ),
+                ranked AS (
+                    SELECT s, ROW_NUMBER() OVER (ORDER BY s) AS rn, COUNT(*) OVER () AS total
+                    FROM latencies
+                )
+                SELECT
+                    ROUND(MIN(CASE WHEN rn >= total * 0.50 THEN s END), 2) AS p50,
+                    ROUND(MIN(CASE WHEN rn >= total * 0.95 THEN s END), 2) AS p95,
+                    ROUND(MIN(CASE WHEN rn >= total * 0.99 THEN s END), 2) AS p99
+                FROM ranked
+                """,
+                (tenant_id,),
+            )
         row = cur.fetchone()
         latency = {
             "p50_sec": row[0] if row and row[0] is not None else None,
@@ -536,20 +602,38 @@ def get_metrics_snapshot() -> dict:
             "window": "24h",
         }
 
-        cur.execute(
-            """
-            SELECT
-                COUNT(*) AS total,
-                SUM(CASE WHEN final_route = 'human' THEN 1 ELSE 0 END) AS escalated,
-                ROUND(
-                    100.0 * SUM(CASE WHEN final_route = 'human' THEN 1 ELSE 0 END)
-                    / NULLIF(COUNT(*), 0),
-                    1
-                ) AS rate_pct
-            FROM traces
-            WHERE julianday(started_at) >= julianday('now', '-1 day')
-            """
-        )
+        if tenant_id is None:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(CASE WHEN final_route = 'human' THEN 1 ELSE 0 END) AS escalated,
+                    ROUND(
+                        100.0 * SUM(CASE WHEN final_route = 'human' THEN 1 ELSE 0 END)
+                        / NULLIF(COUNT(*), 0),
+                        1
+                    ) AS rate_pct
+                FROM traces
+                WHERE julianday(started_at) >= julianday('now', '-1 day')
+                """
+            )
+        else:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(CASE WHEN final_route = 'human' THEN 1 ELSE 0 END) AS escalated,
+                    ROUND(
+                        100.0 * SUM(CASE WHEN final_route = 'human' THEN 1 ELSE 0 END)
+                        / NULLIF(COUNT(*), 0),
+                        1
+                    ) AS rate_pct
+                FROM traces
+                WHERE tenant_id = ?
+                  AND julianday(started_at) >= julianday('now', '-1 day')
+                """,
+                (tenant_id,),
+            )
         row = cur.fetchone()
         escalation = {
             "total_traces": row[0] if row and row[0] is not None else 0,
@@ -558,21 +642,40 @@ def get_metrics_snapshot() -> dict:
             "window": "24h",
         }
 
-        cur.execute(
-            """
-            SELECT
-                COUNT(final_quality) AS scored,
-                ROUND(AVG(final_quality), 1) AS avg_q,
-                ROUND(
-                    100.0 * SUM(CASE WHEN final_quality < 60 THEN 1 ELSE 0 END)
-                    / NULLIF(COUNT(final_quality), 0),
-                    1
-                ) AS low_share
-            FROM traces
-            WHERE final_quality IS NOT NULL
-              AND julianday(started_at) >= julianday('now', '-7 day')
-            """
-        )
+        if tenant_id is None:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(final_quality) AS scored,
+                    ROUND(AVG(final_quality), 1) AS avg_q,
+                    ROUND(
+                        100.0 * SUM(CASE WHEN final_quality < 60 THEN 1 ELSE 0 END)
+                        / NULLIF(COUNT(final_quality), 0),
+                        1
+                    ) AS low_share
+                FROM traces
+                WHERE final_quality IS NOT NULL
+                  AND julianday(started_at) >= julianday('now', '-7 day')
+                """
+            )
+        else:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(final_quality) AS scored,
+                    ROUND(AVG(final_quality), 1) AS avg_q,
+                    ROUND(
+                        100.0 * SUM(CASE WHEN final_quality < 60 THEN 1 ELSE 0 END)
+                        / NULLIF(COUNT(final_quality), 0),
+                        1
+                    ) AS low_share
+                FROM traces
+                WHERE tenant_id = ?
+                  AND final_quality IS NOT NULL
+                  AND julianday(started_at) >= julianday('now', '-7 day')
+                """,
+                (tenant_id,),
+            )
         row = cur.fetchone()
         quality = {
             "scored_traces": row[0] if row and row[0] is not None else 0,
@@ -581,31 +684,60 @@ def get_metrics_snapshot() -> dict:
             "window": "7d",
         }
 
-        cur.execute(
-            """
-            SELECT
-                COUNT(*) AS total,
-                SUM(
-                    CASE
-                        WHEN finished_at IS NULL
-                         AND julianday(started_at) < julianday('now', '-15 minute')
-                        THEN 1 ELSE 0
-                    END
-                ) AS failed,
-                ROUND(
-                    100.0 * SUM(
+        if tenant_id is None:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(
                         CASE
                             WHEN finished_at IS NULL
                              AND julianday(started_at) < julianday('now', '-15 minute')
                             THEN 1 ELSE 0
                         END
-                    ) / NULLIF(COUNT(*), 0),
-                    1
-                ) AS rate
-            FROM traces
-            WHERE julianday(started_at) >= julianday('now', '-1 day')
-            """
-        )
+                    ) AS failed,
+                    ROUND(
+                        100.0 * SUM(
+                            CASE
+                                WHEN finished_at IS NULL
+                                 AND julianday(started_at) < julianday('now', '-15 minute')
+                                THEN 1 ELSE 0
+                            END
+                        ) / NULLIF(COUNT(*), 0),
+                        1
+                    ) AS rate
+                FROM traces
+                WHERE julianday(started_at) >= julianday('now', '-1 day')
+                """
+            )
+        else:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(
+                        CASE
+                            WHEN finished_at IS NULL
+                             AND julianday(started_at) < julianday('now', '-15 minute')
+                            THEN 1 ELSE 0
+                        END
+                    ) AS failed,
+                    ROUND(
+                        100.0 * SUM(
+                            CASE
+                                WHEN finished_at IS NULL
+                                 AND julianday(started_at) < julianday('now', '-15 minute')
+                                THEN 1 ELSE 0
+                            END
+                        ) / NULLIF(COUNT(*), 0),
+                        1
+                    ) AS rate
+                FROM traces
+                WHERE tenant_id = ?
+                  AND julianday(started_at) >= julianday('now', '-1 day')
+                """,
+                (tenant_id,),
+            )
         row = cur.fetchone()
         errors = {
             "total_started": row[0] if row and row[0] is not None else 0,
@@ -614,20 +746,39 @@ def get_metrics_snapshot() -> dict:
             "window": "24h",
         }
 
-        cur.execute(
-            """
-            SELECT
-                COUNT(*) AS total,
-                SUM(CASE WHEN rating = 'down' THEN 1 ELSE 0 END) AS thumbs_down,
-                ROUND(
-                    100.0 * SUM(CASE WHEN rating = 'down' THEN 1 ELSE 0 END)
-                    / NULLIF(COUNT(*), 0),
-                    1
-                ) AS rate
-            FROM feedback
-            WHERE julianday(ts) >= julianday('now', '-7 day')
-            """
-        )
+        if tenant_id is None:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(CASE WHEN rating = 'down' THEN 1 ELSE 0 END) AS thumbs_down,
+                    ROUND(
+                        100.0 * SUM(CASE WHEN rating = 'down' THEN 1 ELSE 0 END)
+                        / NULLIF(COUNT(*), 0),
+                        1
+                    ) AS rate
+                FROM feedback
+                WHERE julianday(ts) >= julianday('now', '-7 day')
+                """
+            )
+        else:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(CASE WHEN f.rating = 'down' THEN 1 ELSE 0 END) AS thumbs_down,
+                    ROUND(
+                        100.0 * SUM(CASE WHEN f.rating = 'down' THEN 1 ELSE 0 END)
+                        / NULLIF(COUNT(*), 0),
+                        1
+                    ) AS rate
+                FROM feedback f
+                JOIN traces t ON t.trace_id = f.trace_id
+                WHERE t.tenant_id = ?
+                  AND julianday(f.ts) >= julianday('now', '-7 day')
+                """,
+                (tenant_id,),
+            )
         row = cur.fetchone()
         feedback = {
             "total": row[0] if row and row[0] is not None else 0,

@@ -164,13 +164,13 @@ _build_vector_store = None
 _get_retriever = None
 _get_embeddings = None
 try:
-    from manager import build_vector_store, get_retriever, get_embeddings
+    from vectordb.manager import build_vector_store, get_retriever, get_embeddings
     _build_vector_store = build_vector_store
     _get_retriever = get_retriever
     _get_embeddings = get_embeddings
 except ImportError:
     try:
-        from vectordb.manager import build_vector_store, get_retriever, get_embeddings
+        from manager import build_vector_store, get_retriever, get_embeddings
         _build_vector_store = build_vector_store
         _get_retriever = get_retriever
         _get_embeddings = get_embeddings
@@ -347,7 +347,10 @@ def _get_pipeline_semaphore() -> asyncio.Semaphore:
     return _pipeline_semaphore
 
 
-async def _get_or_create_session(session_id: Optional[str]) -> tuple:
+async def _get_or_create_session(
+    session_id: Optional[str],
+    tenant_id: str = "default",
+) -> tuple:
     global _retriever, _llm, _db_retry_after
 
     if not session_id:
@@ -398,20 +401,51 @@ async def _get_or_create_session(session_id: Optional[str]) -> tuple:
             _db_retry_after = time.monotonic() + 60.0
             logger.warning("DB session fallback to memory: %s", exc)
 
-    if session_id not in _session_llm_state:
-        if _ConversationSession is not None and _retriever is not None:
+    session_retriever = _retriever
+    settings = get_settings()
+    chroma_dir = getattr(settings, "vectordb_chroma_dir", None)
+    has_persisted_store = (
+        chroma_dir is not None
+        and Path(chroma_dir).exists()
+        and any(Path(chroma_dir).iterdir())
+    )
+    if _get_retriever is not None and (_retriever is not None or _vector_store is not None or has_persisted_store):
+        try:
+            retriever_params = inspect.signature(_get_retriever).parameters
+            if "tenant_id" in retriever_params or any(
+                param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+                for param in retriever_params.values()
+            ):
+                session_retriever = _get_retriever(tenant_id=tenant_id)
+        except Exception as exc:
+            logger.warning("Failed to resolve retriever for tenant %s: %s", tenant_id, exc)
+
+    existing_session = _session_llm_state.get(session_id)
+    tenant_mismatch = (
+        hasattr(existing_session, "ask")
+        and getattr(existing_session, "_tenant_id", "default") != tenant_id
+    )
+
+    if session_id not in _session_llm_state or tenant_mismatch:
+        if _ConversationSession is not None and session_retriever is not None:
             session = _ConversationSession(
-                retriever=_retriever,
+                retriever=session_retriever,
                 llm=_llm,
                 max_iterations=2,
                 max_history=20,
             )
-            if db_history and hasattr(session, "_history"):
+            setattr(session, "_tenant_id", tenant_id)
+            if session_id not in _session_llm_state and db_history and hasattr(session, "_history"):
                 max_history = getattr(session, "_max_history", 20)
                 session._history = db_history[-(max_history * 2):]
             _session_llm_state[session_id] = session
         else:
-            _session_llm_state[session_id] = {"history": list(db_history)}
+            _session_llm_state[session_id] = {"history": list(db_history), "tenant_id": tenant_id}
+    elif hasattr(existing_session, "_retriever") and session_retriever is not None:
+        existing_session._retriever = session_retriever
+        setattr(existing_session, "_tenant_id", tenant_id)
+    elif isinstance(existing_session, dict):
+        existing_session["tenant_id"] = tenant_id
 
     import time as _time
     _session_last_access[session_id] = _time.monotonic()
@@ -427,6 +461,7 @@ def initialize_vector_store() -> None:
 
     settings = get_settings()
     chroma_dir = settings.vectordb_chroma_dir
+    collection_name = f"{getattr(settings, 'vectordb_collection_prefix', 'rag_docs')}_default"
 
     if _Chroma is not None and chroma_dir.exists() and any(chroma_dir.iterdir()):
         try:
@@ -439,11 +474,18 @@ def initialize_vector_store() -> None:
             _vector_store = _Chroma(
                 persist_directory=str(chroma_dir),
                 embedding_function=embeddings,
-                collection_name="documents",
+                collection_name=collection_name,
             )
 
             if _get_retriever is not None:
-                _retriever = _get_retriever(_vector_store, chunks=None)
+                retriever_params = inspect.signature(_get_retriever).parameters
+                if "tenant_id" in retriever_params or any(
+                    param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+                    for param in retriever_params.values()
+                ):
+                    _retriever = _get_retriever(_vector_store, chunks=None, tenant_id="default")
+                else:
+                    _retriever = _get_retriever(_vector_store, chunks=None)
             else:
                 _retriever = _vector_store.as_retriever(search_kwargs={"k": 5})
 
@@ -455,7 +497,10 @@ def initialize_vector_store() -> None:
     logger.info("No existing vector store found. Upload documents via /api/upload to create one.")
 
 
-def _rebuild_vector_store_from_docs(docs: List[Any]) -> bool:
+def _rebuild_vector_store_from_docs(
+    docs: List[Any],
+    tenant_id: str = "default",
+) -> bool:
     global _vector_store, _retriever, _chunks
 
     if _build_vector_store is None:
@@ -464,15 +509,33 @@ def _rebuild_vector_store_from_docs(docs: List[Any]) -> bool:
 
     try:
         chunk_config = {"chunk_size": 800, "chunk_overlap": 200}
-        _vector_store, _chunks = _build_vector_store(docs, chunk_config)
+        build_params = inspect.signature(_build_vector_store).parameters
+        if "tenant_id" in build_params or any(
+            param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+            for param in build_params.values()
+        ):
+            _vector_store, _chunks = _build_vector_store(
+                docs,
+                chunk_config,
+                tenant_id=tenant_id,
+            )
+        else:
+            _vector_store, _chunks = _build_vector_store(docs, chunk_config)
 
         if _get_retriever is not None:
-            _retriever = _get_retriever(_vector_store, chunks=_chunks)
+            retriever_params = inspect.signature(_get_retriever).parameters
+            if "tenant_id" in retriever_params or any(
+                param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+                for param in retriever_params.values()
+            ):
+                _retriever = _get_retriever(_vector_store, chunks=_chunks, tenant_id=tenant_id)
+            else:
+                _retriever = _get_retriever(_vector_store, chunks=_chunks)
         elif hasattr(_vector_store, "as_retriever"):
             _retriever = _vector_store.as_retriever(search_kwargs={"k": 5})
 
         for sid, session in _sessions.items():
-            if hasattr(session, "_retriever"):
+            if hasattr(session, "_retriever") and getattr(session, "_tenant_id", "default") == tenant_id:
                 session._retriever = _retriever
 
         logger.info("Vector store rebuilt: %d chunks", len(_chunks))
@@ -731,7 +794,15 @@ async def ask(
     if not question:
         raise HTTPException(status_code=400, detail="question is empty")
 
-    session_result = _get_or_create_session(body.session_id)
+    tenant = get_current_tenant() or _user.get("tenant", "default")
+    session_params = inspect.signature(_get_or_create_session).parameters
+    if "tenant_id" in session_params or any(
+        param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+        for param in session_params.values()
+    ):
+        session_result = _get_or_create_session(body.session_id, tenant)
+    else:
+        session_result = _get_or_create_session(body.session_id)
     if asyncio.iscoroutine(session_result):
         session_id, session = await session_result
     else:
@@ -744,7 +815,6 @@ async def ask(
             getattr(settings, "pipeline_acquire_timeout_sec", 0.5)
         )
         request_id = get_request_id()
-        tenant = get_current_tenant() or _user.get("tenant", "default")
         ask_params = inspect.signature(session.ask).parameters
         ask_args = (
             (question, request_id, tenant)
@@ -904,7 +974,15 @@ async def ask_stream(
         global _db_retry_after
         yield "data: " + _json.dumps({"type": "status", "node": "processing"}) + "\n\n"
 
-        session_result = _get_or_create_session(body.session_id)
+        tenant = get_current_tenant() or _user.get("tenant", "default")
+        session_params = inspect.signature(_get_or_create_session).parameters
+        if "tenant_id" in session_params or any(
+            param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+            for param in session_params.values()
+        ):
+            session_result = _get_or_create_session(body.session_id, tenant)
+        else:
+            session_result = _get_or_create_session(body.session_id)
         if asyncio.iscoroutine(session_result):
             session_id, session = await session_result
         else:
@@ -917,8 +995,6 @@ async def ask_stream(
                 "detail": "question is required",
             }) + "\n\n"
             return
-
-        tenant = get_current_tenant() or _user.get("tenant", "default")
 
         await log_audit(
             actor=_user.get("sub", "anonymous"),
@@ -1278,9 +1354,16 @@ async def get_metrics(
     _user: dict = Depends(require_role("admin")),
 ) -> dict:
     """Агрегированный JSON-снапшот метрик здоровья системы."""
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
     try:
         from sqlite_trace import get_metrics_snapshot  # noqa: PLC0415
 
+        metrics_params = inspect.signature(get_metrics_snapshot).parameters
+        if "tenant_id" in metrics_params or any(
+            param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+            for param in metrics_params.values()
+        ):
+            return get_metrics_snapshot(tenant_id=tenant)
         return get_metrics_snapshot()
     except Exception as exc:
         logger.warning("Failed to get metrics: %s", exc)
@@ -1339,6 +1422,7 @@ async def admin_list_audit(
     _user: dict = Depends(require_role("agent", "admin")),
 ) -> JSONResponse:
     limit = max(1, min(500, limit))
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
 
     try:
         from sqlalchemy import select  # noqa: PLC0415
@@ -1347,7 +1431,12 @@ async def admin_list_audit(
         from db.models import AuditLog  # noqa: PLC0415
 
         async with async_session() as db:
-            stmt = select(AuditLog).order_by(AuditLog.ts.desc()).limit(limit)
+            stmt = (
+                select(AuditLog)
+                .where(AuditLog.tenant_id == tenant)
+                .order_by(AuditLog.ts.desc())
+                .limit(limit)
+            )
             if actor:
                 stmt = stmt.where(AuditLog.actor == actor)
             if action:
@@ -1385,7 +1474,15 @@ async def admin_list_traces(
 ) -> JSONResponse:
     from sqlite_trace import list_recent_traces  # noqa: PLC0415
 
-    traces = await asyncio.to_thread(list_recent_traces, limit)
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    trace_params = inspect.signature(list_recent_traces).parameters
+    if "tenant_id" in trace_params or any(
+        param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+        for param in trace_params.values()
+    ):
+        traces = await asyncio.to_thread(list_recent_traces, limit, tenant_id=tenant)
+    else:
+        traces = await asyncio.to_thread(list_recent_traces, limit)
     return JSONResponse(content={"traces": traces})
 
 
@@ -1399,7 +1496,15 @@ async def admin_get_trace(
 
     from sqlite_trace import get_trace_detail  # noqa: PLC0415
 
-    trace = await asyncio.to_thread(get_trace_detail, trace_id)
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    detail_params = inspect.signature(get_trace_detail).parameters
+    if "tenant_id" in detail_params or any(
+        param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+        for param in detail_params.values()
+    ):
+        trace = await asyncio.to_thread(get_trace_detail, trace_id, tenant_id=tenant)
+    else:
+        trace = await asyncio.to_thread(get_trace_detail, trace_id)
     if trace is None:
         raise HTTPException(status_code=404, detail="trace not found")
     return JSONResponse(content=trace)
@@ -1419,7 +1524,19 @@ async def admin_purge_traces(
 
     from sqlite_trace import purge_old_traces
 
-    result = await asyncio.to_thread(purge_old_traces, older_than_days)
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    purge_params = inspect.signature(purge_old_traces).parameters
+    if "tenant_id" in purge_params or any(
+        param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+        for param in purge_params.values()
+    ):
+        result = await asyncio.to_thread(
+            purge_old_traces,
+            older_than_days,
+            tenant_id=tenant,
+        )
+    else:
+        result = await asyncio.to_thread(purge_old_traces, older_than_days)
 
     for table, count in (
         ("traces", result["traces_deleted"]),
@@ -1457,7 +1574,15 @@ async def admin_purge_audit(
 
     from db.audit import purge_old_audit
 
-    deleted = await purge_old_audit(older_than_days)
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    audit_params = inspect.signature(purge_old_audit).parameters
+    if "tenant_id" in audit_params or any(
+        param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+        for param in audit_params.values()
+    ):
+        deleted = await purge_old_audit(older_than_days, tenant_id=tenant)
+    else:
+        deleted = await purge_old_audit(older_than_days)
     try:
         prometheus_metrics.record_audit_purged(deleted)
     except Exception:
@@ -1498,12 +1623,17 @@ async def upload_document(
 
     import re as _re
 
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
     safe_name = Path(file.filename.replace("\\", "/")).name
     safe_name = _re.sub(r"[^\w\-.]", "_", safe_name)
     if not safe_name or safe_name.startswith("."):
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    upload_dir = PROJECT_ROOT / "data" / "uploads"
+    upload_root = PROJECT_ROOT / "data" / "uploads"
+    if tenant == "default":
+        upload_dir = upload_root
+    else:
+        upload_dir = upload_root / _re.sub(r"[^A-Za-z0-9_\-]", "_", tenant)
     upload_dir.mkdir(parents=True, exist_ok=True)
 
     file_path = upload_dir / safe_name
@@ -1535,28 +1665,29 @@ async def upload_document(
         actor=_user.get("sub", "anonymous"),
         action="upload",
         resource=f"document:{safe_name}",
-        detail={"tenant": _user.get("tenant", "default")},
+        detail={"tenant": tenant},
         ip_address=request.client.host if request.client else None,
     )
 
-    try:
-        from tasks.ingest_task import ingest_document
+    if tenant == "default":
+        try:
+            from tasks.ingest_task import ingest_document
 
-        task = ingest_document.delay(str(file_path))
-        return UploadResponse(
-            status="accepted",
-            filename=safe_name,
-            message=f"File uploaded. Processing in background. task_id={task.id}",
-        )
-    except Exception as exc:
-        logger.info("Celery async upload unavailable, falling back to sync: %s", exc)
+            task = ingest_document.delay(str(file_path))
+            return UploadResponse(
+                status="accepted",
+                filename=safe_name,
+                message=f"File uploaded. Processing in background. task_id={task.id}",
+            )
+        except Exception as exc:
+            logger.info("Celery async upload unavailable, falling back to sync: %s", exc)
 
     if _DocumentLoader is not None and _build_vector_store is not None:
         try:
             loader = _DocumentLoader(recursive=False)
             docs = loader.load_documents(str(upload_dir))
             if docs:
-                success = _rebuild_vector_store_from_docs(docs)
+                success = _rebuild_vector_store_from_docs(docs, tenant_id=tenant)
                 if success:
                     return UploadResponse(
                         status="ok",
