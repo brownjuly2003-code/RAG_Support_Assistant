@@ -74,6 +74,28 @@ def cache_delete(key: str) -> None:
     _fallback.pop(key, None)
 
 
+def cache_delete_pattern(pattern: str) -> int:
+    """Delete all keys matching a glob-style pattern."""
+    r = _get_redis()
+    deleted = 0
+    if r is not None:
+        try:
+            for key in r.scan_iter(match=pattern, count=500):
+                r.delete(key)
+                deleted += 1
+            return deleted
+        except Exception as exc:
+            logger.warning("Redis SCAN/DEL failed: %s", exc)
+
+    import fnmatch
+
+    to_delete = [key for key in _fallback if fnmatch.fnmatch(key, pattern)]
+    for key in to_delete:
+        _fallback.pop(key, None)
+        deleted += 1
+    return deleted
+
+
 def cache_json_get(key: str) -> Any | None:
     """Get a JSON object from cache."""
     raw = cache_get(key)

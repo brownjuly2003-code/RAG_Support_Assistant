@@ -14,6 +14,7 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import inspect
 import json as _json
 import logging
@@ -40,6 +41,7 @@ from api.correlation import (
     set_request_id,
 )
 from auth.dependencies import get_current_user, require_role
+from cache.redis_cache import cache_delete_pattern, cache_json_get, cache_json_set
 from db.audit import log_audit
 from monitoring import prometheus as prometheus_metrics
 try:
@@ -214,6 +216,8 @@ except ImportError:
             shutdown_ready_delay_sec = 5.0
             api_key = ""
             require_ollama = False
+            llm_cache_enabled = False
+            llm_cache_ttl_seconds = 3600
             cors_origins = ["*"]
         return _S()
 
@@ -345,6 +349,12 @@ def _get_pipeline_semaphore() -> asyncio.Semaphore:
         _pipeline_semaphore = asyncio.Semaphore(size)
 
     return _pipeline_semaphore
+
+
+def _cache_key(tenant: str, question: str) -> str:
+    normalized_question = question.strip().lower()
+    question_hash = hashlib.sha256(normalized_question.encode("utf-8")).hexdigest()[:16]
+    return f"llm_resp:{tenant or 'default'}:{question_hash}"
 
 
 async def _get_or_create_session(
@@ -808,109 +818,172 @@ async def ask(
     else:
         session_id, session = session_result
 
+    settings = get_settings()
+    cache_enabled = bool(getattr(settings, "llm_cache_enabled", False))
+    llm_cache_key = _cache_key(tenant, question)
+    cache_hit = False
+
     if hasattr(session, "ask"):
-        settings = get_settings()
-        timeout = float(getattr(settings, "request_timeout_sec", 30.0))
-        acquire_timeout = float(
-            getattr(settings, "pipeline_acquire_timeout_sec", 0.5)
-        )
-        request_id = get_request_id()
-        ask_params = inspect.signature(session.ask).parameters
-        ask_args = (
-            (question, request_id, tenant)
-            if len(ask_params) >= 3
-            or any(
-                param.kind == inspect.Parameter.VAR_POSITIONAL
-                for param in ask_params.values()
-            )
-            else (question, request_id)
-        )
-        semaphore = _get_pipeline_semaphore()
-        try:
-            await asyncio.wait_for(semaphore.acquire(), timeout=acquire_timeout)
-        except asyncio.TimeoutError:
-            try:
-                prometheus_metrics.record_pipeline_rejection("busy")
-            except Exception:
-                pass
-            logger.warning(
-                "req_id=%s /api/ask rejected: pipeline pool saturated",
-                request_id or "-",
-            )
-            raise HTTPException(
-                status_code=503,
-                detail="Server is busy processing other requests - retry in a moment",
-            )
-        try:
-            prometheus_metrics.INFLIGHT_PIPELINES.inc()
-            try:
-                result = await asyncio.wait_for(
-                    asyncio.to_thread(session.ask, *ask_args),
-                    timeout=timeout,
-                )
-
-                answer = result.get("answer") or ""
-                quality = result.get("quality_score") or 50
-                route = result.get("route") or "auto"
-
-                sources_list = []
-                docs = result.get("graded_docs") or result.get("context_docs") or []
-                for doc in docs[:5]:
-                    if isinstance(doc, dict):
-                        src = doc.get("metadata", {}).get("source", "")
-                        content = doc.get("page_content", "")[:200]
-                    else:
-                        src = getattr(doc, "metadata", {}).get("source", "")
-                        content = getattr(doc, "page_content", "")[:200]
-                    sources_list.append(SourceInfo(source=src, page_content=content))
-
-                response = AskResponse(
-                    answer=answer,
-                    quality_score=quality,
-                    route=route,
-                    sources=sources_list,
-                    session_id=session_id,
-                    trace_id=result.get("trace_id") or "",
-                    suggested_questions=result.get("suggested_questions") or [],
-                )
-            except asyncio.TimeoutError:
+        if cache_enabled:
+            cached_payload = cache_json_get(llm_cache_key)
+            if isinstance(cached_payload, dict) and cached_payload.get("answer"):
                 try:
-                    prometheus_metrics.record_request_timeout("/api/ask")
+                    prometheus_metrics.LLM_CACHE_HITS.labels(tenant=tenant).inc()
                 except Exception:
                     pass
-                logger.warning(
-                    "req_id=%s /api/ask exceeded timeout=%.1fs",
-                    request_id or "-",
-                    timeout,
-                )
-                raise HTTPException(
-                    status_code=504,
-                    detail=f"Request exceeded {timeout:.0f}s wall-time limit",
-                )
-            except Exception as exc:
-                logger.error("Pipeline error in /ask: %s", exc, exc_info=True)
-                answer = "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору."
+
+                answer = str(cached_payload.get("answer") or "")
+                cached_sources = []
+                for item in cached_payload.get("sources", [])[:5]:
+                    if not isinstance(item, dict):
+                        continue
+                    cached_sources.append(
+                        SourceInfo(
+                            source=item.get("source", ""),
+                            page_content=item.get("page_content", ""),
+                        )
+                    )
+
                 if hasattr(session, "_history"):
                     session._history.append({"role": "user", "content": question})
                     session._history.append({"role": "assistant", "content": answer})
+                    max_history = getattr(session, "_max_history", 20)
+                    if len(session._history) > max_history * 2:
+                        session._history = session._history[-(max_history * 2):]
                 elif isinstance(session, dict):
                     session["history"].append({"role": "user", "content": question})
                     session["history"].append({"role": "assistant", "content": answer})
+
                 response = AskResponse(
                     answer=answer,
-                    quality_score=0,
-                    route="human",
-                    sources=[],
+                    quality_score=int(cached_payload.get("quality_score") or 50),
+                    route=str(cached_payload.get("route") or "auto"),
+                    sources=cached_sources,
                     session_id=session_id,
                     trace_id="",
-                    suggested_questions=[],
+                    suggested_questions=cached_payload.get("suggested_questions") or [],
                 )
-        finally:
+                cache_hit = True
+            else:
+                try:
+                    prometheus_metrics.LLM_CACHE_MISSES.labels(tenant=tenant).inc()
+                except Exception:
+                    pass
+
+        if not cache_hit:
+            timeout = float(getattr(settings, "request_timeout_sec", 30.0))
+            acquire_timeout = float(
+                getattr(settings, "pipeline_acquire_timeout_sec", 0.5)
+            )
+            request_id = get_request_id()
+            ask_params = inspect.signature(session.ask).parameters
+            ask_args = (
+                (question, request_id, tenant)
+                if len(ask_params) >= 3
+                or any(
+                    param.kind == inspect.Parameter.VAR_POSITIONAL
+                    for param in ask_params.values()
+                )
+                else (question, request_id)
+            )
+            semaphore = _get_pipeline_semaphore()
             try:
-                prometheus_metrics.INFLIGHT_PIPELINES.dec()
-            except Exception:
-                pass
-            semaphore.release()
+                await asyncio.wait_for(semaphore.acquire(), timeout=acquire_timeout)
+            except asyncio.TimeoutError:
+                try:
+                    prometheus_metrics.record_pipeline_rejection("busy")
+                except Exception:
+                    pass
+                logger.warning(
+                    "req_id=%s /api/ask rejected: pipeline pool saturated",
+                    request_id or "-",
+                )
+                raise HTTPException(
+                    status_code=503,
+                    detail="Server is busy processing other requests - retry in a moment",
+                )
+            try:
+                prometheus_metrics.INFLIGHT_PIPELINES.inc()
+                try:
+                    result = await asyncio.wait_for(
+                        asyncio.to_thread(session.ask, *ask_args),
+                        timeout=timeout,
+                    )
+
+                    answer = result.get("answer") or ""
+                    quality = result.get("quality_score") or 50
+                    route = result.get("route") or "auto"
+
+                    sources_list = []
+                    docs = result.get("graded_docs") or result.get("context_docs") or []
+                    for doc in docs[:5]:
+                        if isinstance(doc, dict):
+                            src = doc.get("metadata", {}).get("source", "")
+                            content = doc.get("page_content", "")[:200]
+                        else:
+                            src = getattr(doc, "metadata", {}).get("source", "")
+                            content = getattr(doc, "page_content", "")[:200]
+                        sources_list.append(SourceInfo(source=src, page_content=content))
+
+                    response = AskResponse(
+                        answer=answer,
+                        quality_score=quality,
+                        route=route,
+                        sources=sources_list,
+                        session_id=session_id,
+                        trace_id=result.get("trace_id") or "",
+                        suggested_questions=result.get("suggested_questions") or [],
+                    )
+                    if cache_enabled and response.answer and response.route == "auto":
+                        cache_json_set(
+                            llm_cache_key,
+                            {
+                                "answer": response.answer,
+                                "quality_score": response.quality_score,
+                                "route": response.route,
+                                "sources": [source.model_dump() for source in response.sources],
+                                "suggested_questions": response.suggested_questions,
+                            },
+                            ttl_seconds=int(getattr(settings, "llm_cache_ttl_seconds", 3600)),
+                        )
+                except asyncio.TimeoutError:
+                    try:
+                        prometheus_metrics.record_request_timeout("/api/ask")
+                    except Exception:
+                        pass
+                    logger.warning(
+                        "req_id=%s /api/ask exceeded timeout=%.1fs",
+                        request_id or "-",
+                        timeout,
+                    )
+                    raise HTTPException(
+                        status_code=504,
+                        detail=f"Request exceeded {timeout:.0f}s wall-time limit",
+                    )
+                except Exception as exc:
+                    logger.error("Pipeline error in /ask: %s", exc, exc_info=True)
+                    answer = "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору."
+                    if hasattr(session, "_history"):
+                        session._history.append({"role": "user", "content": question})
+                        session._history.append({"role": "assistant", "content": answer})
+                    elif isinstance(session, dict):
+                        session["history"].append({"role": "user", "content": question})
+                        session["history"].append({"role": "assistant", "content": answer})
+                    response = AskResponse(
+                        answer=answer,
+                        quality_score=0,
+                        route="human",
+                        sources=[],
+                        session_id=session_id,
+                        trace_id="",
+                        suggested_questions=[],
+                    )
+            finally:
+                try:
+                    prometheus_metrics.INFLIGHT_PIPELINES.dec()
+                except Exception:
+                    pass
+                semaphore.release()
     else:
         session["history"].append({"role": "user", "content": question})
         fallback_answer = f"[DEMO] Pipeline not available. Question received: {question}"
@@ -959,6 +1032,8 @@ async def ask(
     if response.route == "human":
         prometheus_metrics.ESCALATION_TOTAL.inc()
     prometheus_metrics.ACTIVE_SESSIONS.set(len(_sessions))
+    if cache_hit:
+        return JSONResponse(content={**response.model_dump(), "cached": True})
     return response
 
 
@@ -1674,6 +1749,9 @@ async def upload_document(
             from tasks.ingest_task import ingest_document
 
             task = ingest_document.delay(str(file_path))
+            if getattr(settings, "llm_cache_enabled", False):
+                deleted = cache_delete_pattern(f"llm_resp:{tenant}:*")
+                logger.info("Invalidated %d cached LLM responses for tenant %s", deleted, tenant)
             return UploadResponse(
                 status="accepted",
                 filename=safe_name,
@@ -1689,6 +1767,9 @@ async def upload_document(
             if docs:
                 success = _rebuild_vector_store_from_docs(docs, tenant_id=tenant)
                 if success:
+                    if getattr(settings, "llm_cache_enabled", False):
+                        deleted = cache_delete_pattern(f"llm_resp:{tenant}:*")
+                        logger.info("Invalidated %d cached LLM responses for tenant %s", deleted, tenant)
                     return UploadResponse(
                         status="ok",
                         filename=safe_name,

@@ -133,7 +133,15 @@ python main.py
 |---|---|---|
 | `DATABASE_URL` | `postgresql+asyncpg://rag:rag_dev_password@localhost:5432/rag_assistant` | Postgres для audit/sessions |
 | `REDIS_URL` | `redis://localhost:6379/0` | cache с fallback на in-memory dict |
+| `LLM_CACHE_ENABLED` | `false` | включает tenant-scoped cache ответов `/api/ask` |
+| `LLM_CACHE_TTL_SECONDS` | `3600` | TTL кеша LLM-ответов в секундах |
 | `SESSION_TTL_SECONDS` | `7200` | TTL API-сессий |
+
+### LLM response caching
+
+- Кешируется финальный ответ `/api/ask` для пары `(tenant, normalized_question)`, где normalizer = `.strip().lower()`.
+- Ключи имеют вид `llm_resp:{tenant}:{sha256(question)[:16]}`: вопрос не светится в Redis в открытом виде.
+- Кеш включается только через `LLM_CACHE_ENABLED=true`, TTL задаётся `LLM_CACHE_TTL_SECONDS`, при upload tenant namespace `llm_resp:{tenant}:*` инвалидируется.
 
 ### Retention & deploy
 

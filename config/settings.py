@@ -209,6 +209,12 @@ class Settings:
     langfuse_secret_key: str = os.getenv("LANGFUSE_SECRET_KEY", "")
     langfuse_host: str = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    llm_cache_enabled: bool = field(
+        default_factory=lambda: os.getenv("LLM_CACHE_ENABLED", "false").strip().lower() in ("1", "true", "yes")
+    )
+    llm_cache_ttl_seconds: int = field(
+        default_factory=lambda: int(os.getenv("LLM_CACHE_TTL_SECONDS", "3600"))
+    )
     rag_env: str = field(
         default_factory=lambda: os.getenv("RAG_ENV", "development").strip().lower()
     )

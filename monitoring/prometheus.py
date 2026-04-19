@@ -20,6 +20,8 @@ __all__ = [
     "FEEDBACK_COUNT",
     "HTTP_REQUESTS",
     "HTTP_REQUEST_DURATION",
+    "LLM_CACHE_HITS",
+    "LLM_CACHE_MISSES",
     "OLLAMA_RETRY_EVENTS",
     "PROMETHEUS_AVAILABLE",
     "PIPELINE_REJECTIONS",
@@ -106,6 +108,8 @@ except ImportError:
     REQUEST_TIMEOUTS = _NoopMetric()
     INFLIGHT_PIPELINES = _NoopMetric()
     PIPELINE_REJECTIONS = _NoopMetric()
+    LLM_CACHE_HITS = _NoopMetric()
+    LLM_CACHE_MISSES = _NoopMetric()
     TRACES_PURGED = _NoopMetric()
     AUDIT_PURGED = _NoopMetric()
     AUTH_FAILURES = _NoopMetric()
@@ -258,6 +262,20 @@ else:
         "rag_pipeline_rejections_total",
         "Requests rejected due to pipeline saturation",
         ["reason"],
+        registry=REGISTRY,
+    )
+
+    LLM_CACHE_HITS = Counter(
+        "llm_cache_hits_total",
+        "LLM response cache hits",
+        ["tenant"],
+        registry=REGISTRY,
+    )
+
+    LLM_CACHE_MISSES = Counter(
+        "llm_cache_misses_total",
+        "LLM response cache misses",
+        ["tenant"],
         registry=REGISTRY,
     )
 
