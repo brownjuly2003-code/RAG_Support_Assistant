@@ -4,7 +4,6 @@ from __future__ import annotations
 import importlib
 import inspect
 import sys
-import time
 import types
 from functools import wraps
 from pathlib import Path
@@ -53,8 +52,7 @@ def _install_slowapi_stub() -> None:
                                 break
 
                     key = self.key_func(request) if request is not None else "global"
-                    bucket = int(time.time() // window_seconds)
-                    storage_key = (func.__name__, key, bucket)
+                    storage_key = (func.__name__, key, window_seconds)
                     hits = self._storage._hits.get(storage_key, 0) + 1
                     self._storage._hits[storage_key] = hits
                     if hits > max_requests:
@@ -162,6 +160,10 @@ def _clear_api_state() -> None:
     limiter_storage = getattr(api_app.app.state.limiter, "_storage", None)
     if limiter_storage is not None and hasattr(limiter_storage, "reset"):
         limiter_storage.reset()
+    elif limiter_storage is not None and hasattr(limiter_storage, "storage"):
+        limiter_storage.storage.clear()
+    elif limiter_storage is not None and hasattr(limiter_storage, "_storage"):
+        limiter_storage._storage.clear()
 
 
 _install_slowapi_stub()
@@ -185,6 +187,18 @@ def _reset_api_state():
     _clear_api_state()
     yield
     _clear_api_state()
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    limiter_storage = getattr(api_app.app.state.limiter, "_storage", None)
+    if limiter_storage is not None and hasattr(limiter_storage, "reset"):
+        limiter_storage.reset()
+    elif limiter_storage is not None and hasattr(limiter_storage, "storage"):
+        limiter_storage.storage.clear()
+    elif limiter_storage is not None and hasattr(limiter_storage, "_storage"):
+        limiter_storage._storage.clear()
+    yield
 
 
 @pytest.fixture
