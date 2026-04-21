@@ -300,6 +300,15 @@ class KbDraftUpdateRequest(BaseModel):
     draft_content: str = Field(..., min_length=1, max_length=20000)
 
 
+class ReviewQueueUpdateRequest(BaseModel):
+    status: str = Field(
+        ...,
+        pattern=r"^(pending|in_review|confirmed_good|confirmed_bad|dismissed)$",
+    )
+    reviewer_notes: str = Field(default="", max_length=5000)
+    reviewed_by: Optional[str] = Field(default=None, max_length=64)
+
+
 class SessionInfo(BaseModel):
     session_id: str
     message_count: int
@@ -376,6 +385,22 @@ _chunks: List[Any] = []
 _llm: Any = None
 _pipeline_semaphore: asyncio.Semaphore | None = None
 _vector_store_init_lock = threading.Lock()
+_REVIEW_QUEUE_REASONS = (
+    "thumbs_down",
+    "low_quality",
+    "escalated",
+    "fact_fail",
+    "slow_trace",
+    "manual",
+)
+_REVIEW_QUEUE_STATUSES = (
+    "pending",
+    "in_review",
+    "confirmed_good",
+    "confirmed_bad",
+    "dismissed",
+)
+_regression_jobs: Dict[str, Dict[str, Any]] = {}
 
 
 def _get_pipeline_semaphore() -> asyncio.Semaphore:
@@ -432,6 +457,490 @@ def _touch_tenant_document(tenant_id: str, doc_id: str) -> bool:
             metadata["last_updated"] = now_iso
             touched = True
     return touched
+
+
+def _experiments_dir() -> Path:
+    return Path(getattr(get_settings(), "project_root", PROJECT_ROOT)) / "evaluation" / "experiments"
+
+
+def _project_root_path() -> Path:
+    return Path(getattr(get_settings(), "project_root", PROJECT_ROOT))
+
+
+def _serialize_regression_job(job: dict[str, Any]) -> dict[str, Any]:
+    payload = dict(job)
+    payload["created_at"] = _serialize_timestamp(payload.get("created_at"))
+    payload["started_at"] = _serialize_timestamp(payload.get("started_at"))
+    payload["finished_at"] = _serialize_timestamp(payload.get("finished_at"))
+    return payload
+
+
+def _read_regression_report_assets(report_path: str | None) -> tuple[dict[str, Any] | None, str | None]:
+    if not report_path:
+        return None, None
+
+    json_path = _project_root_path() / Path(report_path)
+    if not json_path.exists():
+        return None, None
+
+    try:
+        report_payload = _json.loads(json_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        report_payload = None
+
+    markdown_path = json_path.with_suffix(".md")
+    try:
+        markdown = markdown_path.read_text(encoding="utf-8") if markdown_path.exists() else None
+    except OSError:
+        markdown = None
+    return report_payload, markdown
+
+
+async def _list_regression_run_rows(limit: int) -> list[dict[str, Any]]:
+    from sqlalchemy import text  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+
+    async with async_session() as db:
+        rows = (
+            await db.execute(
+                text(
+                    """
+                    SELECT
+                        run_id,
+                        created_at,
+                        value,
+                        sample_size,
+                        drift_alert,
+                        baseline_experiment_id,
+                        candidate_experiment_id,
+                        report_path
+                    FROM eval_results
+                    WHERE kind = 'regression'
+                    ORDER BY created_at DESC
+                    LIMIT :limit
+                    """
+                ),
+                {"limit": limit},
+            )
+        ).mappings().all()
+    return [dict(row) for row in rows]
+
+
+async def _get_regression_run_row(run_id: str) -> dict[str, Any] | None:
+    from sqlalchemy import text  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+
+    async with async_session() as db:
+        rows = (
+            await db.execute(
+                text(
+                    """
+                    SELECT
+                        run_id,
+                        created_at,
+                        value,
+                        sample_size,
+                        drift_alert,
+                        baseline_experiment_id,
+                        candidate_experiment_id,
+                        report_path
+                    FROM eval_results
+                    WHERE kind = 'regression' AND run_id = :run_id
+                    LIMIT 1
+                    """
+                ),
+                {"run_id": run_id},
+            )
+        ).mappings().all()
+    if not rows:
+        return None
+    return dict(rows[0])
+
+
+def _serialize_regression_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "run_id": str(row.get("run_id") or ""),
+        "status": "completed",
+        "result": "fail" if bool(row.get("drift_alert")) else "pass",
+        "created_at": _serialize_timestamp(row.get("created_at")),
+        "baseline": str(row.get("baseline_experiment_id") or "current"),
+        "candidate": str(row.get("candidate_experiment_id") or "current"),
+        "candidate_pass_rate": float(row.get("value") or 0.0),
+        "sample_size": int(row.get("sample_size") or 0),
+        "report_path": row.get("report_path"),
+    }
+
+
+async def _run_regression_job(run_id: str, baseline: str, candidate: str) -> None:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+    from scripts import regression_eval  # noqa: PLC0415
+
+    job = _regression_jobs.setdefault(
+        run_id,
+        {
+            "run_id": run_id,
+            "status": "queued",
+            "baseline": baseline,
+            "candidate": candidate,
+            "created_at": datetime.now(timezone.utc),
+        },
+    )
+    job["status"] = "running"
+    job["started_at"] = datetime.now(timezone.utc)
+
+    started_monotonic = time.monotonic()
+    try:
+        report = await asyncio.to_thread(
+            regression_eval.run_regression,
+            baseline=baseline,
+            candidate=candidate,
+            dataset_path=_project_root_path() / "evaluation" / "curated_cases.jsonl",
+            project_root=_project_root_path(),
+        )
+        _markdown_path, json_path = await asyncio.to_thread(
+            regression_eval.write_report_files,
+            report,
+            project_root=_project_root_path(),
+        )
+        await regression_eval.persist_regression_result(
+            session_factory=async_session,
+            report=report,
+            report_path=json_path.relative_to(_project_root_path()),
+        )
+
+        result = "pass" if bool(report["gate"]["passed"]) else "fail"
+        duration_sec = max(time.monotonic() - started_monotonic, 0.0)
+        prometheus_metrics.record_regression_run(result, duration_sec)
+        prometheus_metrics.set_regression_last_pass_rate(
+            report["baseline"],
+            report["candidate"],
+            float(report["aggregate"]["candidate_pass_rate"]),
+        )
+
+        job.update(
+            {
+                "status": "completed",
+                "result": result,
+                "finished_at": datetime.now(timezone.utc),
+                "exit_code": int(report["exit_code"]),
+                "report_path": str(json_path.relative_to(_project_root_path()).as_posix()),
+                "aggregate": report["aggregate"],
+                "gate": report["gate"],
+            }
+        )
+    except Exception as exc:
+        duration_sec = max(time.monotonic() - started_monotonic, 0.0)
+        prometheus_metrics.record_regression_run("fail", duration_sec)
+        job.update(
+            {
+                "status": "error",
+                "finished_at": datetime.now(timezone.utc),
+                "error": str(exc),
+            }
+        )
+
+
+def _review_queue_enabled() -> bool:
+    return bool(getattr(get_settings(), "review_queue_enabled", True))
+
+
+def _curated_dataset_path() -> Path:
+    return Path(getattr(get_settings(), "project_root", PROJECT_ROOT)) / "evaluation" / "curated_cases.jsonl"
+
+
+def _curated_dataset_job_key(job_id: str) -> str:
+    return f"curated-dataset-job:{job_id}"
+
+
+def _store_curated_dataset_job(job_id: str, payload: dict[str, Any]) -> None:
+    cache_json_set(_curated_dataset_job_key(job_id), payload, ttl_seconds=86400)
+
+
+def _curated_dataset_summary(path: Path | None = None) -> dict[str, Any]:
+    from evaluation.dataset import load_curated_cases  # noqa: PLC0415
+
+    dataset_path = path or _curated_dataset_path()
+    cases = load_curated_cases(dataset_path)
+
+    verdict_counts = {"good": 0, "bad": 0}
+    tenant_counts: dict[str, dict[str, int]] = {}
+    channel_counts: dict[str, int] = {}
+
+    for case in cases:
+        verdict_counts[case.human_verdict] = verdict_counts.get(case.human_verdict, 0) + 1
+
+        tenant_bucket = tenant_counts.setdefault(
+            case.tenant_id,
+            {"good": 0, "bad": 0, "total": 0},
+        )
+        tenant_bucket[case.human_verdict] = tenant_bucket.get(case.human_verdict, 0) + 1
+        tenant_bucket["total"] += 1
+
+        channel = str(case.input.channel or "web")
+        channel_counts[channel] = channel_counts.get(channel, 0) + 1
+
+    for tenant_id, counts in tenant_counts.items():
+        prometheus_metrics.set_curated_dataset_size("good", tenant_id, counts.get("good", 0))
+        prometheus_metrics.set_curated_dataset_size("bad", tenant_id, counts.get("bad", 0))
+
+    last_build_timestamp = dataset_path.stat().st_mtime if dataset_path.exists() else 0.0
+    prometheus_metrics.set_curated_dataset_last_build_timestamp(last_build_timestamp)
+
+    return {
+        "count": len(cases),
+        "verdict_counts": verdict_counts,
+        "tenant_counts": tenant_counts,
+        "channel_counts": channel_counts,
+    }
+
+
+def _serialize_timestamp(value: Any) -> Any:
+    if value is None:
+        return None
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return value
+
+
+def _reviewed_by_uuid(raw_value: str | None) -> str | None:
+    if not raw_value:
+        return None
+    try:
+        return str(uuid.UUID(str(raw_value)))
+    except (TypeError, ValueError, AttributeError):
+        return None
+
+
+def _load_review_queue_trace_details(trace_ids: list[str]) -> dict[str, dict[str, Any]]:
+    import json  # noqa: PLC0415
+    import sqlite3  # noqa: PLC0415
+
+    if not trace_ids:
+        return {}
+
+    db_path = Path(getattr(get_settings(), "tracing_db_path", ""))
+    if not db_path.exists():
+        return {}
+
+    unique_trace_ids = list(dict.fromkeys(trace_ids))
+    placeholders = ", ".join("?" for _ in unique_trace_ids)
+    details: dict[str, dict[str, Any]] = {
+        trace_id: {
+            "quality": None,
+            "duration_ms": None,
+            "fact_score": None,
+            "trace_url": f"/admin/traces/{trace_id}",
+        }
+        for trace_id in unique_trace_ids
+    }
+
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        trace_rows = conn.execute(
+            f"""
+            SELECT trace_id, final_quality
+            FROM traces
+            WHERE trace_id IN ({placeholders})
+            """,
+            tuple(unique_trace_ids),
+        ).fetchall()
+        for row in trace_rows:
+            trace_id = str(row["trace_id"])
+            if row["final_quality"] is not None:
+                details[trace_id]["quality"] = float(row["final_quality"])
+
+        step_rows = conn.execute(
+            f"""
+            SELECT trace_id, state_json
+            FROM trace_steps
+            WHERE trace_id IN ({placeholders})
+            ORDER BY trace_id ASC, step_order ASC, id ASC
+            """,
+            tuple(unique_trace_ids),
+        ).fetchall()
+        for row in step_rows:
+            trace_id = str(row["trace_id"])
+            state_json = row["state_json"]
+            try:
+                state = json.loads(state_json) if state_json else {}
+            except (TypeError, ValueError, json.JSONDecodeError):
+                state = {}
+            if not isinstance(state, dict):
+                continue
+
+            raw_duration = state.get("duration_ms")
+            try:
+                duration_ms = int(float(raw_duration)) if raw_duration is not None else None
+            except (TypeError, ValueError):
+                duration_ms = None
+            if duration_ms is not None:
+                current_duration = details[trace_id]["duration_ms"]
+                details[trace_id]["duration_ms"] = (
+                    duration_ms
+                    if current_duration is None
+                    else max(int(current_duration), duration_ms)
+                )
+
+            raw_fact_score = state.get("factuality_score", state.get("fact_score"))
+            try:
+                fact_score = float(raw_fact_score) if raw_fact_score is not None else None
+            except (TypeError, ValueError):
+                fact_score = None
+            if fact_score is not None:
+                details[trace_id]["fact_score"] = fact_score
+
+    return details
+
+
+async def _refresh_review_queue_metrics(_tenant: str | None = None) -> None:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from sqlalchemy import text  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+
+    try:
+        pending_counts = {reason: 0 for reason in _REVIEW_QUEUE_REASONS}
+        confirmed_counts = {"good": 0, "bad": 0}
+        oldest_pending_seconds = 0.0
+
+        async with async_session() as db:
+            pending_rows = (
+                await db.execute(
+                    text(
+                        """
+                        SELECT reason, COUNT(*) AS total
+                        FROM review_queue
+                        WHERE status = 'pending'
+                        GROUP BY reason
+                        """
+                    )
+                )
+            ).mappings().all()
+            for row in pending_rows:
+                reason = str(row["reason"])
+                if reason in pending_counts:
+                    pending_counts[reason] = int(row["total"] or 0)
+
+            confirmed_rows = (
+                await db.execute(
+                    text(
+                        """
+                        SELECT status, COUNT(*) AS total
+                        FROM review_queue
+                        WHERE status IN ('confirmed_good', 'confirmed_bad')
+                        GROUP BY status
+                        """
+                    )
+                )
+            ).mappings().all()
+            for row in confirmed_rows:
+                status = str(row["status"])
+                if status == "confirmed_good":
+                    confirmed_counts["good"] = int(row["total"] or 0)
+                elif status == "confirmed_bad":
+                    confirmed_counts["bad"] = int(row["total"] or 0)
+
+            oldest_rows = (
+                await db.execute(
+                    text(
+                        """
+                        SELECT MIN(created_at) AS oldest_pending
+                        FROM review_queue
+                        WHERE status = 'pending'
+                        """
+                    )
+                )
+            ).mappings().all()
+            oldest_pending = oldest_rows[0]["oldest_pending"] if oldest_rows else None
+            if oldest_pending is not None:
+                if isinstance(oldest_pending, str):
+                    oldest_pending = datetime.fromisoformat(oldest_pending)
+                if oldest_pending.tzinfo is None:
+                    oldest_pending = oldest_pending.replace(tzinfo=timezone.utc)
+                oldest_pending_seconds = max(
+                    0.0,
+                    (datetime.now(timezone.utc) - oldest_pending).total_seconds(),
+                )
+
+        for reason, count in pending_counts.items():
+            prometheus_metrics.set_review_queue_pending(reason, count)
+        for verdict, count in confirmed_counts.items():
+            prometheus_metrics.set_review_queue_confirmed(verdict, count)
+        prometheus_metrics.set_review_queue_oldest_pending(oldest_pending_seconds)
+    except Exception:
+        return None
+
+
+async def _run_curated_dataset_rebuild(
+    *,
+    job_id: str,
+    tenant: str,
+    since: str | None,
+    include_bad: bool,
+) -> None:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from scripts import build_curated_dataset  # noqa: PLC0415
+
+    dataset_path = _curated_dataset_path()
+    _store_curated_dataset_job(
+        job_id,
+        {
+            "job_id": job_id,
+            "status": "running",
+            "tenant": tenant,
+            "since": since,
+            "include_bad": include_bad,
+            "progress": 25,
+            "out": str(dataset_path),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+    try:
+        result = await build_curated_dataset.run_once(
+            tenant=tenant,
+            since=since,
+            out=dataset_path,
+            include_bad=include_bad,
+            settings=get_settings(),
+        )
+        summary = _curated_dataset_summary(dataset_path)
+        _store_curated_dataset_job(
+            job_id,
+            {
+                "job_id": job_id,
+                "status": "completed",
+                "tenant": tenant,
+                "since": since,
+                "include_bad": include_bad,
+                "progress": 100,
+                "out": str(dataset_path),
+                "result": result,
+                "summary": summary,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+    except Exception as exc:
+        _store_curated_dataset_job(
+            job_id,
+            {
+                "job_id": job_id,
+                "status": "failed",
+                "tenant": tenant,
+                "since": since,
+                "include_bad": include_bad,
+                "progress": 100,
+                "out": str(dataset_path),
+                "error": str(exc),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
 
 
 def _load_recent_trace_summaries(tenant_id: str, days: int) -> list[dict[str, Any]]:
@@ -2195,6 +2704,360 @@ async def admin_list_audit(
     )
 
 
+@router.get("/admin/review-queue")
+async def admin_list_review_queue(
+    status: str = "pending",
+    reason: str = "*",
+    limit: int = 50,
+    offset: int = 0,
+    _user: dict = Depends(require_role("admin", "reviewer")),
+) -> JSONResponse:
+    from sqlalchemy import text  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+
+    if not _review_queue_enabled():
+        raise HTTPException(status_code=404, detail="review queue disabled")
+
+    normalized_status = None if status in ("", "*") else status
+    normalized_reason = None if reason in ("", "*") else reason
+    if normalized_status is not None and normalized_status not in _REVIEW_QUEUE_STATUSES:
+        raise HTTPException(status_code=422, detail="invalid review queue status")
+    if normalized_reason is not None and normalized_reason not in _REVIEW_QUEUE_REASONS:
+        raise HTTPException(status_code=422, detail="invalid review queue reason")
+
+    safe_limit = max(1, min(500, limit))
+    safe_offset = max(0, offset)
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+
+    query = """
+        SELECT id, trace_id, tenant_id, reason, status, reviewer_notes, created_at, reviewed_at, reviewed_by
+        FROM review_queue
+        WHERE tenant_id = :tenant_id
+    """
+    params: dict[str, Any] = {
+        "tenant_id": tenant,
+        "limit": safe_limit,
+        "offset": safe_offset,
+    }
+    if normalized_status is not None:
+        query += " AND status = :status"
+        params["status"] = normalized_status
+    if normalized_reason is not None:
+        query += " AND reason = :reason"
+        params["reason"] = normalized_reason
+    query += " ORDER BY created_at DESC LIMIT :limit OFFSET :offset"
+
+    async with async_session() as db:
+        rows = (await db.execute(text(query), params)).mappings().all()
+
+    trace_details = _load_review_queue_trace_details([str(row["trace_id"]) for row in rows])
+    await _refresh_review_queue_metrics(tenant)
+    return JSONResponse(
+        content={
+            "items": [
+                {
+                    "id": row["id"],
+                    "trace_id": row["trace_id"],
+                    "tenant_id": row["tenant_id"],
+                    "reason": row["reason"],
+                    "status": row["status"],
+                    "reviewer_notes": row["reviewer_notes"] or "",
+                    "created_at": _serialize_timestamp(row["created_at"]),
+                    "reviewed_at": _serialize_timestamp(row["reviewed_at"]),
+                    "reviewed_by": str(row["reviewed_by"]) if row["reviewed_by"] is not None else None,
+                    "quality": trace_details.get(str(row["trace_id"]), {}).get("quality"),
+                    "fact_score": trace_details.get(str(row["trace_id"]), {}).get("fact_score"),
+                    "duration_ms": trace_details.get(str(row["trace_id"]), {}).get("duration_ms"),
+                    "trace_url": trace_details.get(str(row["trace_id"]), {}).get(
+                        "trace_url",
+                        f"/admin/traces/{row['trace_id']}",
+                    ),
+                }
+                for row in rows
+            ],
+            "count": len(rows),
+            "limit": safe_limit,
+            "offset": safe_offset,
+        }
+    )
+
+
+@router.post("/admin/review-queue/{review_id}")
+async def admin_update_review_queue(
+    review_id: int,
+    body: ReviewQueueUpdateRequest,
+    _user: dict = Depends(require_role("admin", "reviewer")),
+) -> JSONResponse:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from sqlalchemy import text  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+
+    if not _review_queue_enabled():
+        raise HTTPException(status_code=404, detail="review queue disabled")
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    reviewer_id = _reviewed_by_uuid(body.reviewed_by or _user.get("sub"))
+    reviewed_at = datetime.now(timezone.utc) if body.status != "pending" else None
+
+    async with async_session() as db:
+        result = await db.execute(
+            text(
+                """
+                UPDATE review_queue
+                SET status = :status,
+                    reviewer_notes = :reviewer_notes,
+                    reviewed_by = :reviewed_by,
+                    reviewed_at = :reviewed_at
+                WHERE id = :review_id AND tenant_id = :tenant_id
+                """
+            ),
+            {
+                "status": body.status,
+                "reviewer_notes": body.reviewer_notes.strip(),
+                "reviewed_by": reviewer_id,
+                "reviewed_at": reviewed_at,
+                "review_id": review_id,
+                "tenant_id": tenant,
+            },
+        )
+        await db.commit()
+
+    if int(getattr(result, "rowcount", 0) or 0) == 0:
+        raise HTTPException(status_code=404, detail="review item not found")
+
+    await _refresh_review_queue_metrics(tenant)
+    return JSONResponse(content={"status": "ok"})
+
+
+@router.get("/admin/review-queue/stats")
+async def admin_review_queue_stats(
+    _user: dict = Depends(require_role("admin", "reviewer")),
+) -> JSONResponse:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from sqlalchemy import text  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+
+    if not _review_queue_enabled():
+        raise HTTPException(status_code=404, detail="review queue disabled")
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    status_counts = {item: 0 for item in _REVIEW_QUEUE_STATUSES}
+    reason_counts = {item: 0 for item in _REVIEW_QUEUE_REASONS}
+    oldest_pending_seconds = 0.0
+
+    async with async_session() as db:
+        status_rows = (
+            await db.execute(
+                text(
+                    """
+                    SELECT status, COUNT(*) AS total
+                    FROM review_queue
+                    WHERE tenant_id = :tenant_id
+                    GROUP BY status
+                    """
+                ),
+                {"tenant_id": tenant},
+            )
+        ).mappings().all()
+        for row in status_rows:
+            key = str(row["status"])
+            if key in status_counts:
+                status_counts[key] = int(row["total"] or 0)
+
+        reason_rows = (
+            await db.execute(
+                text(
+                    """
+                    SELECT reason, COUNT(*) AS total
+                    FROM review_queue
+                    WHERE tenant_id = :tenant_id
+                    GROUP BY reason
+                    """
+                ),
+                {"tenant_id": tenant},
+            )
+        ).mappings().all()
+        for row in reason_rows:
+            key = str(row["reason"])
+            if key in reason_counts:
+                reason_counts[key] = int(row["total"] or 0)
+
+        oldest_rows = (
+            await db.execute(
+                text(
+                    """
+                    SELECT MIN(created_at) AS oldest_pending
+                    FROM review_queue
+                    WHERE tenant_id = :tenant_id AND status = 'pending'
+                    """
+                ),
+                {"tenant_id": tenant},
+            )
+        ).mappings().all()
+        oldest_pending = oldest_rows[0]["oldest_pending"] if oldest_rows else None
+        if oldest_pending is not None:
+            if isinstance(oldest_pending, str):
+                oldest_pending = datetime.fromisoformat(oldest_pending)
+            if oldest_pending.tzinfo is None:
+                oldest_pending = oldest_pending.replace(tzinfo=timezone.utc)
+            oldest_pending_seconds = max(
+                0.0,
+                (datetime.now(timezone.utc) - oldest_pending).total_seconds(),
+            )
+
+    await _refresh_review_queue_metrics(tenant)
+    return JSONResponse(
+        content={
+            "status_counts": status_counts,
+            "reason_counts": reason_counts,
+            "oldest_pending_seconds": oldest_pending_seconds,
+        }
+    )
+
+
+@router.get("/admin/curated-dataset/stats")
+async def admin_curated_dataset_stats(
+    _user: dict = Depends(require_role("admin", "reviewer")),
+) -> JSONResponse:
+    _ = _user
+    return JSONResponse(content=_curated_dataset_summary())
+
+
+@router.post("/admin/curated-dataset/rebuild")
+async def admin_rebuild_curated_dataset(
+    tenant: str = "all",
+    since: str | None = None,
+    include_bad: bool = False,
+    _user: dict = Depends(require_role("admin", "reviewer")),
+) -> JSONResponse:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    _ = _user
+    job_id = str(uuid.uuid4())
+    dataset_path = _curated_dataset_path()
+    _store_curated_dataset_job(
+        job_id,
+        {
+            "job_id": job_id,
+            "status": "queued",
+            "tenant": tenant,
+            "since": since,
+            "include_bad": include_bad,
+            "progress": 0,
+            "out": str(dataset_path),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+    asyncio.create_task(
+        _run_curated_dataset_rebuild(
+            job_id=job_id,
+            tenant=tenant,
+            since=since,
+            include_bad=include_bad,
+        )
+    )
+    return JSONResponse(content={"job_id": job_id, "status": "queued"})
+
+
+@router.get("/admin/thresholds/analysis")
+async def admin_threshold_analysis(
+    days: int = 30,
+    _user: dict = Depends(require_role("admin", "reviewer")),
+) -> JSONResponse:
+    safe_days = max(1, min(365, days))
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    cache_key = f"threshold-analysis:{tenant}:{safe_days}"
+    cached_payload = cache_json_get(cache_key)
+    if cached_payload is not None:
+        payload = dict(cached_payload)
+        payload["cached"] = True
+        return JSONResponse(content=payload)
+
+    from scripts import analyze_thresholds  # noqa: PLC0415
+
+    settings = get_settings()
+    report_path = Path(getattr(settings, "project_root", PROJECT_ROOT)) / "reports" / "threshold_recommendations.md"
+    payload = await analyze_thresholds.run_once(
+        days=safe_days,
+        tenant=tenant,
+        out=report_path,
+        settings=settings,
+    )
+    cache_json_set(cache_key, payload, ttl_seconds=86400)
+    payload = dict(payload)
+    payload["cached"] = False
+    return JSONResponse(content=payload)
+
+
+@router.post("/admin/thresholds/refresh")
+async def admin_refresh_threshold_analysis(
+    days: int = 30,
+    _user: dict = Depends(require_role("admin", "reviewer")),
+) -> JSONResponse:
+    from scripts import analyze_thresholds  # noqa: PLC0415
+
+    safe_days = max(1, min(365, days))
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    settings = get_settings()
+    report_path = Path(getattr(settings, "project_root", PROJECT_ROOT)) / "reports" / "threshold_recommendations.md"
+    payload = await analyze_thresholds.run_once(
+        days=safe_days,
+        tenant=tenant,
+        out=report_path,
+        settings=settings,
+    )
+    cache_json_set(f"threshold-analysis:{tenant}:{safe_days}", payload, ttl_seconds=86400)
+    payload = dict(payload)
+    payload["cached"] = False
+    return JSONResponse(content=payload)
+
+
+@router.get("/admin/improvement-backlog/current")
+async def admin_current_improvement_backlog(
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from scripts import generate_improvement_backlog  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    settings = get_settings()
+    project_root = Path(getattr(settings, "project_root", PROJECT_ROOT))
+    week = generate_improvement_backlog.latest_persisted_week(project_root)
+    if week is None:
+        week = generate_improvement_backlog.default_week_spec(datetime.now(timezone.utc))
+
+    payload = await generate_improvement_backlog.run_once(
+        tenant=tenant,
+        week=week,
+        out=None,
+        settings=settings,
+    )
+    return JSONResponse(content=payload)
+
+
+@router.get("/admin/improvement-backlog/archive")
+async def admin_improvement_backlog_archive(
+    year: int | None = None,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from scripts import generate_improvement_backlog  # noqa: PLC0415
+
+    _ = _user
+    settings = get_settings()
+    project_root = Path(getattr(settings, "project_root", PROJECT_ROOT))
+    return JSONResponse(
+        content={
+            "weeks": generate_improvement_backlog.list_archive_weeks(project_root, year),
+        }
+    )
+
+
 @router.get("/admin/traces")
 async def admin_list_traces(
     limit: int | None = None,
@@ -2404,6 +3267,134 @@ async def admin_publish_kb_draft(
         draft.reviewed_at = datetime.now(timezone.utc)
         await db.commit()
     return JSONResponse(content={"status": "ok"})
+
+
+@router.get("/admin/experiments")
+async def admin_list_experiments(
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from evaluation.experiment_schema import load_experiment  # noqa: PLC0415
+
+    experiments = []
+    for path in sorted(_experiments_dir().glob("*.yaml")):
+        experiment = load_experiment(path)
+        experiments.append(
+            {
+                "id": experiment.id,
+                "name": experiment.name,
+                "status": experiment.status,
+                "latest_eval_link": None,
+            }
+        )
+    return JSONResponse(content={"experiments": experiments})
+
+
+@router.get("/admin/experiments/{experiment_id}")
+async def admin_get_experiment(
+    experiment_id: str,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from evaluation.experiment_schema import load_experiment  # noqa: PLC0415
+
+    path = _experiments_dir() / f"{experiment_id}.yaml"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="experiment not found")
+
+    experiment = load_experiment(path)
+    payload = experiment.model_dump(mode="json")
+    payload["latest_eval_link"] = None
+    return JSONResponse(content=payload)
+
+
+@router.post("/admin/experiments/{experiment_id}/archive")
+async def admin_archive_experiment(
+    experiment_id: str,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from evaluation.experiment_schema import load_experiment, save_experiment  # noqa: PLC0415
+
+    path = _experiments_dir() / f"{experiment_id}.yaml"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="experiment not found")
+
+    experiment = load_experiment(path)
+    experiment.status = "archived"
+    save_experiment(experiment, path)
+    return JSONResponse(content={"status": "archived", "id": experiment.id})
+
+
+@router.post("/admin/experiments/{experiment_id}/regression-run")
+async def admin_run_experiment_regression(
+    experiment_id: str,
+    baseline: str = "current",
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    if experiment_id != "current":
+        candidate_path = _experiments_dir() / f"{experiment_id}.yaml"
+        if not candidate_path.exists():
+            raise HTTPException(status_code=404, detail="experiment not found")
+
+    if baseline != "current":
+        baseline_path = _experiments_dir() / f"{baseline}.yaml"
+        if not baseline_path.exists():
+            raise HTTPException(status_code=404, detail="baseline experiment not found")
+
+    run_id = f"regression-{uuid.uuid4().hex[:12]}"
+    _regression_jobs[run_id] = {
+        "run_id": run_id,
+        "status": "queued",
+        "baseline": baseline,
+        "candidate": experiment_id,
+        "created_at": datetime.now(timezone.utc),
+    }
+    asyncio.create_task(_run_regression_job(run_id, baseline, experiment_id))
+    return JSONResponse(
+        status_code=202,
+        content={"job_id": run_id, "status": "queued"},
+    )
+
+
+@router.get("/admin/regression-runs")
+async def admin_list_regression_runs(
+    limit: int = 20,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    normalized_limit = max(1, min(limit, 100))
+    rows = await _list_regression_run_rows(normalized_limit)
+    items = [_serialize_regression_row(row) for row in rows]
+    known_ids = {item["run_id"] for item in items}
+
+    pending_jobs = [
+        _serialize_regression_job(job)
+        for job in _regression_jobs.values()
+        if str(job.get("run_id") or "") not in known_ids
+    ]
+
+    combined = pending_jobs + items
+    combined.sort(key=lambda item: str(item.get("created_at") or ""), reverse=True)
+    return JSONResponse(content={"runs": combined[:normalized_limit]})
+
+
+@router.get("/admin/regression-runs/{run_id}")
+async def admin_get_regression_run(
+    run_id: str,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    row = await _get_regression_run_row(run_id)
+    if row is not None:
+        report_payload, report_markdown = _read_regression_report_assets(row.get("report_path"))
+        payload = _serialize_regression_row(row)
+        payload["report"] = report_payload
+        payload["report_markdown"] = report_markdown
+        return JSONResponse(content=payload)
+
+    job = _regression_jobs.get(run_id)
+    if job is not None:
+        return JSONResponse(content=_serialize_regression_job(job))
+
+    raise HTTPException(status_code=404, detail="regression run not found")
 
 
 @router.get("/admin/stale-docs")
@@ -3505,6 +4496,13 @@ async def agent_dashboard(
     if not agent_path.exists():
         raise HTTPException(status_code=404, detail="agent dashboard not found")
     return HTMLResponse(agent_path.read_text(encoding="utf-8"))
+
+
+@app.get("/admin/traces/{trace_id}")
+async def admin_trace_detail_redirect(trace_id: str) -> RedirectResponse:
+    if not re.fullmatch(r"[A-Za-z0-9\-]{8,64}", trace_id):
+        raise HTTPException(status_code=400, detail="invalid trace_id format")
+    return RedirectResponse(url=f"/traces-ui/{trace_id}", status_code=307)
 
 
 @app.get("/metrics")

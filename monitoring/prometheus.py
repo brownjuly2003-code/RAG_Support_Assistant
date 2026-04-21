@@ -12,6 +12,8 @@ __all__ = [
     "CIRCUIT_BREAKER_STATE",
     "CIRCUIT_BREAKER_TRANSITIONS",
     "CONTENT_TYPE_LATEST",
+    "CURATED_DATASET_LAST_BUILD_TIMESTAMP_SECONDS",
+    "CURATED_DATASET_SIZE",
     "DB_POOL_CHECKED_OUT",
     "DB_POOL_OVERFLOW",
     "DB_POOL_SIZE",
@@ -28,7 +30,13 @@ __all__ = [
     "PIPELINE_REJECTIONS",
     "QUALITY_SCORE",
     "RATE_LIMIT_REJECTIONS",
+    "REGRESSION_LAST_PASS_RATE",
+    "REGRESSION_RUNS_DURATION",
+    "REGRESSION_RUNS_TOTAL",
     "REGISTRY",
+    "REVIEW_QUEUE_CONFIRMED_TOTAL",
+    "REVIEW_QUEUE_OLDEST_PENDING_SECONDS",
+    "REVIEW_QUEUE_PENDING_TOTAL",
     "REQUEST_COUNT",
     "REQUEST_DURATION",
     "REQUEST_TIMEOUTS",
@@ -43,14 +51,21 @@ __all__ = [
     "record_audit_purged",
     "record_auth_failure",
     "record_body_size_rejection",
+    "set_curated_dataset_last_build_timestamp",
+    "set_curated_dataset_size",
     "record_db_pool_stats",
     "record_eval_drift",
     "record_circuit_breaker_change",
     "record_ollama_retry_event",
     "record_model_routing",
     "record_pipeline_rejection",
+    "record_regression_run",
     "record_rate_limit_rejection",
     "record_request_timeout",
+    "set_review_queue_confirmed",
+    "set_review_queue_oldest_pending",
+    "set_review_queue_pending",
+    "set_regression_last_pass_rate",
     "record_stale_important_docs",
     "record_traces_purged",
 ]
@@ -109,6 +124,12 @@ except ImportError:
     OLLAMA_RETRY_EVENTS = _NoopMetric()
     MODEL_ROUTING = _NoopMetric()
     RATE_LIMIT_REJECTIONS = _NoopMetric()
+    REGRESSION_RUNS_TOTAL = _NoopMetric()
+    REGRESSION_RUNS_DURATION = _NoopMetric()
+    REGRESSION_LAST_PASS_RATE = _NoopMetric()
+    REVIEW_QUEUE_PENDING_TOTAL = _NoopMetric()
+    REVIEW_QUEUE_CONFIRMED_TOTAL = _NoopMetric()
+    REVIEW_QUEUE_OLDEST_PENDING_SECONDS = _NoopMetric()
     REQUEST_TIMEOUTS = _NoopMetric()
     STALE_IMPORTANT_DOCS = _NoopMetric()
     INFLIGHT_PIPELINES = _NoopMetric()
@@ -120,6 +141,8 @@ except ImportError:
     AUTH_FAILURES = _NoopMetric()
     BODY_SIZE_REJECTIONS = _NoopMetric()
     EVAL_DRIFT = _NoopMetric()
+    CURATED_DATASET_SIZE = _NoopMetric()
+    CURATED_DATASET_LAST_BUILD_TIMESTAMP_SECONDS = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     REGISTRY = CollectorRegistry()
@@ -251,6 +274,47 @@ else:
         registry=REGISTRY,
     )
 
+    REGRESSION_RUNS_TOTAL = Counter(
+        "regression_runs_total",
+        "Completed regression runs grouped by result",
+        ["result"],
+        registry=REGISTRY,
+    )
+
+    REGRESSION_RUNS_DURATION = Histogram(
+        "regression_runs_duration_seconds",
+        "Wall-clock duration of regression runs",
+        buckets=(0.5, 1, 2, 5, 10, 20, 30, 60, 120, 300, 600),
+        registry=REGISTRY,
+    )
+
+    REGRESSION_LAST_PASS_RATE = Gauge(
+        "regression_last_pass_rate",
+        "Most recent candidate pass rate for a baseline/candidate pair",
+        ["baseline", "candidate"],
+        registry=REGISTRY,
+    )
+
+    REVIEW_QUEUE_PENDING_TOTAL = Gauge(
+        "review_queue_pending_total",
+        "Current review queue size in pending state",
+        ["reason"],
+        registry=REGISTRY,
+    )
+
+    REVIEW_QUEUE_CONFIRMED_TOTAL = Gauge(
+        "review_queue_confirmed_total",
+        "Current review queue size in confirmed states",
+        ["verdict"],
+        registry=REGISTRY,
+    )
+
+    REVIEW_QUEUE_OLDEST_PENDING_SECONDS = Gauge(
+        "review_queue_oldest_pending_seconds",
+        "Age of the oldest pending review queue item",
+        registry=REGISTRY,
+    )
+
     REQUEST_TIMEOUTS = Counter(
         "rag_request_timeouts_total",
         "Requests exceeding REQUEST_TIMEOUT_SEC wall-time",
@@ -325,6 +389,26 @@ else:
         registry=REGISTRY,
     )
 
+    CURATED_DATASET_SIZE = Gauge(
+        "curated_dataset_size",
+        "Current curated dataset size split by verdict and tenant",
+        ["verdict", "tenant"],
+        registry=REGISTRY,
+    )
+
+    CURATED_DATASET_LAST_BUILD_TIMESTAMP_SECONDS = Gauge(
+        "curated_dataset_last_build_timestamp_seconds",
+        "Unix timestamp of the latest curated dataset build artifact",
+        registry=REGISTRY,
+    )
+
+    for _reason in ("thumbs_down", "low_quality", "escalated", "fact_fail", "slow_trace", "manual"):
+        REVIEW_QUEUE_PENDING_TOTAL.labels(reason=_reason).set(0)
+    for _verdict in ("good", "bad"):
+        REVIEW_QUEUE_CONFIRMED_TOTAL.labels(verdict=_verdict).set(0)
+    REVIEW_QUEUE_OLDEST_PENDING_SECONDS.set(0)
+    CURATED_DATASET_LAST_BUILD_TIMESTAMP_SECONDS.set(0)
+
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
 
@@ -379,8 +463,32 @@ def record_rate_limit_rejection(endpoint: str) -> None:
     RATE_LIMIT_REJECTIONS.labels(endpoint=endpoint).inc()
 
 
+def record_regression_run(result: str, duration_sec: float) -> None:
+    REGRESSION_RUNS_TOTAL.labels(result=result).inc()
+    REGRESSION_RUNS_DURATION.observe(max(0.0, float(duration_sec)))
+
+
 def record_request_timeout(endpoint: str) -> None:
     REQUEST_TIMEOUTS.labels(endpoint=endpoint).inc()
+
+
+def set_review_queue_pending(reason: str, count: int) -> None:
+    REVIEW_QUEUE_PENDING_TOTAL.labels(reason=reason).set(max(0, count))
+
+
+def set_review_queue_confirmed(verdict: str, count: int) -> None:
+    REVIEW_QUEUE_CONFIRMED_TOTAL.labels(verdict=verdict).set(max(0, count))
+
+
+def set_review_queue_oldest_pending(seconds: float) -> None:
+    REVIEW_QUEUE_OLDEST_PENDING_SECONDS.set(max(0.0, float(seconds)))
+
+
+def set_regression_last_pass_rate(baseline: str, candidate: str, pass_rate: float) -> None:
+    REGRESSION_LAST_PASS_RATE.labels(
+        baseline=baseline,
+        candidate=candidate,
+    ).set(max(0.0, float(pass_rate)))
 
 
 def record_stale_important_docs(count: int) -> None:
@@ -411,3 +519,11 @@ def record_body_size_rejection(reason: str) -> None:
 
 def record_eval_drift(metric_name: str, value: float) -> None:
     EVAL_DRIFT.labels(metric_name=metric_name).set(value)
+
+
+def set_curated_dataset_size(verdict: str, tenant: str, count: int) -> None:
+    CURATED_DATASET_SIZE.labels(verdict=verdict, tenant=tenant).set(max(0, count))
+
+
+def set_curated_dataset_last_build_timestamp(timestamp: float) -> None:
+    CURATED_DATASET_LAST_BUILD_TIMESTAMP_SECONDS.set(max(0.0, float(timestamp)))

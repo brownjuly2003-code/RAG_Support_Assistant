@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-review-queue
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: review-queue
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              command:
+                - python
+                - scripts/build_review_queue.py
+                - --days
+                - "1"
+                - --tenant
+                - all
+              envFrom:
+                - configMapRef:
+                    name: {{ .Release.Name }}-config

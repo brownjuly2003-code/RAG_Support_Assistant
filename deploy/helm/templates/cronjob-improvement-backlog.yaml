@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-improvement-backlog
+spec:
+  schedule: "0 6 * * 1"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: improvement-backlog
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              command:
+                - python
+                - scripts/generate_improvement_backlog.py
+                - --tenant
+                - all
+              envFrom:
+                - configMapRef:
+                    name: {{ .Release.Name }}-config

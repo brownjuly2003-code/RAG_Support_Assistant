@@ -80,6 +80,8 @@ User / Email / Widget
   `pgcrypto` and an external `DB_ENCRYPTION_KEY`.
 - **Knowledge Builder:** `scripts/kb_builder.py` clusters resolved tickets into
   reviewable KB drafts that admins can publish back into the vector store.
+- **Review queue:** `scripts/build_review_queue.py` collects weak, escalated,
+  slow, or thumbs-down traces into a human review backlog with admin actions.
 - **Freshness monitoring:** Citation counts plus document age highlight
   stale-but-important documents for review.
 - **Auto-categorization:** Uploads are classified into categories from
@@ -88,6 +90,9 @@ User / Email / Widget
   resolution rates, quality trends, and LLM cost summaries.
 - **Weekly reports:** Markdown digests can be pushed through Slack or email on
   a weekly schedule.
+- **Improvement backlog:** A weekly generator combines confirmed bad reviews,
+  KB gaps, slow endpoints, stale docs, evaluator drift, and thumbs-down trends
+  into a prioritized improvement backlog.
 - **Email channel:** Incoming support mail can be processed through IMAP
   polling or an inbound webhook, then routed through the same RAG flow.
 - **Canonical module layout:** Core agent modules now live under `agent/*`,
@@ -119,7 +124,7 @@ Open:
 - **http://localhost:8000** - chat UI
 - **http://localhost:8000/static/login.html** - password + SSO login page
 - **http://localhost:8000/static/admin.html** - admin UI for traces, audit,
-  KB gaps, KB drafts, stale docs, and breaker controls
+  review queue, KB gaps, KB drafts, stale docs, and breaker controls
 - **http://localhost:8000/agent** - agent copilot dashboard
 - **http://localhost:8000/static/analytics.html** - analytics dashboard
 - **http://localhost:8000/static/metrics.html** - system metrics dashboard
@@ -166,6 +171,11 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `RAG_SELF_RAG_MIN_QUALITY` | `70` | Minimum quality score to avoid retry/escalation |
 | `FACT_VERIFICATION_ENABLED` | `true` | Run fact verification after generation |
 | `FACT_VERIFICATION_MIN_SCORE` | `70` | Minimum factuality score threshold |
+| `SLOW_TRACE_THRESHOLD_MS` | `10000` | Trace-duration threshold for review queue collection |
+| `THRESHOLD_ANALYSIS_MIN_LABELS` | `20` | Minimum labeled traces required before suggesting a new threshold |
+| `REVIEW_QUEUE_ENABLED` | `true` | Enable review queue builder and admin endpoints |
+| `REGRESSION_GATE_MAX_REGRESSIONS` | `2` | Maximum allowed curated regressions before the gate fails |
+| `REGRESSION_GATE_MIN_PASS_RATE` | `0.85` | Minimum candidate pass rate required by the regression gate |
 | `RAG_VECTOR_BACKEND` | `chroma` | Vector store backend |
 | `VECTORDB_COLLECTION_PREFIX` | `rag_docs` | Chroma collection prefix; full name is `{prefix}_{tenant_id}` |
 | `CATEGORIES_CONFIG_PATH` | `config/categories.yml` | Taxonomy file for upload auto-categorization |
@@ -252,6 +262,15 @@ Resilience layers apply in this order:
 | `REPORT_SMTP_PORT` | `SMTP_PORT` fallback or `587` | SMTP port override for weekly reports |
 | `REPORT_SMTP_USER` | `SMTP_USER` fallback | SMTP user override for weekly reports |
 | `REPORT_SMTP_PASS` | `SMTP_PASS` fallback | SMTP password override for weekly reports |
+| `BACKLOG_WEIGHT_REVIEW_BAD` | `3.0` | Impact weight for confirmed-bad review backlog items |
+| `BACKLOG_WEIGHT_THUMBS_DOWN` | `2.0` | Impact weight for thumbs-down backlog items |
+| `BACKLOG_WEIGHT_SLOW` | `1.5` | Impact weight for slow-endpoint backlog items |
+| `BACKLOG_WEIGHT_FRESHNESS` | `1.0` | Impact weight for stale-document backlog items |
+| `BACKLOG_WEIGHT_EVALUATOR_DRIFT` | `2.5` | Impact weight for evaluator drift backlog items |
+| `BACKLOG_MAX_ITEMS` | `30` | Maximum number of improvement backlog items kept after ranking |
+| `BACKLOG_FRESHNESS_MAX_DAYS` | `90` | Freshness cutoff for stale-doc backlog items |
+| `BACKLOG_EMAIL_ENABLED` | `false` | Email the generated backlog to `TENANT_ADMIN_EMAIL` after each run |
+| `TENANT_ADMIN_EMAIL` | `""` | Optional recipient for backlog email delivery |
 | `EMAIL_CHANNEL_MODE` | `disabled` | Email channel mode: `disabled`, `imap`, or `webhook` |
 | `IMAP_HOST` | `""` | IMAP server hostname |
 | `IMAP_PORT` | `993` | IMAP server port |
@@ -321,8 +340,12 @@ Resilience layers apply in this order:
 | PATCH | `/api/admin/kb-drafts/{draft_id}` | admin | Edit a pending KB draft |
 | POST | `/api/admin/kb-drafts/{draft_id}/reject` | admin | Reject a pending KB draft |
 | POST | `/api/admin/kb-drafts/{draft_id}/publish` | admin | Publish a KB draft into the vector store |
+| GET | `/api/admin/improvement-backlog/current` | admin | Return the latest improvement backlog as JSON |
+| GET | `/api/admin/improvement-backlog/archive?year=2026` | admin | List archived improvement backlog weeks |
 | GET | `/api/admin/stale-docs` | admin | List stale but highly cited documents |
 | POST | `/api/admin/stale-docs/{doc_id}/review` | admin | Mark a stale document as reviewed |
+| GET | `/api/admin/curated-dataset/stats` | admin | Aggregate curated dataset counts by verdict, tenant, and channel |
+| POST | `/api/admin/curated-dataset/rebuild` | admin | Trigger an async rebuild of `evaluation/curated_cases.jsonl` |
 
 ### Analytics and channels
 
@@ -378,6 +401,67 @@ curl -s "http://localhost:8000/api/analytics/top-topics?days=7" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
+## Experiments
+
+Prompt, model, and retrieval changes can be tracked as YAML experiments in
+`evaluation/experiments/`.
+
+Create a new draft from the current runtime snapshot:
+
+```bash
+python scripts/experiment_new.py --name "concise-answers" --from current --description "Shorter support replies"
+```
+
+Stage an experiment without changing committed defaults:
+
+```bash
+python scripts/experiment_apply.py 2026-04-21-concise-answers --mode stage
+EXPERIMENT_ID=2026-04-21-concise-answers python -c "from config.settings import get_settings; print(get_settings().retrieval_top_k)"
+```
+
+Recommended workflow:
+
+1. Create a draft with `experiment_new.py`.
+2. Stage it with `experiment_apply.py --mode stage`.
+3. Run nightly or regression evaluation against the staged `EXPERIMENT_ID`.
+4. Deploy with `experiment_apply.py --mode deploy` once metrics look acceptable.
+
+Admin endpoints:
+
+- `GET /api/admin/experiments`
+- `GET /api/admin/experiments/{id}`
+- `POST /api/admin/experiments/{id}/archive`
+- `POST /api/admin/experiments/{id}/regression-run?baseline=current`
+- `GET /api/admin/regression-runs`
+- `GET /api/admin/regression-runs/{run_id}`
+
+## Regression eval
+
+Curated regression runs compare a baseline against `current` or an experiment
+without invoking the heavy nightly RAGAS pipeline.
+
+```bash
+python scripts/regression_eval.py \
+  --baseline current \
+  --candidate 2026-04-21-concise-answers \
+  --dataset evaluation/curated_cases.jsonl \
+  --tenant all \
+  --max-cases 100 \
+  --seed 42
+```
+
+- The script writes `reports/regression/<timestamp>-<baseline>-vs-<candidate>.md`
+  and a JSON sidecar next to it.
+- Exit code `0` means the candidate satisfied the regression gate, `1` means
+  gate failure, and `2` is reserved for infrastructure/runtime errors.
+- Each completed run is persisted into `eval_results` with `kind='regression'`,
+  `run_id`, baseline/candidate experiment ids, and the report path.
+- `temperature=0` is forced for Ollama-backed regression runs to keep
+  comparisons reproducible.
+- GitHub Actions exposes an informational `regression-eval` job on pull
+  requests that touch `agent/prompts.py`, `config/settings.py`, or
+  `evaluation/experiments/*.yaml`.
+
 ## Monitoring
 
 The project exposes three observability surfaces.
@@ -399,7 +483,7 @@ coloring for operators and admins.
 
 ### 2. `GET /metrics` - Prometheus
 
-`monitoring/prometheus.py` currently initializes **30** Prometheus collectors
+`monitoring/prometheus.py` currently initializes **33** Prometheus collectors
 (`Counter`, `Gauge`, `Histogram`, or `Summary`):
 
 - **HTTP and latency:** `rag_requests_total{route}`,
@@ -407,7 +491,9 @@ coloring for operators and admins.
   `rag_http_request_duration_seconds{method,endpoint}`
 - **Quality and feedback:** `rag_quality_score`, `rag_factuality_score`,
   `rag_escalation_total`, `rag_feedback_total{rating}`,
-  `rag_model_routing_total{complexity}`, `rag_eval_drift{metric_name}`
+  `rag_model_routing_total{complexity}`, `rag_eval_drift{metric_name}`,
+  `regression_runs_total{result}`, `regression_runs_duration_seconds`,
+  `regression_last_pass_rate{baseline,candidate}`
 - **Resilience and protection:** `rag_circuit_breaker_state{name}`,
   `rag_circuit_breaker_transitions_total{name,to_state}`,
   `rag_ollama_retry_events_total{event}`,
@@ -420,7 +506,10 @@ coloring for operators and admins.
   `rag_active_sessions`, `rag_vector_store_documents`,
   `rag_stale_important_docs_count`, `llm_cache_hits_total{tenant}`,
   `llm_cache_misses_total{tenant}`, `rag_traces_purged_total{table}`,
-  `rag_audit_purged_total`, `rag_auth_failures_total{reason}`
+  `rag_audit_purged_total`, `rag_auth_failures_total{reason}`,
+  `review_queue_pending_total{reason}`,
+  `review_queue_confirmed_total{verdict}`,
+  `review_queue_oldest_pending_seconds`
 
 ### 3. Alert rules and scheduled checks
 
@@ -430,12 +519,127 @@ coloring for operators and admins.
   every five minutes and push alerts through `ALERT_WEBHOOK_URL`.
 - `scripts/nightly_eval.py` records evaluation drift, and
   `scripts/weekly_report.py` produces tenant-specific weekly reports.
+- `scripts/build_review_queue.py` is intended for hourly automation and feeds
+  the continuous-learning review backlog.
+- `scripts/generate_improvement_backlog.py` aggregates the weekly actionable
+  backlog and writes `reports/improvement_backlog/<YYYY-Www>.md`.
 
 ```bash
 python scripts/check_alerts.py --dry-run
+python scripts/build_review_queue.py --days 1 --tenant all
 python scripts/nightly_eval.py
 python scripts/weekly_report.py --tenant TEST --dry-run
+python scripts/generate_improvement_backlog.py --tenant all --week 2026-W17 --out reports/improvement_backlog/2026-W17.md
 ```
+
+## Review queue
+
+The review queue keeps weak or high-risk traces from being lost between
+tracing, feedback, and escalation flows.
+
+```bash
+python scripts/build_review_queue.py --days 7 --tenant all
+```
+
+- The builder inserts `pending` cases for `thumbs_down`, `low_quality`,
+  `escalated`, `fact_fail`, and `slow_trace` signals.
+- The admin UI exposes a **Review Queue** tab with filters, status counters,
+  `Confirm good` / `Confirm bad` / `Dismiss` actions, and links to
+  `/admin/traces/{trace_id}`.
+- For single-user offline review, export a JSONL batch, annotate `review.*`
+  fields in an editor, then import the verdicts back through the CLI.
+- For Kubernetes, use `deploy/helm/templates/cronjob-review-queue.yaml` to run
+  the builder hourly with `--days 1`.
+
+## Improvement backlog
+
+The improvement backlog turns one week of review, KB, freshness, latency, and
+evaluation signals into a ranked list of changes worth making this week.
+
+```bash
+python scripts/generate_improvement_backlog.py --tenant all --week 2026-W17 --out reports/improvement_backlog/2026-W17.md
+```
+
+- Ranking uses `impact * frequency * recency`, where recency decays
+  exponentially from the latest occurrence.
+- The generator keeps at most `BACKLOG_MAX_ITEMS` items and renders markdown
+  sections for critical, high, and medium priorities.
+- `GET /api/admin/improvement-backlog/current` returns the latest backlog JSON
+  for the current admin tenant.
+- `GET /api/admin/improvement-backlog/archive?year=2026` lists stored markdown
+  backlog weeks under `reports/improvement_backlog/`.
+- For Kubernetes, use `deploy/helm/templates/cronjob-improvement-backlog.yaml`
+  to generate the backlog every Monday at `06:00 UTC`.
+
+## Curated dataset
+
+Confirmed review cases can be promoted into a reusable JSONL dataset for
+regression checks and provider benchmarks.
+
+```bash
+python scripts/build_curated_dataset.py --tenant all --since 2026-04-01 --out evaluation/curated_cases.jsonl --include-bad
+```
+
+- Each line in `evaluation/curated_cases.jsonl` is a standalone case with
+  `input.query`, `input.context_hint`, `input.channel`, `expected.*`,
+  `human_verdict`, `reviewer_notes`, `source_trace_id`, and `created_at`.
+- `confirmed_good` rows always participate; add `--include-bad` to also export
+  `confirmed_bad` rows.
+- Re-running the builder is idempotent by `case_id`, so the file can be
+  refreshed safely during iterative review.
+- `GET /api/admin/curated-dataset/stats` returns dataset counts split by
+  verdict, tenant, and channel.
+- `POST /api/admin/curated-dataset/rebuild` queues an async rebuild and stores
+  progress in Redis under a `curated-dataset-job:<job_id>` tracker key.
+
+## Offline review workflow
+
+Use the export/import pair when reviewing pending cases locally instead of
+clicking through the admin UI one by one.
+
+```bash
+python scripts/review_export.py --status pending --tenant all --limit 5
+python scripts/review_import.py .review_local/review_batch_<timestamp>.jsonl --dry-run
+python scripts/review_import.py .review_local/review_batch_<timestamp>.jsonl --confirm
+```
+
+- `scripts/review_export.py` writes a comment header plus one JSON object per
+  review case with `query`, `answer`, `retrieved_docs`, `tool_calls`,
+  `citations`, and an empty `review` object for manual annotation.
+- By default export files are written to `.review_local/`, and both
+  `.review_local/` and `review_batch_*.jsonl` are ignored by git.
+- Edit only the nested `review` object per line:
+  `verdict = good | bad | dismiss`, optional `notes`, optional `fix_hint`,
+  optional `tags`.
+- `scripts/review_import.py` skips comments, ignores rows with `review.verdict =
+  null`, and refuses to overwrite items that are no longer `pending`.
+- Set `REVIEWER_EMAIL` before import. In the current schema it must match an
+  existing `users.username` so the import can persist `reviewed_by`.
+- For large batches, either pass `--confirm` up front or answer the interactive
+  confirmation prompt when more than 10 verdicts would be applied.
+
+## Threshold tuning
+
+Threshold recommendations are generated from recent traces plus
+`review_queue` verdicts. The analyzer writes a markdown report and exposes a
+JSON view for admin tooling.
+
+```bash
+python scripts/analyze_thresholds.py --tenant all --days 30 --out reports/threshold_recommendations.md
+```
+
+- `scripts/analyze_thresholds.py` evaluates `QUALITY_THRESHOLD`,
+  `FACT_VERIFICATION_MIN_SCORE`, `ESCALATION_THRESHOLD`, and
+  `SLOW_TRACE_THRESHOLD_MS` against labeled bad/good traces and suggests the
+  best cutoff by F1.
+- `GET /api/admin/thresholds/analysis?days=30` returns the latest cached JSON
+  analysis for the current tenant.
+- `POST /api/admin/thresholds/refresh?days=30` forces a refresh and rewrites
+  `reports/threshold_recommendations.md`.
+- `deploy/helm/templates/cronjob-threshold-analysis.yaml` runs the analyzer
+  weekly.
+- If fewer than `THRESHOLD_ANALYSIS_MIN_LABELS` labeled traces are available,
+  the report keeps the metric section but marks it as insufficient data.
 
 ## Multi-tenancy
 
@@ -462,7 +666,7 @@ python scripts/migrate_default_collection.py
 - `/static/help.html` - end-user help page
 - `/static/metrics.html` - system metrics dashboard with auto-refresh
 - `/static/admin.html` - admin UI for breaker control, traces, audit logs,
-  KB gaps, categories, KB drafts, and stale docs
+  review queue, KB gaps, categories, KB drafts, and stale docs
 - `/agent` and `/static/agent.html` - agent copilot dashboard
 - `/static/analytics.html` - product analytics dashboard
 - `/static/widget.html` - embeddable support widget
@@ -531,6 +735,8 @@ git and back it up separately from database backups.
 Deployment artifacts added in arc `102-122` include:
 
 - `deploy/helm/templates/cronjob.yaml` for nightly eval and KB-gap jobs
+- `deploy/helm/templates/cronjob-review-queue.yaml` for hourly review-queue builds
+- `deploy/helm/templates/cronjob-improvement-backlog.yaml` for weekly improvement backlog generation
 - `deploy/helm/templates/cronjob-report.yaml` for weekly reports
 - `deploy/helm/templates/deployment-email-poller.yaml` for IMAP polling mode
 - `.github/workflows/weekly-report.yml` for scheduled managed deployments
@@ -548,6 +754,7 @@ Alembic migrations introduced after the original README baseline:
 - `010_document_stats` - tracks citation counts, freshness, and stale-doc
   review state.
 - `011_trace_costs` - stores token usage and cost data for analytics.
+- `012_review_queue` - creates the `review_queue` table for human quality review.
 
 ## Project structure
 
@@ -564,13 +771,13 @@ evaluation/             RAG evaluation, drift detection, benchmarks
 ingestion/              Loaders, pipeline, categorizer, contextual headers
 monitoring/             Prometheus collectors and alert rules
 reports/                Weekly-report renderer
-scripts/                Ops jobs: eval, reindex, KB builder/gap detection, email poller
+scripts/                Ops jobs: eval, review queue, reindex, KB builder/gap detection, email poller
 static/                 chat, admin, agent, analytics, login, metrics, widget UIs
 tests/                  Unit and integration test suites
 tests/integration/      End-to-end coverage for critical user flows
 tracing/                SQLite tracing and OpenTelemetry setup
 vectordb/               ChromaDB manager, BM25 fusion, reranking
-alembic/                Migrations `001` through `011`
+alembic/                Migrations `001` through `012`
 graph.py                Root compatibility shim; new graph code lives in `agent/graph.py`
 prompts.py              Root compatibility shim; new prompts live in `agent/prompts.py`
 state.py                Root compatibility shim; new state lives in `agent/state.py`

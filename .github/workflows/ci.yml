@@ -117,3 +117,71 @@ jobs:
 
       - name: Run pre-commit
         run: pre-commit run --all-files
+
+  regression-eval:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: regression_changes
+        with:
+          list-files: shell
+          filters: |
+            regression:
+              - 'agent/prompts.py'
+              - 'config/settings.py'
+              - 'evaluation/experiments/*.yaml'
+
+      - name: Skip when regression inputs did not change
+        if: steps.regression_changes.outputs.regression != 'true'
+        run: echo "No prompt/settings/experiment changes detected."
+
+      - uses: actions/setup-python@v5
+        if: steps.regression_changes.outputs.regression == 'true'
+        with:
+          python-version: "3.13"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        if: steps.regression_changes.outputs.regression == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Resolve regression candidate
+        if: steps.regression_changes.outputs.regression == 'true'
+        id: regression_target
+        shell: bash
+        run: |
+          candidate="current"
+          for file in ${{ steps.regression_changes.outputs.regression_files }}; do
+            if [[ "$file" == evaluation/experiments/*.yaml ]]; then
+              candidate="$(basename "$file" .yaml)"
+              break
+            fi
+          done
+          echo "candidate=$candidate" >> "$GITHUB_OUTPUT"
+
+      - name: Skip when curated dataset is unavailable
+        if: steps.regression_changes.outputs.regression == 'true' && !hashFiles('evaluation/curated_cases.jsonl')
+        run: echo "evaluation/curated_cases.jsonl is missing; skipping informational regression run."
+
+      - name: Run regression eval
+        if: steps.regression_changes.outputs.regression == 'true' && hashFiles('evaluation/curated_cases.jsonl')
+        run: >
+          python scripts/regression_eval.py
+          --baseline current
+          --candidate ${{ steps.regression_target.outputs.candidate }}
+          --dataset evaluation/curated_cases.jsonl
+          --tenant all
+          --max-cases 100
+          --seed 42

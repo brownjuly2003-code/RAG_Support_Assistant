@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-threshold-analysis
+spec:
+  schedule: "0 9 * * 1"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: threshold-analysis
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              command:
+                - python
+                - scripts/analyze_thresholds.py
+                - --days
+                - "30"
+                - --tenant
+                - all
+                - --out
+                - reports/threshold_recommendations.md
+              envFrom:
+                - configMapRef:
+                    name: {{ .Release.Name }}-config

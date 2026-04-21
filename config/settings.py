@@ -31,13 +31,64 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
+import yaml
 from pydantic import SecretStr
 
 
 # Определяем корень проекта как родительскую директорию для config/
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+EXPERIMENT_OVERRIDE_PATH = PROJECT_ROOT / "config" / "experiment_override.yaml"
+EXPERIMENT_SETTINGS_KEYS = (
+    "ollama_model_name",
+    "ollama_fast_model_name",
+    "model_routing_enabled",
+    "embedding_model",
+    "reranker_model",
+    "hybrid_search",
+    "retrieval_top_k",
+    "rerank_top_k",
+    "rrf_k",
+    "quality_threshold",
+    "semantic_chunking",
+    "contextual_headers",
+    "agentic_mode",
+    "hyde",
+    "parent_child",
+    "self_rag_max_iterations",
+    "self_rag_min_quality",
+    "fact_verification_enabled",
+    "fact_verification_min_score",
+    "chunk_size",
+    "chunk_overlap",
+)
+_EXPERIMENT_SETTING_ENV_VARS: dict[str, tuple[str, ...]] = {
+    "ollama_model_name": ("OLLAMA_MODEL_NAME",),
+    "ollama_fast_model_name": ("OLLAMA_FAST_MODEL_NAME",),
+    "model_routing_enabled": ("MODEL_ROUTING_ENABLED",),
+    "embedding_model": ("RAG_EMBEDDING_MODEL",),
+    "reranker_model": ("RAG_RERANKER_MODEL",),
+    "hybrid_search": ("RAG_HYBRID_SEARCH",),
+    "retrieval_top_k": ("RAG_RETRIEVAL_TOP_K",),
+    "rerank_top_k": ("RAG_RERANK_TOP_K",),
+    "rrf_k": ("RRF_K",),
+    "quality_threshold": ("QUALITY_THRESHOLD",),
+    "semantic_chunking": ("RAG_SEMANTIC_CHUNKING",),
+    "contextual_headers": ("RAG_CONTEXTUAL_HEADERS",),
+    "agentic_mode": ("RAG_AGENTIC_MODE",),
+    "hyde": ("RAG_HYDE",),
+    "parent_child": ("RAG_PARENT_CHILD",),
+    "self_rag_max_iterations": ("RAG_SELF_RAG_MAX_ITER",),
+    "self_rag_min_quality": ("RAG_SELF_RAG_MIN_QUALITY",),
+    "fact_verification_enabled": ("FACT_VERIFICATION_ENABLED",),
+    "fact_verification_min_score": ("FACT_VERIFICATION_MIN_SCORE",),
+    "chunk_size": ("CHUNK_SIZE", "RAG_CHUNK_SIZE"),
+    "chunk_overlap": ("CHUNK_OVERLAP", "RAG_CHUNK_OVERLAP"),
+}
+# BEGIN DEPLOYED_EXPERIMENT_SETTINGS
+DEPLOYED_EXPERIMENT_SETTINGS: dict[str, Any] = {}
+# END DEPLOYED_EXPERIMENT_SETTINGS
 
 
 def _load_llm_model_prices() -> dict[str, dict[str, float]]:
@@ -77,6 +128,31 @@ def _load_llm_model_prices() -> dict[str, dict[str, float]]:
             continue
         result[model_name] = {"input": amount, "output": amount}
     return result
+
+
+def _load_experiment_override_payload() -> dict[str, Any]:
+    if not EXPERIMENT_OVERRIDE_PATH.exists():
+        return {}
+    payload = yaml.safe_load(EXPERIMENT_OVERRIDE_PATH.read_text(encoding="utf-8")) or {}
+    if not isinstance(payload, dict):
+        return {}
+    return payload
+
+
+def _apply_settings_overrides(settings: "Settings", overrides: dict[str, Any]) -> None:
+    for key, value in overrides.items():
+        if hasattr(settings, key):
+            setattr(settings, key, value)
+
+
+def _apply_deployed_settings(settings: "Settings") -> None:
+    active_overrides: dict[str, Any] = {}
+    for key, value in DEPLOYED_EXPERIMENT_SETTINGS.items():
+        env_names = _EXPERIMENT_SETTING_ENV_VARS.get(key, ())
+        if any((os.getenv(env_name, "") or "").strip() for env_name in env_names):
+            continue
+        active_overrides[key] = value
+    _apply_settings_overrides(settings, active_overrides)
 
 
 @dataclass
@@ -210,9 +286,51 @@ class Settings:
     fact_verification_min_score: int = field(
         default_factory=lambda: int(os.getenv("FACT_VERIFICATION_MIN_SCORE", "70"))
     )
+    slow_trace_threshold_ms: int = int(os.getenv("SLOW_TRACE_THRESHOLD_MS", "10000"))
+    threshold_analysis_min_labels: int = int(os.getenv("THRESHOLD_ANALYSIS_MIN_LABELS", "20"))
+    review_queue_enabled: bool = field(
+        default_factory=lambda: os.getenv(
+            "REVIEW_QUEUE_ENABLED", "true"
+        ).strip().lower() in ("1", "true", "yes")
+    )
+    regression_gate_max_regressions: int = field(
+        default_factory=lambda: int(os.getenv("REGRESSION_GATE_MAX_REGRESSIONS", "2"))
+    )
+    regression_gate_min_pass_rate: float = field(
+        default_factory=lambda: float(os.getenv("REGRESSION_GATE_MIN_PASS_RATE", "0.85"))
+    )
 
     # --- Backend векторного хранилища ---
     # "chroma" (по умолчанию) или "qdrant"
+    backlog_weight_review_bad: float = field(
+        default_factory=lambda: float(os.getenv("BACKLOG_WEIGHT_REVIEW_BAD", "3.0"))
+    )
+    backlog_weight_thumbs_down: float = field(
+        default_factory=lambda: float(os.getenv("BACKLOG_WEIGHT_THUMBS_DOWN", "2.0"))
+    )
+    backlog_weight_slow: float = field(
+        default_factory=lambda: float(os.getenv("BACKLOG_WEIGHT_SLOW", "1.5"))
+    )
+    backlog_weight_freshness: float = field(
+        default_factory=lambda: float(os.getenv("BACKLOG_WEIGHT_FRESHNESS", "1.0"))
+    )
+    backlog_weight_evaluator_drift: float = field(
+        default_factory=lambda: float(os.getenv("BACKLOG_WEIGHT_EVALUATOR_DRIFT", "2.5"))
+    )
+    backlog_max_items: int = field(
+        default_factory=lambda: int(os.getenv("BACKLOG_MAX_ITEMS", "30"))
+    )
+    backlog_freshness_max_days: int = field(
+        default_factory=lambda: int(os.getenv("BACKLOG_FRESHNESS_MAX_DAYS", "90"))
+    )
+    backlog_email_enabled: bool = field(
+        default_factory=lambda: os.getenv(
+            "BACKLOG_EMAIL_ENABLED", "false"
+        ).strip().lower() in ("1", "true", "yes")
+    )
+    tenant_admin_email: str = field(
+        default_factory=lambda: os.getenv("TENANT_ADMIN_EMAIL", "")
+    )
     vector_backend: str = os.getenv("RAG_VECTOR_BACKEND", "chroma").strip().lower()
 
     # --- Куда слать эскалации (SupportSink) ---
@@ -527,5 +645,14 @@ def get_settings() -> Settings:
     global _settings
     if _settings is None:
         _settings = Settings()
+        _apply_deployed_settings(_settings)
+        experiment_id = (os.getenv("EXPERIMENT_ID", "") or "").strip()
+        if experiment_id:
+            payload = _load_experiment_override_payload()
+            configured_id = str(payload.get("experiment_id") or "")
+            if not configured_id or configured_id == experiment_id:
+                overrides = payload.get("settings_overrides") or {}
+                if isinstance(overrides, dict):
+                    _apply_settings_overrides(_settings, overrides)
         _settings.ensure_dirs()
     return _settings

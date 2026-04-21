@@ -217,6 +217,11 @@ class EvalResult(Base):
     value: Mapped[float] = mapped_column(Float)
     sample_size: Mapped[int] = mapped_column(Integer)
     drift_alert: Mapped[bool] = mapped_column(Boolean, default=False)
+    kind: Mapped[str] = mapped_column(String(30), default="nightly", index=True)
+    run_id: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+    baseline_experiment_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    candidate_experiment_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    report_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class KnowledgeGap(Base):

@@ -55,7 +55,7 @@
 <header>
   <div class="heading">
     <h1>RAG Support Assistant - Admin</h1>
-    <p class="muted">Minimal operator access to breaker, traces, audit, and metrics endpoints.</p>
+    <p class="muted">Minimal operator access to breaker, traces, review queue, audit, and metrics endpoints.</p>
   </div>
   <div class="auth">
     <label for="token">Bearer Token</label>
@@ -70,6 +70,7 @@
 <nav class="tabs" aria-label="Admin sections">
   <button type="button" data-tab="breaker" class="active">Circuit Breaker</button>
   <button type="button" data-tab="traces">Traces</button>
+  <button type="button" data-tab="review-queue">Review Queue</button>
   <button type="button" data-tab="kb-gaps">Knowledge Gaps</button>
   <button type="button" data-tab="kb-drafts">KB Drafts</button>
   <button type="button" data-tab="stale-docs">Stale Docs</button>
@@ -111,6 +112,50 @@
     </table>
     <pre id="traces-output"></pre>
     <pre id="trace-detail"></pre>
+  </section>
+
+  <section id="tab-review-queue">
+    <h2>Review Queue</h2>
+    <div class="controls">
+      <label>Status
+        <select id="review-queue-status">
+          <option value="pending">pending</option>
+          <option value="in_review">in_review</option>
+          <option value="confirmed_good">confirmed_good</option>
+          <option value="confirmed_bad">confirmed_bad</option>
+          <option value="dismissed">dismissed</option>
+          <option value="*">*</option>
+        </select>
+      </label>
+      <label>Reason
+        <select id="review-queue-reason">
+          <option value="*">*</option>
+          <option value="thumbs_down">thumbs_down</option>
+          <option value="low_quality">low_quality</option>
+          <option value="escalated">escalated</option>
+          <option value="fact_fail">fact_fail</option>
+          <option value="slow_trace">slow_trace</option>
+          <option value="manual">manual</option>
+        </select>
+      </label>
+      <label>Limit <input id="review-queue-limit" type="number" value="50" min="1" max="500"></label>
+      <button id="btn-load-review-queue" type="button">Load</button>
+    </div>
+    <pre id="review-queue-stats"></pre>
+    <table id="review-queue-table">
+      <thead>
+        <tr>
+          <th scope="col">trace_id</th>
+          <th scope="col">reason</th>
+          <th scope="col">quality</th>
+          <th scope="col">duration_ms</th>
+          <th scope="col">created_at</th>
+          <th scope="col">action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <pre id="review-queue-output"></pre>
   </section>
 
   <section id="tab-kb-gaps">
@@ -393,6 +438,147 @@
     }
     if (staleButton) {
       staleButton.addEventListener("click", loadStaleDocs);
+    }
+  })();
+</script>
+<script>
+  (function () {
+    var storageKey = "rag_admin_token";
+    var button = document.getElementById("btn-load-review-queue");
+    var statusInput = document.getElementById("review-queue-status");
+    var reasonInput = document.getElementById("review-queue-reason");
+    var limitInput = document.getElementById("review-queue-limit");
+    var tableBody = document.querySelector("#review-queue-table tbody");
+    var output = document.getElementById("review-queue-output");
+    var statsOutput = document.getElementById("review-queue-stats");
+
+    function headers() {
+      var token = (localStorage.getItem(storageKey) || "").trim();
+      var result = { "Content-Type": "application/json" };
+      if (token) {
+        result.Authorization = "Bearer " + token;
+      }
+      return result;
+    }
+
+    async function loadStats() {
+      var response = await fetch("/api/admin/review-queue/stats", {
+        method: "GET",
+        headers: headers()
+      });
+      var data = await response.json().catch(function () { return {}; });
+      statsOutput.textContent = JSON.stringify({ status: response.status, body: data }, null, 2);
+    }
+
+    async function loadQueue() {
+      var params = new URLSearchParams();
+      var status = statusInput.value;
+      var reason = reasonInput.value;
+      var limit = limitInput.value;
+      var response;
+      var data;
+
+      params.set("status", status || "pending");
+      params.set("reason", reason || "*");
+      params.set("limit", limit || "50");
+      params.set("offset", "0");
+
+      response = await fetch("/api/admin/review-queue?" + params.toString(), {
+        method: "GET",
+        headers: headers()
+      });
+      data = await response.json().catch(function () { return {}; });
+      tableBody.innerHTML = "";
+
+      if (!response.ok || !data || !Array.isArray(data.items)) {
+        output.textContent = JSON.stringify({ status: response.status, body: data }, null, 2);
+        return;
+      }
+
+      data.items.forEach(function (item) {
+        var row = document.createElement("tr");
+        var traceCell = document.createElement("td");
+        var reasonCell = document.createElement("td");
+        var qualityCell = document.createElement("td");
+        var durationCell = document.createElement("td");
+        var createdCell = document.createElement("td");
+        var actionCell = document.createElement("td");
+        var traceLink = document.createElement("a");
+        var confirmGood = document.createElement("button");
+        var confirmBad = document.createElement("button");
+        var dismiss = document.createElement("button");
+
+        traceLink.href = item.trace_url || ("/admin/traces/" + encodeURIComponent(item.trace_id || ""));
+        traceLink.textContent = item.trace_id || "";
+        traceLink.target = "_blank";
+        traceLink.rel = "noopener";
+        traceCell.appendChild(traceLink);
+
+        reasonCell.textContent = item.reason || "";
+        qualityCell.textContent = item.quality == null ? "" : String(item.quality);
+        durationCell.textContent = item.duration_ms == null ? "" : String(item.duration_ms);
+        createdCell.textContent = item.created_at || "";
+
+        confirmGood.type = "button";
+        confirmGood.textContent = "Confirm good";
+        confirmGood.onclick = async function () {
+          var notes = window.prompt("Reviewer notes", item.reviewer_notes || "") || "";
+          await fetch("/api/admin/review-queue/" + encodeURIComponent(String(item.id)), {
+            method: "POST",
+            headers: headers(),
+            body: JSON.stringify({ status: "confirmed_good", reviewer_notes: notes })
+          });
+          loadStats();
+          loadQueue();
+        };
+
+        confirmBad.type = "button";
+        confirmBad.textContent = "Confirm bad";
+        confirmBad.onclick = async function () {
+          var notes = window.prompt("Reviewer notes", item.reviewer_notes || "") || "";
+          await fetch("/api/admin/review-queue/" + encodeURIComponent(String(item.id)), {
+            method: "POST",
+            headers: headers(),
+            body: JSON.stringify({ status: "confirmed_bad", reviewer_notes: notes })
+          });
+          loadStats();
+          loadQueue();
+        };
+
+        dismiss.type = "button";
+        dismiss.textContent = "Dismiss";
+        dismiss.onclick = async function () {
+          var notes = window.prompt("Dismiss reason", item.reviewer_notes || "") || "";
+          await fetch("/api/admin/review-queue/" + encodeURIComponent(String(item.id)), {
+            method: "POST",
+            headers: headers(),
+            body: JSON.stringify({ status: "dismissed", reviewer_notes: notes })
+          });
+          loadStats();
+          loadQueue();
+        };
+
+        actionCell.appendChild(confirmGood);
+        actionCell.appendChild(confirmBad);
+        actionCell.appendChild(dismiss);
+
+        row.appendChild(traceCell);
+        row.appendChild(reasonCell);
+        row.appendChild(qualityCell);
+        row.appendChild(durationCell);
+        row.appendChild(createdCell);
+        row.appendChild(actionCell);
+        tableBody.appendChild(row);
+      });
+
+      output.textContent = JSON.stringify({ status: response.status, count: data.items.length }, null, 2);
+    }
+
+    if (button) {
+      button.addEventListener("click", function () {
+        loadStats();
+        loadQueue();
+      });
     }
   })();
 </script>

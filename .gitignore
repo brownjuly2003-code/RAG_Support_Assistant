@@ -16,3 +16,5 @@ data/
 Thumbs.db
 *.db
 .claude/
+review_batch_*.jsonl
+.review_local/
