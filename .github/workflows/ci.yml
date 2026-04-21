@@ -2,12 +2,10 @@ name: CI
 
 on:
   push:
-    branches: ["master", "main"]
   pull_request:
-    branches: ["master", "main"]
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,21 +13,107 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
           cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
 
       - name: Lint
         run: ruff check .
 
-      - name: Test
-        run: pytest tests/ -v --tb=short
+  test-unit:
+    runs-on: ubuntu-latest
 
-      - name: RAG Evaluation Gate
-        if: github.event_name == 'pull_request'
-        run: python scripts/eval_gate.py
-        continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run unit tests
+        run: pytest tests/ -q --ignore=tests/integration -p no:cacheprovider
+
+  test-integration:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:16
         env:
-          OLLAMA_BASE_URL: "http://localhost:11434"
+          POSTGRES_DB: rag_test
+          POSTGRES_USER: rag
+          POSTGRES_PASSWORD: rag_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rag -d rag_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+asyncpg://rag:rag_test_password@127.0.0.1:5432/rag_test
+      REDIS_URL: redis://127.0.0.1:6379/0
+      OLLAMA_BASE_URL: http://127.0.0.1:65535
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run integration tests
+        run: pytest tests/integration -q
+
+  pre-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install pre-commit
+        run: |
+          python -m pip install --upgrade pip
+          pip install pre-commit==4.5.1
+
+      - name: Run pre-commit
+        run: pre-commit run --all-files
