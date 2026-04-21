@@ -169,6 +169,18 @@ groups:
         annotations:
           summary: ">20% negative feedback over 30min"
 
+      - alert: RagEvalDriftHigh
+        expr: max by (metric_name) (rag_eval_drift) > 0.1
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Nightly RAG eval drift >10%"
+          description: |
+            At least one nightly eval metric has drifted by more than 10%
+            against the rolling 7-day baseline. Check recent KB changes,
+            model changes, and the latest nightly_eval output.
+
   - name: rag-latency
     interval: 30s
     rules:

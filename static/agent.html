@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent Copilot</title>
+    <link rel="stylesheet" href="/static/styles/agent.css">
+</head>
+<body>
+    <header class="agent-header">
+        <div>
+            <p class="agent-kicker">Operator Workspace</p>
+            <h1>Agent Copilot</h1>
+            <p class="agent-subtitle">Очередь эскалаций, контекст диалога и черновик ответа в одном рабочем окне.</p>
+        </div>
+        <div class="agent-auth">
+            <label for="agentToken">Bearer token</label>
+            <div class="agent-auth-row">
+                <input id="agentToken" type="password" autocomplete="off" spellcheck="false" placeholder="Вставьте JWT access token">
+                <button id="saveAgentToken" type="button">Сохранить</button>
+            </div>
+            <p id="agentStatus" class="agent-status" aria-live="polite">Токен не сохранён.</p>
+        </div>
+    </header>
+
+    <main class="agent-layout">
+        <section class="agent-column ticket-column">
+            <div class="column-header">
+                <div>
+                    <p class="column-kicker">Queue</p>
+                    <h2>Тикеты</h2>
+                </div>
+                <select id="ticketStatusFilter" aria-label="Фильтр статуса">
+                    <option value="">Все</option>
+                    <option value="open">Open</option>
+                    <option value="resolved">Resolved</option>
+                </select>
+            </div>
+            <div id="ticketList" class="ticket-list"></div>
+        </section>
+
+        <section class="agent-column context-column">
+            <div class="column-header">
+                <div>
+                    <p class="column-kicker">Context</p>
+                    <h2>Диалог</h2>
+                </div>
+            </div>
+            <div id="ticketMeta" class="ticket-meta">Выберите тикет слева.</div>
+            <div id="ticketMessages" class="ticket-messages"></div>
+        </section>
+
+        <section class="agent-column draft-column">
+            <div class="column-header">
+                <div>
+                    <p class="column-kicker">Draft</p>
+                    <h2>Ответ оператору</h2>
+                </div>
+            </div>
+            <textarea id="operatorResponse" class="draft-input" placeholder="Выберите тикет, чтобы отредактировать черновик ответа."></textarea>
+            <button id="sendResponse" class="send-response" type="button">Сохранить как resolved</button>
+            <div class="similar-block">
+                <h3>Похожие resolved</h3>
+                <div id="similarTickets" class="similar-list"></div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const tokenInput = document.getElementById('agentToken');
+        const saveAgentTokenBtn = document.getElementById('saveAgentToken');
+        const agentStatus = document.getElementById('agentStatus');
+        const ticketStatusFilter = document.getElementById('ticketStatusFilter');
+        const ticketList = document.getElementById('ticketList');
+        const ticketMeta = document.getElementById('ticketMeta');
+        const ticketMessages = document.getElementById('ticketMessages');
+        const operatorResponse = document.getElementById('operatorResponse');
+        const sendResponse = document.getElementById('sendResponse');
+        const similarTickets = document.getElementById('similarTickets');
+
+        let currentTicketId = null;
+
+        function getToken() {
+            return localStorage.getItem('agent_token') || '';
+        }
+
+        function setStatus(message, isError) {
+            agentStatus.textContent = message;
+            agentStatus.classList.toggle('is-error', Boolean(isError));
+        }
+
+        async function apiFetch(path, options) {
+            const token = getToken();
+            const headers = Object.assign({}, options && options.headers ? options.headers : {});
+            if (token) {
+                headers.Authorization = 'Bearer ' + token;
+            }
+            if (!headers['Content-Type'] && options && options.body) {
+                headers['Content-Type'] = 'application/json';
+            }
+            const response = await fetch(path, Object.assign({}, options || {}, { headers }));
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            return response.json();
+        }
+
+        function renderTicketList(tickets) {
+            ticketList.innerHTML = '';
+            if (!tickets.length) {
+                ticketList.innerHTML = '<div class="empty-state">Тикетов нет.</div>';
+                return;
+            }
+
+            tickets.forEach(function(ticket) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'ticket-card' + (ticket.id === currentTicketId ? ' active' : '');
+                button.innerHTML =
+                    '<span class="ticket-status status-' + ticket.status + '">' + ticket.status + '</span>' +
+                    '<strong>' + ticket.user_question + '</strong>' +
+                    '<span>' + (ticket.created_at || '').replace('T', ' ').slice(0, 16) + '</span>';
+                button.addEventListener('click', function() {
+                    loadTicket(ticket.id);
+                });
+                ticketList.appendChild(button);
+            });
+        }
+
+        function renderMessages(messages) {
+            ticketMessages.innerHTML = '';
+            if (!messages.length) {
+                ticketMessages.innerHTML = '<div class="empty-state">История сообщений недоступна.</div>';
+                return;
+            }
+
+            messages.forEach(function(message) {
+                const item = document.createElement('article');
+                item.className = 'context-message ' + message.role;
+                item.innerHTML =
+                    '<div class="context-role">' + message.role + '</div>' +
+                    '<div class="context-content">' + message.content + '</div>';
+                ticketMessages.appendChild(item);
+            });
+        }
+
+        function renderSimilar(items) {
+            similarTickets.innerHTML = '';
+            if (!items.length) {
+                similarTickets.innerHTML = '<div class="empty-state">Нет похожих resolved тикетов.</div>';
+                return;
+            }
+
+            items.forEach(function(item) {
+                const card = document.createElement('article');
+                card.className = 'similar-card';
+                card.innerHTML =
+                    '<strong>' + item.user_question + '</strong>' +
+                    '<p>' + (item.operator_response || 'Ответ пока не сохранён.') + '</p>';
+                similarTickets.appendChild(card);
+            });
+        }
+
+        async function loadTickets() {
+            try {
+                const suffix = ticketStatusFilter.value ? '?status=' + encodeURIComponent(ticketStatusFilter.value) : '';
+                const data = await apiFetch('/api/agent/tickets' + suffix);
+                renderTicketList(data.tickets || []);
+                setStatus('Тикеты загружены.', false);
+            } catch (error) {
+                renderTicketList([]);
+                setStatus('Не удалось загрузить тикеты: ' + error.message, true);
+            }
+        }
+
+        async function loadTicket(ticketId) {
+            currentTicketId = ticketId;
+            try {
+                const data = await apiFetch('/api/agent/tickets/' + ticketId);
+                ticketMeta.textContent = 'Session: ' + data.ticket.session_id + ' • Status: ' + data.ticket.status;
+                operatorResponse.value = data.ticket.operator_response || data.ticket.ai_draft || '';
+                renderMessages(data.messages || []);
+                renderSimilar(data.similar_tickets || []);
+                loadTickets();
+            } catch (error) {
+                setStatus('Не удалось загрузить тикет: ' + error.message, true);
+            }
+        }
+
+        async function respondToTicket() {
+            if (!currentTicketId || !operatorResponse.value.trim()) {
+                setStatus('Выберите тикет и заполните ответ.', true);
+                return;
+            }
+
+            try {
+                const data = await apiFetch('/api/agent/tickets/' + currentTicketId + '/respond', {
+                    method: 'POST',
+                    body: JSON.stringify({ response: operatorResponse.value.trim() }),
+                });
+                setStatus('Ответ сохранён для тикета ' + data.ticket.id + '.', false);
+                await loadTicket(currentTicketId);
+            } catch (error) {
+                setStatus('Не удалось сохранить ответ: ' + error.message, true);
+            }
+        }
+
+        saveAgentTokenBtn.addEventListener('click', function() {
+            localStorage.setItem('agent_token', tokenInput.value.trim());
+            setStatus(tokenInput.value.trim() ? 'Токен сохранён.' : 'Токен очищен.', false);
+            loadTickets();
+        });
+
+        ticketStatusFilter.addEventListener('change', loadTickets);
+        sendResponse.addEventListener('click', respondToTicket);
+
+        tokenInput.value = getToken();
+        loadTickets();
+    </script>
+</body>
+</html>

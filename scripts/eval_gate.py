@@ -152,12 +152,9 @@ def _load_pipeline_dependencies() -> tuple[Any, Any, Any, str] | tuple[None, Non
         return None, None, None, "retriever is not initialized"
 
     try:
-        from graph import LocalOllamaLLM, run_qa_pipeline
-    except ImportError:
-        try:
-            from agent.graph import LocalOllamaLLM, run_qa_pipeline
-        except ImportError as exc:
-            return None, None, None, f"pipeline import failed: {exc}"
+        from agent.graph import LocalOllamaLLM, run_qa_pipeline
+    except ImportError as exc:
+        return None, None, None, f"pipeline import failed: {exc}"
 
     llm = LocalOllamaLLM(model_name=settings.ollama_model_name)
     return run_qa_pipeline, retriever, llm, ""

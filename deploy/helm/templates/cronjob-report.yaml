@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-weekly-report
+spec:
+  schedule: "0 9 * * 1"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: weekly-report
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              command:
+                - python
+                - scripts/weekly_report.py
+              envFrom:
+                - configMapRef:
+                    name: {{ .Release.Name }}-config

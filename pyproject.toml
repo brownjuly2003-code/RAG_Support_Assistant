@@ -10,3 +10,8 @@ exclude = [
 [tool.ruff.lint]
 select = ["E", "F", "W"]
 ignore = ["E501"]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: end-to-end integration tests",
+]

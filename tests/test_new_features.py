@@ -94,7 +94,7 @@ def test_ask_stream_content_type(
 
 
 def test_state_has_hyde_query() -> None:
-    from state import create_initial_state
+    from agent.state import create_initial_state
 
     state = create_initial_state("question")
     assert "hyde_query" in state

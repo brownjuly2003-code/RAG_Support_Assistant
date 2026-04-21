@@ -135,7 +135,9 @@
         }
 
         .back-link {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            min-height: 44px;
             margin-top: 20px;
             color: var(--accent);
             text-decoration: none;
@@ -144,6 +146,16 @@
 
         .back-link:hover {
             color: var(--accent-hover);
+        }
+
+        @media (max-width: 1024px) {
+            body {
+                padding: 28px 18px 42px;
+            }
+
+            .page {
+                max-width: 920px;
+            }
         }
 
         @media (max-width: 768px) {
@@ -242,9 +254,9 @@ quality score + route auto/human
             <h2>Технологии</h2>
             <table>
                 <tr>
-                    <th>Компонент</th>
-                    <th>Технология</th>
-                    <th>Зачем</th>
+                    <th scope="col">Компонент</th>
+                    <th scope="col">Технология</th>
+                    <th scope="col">Зачем</th>
                 </tr>
                 <tr>
                     <td>Оркестрация</td>

@@ -1,0 +1,11 @@
+default:
+  - name: returns
+    description: "Returns, refunds, cancellations"
+  - name: shipping
+    description: "Delivery, shipping, pickup"
+  - name: account
+    description: "Account management, login, password"
+  - name: payment
+    description: "Payments, billing, invoices"
+  - name: product
+    description: "Product info, specs, availability"

@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-import graph
+import agent.graph as graph
 from utils.circuit_breaker import CircuitBreaker, CircuitOpenError, CircuitState
 
 

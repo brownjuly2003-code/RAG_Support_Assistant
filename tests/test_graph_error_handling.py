@@ -5,9 +5,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from state import create_initial_state
+from agent.state import create_initial_state
 
-graph = importlib.import_module("graph")
+graph = importlib.import_module("agent.graph")
 
 
 def test_handle_error_triggered_when_node_raises() -> None:
@@ -25,11 +25,11 @@ def test_handle_error_triggered_when_node_raises() -> None:
 
     with (
         patch(
-            "graph.build_query_transform_prompt",
+            "agent.graph.build_query_transform_prompt",
             side_effect=RuntimeError("Сбой трансформации запроса"),
         ),
-        patch("graph._escalate_to_inbox") as escalate_to_inbox,
-        patch("graph.log_step"),
+        patch("agent.graph._escalate_to_inbox") as escalate_to_inbox,
+        patch("agent.graph.log_step"),
     ):
         final_state = support_graph.invoke(initial_state)
 
@@ -48,12 +48,12 @@ def test_handle_error_triggered_when_node_raises() -> None:
 @pytest.mark.parametrize(
     ("node_name", "patch_target", "llm_responses"),
     [
-        ("retrieve", "graph._docs_to_plain_dicts", ["поисковый запрос"]),
-        ("grade_docs", "graph.build_doc_grade_prompt", ["поисковый запрос"]),
-        ("generate", "graph.build_qa_prompt", ["поисковый запрос", "YES"]),
+        ("retrieve", "agent.graph._docs_to_plain_dicts", ["поисковый запрос"]),
+        ("grade_docs", "agent.graph.build_doc_grade_prompt", ["поисковый запрос"]),
+        ("generate", "agent.graph.build_qa_prompt", ["поисковый запрос", "YES"]),
         (
             "evaluate",
-            "graph.build_self_eval_prompt",
+            "agent.graph.build_self_eval_prompt",
             ["поисковый запрос", "YES", "Сформированный ответ"],
         ),
         (
@@ -104,8 +104,8 @@ def test_handle_error_triggered_for_remaining_nodes(
 
     with (
         failing_patch,
-        patch("graph._escalate_to_inbox") as escalate_to_inbox,
-        patch("graph.log_step", side_effect=log_step_side_effect),
+        patch("agent.graph._escalate_to_inbox") as escalate_to_inbox,
+        patch("agent.graph.log_step", side_effect=log_step_side_effect),
     ):
         final_state = support_graph.invoke(initial_state)
 

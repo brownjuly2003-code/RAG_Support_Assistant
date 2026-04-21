@@ -11,7 +11,7 @@ from auth.dependencies import get_current_user
 from auth.jwt_handler import create_access_token, create_refresh_token, verify_token
 
 api_app = importlib.import_module("api.app")
-graph_module = importlib.import_module("graph")
+graph_module = importlib.import_module("agent.graph")
 
 
 def _auth_header(tenant: str = "default", role: str = "admin") -> dict[str, str]:

@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import graph
+import agent.graph as graph
 from api import app as api_app
 from utils.circuit_breaker import CircuitBreaker, CircuitState
 

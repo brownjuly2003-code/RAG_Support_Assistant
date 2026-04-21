@@ -1,4 +1,4 @@
-from state import create_initial_state
+from agent.state import create_initial_state
 
 
 def test_create_initial_state_has_error_fields_with_safe_defaults() -> None:

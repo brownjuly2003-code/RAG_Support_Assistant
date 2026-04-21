@@ -5,7 +5,7 @@ import importlib
 import pytest
 from fastapi.testclient import TestClient
 
-import graph
+import agent.graph as graph
 
 
 def test_admin_can_reset_circuit_breaker(client_with_key: TestClient) -> None:

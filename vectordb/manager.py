@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, List, Sequence
@@ -40,6 +41,57 @@ def _collection_name(tenant_id: str) -> str:
     return f"{prefix}_{_sanitize_tenant(tenant_id)}"
 
 
+def add_contextual_headers(
+    chunks: List[Document],
+    full_documents: Sequence[Document],
+    chunk_size: int,
+) -> List[Document]:
+    enriched = _base_manager.add_contextual_headers(
+        list(chunks),
+        llm=None,
+        full_documents=list(full_documents),
+    )
+    prepared: List[Document] = []
+    for chunk in enriched:
+        page_content = chunk.page_content
+        if len(page_content) > chunk_size:
+            logger.warning(
+                "Contextual header exceeded chunk_size for source %s; truncating chunk",
+                (chunk.metadata or {}).get("source", "unknown"),
+            )
+            page_content = page_content[:chunk_size]
+        prepared.append(
+            Document(
+                page_content=page_content,
+                metadata={**(chunk.metadata or {}), "has_context_header": True},
+            )
+        )
+    return prepared
+
+
+def _ensure_document_metadata(docs: Sequence[Document]) -> None:
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for index, doc in enumerate(docs):
+        metadata = getattr(doc, "metadata", None)
+        if not isinstance(metadata, dict):
+            metadata = {}
+            setattr(doc, "metadata", metadata)
+        source = str(
+            metadata.get("source")
+            or metadata.get("file_name")
+            or metadata.get("file_path")
+            or f"document-{index}"
+        )
+        categories = metadata.get("categories")
+        if not isinstance(categories, list) or not categories:
+            categories = ["uncategorized"]
+            metadata["categories"] = categories
+        metadata.setdefault("primary_category", str(categories[0]))
+        metadata.setdefault("doc_id", Path(source).name)
+        metadata.setdefault("title", source)
+        metadata.setdefault("last_updated", now_iso)
+
+
 def build_vector_store(
     docs: Sequence[Document],
     chunk_config: Dict[str, int],
@@ -53,38 +105,43 @@ def build_vector_store(
     tenant = tenant_id or "default"
     if embeddings is None:
         embeddings = get_embeddings()
+    _ensure_document_metadata(docs)
 
     settings = get_settings()
     backend = getattr(settings, "vector_backend", "chroma")
-    if backend == "qdrant":
-        store, chunks = _base_manager.build_vector_store(
-            docs,
-            chunk_config,
-            embeddings=embeddings,
-            use_semantic_chunking=use_semantic_chunking,
+    chunk_size = int(chunk_config.get("chunk_size", getattr(settings, "chunk_size", 800)))
+    chunk_overlap = int(chunk_config.get("chunk_overlap", getattr(settings, "chunk_overlap", 200)))
+    semantic_chunking_enabled = settings.semantic_chunking or use_semantic_chunking
+
+    if semantic_chunking_enabled:
+        chunks = _base_manager.semantic_split(
+            list(docs),
+            embeddings,
+            min_chunk_size=chunk_overlap,
+            max_chunk_size=chunk_size,
         )
+    else:
+        splitter = _base_manager._build_text_splitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+        chunks = splitter.split_documents(list(docs))
+
+    if getattr(settings, "contextual_headers", False):
+        chunks = add_contextual_headers(
+            chunks,
+            full_documents=docs,
+            chunk_size=chunk_size,
+        )
+
+    if backend == "qdrant":
+        build_qdrant = getattr(_base_manager, "_build_qdrant", None)
+        if build_qdrant is None:
+            raise ImportError("Qdrant backend is not available")
+        store = build_qdrant(chunks, embeddings)
     else:
         if Chroma is None:
             raise ImportError("Chroma is not available")
-
-        chunk_size = int(chunk_config.get("chunk_size", 800))
-        chunk_overlap = int(chunk_config.get("chunk_overlap", 200))
-        semantic_chunking_enabled = settings.semantic_chunking or use_semantic_chunking
-
-        if semantic_chunking_enabled:
-            chunks = _base_manager.semantic_split(
-                list(docs),
-                embeddings,
-                min_chunk_size=chunk_overlap,
-                max_chunk_size=chunk_size,
-            )
-        else:
-            splitter = _base_manager._build_text_splitter(
-                chunk_size=chunk_size,
-                chunk_overlap=chunk_overlap,
-            )
-            chunks = splitter.split_documents(list(docs))
-
         persist_directory = str(getattr(settings, "vectordb_chroma_dir"))
         collection_name = _collection_name(tenant)
 
@@ -121,6 +178,24 @@ def build_vector_store(
         _retriever_cache.pop(tenant, None)
 
     return store, chunks
+
+
+def retrieve(
+    query: str,
+    tenant_id: str = "default",
+    categories: Sequence[str] | None = None,
+    k: int | None = None,
+) -> List[Document]:
+    retriever = get_retriever(k=k, tenant_id=tenant_id)
+    docs = list(retriever.get_relevant_documents(query))
+    if not categories:
+        return docs
+    allowed = {str(item) for item in categories}
+    return [
+        doc
+        for doc in docs
+        if allowed.intersection(set((getattr(doc, "metadata", {}) or {}).get("categories") or []))
+    ]
 
 
 def get_retriever(

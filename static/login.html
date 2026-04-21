@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Вход | RAG Support Assistant</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: rgba(15, 23, 42, 0.86);
+            --panel-border: rgba(148, 163, 184, 0.22);
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-2: #22c55e;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(56, 189, 248, 0.24), transparent 32%),
+                radial-gradient(circle at bottom right, rgba(34, 197, 94, 0.18), transparent 28%),
+                linear-gradient(145deg, #020617 0%, #0f172a 45%, #111827 100%);
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .panel {
+            width: min(420px, 100%);
+            padding: 32px;
+            border-radius: 24px;
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            box-shadow: 0 24px 80px rgba(2, 6, 23, 0.45);
+            backdrop-filter: blur(18px);
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: 32px;
+            line-height: 1.1;
+        }
+
+        p {
+            margin: 0 0 24px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .actions {
+            display: grid;
+            gap: 12px;
+        }
+
+        .provider-btn,
+        .fallback-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-height: 52px;
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.72);
+            color: var(--text);
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+        }
+
+        .provider-btn:hover,
+        .fallback-link:hover {
+            transform: translateY(-1px);
+            border-color: rgba(56, 189, 248, 0.55);
+            background: rgba(30, 41, 59, 0.9);
+        }
+
+        .provider-btn.google::before {
+            content: "G";
+            color: var(--accent);
+        }
+
+        .provider-btn.azure::before {
+            content: "M";
+            color: var(--accent-2);
+        }
+
+        .status {
+            min-height: 20px;
+            margin-top: 16px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <main class="panel">
+        <h1>SSO вход</h1>
+        <p>Выберите корпоративный провайдер. После успешной авторизации откроется чат с уже установленной JWT-cookie.</p>
+        <div id="providers" class="actions" aria-live="polite"></div>
+        <div id="status" class="status">Загружаем доступные способы входа...</div>
+    </main>
+
+    <script>
+        const providersRoot = document.getElementById('providers');
+        const statusNode = document.getElementById('status');
+
+        function renderProvider(provider) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'provider-btn ' + provider.name;
+            button.textContent = 'Войти через ' + provider.label;
+            button.addEventListener('click', function() {
+                window.location.href = '/api/auth/sso/' + provider.name + '/login';
+            });
+            providersRoot.appendChild(button);
+        }
+
+        async function loadProviders() {
+            try {
+                const response = await fetch('/api/auth/sso/providers');
+                const payload = await response.json();
+                const providers = Array.isArray(payload.providers) ? payload.providers : [];
+
+                providersRoot.innerHTML = '';
+                if (!providers.length) {
+                    const fallback = document.createElement('a');
+                    fallback.className = 'fallback-link';
+                    fallback.href = '/static/chat.html';
+                    fallback.textContent = 'Открыть чат без SSO';
+                    providersRoot.appendChild(fallback);
+                    statusNode.textContent = 'SSO пока не настроен. Доступен fallback-переход в чат.';
+                    return;
+                }
+
+                providers.forEach(renderProvider);
+                statusNode.textContent = 'Выберите провайдера и продолжите авторизацию.';
+            } catch (error) {
+                providersRoot.innerHTML = '';
+                statusNode.textContent = 'Не удалось загрузить список провайдеров.';
+            }
+        }
+
+        loadProviders();
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-email-poller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-email-poller
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-email-poller
+    spec:
+      containers:
+        - name: email-poller
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command:
+            - python
+            - scripts/email_poller.py
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config

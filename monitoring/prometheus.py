@@ -15,6 +15,7 @@ __all__ = [
     "DB_POOL_CHECKED_OUT",
     "DB_POOL_OVERFLOW",
     "DB_POOL_SIZE",
+    "EVAL_DRIFT",
     "ESCALATION_TOTAL",
     "FACTUALITY_SCORE",
     "FEEDBACK_COUNT",
@@ -31,6 +32,7 @@ __all__ = [
     "REQUEST_COUNT",
     "REQUEST_DURATION",
     "REQUEST_TIMEOUTS",
+    "STALE_IMPORTANT_DOCS",
     "TRACES_PURGED",
     "INFLIGHT_PIPELINES",
     "MODEL_ROUTING",
@@ -42,12 +44,14 @@ __all__ = [
     "record_auth_failure",
     "record_body_size_rejection",
     "record_db_pool_stats",
+    "record_eval_drift",
     "record_circuit_breaker_change",
     "record_ollama_retry_event",
     "record_model_routing",
     "record_pipeline_rejection",
     "record_rate_limit_rejection",
     "record_request_timeout",
+    "record_stale_important_docs",
     "record_traces_purged",
 ]
 
@@ -106,6 +110,7 @@ except ImportError:
     MODEL_ROUTING = _NoopMetric()
     RATE_LIMIT_REJECTIONS = _NoopMetric()
     REQUEST_TIMEOUTS = _NoopMetric()
+    STALE_IMPORTANT_DOCS = _NoopMetric()
     INFLIGHT_PIPELINES = _NoopMetric()
     PIPELINE_REJECTIONS = _NoopMetric()
     LLM_CACHE_HITS = _NoopMetric()
@@ -114,6 +119,7 @@ except ImportError:
     AUDIT_PURGED = _NoopMetric()
     AUTH_FAILURES = _NoopMetric()
     BODY_SIZE_REJECTIONS = _NoopMetric()
+    EVAL_DRIFT = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     REGISTRY = CollectorRegistry()
@@ -252,6 +258,12 @@ else:
         registry=REGISTRY,
     )
 
+    STALE_IMPORTANT_DOCS = Gauge(
+        "rag_stale_important_docs_count",
+        "Count of stale documents that are also highly cited",
+        registry=REGISTRY,
+    )
+
     INFLIGHT_PIPELINES = Gauge(
         "rag_inflight_pipelines",
         "Number of /api/ask pipelines currently running",
@@ -303,6 +315,13 @@ else:
         "rag_body_size_rejections_total",
         "Requests rejected due to body size limits",
         ["reason"],
+        registry=REGISTRY,
+    )
+
+    EVAL_DRIFT = Gauge(
+        "rag_eval_drift",
+        "Relative drift between nightly RAG eval metrics and the rolling baseline",
+        ["metric_name"],
         registry=REGISTRY,
     )
 
@@ -364,6 +383,10 @@ def record_request_timeout(endpoint: str) -> None:
     REQUEST_TIMEOUTS.labels(endpoint=endpoint).inc()
 
 
+def record_stale_important_docs(count: int) -> None:
+    STALE_IMPORTANT_DOCS.set(max(0, count))
+
+
 def record_pipeline_rejection(reason: str) -> None:
     PIPELINE_REJECTIONS.labels(reason=reason).inc()
 
@@ -384,3 +407,7 @@ def record_auth_failure(reason: str) -> None:
 
 def record_body_size_rejection(reason: str) -> None:
     BODY_SIZE_REJECTIONS.labels(reason=reason).inc()
+
+
+def record_eval_drift(metric_name: str, value: float) -> None:
+    EVAL_DRIFT.labels(metric_name=metric_name).set(value)

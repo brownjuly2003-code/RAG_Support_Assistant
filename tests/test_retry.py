@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-import graph
+import agent.graph as graph
 from utils.retry import is_retryable_error, retry_with_backoff
 
 

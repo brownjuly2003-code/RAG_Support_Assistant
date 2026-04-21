@@ -5,6 +5,51 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RAG Admin</title>
 <link rel="stylesheet" href="/static/admin.css">
+<style>
+  button,
+  input {
+    min-height: 44px;
+  }
+
+  @media (max-width: 1024px) {
+    header,
+    main {
+      padding-inline: 20px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    header {
+      gap: 16px;
+    }
+
+    .auth-row,
+    .controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .tabs button {
+      flex: 1 1 180px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    header,
+    main {
+      padding-inline: 12px;
+    }
+
+    .tabs {
+      padding-inline: 12px;
+    }
+
+    table {
+      display: block;
+      overflow-x: auto;
+    }
+  }
+</style>
 </head>
 <body>
 <header>
@@ -25,9 +70,14 @@
 <nav class="tabs" aria-label="Admin sections">
   <button type="button" data-tab="breaker" class="active">Circuit Breaker</button>
   <button type="button" data-tab="traces">Traces</button>
+  <button type="button" data-tab="kb-gaps">Knowledge Gaps</button>
+  <button type="button" data-tab="kb-drafts">KB Drafts</button>
+  <button type="button" data-tab="stale-docs">Stale Docs</button>
   <button type="button" data-tab="audit">Audit Log</button>
   <button type="button" data-tab="metrics">Metrics</button>
 </nav>
+
+<p style="padding: 0 32px;"><a href="/static/analytics.html">Open Analytics Dashboard</a></p>
 
 <main>
   <section id="tab-breaker" class="active">
@@ -51,16 +101,71 @@
     <table id="traces-table">
       <thead>
         <tr>
-          <th>trace_id</th>
-          <th>started</th>
-          <th>finished</th>
-          <th>action</th>
+          <th scope="col">trace_id</th>
+          <th scope="col">started</th>
+          <th scope="col">finished</th>
+          <th scope="col">action</th>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
     <pre id="traces-output"></pre>
     <pre id="trace-detail"></pre>
+  </section>
+
+  <section id="tab-kb-gaps">
+    <h2>Knowledge Gaps</h2>
+    <div class="controls">
+      <button id="btn-load-kb-gaps" type="button">Load</button>
+    </div>
+    <table id="kb-gaps-table">
+      <thead>
+        <tr>
+          <th scope="col">topic</th>
+          <th scope="col">count</th>
+          <th scope="col">examples</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <pre id="kb-gaps-output"></pre>
+  </section>
+
+  <section id="tab-kb-drafts">
+    <h2>KB Drafts</h2>
+    <div class="controls">
+      <label>Status
+        <select id="kb-drafts-status">
+          <option value="pending">pending</option>
+          <option value="published">published</option>
+          <option value="rejected">rejected</option>
+        </select>
+      </label>
+      <button id="btn-load-kb-drafts" type="button">Load</button>
+    </div>
+    <div id="kb-drafts-list"></div>
+    <pre id="kb-drafts-output"></pre>
+  </section>
+
+  <section id="tab-stale-docs">
+    <h2>Stale Docs</h2>
+    <div class="controls">
+      <label>Days <input id="stale-docs-days" type="number" value="90" min="1" max="3650"></label>
+      <label>Top cited <input id="stale-docs-top" type="number" value="20" min="1" max="100"></label>
+      <button id="btn-load-stale-docs" type="button">Load</button>
+    </div>
+    <table id="stale-docs-table">
+      <thead>
+        <tr>
+          <th scope="col">Title</th>
+          <th scope="col">Updated</th>
+          <th scope="col">Citations</th>
+          <th scope="col">Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <pre id="stale-docs-output"></pre>
   </section>
 
   <section id="tab-audit">
@@ -78,11 +183,11 @@
     <table id="audit-table">
       <thead>
         <tr>
-          <th>ts</th>
-          <th>actor</th>
-          <th>action</th>
-          <th>resource</th>
-          <th>ip</th>
+          <th scope="col">ts</th>
+          <th scope="col">actor</th>
+          <th scope="col">action</th>
+          <th scope="col">resource</th>
+          <th scope="col">ip</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -98,5 +203,198 @@
 </main>
 
 <script src="/static/admin.js"></script>
+<script>
+  (function () {
+    var storageKey = "rag_admin_token";
+    var button = document.getElementById("btn-load-kb-gaps");
+    var output = document.getElementById("kb-gaps-output");
+    var tableBody = document.querySelector("#kb-gaps-table tbody");
+
+    function buildHeaders() {
+      var token = (localStorage.getItem(storageKey) || "").trim();
+      var headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers.Authorization = "Bearer " + token;
+      }
+      return headers;
+    }
+
+    async function loadKbGaps() {
+      var response = await fetch("/api/admin/kb-gaps", {
+        method: "GET",
+        headers: buildHeaders()
+      });
+      var data = await response.json().catch(function () { return {}; });
+
+      tableBody.innerHTML = "";
+      if (!response.ok || !data || !Array.isArray(data.gaps)) {
+        output.textContent = JSON.stringify({ status: response.status, body: data }, null, 2);
+        return;
+      }
+
+      data.gaps.forEach(function (gap) {
+        var row = document.createElement("tr");
+        var topicCell = document.createElement("td");
+        var countCell = document.createElement("td");
+        var examplesCell = document.createElement("td");
+
+        topicCell.textContent = gap.topic_summary || "";
+        countCell.textContent = String(gap.question_count || 0);
+        examplesCell.textContent = Array.isArray(gap.sample_questions)
+          ? gap.sample_questions.join(" | ")
+          : "";
+
+        row.appendChild(topicCell);
+        row.appendChild(countCell);
+        row.appendChild(examplesCell);
+        tableBody.appendChild(row);
+      });
+
+      output.textContent = JSON.stringify({ status: response.status, count: data.gaps.length }, null, 2);
+    }
+
+    if (button) {
+      button.addEventListener("click", loadKbGaps);
+    }
+  })();
+</script>
+<script>
+  (function () {
+    var storageKey = "rag_admin_token";
+    var draftButton = document.getElementById("btn-load-kb-drafts");
+    var draftList = document.getElementById("kb-drafts-list");
+    var draftOutput = document.getElementById("kb-drafts-output");
+    var staleButton = document.getElementById("btn-load-stale-docs");
+    var staleBody = document.querySelector("#stale-docs-table tbody");
+    var staleOutput = document.getElementById("stale-docs-output");
+
+    function headers() {
+      var token = (localStorage.getItem(storageKey) || "").trim();
+      var result = { "Content-Type": "application/json" };
+      if (token) {
+        result.Authorization = "Bearer " + token;
+      }
+      return result;
+    }
+
+    async function loadDrafts() {
+      var status = document.getElementById("kb-drafts-status").value;
+      var response = await fetch("/api/admin/kb-drafts?status=" + encodeURIComponent(status), {
+        method: "GET",
+        headers: headers()
+      });
+      var data = await response.json().catch(function () { return {}; });
+      draftList.innerHTML = "";
+      if (!response.ok || !Array.isArray(data.drafts)) {
+        draftOutput.textContent = JSON.stringify({ status: response.status, body: data }, null, 2);
+        return;
+      }
+      data.drafts.forEach(function (draft) {
+        var article = document.createElement("article");
+        var title = document.createElement("h3");
+        var textarea = document.createElement("textarea");
+        var actions = document.createElement("div");
+        var saveButton = document.createElement("button");
+        var publishButton = document.createElement("button");
+        var rejectButton = document.createElement("button");
+
+        article.style.marginBottom = "16px";
+        article.style.padding = "16px";
+        article.style.border = "1px solid #ccc";
+        title.textContent = draft.topic + " [" + draft.status + "]";
+        textarea.value = draft.draft_content || "";
+        textarea.style.width = "100%";
+        textarea.style.minHeight = "180px";
+        actions.className = "controls";
+
+        saveButton.textContent = "Save";
+        saveButton.onclick = async function () {
+          await fetch("/api/admin/kb-drafts/" + encodeURIComponent(draft.id), {
+            method: "PATCH",
+            headers: headers(),
+            body: JSON.stringify({ draft_content: textarea.value })
+          });
+          loadDrafts();
+        };
+
+        publishButton.textContent = "Publish";
+        publishButton.onclick = async function () {
+          await fetch("/api/admin/kb-drafts/" + encodeURIComponent(draft.id) + "/publish", {
+            method: "POST",
+            headers: headers()
+          });
+          loadDrafts();
+        };
+
+        rejectButton.textContent = "Reject";
+        rejectButton.onclick = async function () {
+          await fetch("/api/admin/kb-drafts/" + encodeURIComponent(draft.id) + "/reject", {
+            method: "POST",
+            headers: headers()
+          });
+          loadDrafts();
+        };
+
+        actions.appendChild(saveButton);
+        actions.appendChild(publishButton);
+        actions.appendChild(rejectButton);
+        article.appendChild(title);
+        article.appendChild(textarea);
+        article.appendChild(actions);
+        draftList.appendChild(article);
+      });
+      draftOutput.textContent = JSON.stringify({ status: response.status, count: data.drafts.length }, null, 2);
+    }
+
+    async function loadStaleDocs() {
+      var days = document.getElementById("stale-docs-days").value;
+      var top = document.getElementById("stale-docs-top").value;
+      var response = await fetch("/api/admin/stale-docs?days=" + encodeURIComponent(days) + "&top_cited=" + encodeURIComponent(top), {
+        method: "GET",
+        headers: headers()
+      });
+      var data = await response.json().catch(function () { return {}; });
+      staleBody.innerHTML = "";
+      if (!response.ok || !Array.isArray(data.documents)) {
+        staleOutput.textContent = JSON.stringify({ status: response.status, body: data }, null, 2);
+        return;
+      }
+      data.documents.forEach(function (doc) {
+        var row = document.createElement("tr");
+        var titleCell = document.createElement("td");
+        var updatedCell = document.createElement("td");
+        var citationsCell = document.createElement("td");
+        var actionCell = document.createElement("td");
+        var reviewButton = document.createElement("button");
+
+        titleCell.textContent = doc.title || doc.doc_id || "";
+        updatedCell.textContent = doc.last_updated || "";
+        citationsCell.textContent = String(doc.citation_count || 0);
+        reviewButton.textContent = "Mark reviewed";
+        reviewButton.onclick = async function () {
+          await fetch("/api/admin/stale-docs/" + encodeURIComponent(doc.doc_id) + "/review", {
+            method: "POST",
+            headers: headers()
+          });
+          loadStaleDocs();
+        };
+        actionCell.appendChild(reviewButton);
+        row.appendChild(titleCell);
+        row.appendChild(updatedCell);
+        row.appendChild(citationsCell);
+        row.appendChild(actionCell);
+        staleBody.appendChild(row);
+      });
+      staleOutput.textContent = JSON.stringify({ status: response.status, count: data.documents.length }, null, 2);
+    }
+
+    if (draftButton) {
+      draftButton.addEventListener("click", loadDrafts);
+    }
+    if (staleButton) {
+      staleButton.addEventListener("click", loadStaleDocs);
+    }
+  })();
+</script>
 </body>
 </html>

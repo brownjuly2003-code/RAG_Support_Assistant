@@ -177,6 +177,7 @@ class HybridRetriever:
         retrieval_k: int = 20,
         rerank_k: int = 5,
         rrf_k: int = 60,
+        doc_key_chars: int = 200,
         reranker: Any = None,
         use_bm25: bool = True,
     ):
@@ -185,6 +186,7 @@ class HybridRetriever:
         self._retrieval_k = retrieval_k
         self._rerank_k = rerank_k
         self._rrf_k = rrf_k
+        self._doc_key_chars = doc_key_chars
         self._reranker = reranker
 
         # Build BM25 index
@@ -239,12 +241,12 @@ class HybridRetriever:
         doc_map: Dict[str, Document] = {}
 
         for rank, doc in enumerate(list_a):
-            key = doc.page_content[:200]  # Уникальность по содержимому
+            key = doc.page_content[:self._doc_key_chars]  # Уникальность по содержимому
             scores[key] = scores.get(key, 0) + 1.0 / (self._rrf_k + rank)
             doc_map[key] = doc
 
         for rank, doc in enumerate(list_b):
-            key = doc.page_content[:200]
+            key = doc.page_content[:self._doc_key_chars]
             scores[key] = scores.get(key, 0) + 1.0 / (self._rrf_k + rank)
             doc_map[key] = doc
 
@@ -571,13 +573,18 @@ class MultiQueryRetriever:
 
     def _rrf_merge_multiple(self, result_lists: List[List[Document]], k: int = 60) -> List[Document]:
         """RRF merge для нескольких списков."""
+        from config.settings import get_settings
+
+        settings = get_settings()
+        key_chars = getattr(settings, "rrf_doc_key_chars", 200)
+        rrf_k = getattr(settings, "rrf_k", k)
         scores: Dict[str, float] = {}
         doc_map: Dict[str, Document] = {}
 
         for result_list in result_lists:
             for rank, doc in enumerate(result_list):
-                key = doc.page_content[:200]
-                scores[key] = scores.get(key, 0) + 1.0 / (k + rank)
+                key = doc.page_content[:key_chars]
+                scores[key] = scores.get(key, 0) + 1.0 / (rrf_k + rank)
                 doc_map[key] = doc
 
         sorted_keys = sorted(scores, key=lambda x: scores[x], reverse=True)
@@ -709,8 +716,8 @@ def build_vector_store(
     from config.settings import get_settings
     settings = get_settings()
 
-    chunk_size = int(chunk_config.get("chunk_size", 800))
-    chunk_overlap = int(chunk_config.get("chunk_overlap", 200))
+    chunk_size = int(chunk_config.get("chunk_size", getattr(settings, "chunk_size", 800)))
+    chunk_overlap = int(chunk_config.get("chunk_overlap", getattr(settings, "chunk_overlap", 200)))
     semantic_chunking_enabled = settings.semantic_chunking or use_semantic_chunking
 
     if semantic_chunking_enabled:
@@ -772,17 +779,22 @@ def build_retriever(
 
     retrieval_k = k or settings.retrieval_top_k
     rerank_k = settings.rerank_top_k
+    chunk_size = getattr(settings, "chunk_size", 800)
+    chunk_overlap = getattr(settings, "chunk_overlap", 200)
 
     if vector_store is None or chunks is None:
         if settings.semantic_chunking:
             chunks = semantic_split(
                 list(docs),
                 embeddings,
-                min_chunk_size=200,
-                max_chunk_size=800,
+                min_chunk_size=chunk_overlap,
+                max_chunk_size=chunk_size,
             )
         else:
-            splitter = _build_text_splitter(chunk_size=800, chunk_overlap=200)
+            splitter = _build_text_splitter(
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+            )
             chunks = splitter.split_documents(list(docs))
         vector_store = QdrantStubStore(chunks, embeddings)
 
@@ -796,6 +808,8 @@ def build_retriever(
             chunks=chunks or [],
             retrieval_k=retrieval_k,
             rerank_k=rerank_k,
+            rrf_k=getattr(settings, "rrf_k", 60),
+            doc_key_chars=getattr(settings, "rrf_doc_key_chars", 200),
             reranker=reranker,
             use_bm25=use_bm25,
         )
@@ -863,6 +877,8 @@ def get_retriever(
             chunks=chunks or [],
             retrieval_k=retrieval_k,
             rerank_k=rerank_k,
+            rrf_k=getattr(settings, "rrf_k", 60),
+            doc_key_chars=getattr(settings, "rrf_doc_key_chars", 200),
             reranker=reranker,
             use_bm25=use_bm25,
         )

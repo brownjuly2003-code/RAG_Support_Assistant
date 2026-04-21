@@ -6,7 +6,7 @@ import sys
 
 
 def test_graph_state_accepts_tenant_id() -> None:
-    from state import create_initial_state
+    from agent.state import create_initial_state
 
     state = create_initial_state(
         question="x",
@@ -18,7 +18,7 @@ def test_graph_state_accepts_tenant_id() -> None:
 
 
 def test_graph_state_defaults_to_default_tenant() -> None:
-    from state import create_initial_state
+    from agent.state import create_initial_state
 
     state = create_initial_state(question="x", trace_id="t1")
 

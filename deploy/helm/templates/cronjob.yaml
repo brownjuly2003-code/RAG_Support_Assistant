@@ -1,0 +1,62 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-rag-nightly-eval
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: nightly-eval
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              command:
+                - python
+                - scripts/nightly_eval.py
+              envFrom:
+                - configMapRef:
+                    name: {{ .Release.Name }}-config
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-kb-gap-detector
+spec:
+  schedule: "0 3 * * 0"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: kb-gap-detector
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              command:
+                - python
+                - scripts/kb_gap_detector.py
+              envFrom:
+                - configMapRef:
+                    name: {{ .Release.Name }}-config
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-kb-builder
+spec:
+  schedule: "0 4 * * 1"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: kb-builder
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              command:
+                - python
+                - scripts/kb_builder.py
+              envFrom:
+                - configMapRef:
+                    name: {{ .Release.Name }}-config

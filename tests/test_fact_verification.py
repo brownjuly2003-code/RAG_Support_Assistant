@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 
 
 def test_all_supported_claims_give_score_100() -> None:
-    from graph import make_verify_facts_node
-    from state import create_initial_state
+    from agent.graph import make_verify_facts_node
+    from agent.state import create_initial_state
 
     llm = MagicMock()
     llm.invoke.side_effect = [
@@ -26,8 +26,8 @@ def test_all_supported_claims_give_score_100() -> None:
 
 
 def test_mixed_claims_give_partial_score() -> None:
-    from graph import make_verify_facts_node
-    from state import create_initial_state
+    from agent.graph import make_verify_facts_node
+    from agent.state import create_initial_state
 
     llm = MagicMock()
     llm.invoke.side_effect = [
@@ -46,8 +46,8 @@ def test_mixed_claims_give_partial_score() -> None:
 
 
 def test_no_claims_answer_scores_100() -> None:
-    from graph import make_verify_facts_node
-    from state import create_initial_state
+    from agent.graph import make_verify_facts_node
+    from agent.state import create_initial_state
 
     llm = MagicMock()
     llm.invoke.return_value = "NONE"
@@ -64,8 +64,8 @@ def test_no_claims_answer_scores_100() -> None:
 
 def test_disabled_via_settings_skips_verification(monkeypatch) -> None:
     import config.settings as settings_module
-    from graph import make_verify_facts_node
-    from state import create_initial_state
+    from agent.graph import make_verify_facts_node
+    from agent.state import create_initial_state
 
     monkeypatch.setenv("FACT_VERIFICATION_ENABLED", "false")
     settings_module._settings = None
@@ -86,8 +86,8 @@ def test_disabled_via_settings_skips_verification(monkeypatch) -> None:
 
 
 def test_llm_error_produces_error_state() -> None:
-    from graph import make_verify_facts_node
-    from state import create_initial_state
+    from agent.graph import make_verify_facts_node
+    from agent.state import create_initial_state
 
     llm = MagicMock()
     llm.invoke.side_effect = RuntimeError("ollama down")

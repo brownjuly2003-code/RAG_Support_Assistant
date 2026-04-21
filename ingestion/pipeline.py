@@ -11,6 +11,7 @@ IngestPipeline: end-to-end document ingestion.
 from __future__ import annotations
 
 import json
+import inspect
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -30,6 +31,9 @@ except ImportError:
             metadata: Dict[str, Any]
 
 from ingestion.loader import DocumentLoader
+from ingestion.categorizer import annotate_documents_with_categories
+import manager as legacy_manager
+import vectordb.manager as tenant_manager
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +43,7 @@ logger = logging.getLogger(__name__)
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_LOG_PATH = _PROJECT_ROOT / "data" / "ingestion_log.json"
+_ORIGINAL_LEGACY_BUILD_VECTOR_STORE = legacy_manager.build_vector_store
 
 
 class IngestPipeline:
@@ -82,6 +87,7 @@ class IngestPipeline:
         chunk_config: Optional[Dict[str, int]] = None,
         embeddings: Any = None,
         use_semantic_chunking: bool = False,
+        tenant_id: str = "default",
     ) -> tuple[Any, List[Document]]:
         """Run the full ingestion pipeline.
 
@@ -95,24 +101,46 @@ class IngestPipeline:
         Returns:
             ``(vector_store, chunks)`` -- the built store and the chunk list.
         """
-        from manager import build_vector_store
+        from config.settings import get_settings
 
         if chunk_config is None:
-            chunk_config = {"chunk_size": 800, "chunk_overlap": 200}
+            settings = get_settings()
+            chunk_config = {
+                "chunk_size": getattr(settings, "chunk_size", 800),
+                "chunk_overlap": getattr(settings, "chunk_overlap", 200),
+            }
+
+        build_vector_store = tenant_manager.build_vector_store
+        if legacy_manager.build_vector_store is not _ORIGINAL_LEGACY_BUILD_VECTOR_STORE:
+            build_vector_store = legacy_manager.build_vector_store
 
         # Step 1 -- load documents
         docs = self.loader.load_documents(docs_dir)
         if not docs:
             raise ValueError(f"No documents found in {docs_dir}")
+        annotate_documents_with_categories(docs, tenant_id=tenant_id)
         self._documents = docs
 
         # Step 2 -- build vector store
-        store, chunks = build_vector_store(
-            docs,
-            chunk_config,
-            embeddings=embeddings,
-            use_semantic_chunking=use_semantic_chunking,
-        )
+        build_params = inspect.signature(build_vector_store).parameters
+        if "tenant_id" in build_params or any(
+            param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+            for param in build_params.values()
+        ):
+            store, chunks = build_vector_store(
+                docs,
+                chunk_config,
+                embeddings=embeddings,
+                use_semantic_chunking=use_semantic_chunking,
+                tenant_id=tenant_id,
+            )
+        else:
+            store, chunks = build_vector_store(
+                docs,
+                chunk_config,
+                embeddings=embeddings,
+                use_semantic_chunking=use_semantic_chunking,
+            )
         self._store = store
         self._chunks = chunks
 
@@ -127,6 +155,7 @@ class IngestPipeline:
         chunk_config: Optional[Dict[str, int]] = None,
         embeddings: Any = None,
         use_semantic_chunking: bool = False,
+        tenant_id: str = "default",
     ) -> tuple[Any, List[Document]]:
         """Add a single file without rebuilding the entire store.
 
@@ -144,15 +173,24 @@ class IngestPipeline:
         Returns:
             ``(vector_store, chunks)`` -- updated store and full chunk list.
         """
-        from manager import build_vector_store
+        from config.settings import get_settings
 
         if chunk_config is None:
-            chunk_config = {"chunk_size": 800, "chunk_overlap": 200}
+            settings = get_settings()
+            chunk_config = {
+                "chunk_size": getattr(settings, "chunk_size", 800),
+                "chunk_overlap": getattr(settings, "chunk_overlap", 200),
+            }
+
+        build_vector_store = tenant_manager.build_vector_store
+        if legacy_manager.build_vector_store is not _ORIGINAL_LEGACY_BUILD_VECTOR_STORE:
+            build_vector_store = legacy_manager.build_vector_store
 
         new_docs = self.loader.load_single_file(file_path)
         if not new_docs:
             logger.warning("[IngestPipeline] No content extracted from %s", file_path)
             return self._store, self._chunks
+        annotate_documents_with_categories(new_docs, tenant_id=tenant_id)
 
         self._documents.extend(new_docs)
 
@@ -160,12 +198,25 @@ class IngestPipeline:
         # (A true incremental add would call vector_store.add_documents,
         #  but not every backend supports that uniformly, so a full
         #  rebuild is the safest approach for now.)
-        store, chunks = build_vector_store(
-            self._documents,
-            chunk_config,
-            embeddings=embeddings,
-            use_semantic_chunking=use_semantic_chunking,
-        )
+        build_params = inspect.signature(build_vector_store).parameters
+        if "tenant_id" in build_params or any(
+            param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+            for param in build_params.values()
+        ):
+            store, chunks = build_vector_store(
+                self._documents,
+                chunk_config,
+                embeddings=embeddings,
+                use_semantic_chunking=use_semantic_chunking,
+                tenant_id=tenant_id,
+            )
+        else:
+            store, chunks = build_vector_store(
+                self._documents,
+                chunk_config,
+                embeddings=embeddings,
+                use_semantic_chunking=use_semantic_chunking,
+            )
         self._store = store
         self._chunks = chunks
 

@@ -20,6 +20,7 @@ import json as _json
 import logging
 import re
 import sys
+import threading
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -29,9 +30,10 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 import httpx
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.middleware.sessions import SessionMiddleware
 from api.correlation import (
     generate_request_id,
     get_current_tenant,
@@ -41,6 +43,11 @@ from api.correlation import (
     set_request_id,
 )
 from auth.dependencies import get_current_user, require_role
+from auth.oidc import (
+    get_oauth_client as get_oidc_client,
+    list_sso_providers,
+    resolve_oidc_user,
+)
 from cache.redis_cache import cache_delete_pattern, cache_json_get, cache_json_set
 from db.audit import log_audit
 from monitoring import prometheus as prometheus_metrics
@@ -150,16 +157,11 @@ except ImportError:
 _ConversationSession = None
 _run_qa_pipeline = None
 try:
-    from graph import ConversationSession, run_qa_pipeline
+    from agent.graph import ConversationSession, run_qa_pipeline
     _ConversationSession = ConversationSession
     _run_qa_pipeline = run_qa_pipeline
 except ImportError:
-    try:
-        from agent.graph import ConversationSession, run_qa_pipeline
-        _ConversationSession = ConversationSession
-        _run_qa_pipeline = run_qa_pipeline
-    except ImportError:
-        logger.info("RAG pipeline not available - graph module not found")
+    logger.info("RAG pipeline not available - graph module not found")
 
 # manager.py - vector store utilities
 _build_vector_store = None
@@ -209,6 +211,10 @@ except ImportError:
             data_dir = PROJECT_ROOT / "data"
             vectordb_chroma_dir = PROJECT_ROOT / "data" / "vectordb" / "chroma"
             ollama_base_url = "http://localhost:11434"
+            chunk_size = 800
+            chunk_overlap = 200
+            api_default_page_size = 50
+            quality_threshold = 80
             tracing_db_path = PROJECT_ROOT / "data" / "tracing" / "traces.db"
             session_ttl_seconds = 7200
             trace_retention_days = 90
@@ -218,7 +224,18 @@ except ImportError:
             require_ollama = False
             llm_cache_enabled = False
             llm_cache_ttl_seconds = 3600
+            rag_env = "development"
             cors_origins = ["*"]
+            session_secret_key = "dev-secret-change-in-production!"
+            tenant_email_domains = ""
+            google_oidc_client_id = None
+            google_oidc_client_secret = None
+            azure_oidc_tenant = None
+            azure_oidc_client_id = None
+            azure_oidc_client_secret = None
+            otel_enabled = False
+            otel_exporter_otlp_endpoint = "http://localhost:4317"
+            otel_service_name = "rag-support-assistant"
         return _S()
 
 
@@ -229,6 +246,7 @@ except ImportError:
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     session_id: Optional[str] = Field(default=None, max_length=100)
+    confirm: Optional[bool] = None
     tenant_id: str = Field(
         default="default",
         max_length=50,
@@ -241,14 +259,24 @@ class SourceInfo(BaseModel):
     page_content: str = ""
 
 
+class Citation(BaseModel):
+    index: int
+    doc_id: str = ""
+    title: str = ""
+    excerpt: str = ""
+
+
 class AskResponse(BaseModel):
     answer: str
     quality_score: int = 50
     route: str = "auto"
     sources: List[SourceInfo] = Field(default_factory=list)
+    citations: List[Citation] = Field(default_factory=list)
     session_id: str = ""
     trace_id: str = ""
     suggested_questions: List[str] = Field(default_factory=list)
+    requires_confirmation: bool = False
+    action_summary: str = ""
 
 
 class FeedbackRequest(BaseModel):
@@ -262,6 +290,14 @@ class EscalateRequest(BaseModel):
     session_id: str = Field(..., max_length=100)
     question: str = Field(default="", max_length=2000)
     reason: str = Field(default="user_request", max_length=200)
+
+
+class AgentRespondRequest(BaseModel):
+    response: str = Field(..., min_length=1, max_length=5000)
+
+
+class KbDraftUpdateRequest(BaseModel):
+    draft_content: str = Field(..., min_length=1, max_length=20000)
 
 
 class SessionInfo(BaseModel):
@@ -300,6 +336,7 @@ class UploadResponse(BaseModel):
     filename: str
     message: str
     tenant_id: str = "default"
+    assigned_categories: List[str] = Field(default_factory=list)
 
 
 class TaskStatusResponse(BaseModel):
@@ -338,6 +375,7 @@ _retriever: Any = None
 _chunks: List[Any] = []
 _llm: Any = None
 _pipeline_semaphore: asyncio.Semaphore | None = None
+_vector_store_init_lock = threading.Lock()
 
 
 def _get_pipeline_semaphore() -> asyncio.Semaphore:
@@ -349,6 +387,147 @@ def _get_pipeline_semaphore() -> asyncio.Semaphore:
         _pipeline_semaphore = asyncio.Semaphore(size)
 
     return _pipeline_semaphore
+
+
+def _list_tenant_documents(tenant_id: str) -> list[dict[str, Any]]:
+    from vectordb import manager as tenant_manager  # noqa: PLC0415
+
+    documents: dict[str, dict[str, Any]] = {}
+    cached_chunks = getattr(tenant_manager, "_chunks_cache", {}).get(tenant_id) or []
+    for index, chunk in enumerate(cached_chunks):
+        metadata = getattr(chunk, "metadata", {}) or {}
+        doc_id = str(
+            metadata.get("doc_id")
+            or metadata.get("source")
+            or metadata.get("file_name")
+            or f"doc-{index}"
+        )
+        entry = documents.setdefault(
+            doc_id,
+            {
+                "doc_id": doc_id,
+                "title": str(metadata.get("title") or metadata.get("source") or doc_id),
+                "source": str(metadata.get("source") or doc_id),
+                "last_updated": metadata.get("last_updated"),
+                "categories": list(metadata.get("categories") or ["uncategorized"]),
+            },
+        )
+        if not entry.get("last_updated") and metadata.get("last_updated"):
+            entry["last_updated"] = metadata.get("last_updated")
+    return list(documents.values())
+
+
+def _touch_tenant_document(tenant_id: str, doc_id: str) -> bool:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from vectordb import manager as tenant_manager  # noqa: PLC0415
+
+    touched = False
+    now_iso = datetime.now(timezone.utc).isoformat()
+    cached_chunks = getattr(tenant_manager, "_chunks_cache", {}).get(tenant_id) or []
+    for chunk in cached_chunks:
+        metadata = getattr(chunk, "metadata", {}) or {}
+        chunk_doc_id = str(metadata.get("doc_id") or metadata.get("source") or "")
+        if chunk_doc_id == doc_id:
+            metadata["last_updated"] = now_iso
+            touched = True
+    return touched
+
+
+def _load_recent_trace_summaries(tenant_id: str, days: int) -> list[dict[str, Any]]:
+    import json  # noqa: PLC0415
+    from datetime import datetime, timedelta, timezone  # noqa: PLC0415
+
+    import sqlite_trace  # noqa: PLC0415
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    summaries: list[dict[str, Any]] = []
+    with sqlite_trace._get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT trace_id, started_at, final_route, final_quality
+            FROM traces
+            WHERE tenant_id = ? AND started_at >= ?
+            ORDER BY started_at DESC
+            """,
+            (tenant_id, cutoff),
+        )
+        for trace_id, started_at, final_route, final_quality in cur.fetchall():
+            cur.execute(
+                """
+                SELECT state_json
+                FROM trace_steps
+                WHERE trace_id = ?
+                ORDER BY step_order DESC
+                LIMIT 1
+                """,
+                (trace_id,),
+            )
+            row = cur.fetchone()
+            state: dict[str, Any] = {}
+            if row and row[0]:
+                try:
+                    state = json.loads(row[0])
+                except Exception:
+                    state = {}
+            docs = state.get("graded_docs") or state.get("context_docs") or []
+            categories: set[str] = set()
+            for doc in docs:
+                if not isinstance(doc, dict):
+                    continue
+                metadata = doc.get("metadata", {}) or {}
+                for item in metadata.get("categories") or []:
+                    categories.add(str(item))
+                if not categories and metadata.get("primary_category"):
+                    categories.add(str(metadata.get("primary_category")))
+            summaries.append(
+                {
+                    "trace_id": trace_id,
+                    "created_at": datetime.fromisoformat(started_at),
+                    "route": final_route or state.get("route") or "unknown",
+                    "quality_score": int(final_quality or state.get("quality_score") or 0),
+                    "categories": sorted(categories) or ["uncategorized"],
+                    "cost_usd": 0.0,
+                }
+            )
+    return summaries
+
+
+async def _record_citation_stats(tenant_id: str, citations: list[Citation]) -> None:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from sqlalchemy import select  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+    from db.models import DocumentStats  # noqa: PLC0415
+
+    now = datetime.now(timezone.utc)
+    async with async_session() as db:
+        for citation in citations:
+            doc_id = str(citation.doc_id or "").strip()
+            if not doc_id:
+                continue
+            result = await db.execute(
+                select(DocumentStats).where(
+                    DocumentStats.tenant_id == tenant_id,
+                    DocumentStats.doc_id == doc_id,
+                )
+            )
+            row = result.scalar_one_or_none()
+            if row is None:
+                db.add(
+                    DocumentStats(
+                        tenant_id=tenant_id,
+                        doc_id=doc_id,
+                        citation_count=1,
+                        last_cited_at=now,
+                    )
+                )
+            else:
+                row.citation_count += 1
+                row.last_cited_at = now
+        await db.commit()
 
 
 def _cache_key(tenant: str, question: str) -> str:
@@ -469,42 +648,49 @@ async def _get_or_create_session(
 def initialize_vector_store() -> None:
     global _vector_store, _retriever, _chunks
 
-    settings = get_settings()
-    chroma_dir = settings.vectordb_chroma_dir
-    collection_name = f"{getattr(settings, 'vectordb_collection_prefix', 'rag_docs')}_default"
+    if _vector_store is not None and _retriever is not None:
+        return
 
-    if _Chroma is not None and chroma_dir.exists() and any(chroma_dir.iterdir()):
-        try:
-            if _get_embeddings is not None:
-                embeddings = _get_embeddings()
-            else:
-                logger.warning("get_embeddings not available, skipping vector store load")
-                return
-
-            _vector_store = _Chroma(
-                persist_directory=str(chroma_dir),
-                embedding_function=embeddings,
-                collection_name=collection_name,
-            )
-
-            if _get_retriever is not None:
-                retriever_params = inspect.signature(_get_retriever).parameters
-                if "tenant_id" in retriever_params or any(
-                    param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
-                    for param in retriever_params.values()
-                ):
-                    _retriever = _get_retriever(_vector_store, chunks=None, tenant_id="default")
-                else:
-                    _retriever = _get_retriever(_vector_store, chunks=None)
-            else:
-                _retriever = _vector_store.as_retriever(search_kwargs={"k": 5})
-
-            logger.info("Vector store loaded from %s", chroma_dir)
+    with _vector_store_init_lock:
+        if _vector_store is not None and _retriever is not None:
             return
-        except Exception as exc:
-            logger.error("Failed to load existing Chroma: %s", exc, exc_info=True)
 
-    logger.info("No existing vector store found. Upload documents via /api/upload to create one.")
+        settings = get_settings()
+        chroma_dir = settings.vectordb_chroma_dir
+        collection_name = f"{getattr(settings, 'vectordb_collection_prefix', 'rag_docs')}_default"
+
+        if _Chroma is not None and chroma_dir.exists() and any(chroma_dir.iterdir()):
+            try:
+                if _get_embeddings is not None:
+                    embeddings = _get_embeddings()
+                else:
+                    logger.warning("get_embeddings not available, skipping vector store load")
+                    return
+
+                _vector_store = _Chroma(
+                    persist_directory=str(chroma_dir),
+                    embedding_function=embeddings,
+                    collection_name=collection_name,
+                )
+
+                if _get_retriever is not None:
+                    retriever_params = inspect.signature(_get_retriever).parameters
+                    if "tenant_id" in retriever_params or any(
+                        param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+                        for param in retriever_params.values()
+                    ):
+                        _retriever = _get_retriever(_vector_store, chunks=None, tenant_id="default")
+                    else:
+                        _retriever = _get_retriever(_vector_store, chunks=None)
+                else:
+                    _retriever = _vector_store.as_retriever(search_kwargs={"k": 5})
+
+                logger.info("Vector store loaded from %s", chroma_dir)
+                return
+            except Exception as exc:
+                logger.error("Failed to load existing Chroma: %s", exc, exc_info=True)
+
+        logger.info("No existing vector store found. Upload documents via /api/upload to create one.")
 
 
 def _rebuild_vector_store_from_docs(
@@ -517,42 +703,47 @@ def _rebuild_vector_store_from_docs(
         logger.warning("build_vector_store not available")
         return False
 
-    try:
-        chunk_config = {"chunk_size": 800, "chunk_overlap": 200}
-        build_params = inspect.signature(_build_vector_store).parameters
-        if "tenant_id" in build_params or any(
-            param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
-            for param in build_params.values()
-        ):
-            _vector_store, _chunks = _build_vector_store(
-                docs,
-                chunk_config,
-                tenant_id=tenant_id,
-            )
-        else:
-            _vector_store, _chunks = _build_vector_store(docs, chunk_config)
-
-        if _get_retriever is not None:
-            retriever_params = inspect.signature(_get_retriever).parameters
-            if "tenant_id" in retriever_params or any(
+    with _vector_store_init_lock:
+        try:
+            settings = get_settings()
+            chunk_config = {
+                "chunk_size": getattr(settings, "chunk_size", 800),
+                "chunk_overlap": getattr(settings, "chunk_overlap", 200),
+            }
+            build_params = inspect.signature(_build_vector_store).parameters
+            if "tenant_id" in build_params or any(
                 param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
-                for param in retriever_params.values()
+                for param in build_params.values()
             ):
-                _retriever = _get_retriever(_vector_store, chunks=_chunks, tenant_id=tenant_id)
+                _vector_store, _chunks = _build_vector_store(
+                    docs,
+                    chunk_config,
+                    tenant_id=tenant_id,
+                )
             else:
-                _retriever = _get_retriever(_vector_store, chunks=_chunks)
-        elif hasattr(_vector_store, "as_retriever"):
-            _retriever = _vector_store.as_retriever(search_kwargs={"k": 5})
+                _vector_store, _chunks = _build_vector_store(docs, chunk_config)
 
-        for sid, session in _sessions.items():
-            if hasattr(session, "_retriever") and getattr(session, "_tenant_id", "default") == tenant_id:
-                session._retriever = _retriever
+            if _get_retriever is not None:
+                retriever_params = inspect.signature(_get_retriever).parameters
+                if "tenant_id" in retriever_params or any(
+                    param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+                    for param in retriever_params.values()
+                ):
+                    _retriever = _get_retriever(_vector_store, chunks=_chunks, tenant_id=tenant_id)
+                else:
+                    _retriever = _get_retriever(_vector_store, chunks=_chunks)
+            elif hasattr(_vector_store, "as_retriever"):
+                _retriever = _vector_store.as_retriever(search_kwargs={"k": 5})
 
-        logger.info("Vector store rebuilt: %d chunks", len(_chunks))
-        return True
-    except Exception as exc:
-        logger.error("Failed to rebuild vector store: %s", exc, exc_info=True)
-        return False
+            for sid, session in _sessions.items():
+                if hasattr(session, "_retriever") and getattr(session, "_tenant_id", "default") == tenant_id:
+                    session._retriever = _retriever
+
+            logger.info("Vector store rebuilt: %d chunks", len(_chunks))
+            return True
+        except Exception as exc:
+            logger.error("Failed to rebuild vector store: %s", exc, exc_info=True)
+            return False
 
 
 # ---------------------------------------------------------------------------
@@ -691,6 +882,21 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except RuntimeError as exc:
         logger.error("Startup validation failed: %s", exc)
         raise SystemExit(1) from exc
+
+    try:
+        from db.engine import engine as db_engine  # noqa: PLC0415
+        from tracing.otel import init_otel  # noqa: PLC0415
+
+        init_otel(
+            app=app,
+            service_name=getattr(settings, "otel_service_name", "rag-support-assistant"),
+            endpoint=getattr(settings, "otel_exporter_otlp_endpoint", "http://localhost:4317"),
+            enabled=getattr(settings, "otel_enabled", False),
+            sqlalchemy_engine=getattr(db_engine, "sync_engine", db_engine),
+            request_id_getter=get_request_id,
+        )
+    except Exception as exc:
+        logger.warning("OTel initialization skipped: %s", exc)
 
     _shutting_down = False
     initialize_vector_store()
@@ -843,6 +1049,28 @@ async def ask(
                             page_content=item.get("page_content", ""),
                         )
                     )
+                cached_citations = []
+                for item in cached_payload.get("citations", []):
+                    if not isinstance(item, dict):
+                        continue
+                    cached_citations.append(
+                        Citation(
+                            index=int(item.get("index") or 0),
+                            doc_id=str(item.get("doc_id") or ""),
+                            title=str(item.get("title") or ""),
+                            excerpt=str(item.get("excerpt") or ""),
+                        )
+                    )
+                if not cached_citations:
+                    for idx, source in enumerate(cached_sources, start=1):
+                        cached_citations.append(
+                            Citation(
+                                index=idx,
+                                doc_id=source.source or f"doc_{idx}",
+                                title=source.source or f"doc_{idx}",
+                                excerpt=(source.page_content or "")[:300],
+                            )
+                        )
 
                 if hasattr(session, "_history"):
                     session._history.append({"role": "user", "content": question})
@@ -859,6 +1087,7 @@ async def ask(
                     quality_score=int(cached_payload.get("quality_score") or 50),
                     route=str(cached_payload.get("route") or "auto"),
                     sources=cached_sources,
+                    citations=cached_citations,
                     session_id=session_id,
                     trace_id="",
                     suggested_questions=cached_payload.get("suggested_questions") or [],
@@ -877,15 +1106,21 @@ async def ask(
             )
             request_id = get_request_id()
             ask_params = inspect.signature(session.ask).parameters
-            ask_args = (
-                (question, request_id, tenant)
-                if len(ask_params) >= 3
-                or any(
-                    param.kind == inspect.Parameter.VAR_POSITIONAL
-                    for param in ask_params.values()
-                )
-                else (question, request_id)
+            has_var_kwargs = any(
+                param.kind == inspect.Parameter.VAR_KEYWORD
+                for param in ask_params.values()
             )
+            ask_kwargs: dict[str, Any] = {}
+            if "trace_id" in ask_params or has_var_kwargs:
+                ask_kwargs["trace_id"] = request_id
+            if "tenant_id" in ask_params or has_var_kwargs:
+                ask_kwargs["tenant_id"] = tenant
+            if "confirm" in ask_params or has_var_kwargs:
+                ask_kwargs["confirm"] = body.confirm
+            if "user_id" in ask_params or has_var_kwargs:
+                ask_kwargs["user_id"] = _user.get("sub", "anonymous")
+            if "session_id" in ask_params or has_var_kwargs:
+                ask_kwargs["session_id"] = session_id
             semaphore = _get_pipeline_semaphore()
             try:
                 await asyncio.wait_for(semaphore.acquire(), timeout=acquire_timeout)
@@ -906,7 +1141,7 @@ async def ask(
                 prometheus_metrics.INFLIGHT_PIPELINES.inc()
                 try:
                     result = await asyncio.wait_for(
-                        asyncio.to_thread(session.ask, *ask_args),
+                        asyncio.to_thread(session.ask, question, **ask_kwargs),
                         timeout=timeout,
                     )
 
@@ -915,26 +1150,67 @@ async def ask(
                     route = result.get("route") or "auto"
 
                     sources_list = []
+                    citations_list = []
                     docs = result.get("graded_docs") or result.get("context_docs") or []
-                    for doc in docs[:5]:
+                    for idx, doc in enumerate(docs, start=1):
                         if isinstance(doc, dict):
-                            src = doc.get("metadata", {}).get("source", "")
-                            content = doc.get("page_content", "")[:200]
+                            metadata = doc.get("metadata", {}) or {}
+                            src = metadata.get("source") or metadata.get("file_name") or ""
+                            content = doc.get("page_content", "")
                         else:
-                            src = getattr(doc, "metadata", {}).get("source", "")
-                            content = getattr(doc, "page_content", "")[:200]
+                            metadata = getattr(doc, "metadata", {}) or {}
+                            src = metadata.get("source") or metadata.get("file_name") or ""
+                            content = getattr(doc, "page_content", "")
                         sources_list.append(SourceInfo(source=src, page_content=content))
+                        citations_list.append(
+                            Citation(
+                                index=idx,
+                                doc_id=str(
+                                    metadata.get("doc_id")
+                                    or metadata.get("id")
+                                    or src
+                                    or f"doc_{idx}"
+                                ),
+                                title=str(
+                                    metadata.get("title")
+                                    or src
+                                    or metadata.get("file_name")
+                                    or f"doc_{idx}"
+                                ),
+                                excerpt=str(content or "")[:300],
+                            )
+                        )
+                    if result.get("citations"):
+                        citations_list = [
+                            Citation(
+                                index=int(item.get("index") or 0),
+                                doc_id=str(item.get("doc_id") or ""),
+                                title=str(item.get("title") or ""),
+                                excerpt=str(item.get("excerpt") or ""),
+                            )
+                            for item in result.get("citations", [])
+                            if isinstance(item, dict)
+                        ]
 
                     response = AskResponse(
                         answer=answer,
                         quality_score=quality,
                         route=route,
                         sources=sources_list,
+                        citations=citations_list,
                         session_id=session_id,
                         trace_id=result.get("trace_id") or "",
                         suggested_questions=result.get("suggested_questions") or [],
+                        requires_confirmation=bool(result.get("requires_confirmation")),
+                        action_summary=str(result.get("action_summary") or ""),
                     )
-                    if cache_enabled and response.answer and response.route == "auto":
+                    if (
+                        cache_enabled
+                        and response.answer
+                        and response.route == "auto"
+                        and not response.requires_confirmation
+                        and not result.get("tool_calls")
+                    ):
                         cache_json_set(
                             llm_cache_key,
                             {
@@ -974,6 +1250,7 @@ async def ask(
                         quality_score=0,
                         route="human",
                         sources=[],
+                        citations=[],
                         session_id=session_id,
                         trace_id="",
                         suggested_questions=[],
@@ -993,6 +1270,7 @@ async def ask(
             quality_score=0,
             route="human",
             sources=[],
+            citations=[],
             session_id=session_id,
             trace_id="",
             suggested_questions=[],
@@ -1032,6 +1310,8 @@ async def ask(
     if response.route == "human":
         prometheus_metrics.ESCALATION_TOTAL.inc()
     prometheus_metrics.ACTIVE_SESSIONS.set(len(_sessions))
+    if response.citations:
+        asyncio.create_task(_record_citation_stats(tenant, list(response.citations)))
     if cache_hit:
         return JSONResponse(content={**response.model_dump(), "cached": True})
     return response
@@ -1109,10 +1389,7 @@ async def ask_stream(
                 elif isinstance(session, dict):
                     chat_history = session.get("history", [])
 
-                try:
-                    from prompts import build_qa_prompt, build_conversational_qa_prompt  # noqa: PLC0415
-                except ImportError:
-                    from agent.prompts import build_qa_prompt, build_conversational_qa_prompt  # type: ignore[no-redef]  # noqa: PLC0415
+                from agent.prompts import build_qa_prompt, build_conversational_qa_prompt  # noqa: PLC0415
 
                 plain_docs = []
                 for doc in docs[:5]:
@@ -1170,7 +1447,8 @@ async def ask_stream(
                 session["history"].append({"role": "assistant", "content": full_answer})
 
             sources = []
-            for doc in docs[:5]:
+            citations = []
+            for idx, doc in enumerate(docs, start=1):
                 if hasattr(doc, "page_content"):
                     metadata = getattr(doc, "metadata", {}) or {}
                     sources.append({
@@ -1183,23 +1461,37 @@ async def ask_stream(
                         "source": metadata.get("source") or metadata.get("file_name") or "",
                         "page_content": doc.get("page_content", ""),
                     })
+                else:
+                    metadata = {}
+                citations.append({
+                    "index": idx,
+                    "doc_id": str(
+                        metadata.get("doc_id")
+                        or metadata.get("id")
+                        or metadata.get("source")
+                        or metadata.get("file_name")
+                        or f"doc_{idx}"
+                    ),
+                    "title": str(
+                        metadata.get("title")
+                        or metadata.get("source")
+                        or metadata.get("file_name")
+                        or metadata.get("doc_id")
+                        or f"doc_{idx}"
+                    ),
+                    "excerpt": str(sources[-1]["page_content"] if sources else "")[:300],
+                })
 
-            quality = 70 if len(full_answer.strip()) > 20 else 40
+            quality = 70 if len(full_answer.strip()) > 20 or sources else 40
             route = "auto" if quality >= 70 else "human"
             suggested_questions: List[str] = []
             if route == "auto":
                 try:
-                    try:
-                        from prompts import build_suggested_questions_prompt  # noqa: PLC0415
-                    except ImportError:
-                        from agent.prompts import build_suggested_questions_prompt  # type: ignore[no-redef]  # noqa: PLC0415
+                    from agent.prompts import build_suggested_questions_prompt  # noqa: PLC0415
 
                     question_llm = getattr(session, "_llm", None)
                     if question_llm is None:
-                        try:
-                            from graph import LocalOllamaLLM  # noqa: PLC0415
-                        except ImportError:
-                            from agent.graph import LocalOllamaLLM  # type: ignore[no-redef]  # noqa: PLC0415
+                        from agent.graph import LocalOllamaLLM  # noqa: PLC0415
                         question_llm = LocalOllamaLLM(model_name=settings.ollama_model_name)
 
                     context_snippet = "\n\n".join(
@@ -1248,6 +1540,7 @@ async def ask_stream(
                 "route": route,
                 "session_id": session_id,
                 "sources": sources,
+                "citations": citations,
                 "trace_id": "",
                 "suggested_questions": suggested_questions,
             }) + "\n\n"
@@ -1263,19 +1556,50 @@ async def ask_stream(
                     route = result.get("route") or "auto"
                     raw_sources = result.get("graded_docs") or result.get("context_docs") or []
                     sources = []
-                    for item in raw_sources:
+                    citations = []
+                    for idx, item in enumerate(raw_sources, start=1):
                         metadata = item.get("metadata", {}) if isinstance(item, dict) else {}
+                        content = item.get("page_content", "") if isinstance(item, dict) else ""
                         sources.append({
                             "source": metadata.get("source") or metadata.get("file_name") or "",
-                            "page_content": item.get("page_content", "") if isinstance(item, dict) else "",
+                            "page_content": content,
                         })
+                        citations.append({
+                            "index": idx,
+                            "doc_id": str(
+                                metadata.get("doc_id")
+                                or metadata.get("id")
+                                or metadata.get("source")
+                                or metadata.get("file_name")
+                                or f"doc_{idx}"
+                            ),
+                            "title": str(
+                                metadata.get("title")
+                                or metadata.get("source")
+                                or metadata.get("file_name")
+                                or metadata.get("doc_id")
+                                or f"doc_{idx}"
+                            ),
+                            "excerpt": str(content or "")[:300],
+                        })
+                    if result.get("citations"):
+                        citations = [
+                            {
+                                "index": int(item.get("index") or 0),
+                                "doc_id": str(item.get("doc_id") or ""),
+                                "title": str(item.get("title") or ""),
+                                "excerpt": str(item.get("excerpt") or ""),
+                            }
+                            for item in result.get("citations", [])
+                            if isinstance(item, dict)
+                        ]
                     trace_id = result.get("trace_id") or ""
                     suggested_questions = result.get("suggested_questions") or []
                 else:
                     answer = "Сессия не инициализирована."
                     session["history"].append({"role": "user", "content": question})
                     session["history"].append({"role": "assistant", "content": answer})
-                    quality, route, sources, trace_id, suggested_questions = 0, "human", [], "", []
+                    quality, route, sources, citations, trace_id, suggested_questions = 0, "human", [], [], "", []
 
                 if time.monotonic() >= _db_retry_after:
                     try:
@@ -1299,6 +1623,7 @@ async def ask_stream(
                     "route": route,
                     "session_id": session_id,
                     "sources": sources,
+                    "citations": citations,
                     "trace_id": trace_id,
                     "suggested_questions": suggested_questions,
                 }) + "\n\n"
@@ -1311,6 +1636,7 @@ async def ask_stream(
                     "route": "human",
                     "session_id": session_id,
                     "sources": [],
+                    "citations": [],
                     "trace_id": "",
                     "suggested_questions": [],
                 }) + "\n\n"
@@ -1385,6 +1711,33 @@ async def escalate_to_human(
         logger.error("Failed to write escalation: %s", exc)
         raise HTTPException(status_code=500, detail="Escalation failed")
 
+    try:
+        from db.engine import async_session  # noqa: PLC0415
+        from db.models import EscalatedTicket  # noqa: PLC0415
+
+        draft = None
+        question_text = (body.question or "").strip()
+        if question_text:
+            draft = (
+                f"Запрос пользователя: {question_text}\n\n"
+                "Черновик ответа: Спасибо за обращение. Мы получили ваш запрос и передали его оператору. "
+                "Проверим детали и вернёмся с решением."
+            )
+
+        async with async_session() as db:
+            db.add(
+                EscalatedTicket(
+                    tenant_id=_user.get("tenant", "default"),
+                    session_id=body.session_id,
+                    user_question=question_text or "(пользователь запросил оператора)",
+                    ai_draft=draft,
+                    status="open",
+                )
+            )
+            await db.commit()
+    except Exception as exc:
+        logger.warning("Failed to persist escalated ticket: %s", exc)
+
     await log_audit(
         actor=_user.get("sub", "anonymous"),
         action="escalate",
@@ -1400,6 +1753,227 @@ async def escalate_to_human(
         "status": "ok",
         "message": "Ваш запрос передан оператору. Мы ответим в ближайшее время.",
     }
+
+
+@router.get("/agent/tickets")
+async def agent_list_tickets(
+    status: str | None = None,
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> JSONResponse:
+    from sqlalchemy import select  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+    from db.models import EscalatedTicket  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    async with async_session() as db:
+        stmt = (
+            select(EscalatedTicket)
+            .where(EscalatedTicket.tenant_id == tenant)
+            .order_by(EscalatedTicket.created_at.desc())
+        )
+        if status:
+            stmt = stmt.where(EscalatedTicket.status == status)
+        result = await db.execute(stmt)
+        rows = result.scalars().all()
+
+    return JSONResponse(
+        content={
+            "tickets": [
+                {
+                    "id": str(row.id),
+                    "tenant_id": row.tenant_id,
+                    "session_id": row.session_id,
+                    "user_question": row.user_question,
+                    "ai_draft": row.ai_draft,
+                    "operator_response": row.operator_response,
+                    "status": row.status,
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                    "resolved_at": row.resolved_at.isoformat() if row.resolved_at else None,
+                }
+                for row in rows
+            ]
+        }
+    )
+
+
+@router.get("/agent/tickets/{ticket_id}")
+async def agent_get_ticket(
+    ticket_id: str,
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> JSONResponse:
+    from sqlalchemy import select  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+    from db.models import EscalatedTicket, Message  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    try:
+        ticket_uuid = uuid.UUID(ticket_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid ticket_id")
+
+    async with async_session() as db:
+        ticket = await db.get(EscalatedTicket, ticket_uuid)
+        if ticket is None or ticket.tenant_id != tenant:
+            raise HTTPException(status_code=404, detail="ticket not found")
+
+        messages: list[dict[str, str | None]] = []
+        try:
+            session_uuid = uuid.UUID(ticket.session_id)
+            message_result = await db.execute(
+                select(Message)
+                .where(Message.session_id == session_uuid)
+                .order_by(Message.created_at)
+            )
+            messages = [
+                {
+                    "role": message.role,
+                    "content": message.content,
+                    "created_at": message.created_at.isoformat() if message.created_at else None,
+                }
+                for message in message_result.scalars().all()
+            ]
+        except Exception:
+            messages = []
+
+        similar_result = await db.execute(
+            select(EscalatedTicket)
+            .where(
+                EscalatedTicket.tenant_id == tenant,
+                EscalatedTicket.status == "resolved",
+                EscalatedTicket.id != ticket_uuid,
+            )
+            .order_by(EscalatedTicket.resolved_at.desc(), EscalatedTicket.created_at.desc())
+            .limit(3)
+        )
+        similar_rows = similar_result.scalars().all()
+
+    return JSONResponse(
+        content={
+            "ticket": {
+                "id": str(ticket.id),
+                "tenant_id": ticket.tenant_id,
+                "session_id": ticket.session_id,
+                "user_question": ticket.user_question,
+                "ai_draft": ticket.ai_draft,
+                "operator_response": ticket.operator_response,
+                "status": ticket.status,
+                "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
+                "resolved_at": ticket.resolved_at.isoformat() if ticket.resolved_at else None,
+            },
+            "messages": messages,
+            "retrieved_docs": [],
+            "quality_scores": {},
+            "similar_tickets": [
+                {
+                    "id": str(row.id),
+                    "user_question": row.user_question,
+                    "operator_response": row.operator_response,
+                    "resolved_at": row.resolved_at.isoformat() if row.resolved_at else None,
+                }
+                for row in similar_rows
+            ],
+        }
+    )
+
+
+@router.post("/agent/tickets/{ticket_id}/respond")
+async def agent_respond_to_ticket(
+    request: Request,
+    ticket_id: str,
+    body: AgentRespondRequest,
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> JSONResponse:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+    from db.models import EscalatedTicket  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    try:
+        ticket_uuid = uuid.UUID(ticket_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid ticket_id")
+
+    async with async_session() as db:
+        ticket = await db.get(EscalatedTicket, ticket_uuid)
+        if ticket is None or ticket.tenant_id != tenant:
+            raise HTTPException(status_code=404, detail="ticket not found")
+
+        ticket.operator_response = body.response.strip()
+        ticket.status = "resolved"
+        ticket.resolved_at = datetime.now(timezone.utc)
+        await db.commit()
+
+    await log_audit(
+        actor=_user.get("sub", "anonymous"),
+        action="agent_respond",
+        resource=f"ticket:{ticket_id}",
+        detail={"tenant": tenant},
+        ip_address=request.client.host if request.client else None,
+    )
+
+    return JSONResponse(
+        content={
+            "status": "ok",
+            "ticket": {
+                "id": str(ticket.id),
+                "tenant_id": ticket.tenant_id,
+                "session_id": ticket.session_id,
+                "user_question": ticket.user_question,
+                "ai_draft": ticket.ai_draft,
+                "operator_response": ticket.operator_response,
+                "status": ticket.status,
+                "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
+                "resolved_at": ticket.resolved_at.isoformat() if ticket.resolved_at else None,
+            },
+        }
+    )
+
+
+@router.get("/agent/similar")
+async def agent_similar_tickets(
+    ticket_id: str,
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> JSONResponse:
+    from sqlalchemy import select  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+    from db.models import EscalatedTicket  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    try:
+        ticket_uuid = uuid.UUID(ticket_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid ticket_id")
+
+    async with async_session() as db:
+        result = await db.execute(
+            select(EscalatedTicket)
+            .where(
+                EscalatedTicket.tenant_id == tenant,
+                EscalatedTicket.status == "resolved",
+                EscalatedTicket.id != ticket_uuid,
+            )
+            .order_by(EscalatedTicket.resolved_at.desc(), EscalatedTicket.created_at.desc())
+            .limit(3)
+        )
+        rows = result.scalars().all()
+
+    return JSONResponse(
+        content={
+            "tickets": [
+                {
+                    "id": str(row.id),
+                    "user_question": row.user_question,
+                    "operator_response": row.operator_response,
+                    "resolved_at": row.resolved_at.isoformat() if row.resolved_at else None,
+                }
+                for row in rows
+            ]
+        }
+    )
 
 
 @router.get("/feedback/stats")
@@ -1450,7 +2024,7 @@ async def admin_reset_circuit_breaker(
     request: Request,
     _user: dict = Depends(require_role("admin")),
 ) -> JSONResponse:
-    from graph import get_default_breaker
+    from agent.graph import get_default_breaker
 
     breaker = get_default_breaker()
     if breaker is None:
@@ -1491,11 +2065,12 @@ async def admin_reset_circuit_breaker(
 
 @router.get("/admin/audit")
 async def admin_list_audit(
-    limit: int = 50,
+    limit: int | None = None,
     actor: str | None = None,
     action: str | None = None,
     _user: dict = Depends(require_role("agent", "admin")),
 ) -> JSONResponse:
+    limit = getattr(get_settings(), "api_default_page_size", 50) if limit is None else limit
     limit = max(1, min(500, limit))
     tenant = _user.get("tenant") or get_current_tenant() or "default"
 
@@ -1544,11 +2119,12 @@ async def admin_list_audit(
 
 @router.get("/admin/traces")
 async def admin_list_traces(
-    limit: int = 50,
+    limit: int | None = None,
     _user: dict = Depends(require_role("agent", "admin")),
 ) -> JSONResponse:
     from sqlite_trace import list_recent_traces  # noqa: PLC0415
 
+    limit = getattr(get_settings(), "api_default_page_size", 50) if limit is None else limit
     tenant = _user.get("tenant") or get_current_tenant() or "default"
     trace_params = inspect.signature(list_recent_traces).parameters
     if "tenant_id" in trace_params or any(
@@ -1559,6 +2135,404 @@ async def admin_list_traces(
     else:
         traces = await asyncio.to_thread(list_recent_traces, limit)
     return JSONResponse(content={"traces": traces})
+
+
+@router.get("/admin/kb-gaps")
+async def admin_list_kb_gaps(
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from sqlalchemy import select  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+    from db.models import KnowledgeGap  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    async with async_session() as db:
+        stmt = (
+            select(KnowledgeGap)
+            .where(KnowledgeGap.tenant_id == tenant)
+            .order_by(KnowledgeGap.created_at.desc())
+        )
+        result = await db.execute(stmt)
+        rows = result.scalars().all()
+
+    return JSONResponse(
+        content={
+            "gaps": [
+                {
+                    "id": row.id,
+                    "tenant_id": row.tenant_id,
+                    "cluster_id": row.cluster_id,
+                    "topic_summary": row.topic_summary,
+                    "sample_questions": row.sample_questions,
+                    "question_count": row.question_count,
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                    "resolved_at": row.resolved_at.isoformat() if row.resolved_at else None,
+                }
+                for row in rows
+            ]
+        }
+    )
+
+
+@router.get("/admin/categories")
+async def admin_list_categories(
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from ingestion.categorizer import load_categories  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    return JSONResponse(
+        content={
+            "categories": load_categories(
+                tenant,
+                config_path=get_settings().categories_config_path,
+            )
+        }
+    )
+
+
+@router.get("/admin/kb-drafts")
+async def admin_list_kb_drafts(
+    status: str | None = None,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from sqlalchemy import select  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+    from db.models import KbDraft  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    async with async_session() as db:
+        stmt = (
+            select(KbDraft)
+            .where(KbDraft.tenant_id == tenant)
+            .order_by(KbDraft.created_at.desc())
+        )
+        if status:
+            stmt = stmt.where(KbDraft.status == status)
+        result = await db.execute(stmt)
+        rows = result.scalars().all()
+
+    return JSONResponse(
+        content={
+            "drafts": [
+                {
+                    "id": str(row.id),
+                    "tenant_id": row.tenant_id,
+                    "topic": row.topic,
+                    "draft_content": row.draft_content,
+                    "source_ticket_ids": row.source_ticket_ids,
+                    "status": row.status,
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                    "reviewed_at": row.reviewed_at.isoformat() if row.reviewed_at else None,
+                }
+                for row in rows
+            ]
+        }
+    )
+
+
+@router.patch("/admin/kb-drafts/{draft_id}")
+async def admin_update_kb_draft(
+    draft_id: str,
+    body: KbDraftUpdateRequest,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from db.engine import async_session  # noqa: PLC0415
+    from db.models import KbDraft  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    async with async_session() as db:
+        draft = await db.get(KbDraft, uuid.UUID(draft_id))
+        if draft is None or draft.tenant_id != tenant:
+            raise HTTPException(status_code=404, detail="draft not found")
+        if draft.status != "pending":
+            raise HTTPException(status_code=409, detail="draft is immutable")
+        draft.draft_content = body.draft_content.strip()
+        await db.commit()
+    return JSONResponse(content={"status": "ok"})
+
+
+@router.post("/admin/kb-drafts/{draft_id}/reject")
+async def admin_reject_kb_draft(
+    draft_id: str,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+    from db.models import KbDraft  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    async with async_session() as db:
+        draft = await db.get(KbDraft, uuid.UUID(draft_id))
+        if draft is None or draft.tenant_id != tenant:
+            raise HTTPException(status_code=404, detail="draft not found")
+        if draft.status != "pending":
+            raise HTTPException(status_code=409, detail="draft is immutable")
+        draft.status = "rejected"
+        draft.reviewed_at = datetime.now(timezone.utc)
+        await db.commit()
+    return JSONResponse(content={"status": "ok"})
+
+
+@router.post("/admin/kb-drafts/{draft_id}/publish")
+async def admin_publish_kb_draft(
+    draft_id: str,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+    from db.models import KbDraft  # noqa: PLC0415
+    from vectordb import manager as tenant_manager  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    async with async_session() as db:
+        draft = await db.get(KbDraft, uuid.UUID(draft_id))
+        if draft is None or draft.tenant_id != tenant:
+            raise HTTPException(status_code=404, detail="draft not found")
+        if draft.status != "pending":
+            raise HTTPException(status_code=409, detail="draft is immutable")
+
+        doc = Document(
+            page_content=draft.draft_content,
+            metadata={
+                "doc_id": f"kb-builder/{draft.id}",
+                "source": f"kb-builder/{draft.id}",
+                "title": draft.topic,
+                "tenant_id": draft.tenant_id,
+                "auto_generated": True,
+                "generated_from_tickets": draft.source_ticket_ids,
+                "categories": ["uncategorized"],
+                "primary_category": "uncategorized",
+                "last_updated": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+
+        if tenant_manager.Chroma is not None:
+            store = tenant_manager.Chroma(
+                persist_directory=str(get_settings().vectordb_chroma_dir),
+                embedding_function=tenant_manager.get_embeddings(),
+                collection_name=tenant_manager._collection_name(draft.tenant_id),
+            )
+            if hasattr(store, "add_documents"):
+                store.add_documents([doc])
+                if hasattr(store, "persist"):
+                    store.persist()
+
+        draft.status = "published"
+        draft.reviewed_at = datetime.now(timezone.utc)
+        await db.commit()
+    return JSONResponse(content={"status": "ok"})
+
+
+@router.get("/admin/stale-docs")
+async def admin_list_stale_docs(
+    days: int = 90,
+    top_cited: int = 20,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from datetime import datetime, timedelta, timezone  # noqa: PLC0415
+
+    from sqlalchemy import select  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+    from db.models import DocumentStats  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    documents = {item["doc_id"]: item for item in _list_tenant_documents(tenant)}
+
+    async with async_session() as db:
+        stmt = (
+            select(DocumentStats)
+            .where(DocumentStats.tenant_id == tenant)
+            .order_by(DocumentStats.citation_count.desc())
+            .limit(max(1, min(top_cited, 100)))
+        )
+        result = await db.execute(stmt)
+        stats_rows = result.scalars().all()
+
+    stale_documents = []
+    for row in stats_rows:
+        metadata = documents.get(row.doc_id)
+        if not metadata or not metadata.get("last_updated"):
+            continue
+        try:
+            last_updated = datetime.fromisoformat(str(metadata["last_updated"]))
+        except ValueError:
+            continue
+        if last_updated >= cutoff:
+            continue
+        stale_documents.append(
+            {
+                "doc_id": row.doc_id,
+                "title": metadata.get("title") or row.doc_id,
+                "source": metadata.get("source") or row.doc_id,
+                "last_updated": metadata.get("last_updated"),
+                "citation_count": row.citation_count,
+                "last_cited_at": row.last_cited_at.isoformat() if row.last_cited_at else None,
+            }
+        )
+
+    try:
+        prometheus_metrics.record_stale_important_docs(len(stale_documents))
+    except Exception:
+        pass
+    return JSONResponse(content={"documents": stale_documents})
+
+
+@router.post("/admin/stale-docs/{doc_id}/review")
+async def admin_review_stale_doc(
+    doc_id: str,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    if not _touch_tenant_document(tenant, doc_id):
+        raise HTTPException(status_code=404, detail="document not found")
+    return JSONResponse(content={"status": "ok"})
+
+
+@router.get("/analytics/top-topics")
+async def analytics_top_topics(
+    days: int = 7,
+    _user: dict = Depends(require_role("admin", "agent")),
+) -> JSONResponse:
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    summaries = _load_recent_trace_summaries(tenant, days)
+    grouped: dict[str, dict[str, float]] = {}
+    for item in summaries:
+        for category in item["categories"]:
+            entry = grouped.setdefault(category, {"count": 0, "quality_sum": 0.0})
+            entry["count"] += 1
+            entry["quality_sum"] += float(item["quality_score"] or 0)
+    topics = [
+        {
+            "category": category,
+            "count": int(values["count"]),
+            "avg_quality": round(values["quality_sum"] / values["count"], 2) if values["count"] else 0.0,
+        }
+        for category, values in grouped.items()
+    ]
+    topics.sort(key=lambda item: (-item["count"], item["category"]))
+    return JSONResponse(content={"topics": topics[:10]})
+
+
+@router.get("/analytics/resolution-rate")
+async def analytics_resolution_rate(
+    days: int = 7,
+    _user: dict = Depends(require_role("admin", "agent")),
+) -> JSONResponse:
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    summaries = _load_recent_trace_summaries(tenant, days)
+    grouped: dict[str, dict[str, int]] = {}
+    for item in summaries:
+        for category in item["categories"]:
+            entry = grouped.setdefault(category, {"total": 0, "resolved": 0})
+            entry["total"] += 1
+            if item["route"] == "auto":
+                entry["resolved"] += 1
+    payload = [
+        {
+            "category": category,
+            "resolution_rate": round(values["resolved"] / values["total"], 4) if values["total"] else 0.0,
+            "total": values["total"],
+        }
+        for category, values in grouped.items()
+    ]
+    payload.sort(key=lambda item: item["category"])
+    return JSONResponse(content={"topics": payload})
+
+
+@router.get("/analytics/cost-summary")
+async def analytics_cost_summary(
+    days: int = 7,
+    _user: dict = Depends(require_role("admin", "agent")),
+) -> JSONResponse:
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    summaries = _load_recent_trace_summaries(tenant, days)
+    total_cost = round(sum(float(item["cost_usd"] or 0.0) for item in summaries), 6)
+    per_category: dict[str, float] = {}
+    for item in summaries:
+        for category in item["categories"]:
+            per_category[category] = round(per_category.get(category, 0.0) + float(item["cost_usd"] or 0.0), 6)
+    return JSONResponse(
+        content={
+            "summary": {
+                "total_cost_usd": total_cost,
+                "label": "self-hosted (no cost)" if total_cost == 0 else f"${total_cost:.2f}",
+            },
+            "per_category": [
+                {"category": category, "cost_usd": cost}
+                for category, cost in sorted(per_category.items())
+            ],
+        }
+    )
+
+
+@router.get("/analytics/trends")
+async def analytics_trends(
+    days: int = 30,
+    metric: str = "quality",
+    _user: dict = Depends(require_role("admin", "agent")),
+) -> JSONResponse:
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    summaries = _load_recent_trace_summaries(tenant, days)
+    grouped: dict[str, list[float]] = {}
+    for item in summaries:
+        bucket = item["created_at"].date().isoformat()
+        if metric == "cost":
+            value = float(item["cost_usd"] or 0.0)
+        elif metric == "resolution":
+            value = 1.0 if item["route"] == "auto" else 0.0
+        else:
+            value = float(item["quality_score"] or 0.0)
+        grouped.setdefault(bucket, []).append(value)
+    payload = [
+        {
+            "date": bucket,
+            "value": round(sum(values) / len(values), 4) if values else 0.0,
+        }
+        for bucket, values in sorted(grouped.items())
+    ]
+    return JSONResponse(content={"metric": metric, "points": payload})
+
+
+@router.post("/channels/email/inbound")
+async def email_inbound_webhook(request: Request) -> JSONResponse:
+    from channels.email_channel import resolve_tenant_from_recipient, send_reply_smtp  # noqa: PLC0415
+    from channels.email_webhook import process_webhook_payload, verify_signature  # noqa: PLC0415
+
+    settings = get_settings()
+    body = await request.body()
+    signature = request.headers.get("X-Webhook-Signature")
+    if not verify_signature(body, signature, settings.email_webhook_secret):
+        raise HTTPException(status_code=401, detail="invalid webhook signature")
+
+    payload = _json.loads(body.decode("utf-8") or "{}")
+
+    async def _run_qa(question: str, tenant_id: str) -> dict[str, Any]:
+        session_result = _get_or_create_session(None, tenant_id)
+        if asyncio.iscoroutine(session_result):
+            _session_id, session = await session_result
+        else:
+            _session_id, session = session_result
+        return await asyncio.to_thread(session.ask, question, tenant_id=tenant_id)
+
+    async def _forward_message(sender: str, subject: str, body_text: str, result: dict[str, Any]) -> None:
+        _ = sender, subject, body_text, result
+        return None
+
+    await process_webhook_payload(
+        payload,
+        run_qa=_run_qa,
+        send_reply=send_reply_smtp,
+        forward_message=_forward_message,
+        tenant_resolver=resolve_tenant_from_recipient,
+    )
+    return JSONResponse(content={"ok": True})
 
 
 @router.get("/admin/traces/{trace_id}")
@@ -1714,6 +2688,8 @@ async def upload_document(
     file_path = upload_dir / safe_name
     settings = get_settings()
     upload_limit = getattr(settings, "max_upload_bytes", 50 * 1024 * 1024)
+    docs = None
+    assigned_categories: list[str] = []
     try:
         content = bytearray()
         while True:
@@ -1744,6 +2720,18 @@ async def upload_document(
         ip_address=request.client.host if request.client else None,
     )
 
+    if _DocumentLoader is not None:
+        try:
+            from ingestion.categorizer import annotate_documents_with_categories
+
+            loader = _DocumentLoader(recursive=False)
+            docs = loader.load_documents(str(upload_dir))
+            if docs:
+                assigned_by_source = annotate_documents_with_categories(docs, tenant_id=tenant)
+                assigned_categories = list(assigned_by_source.get(safe_name) or [])
+        except Exception as exc:
+            logger.warning("Category pre-processing failed for %s: %s", safe_name, exc)
+
     if tenant == "default":
         try:
             from tasks.ingest_task import ingest_document
@@ -1756,14 +2744,16 @@ async def upload_document(
                 status="accepted",
                 filename=safe_name,
                 message=f"File uploaded. Processing in background. task_id={task.id}",
+                assigned_categories=assigned_categories,
             )
         except Exception as exc:
             logger.info("Celery async upload unavailable, falling back to sync: %s", exc)
 
     if _DocumentLoader is not None and _build_vector_store is not None:
         try:
-            loader = _DocumentLoader(recursive=False)
-            docs = loader.load_documents(str(upload_dir))
+            if docs is None:
+                loader = _DocumentLoader(recursive=False)
+                docs = loader.load_documents(str(upload_dir))
             if docs:
                 success = _rebuild_vector_store_from_docs(docs, tenant_id=tenant)
                 if success:
@@ -1774,18 +2764,21 @@ async def upload_document(
                         status="ok",
                         filename=safe_name,
                         message=f"File uploaded and indexed. {len(docs)} document(s) processed.",
+                        assigned_categories=assigned_categories,
                     )
                 else:
                     return UploadResponse(
                         status="partial",
                         filename=safe_name,
                         message="File saved but indexing failed. Check server logs.",
+                        assigned_categories=assigned_categories,
                     )
             else:
                 return UploadResponse(
                     status="partial",
                     filename=safe_name,
                     message="File saved but no text content could be extracted.",
+                    assigned_categories=assigned_categories,
                 )
         except Exception as exc:
             logger.error("Ingestion error for %s: %s", file.filename, exc, exc_info=True)
@@ -1793,12 +2786,14 @@ async def upload_document(
                 status="partial",
                 filename=safe_name,
                 message=f"File saved but ingestion failed: {exc}",
+                assigned_categories=assigned_categories,
             )
     else:
         return UploadResponse(
             status="partial",
             filename=safe_name,
             message="File saved. Document loader or vector store builder not available for indexing.",
+            assigned_categories=assigned_categories,
         )
 
 
@@ -1835,6 +2830,89 @@ async def get_task_status(
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Task backend error: {exc}")
+
+
+@router.get("/auth/sso/providers")
+async def sso_providers() -> dict[str, list[dict[str, str]]]:
+    return {"providers": list_sso_providers(get_settings())}
+
+
+@router.get("/auth/sso/{provider}/login")
+async def sso_login(provider: str, request: Request):
+    try:
+        client = get_oidc_client(provider)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    if client is None:
+        raise HTTPException(status_code=404, detail="Provider not configured")
+
+    redirect_uri = request.url_for("sso_callback", provider=provider)
+    return await client.authorize_redirect(request, str(redirect_uri))
+
+
+@router.get("/auth/sso/{provider}/callback", name="sso_callback")
+async def sso_callback(provider: str, request: Request):
+    from auth.jwt_handler import (
+        ACCESS_TOKEN_TTL,
+        REFRESH_TOKEN_TTL,
+        create_access_token,
+        create_refresh_token,
+    )
+
+    try:
+        client = get_oidc_client(provider)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    if client is None:
+        raise HTTPException(status_code=404, detail="Provider not configured")
+
+    try:
+        token = await client.authorize_access_token(request)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"SSO callback failed: {exc}")
+
+    userinfo = token.get("userinfo") if isinstance(token, dict) else None
+    if userinfo is None and hasattr(client, "userinfo"):
+        userinfo = await client.userinfo(token=token)
+    if not isinstance(userinfo, dict):
+        raise HTTPException(status_code=400, detail="OIDC userinfo is missing")
+
+    try:
+        user = await resolve_oidc_user(provider, userinfo)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    access_token = create_access_token(str(user.id), user.role, user.tenant_id)
+    refresh_token = create_refresh_token(str(user.id), user.role, user.tenant_id)
+    secure_cookie = getattr(get_settings(), "rag_env", "development") == "production"
+
+    response = RedirectResponse("/static/chat.html", status_code=307)
+    response.set_cookie(
+        "access_token",
+        access_token,
+        httponly=True,
+        secure=secure_cookie,
+        samesite="lax",
+        max_age=ACCESS_TOKEN_TTL,
+        path="/",
+    )
+    response.set_cookie(
+        "refresh_token",
+        refresh_token,
+        httponly=True,
+        secure=secure_cookie,
+        samesite="lax",
+        max_age=REFRESH_TOKEN_TTL,
+        path="/",
+    )
+    await log_audit(
+        actor=str(user.id),
+        action="sso_login",
+        resource=f"auth/{provider}",
+        detail={"provider": provider, "tenant": user.tenant_id},
+        ip_address=request.client.host if request.client else None,
+    )
+    return response
 
 
 @router.post("/auth/login", response_model=TokenResponse)
@@ -2138,12 +3216,9 @@ async def health_check() -> HealthResponse:
     overall = "unhealthy" if critical_down else ("degraded" if non_critical_error else "ok")
     breakers_snap: List[Dict[str, Any]] = []
     try:
-        from graph import get_default_breaker
+        from agent.graph import get_default_breaker
     except ImportError:
-        try:
-            from agent.graph import get_default_breaker
-        except ImportError:
-            get_default_breaker = None  # type: ignore[assignment]
+        get_default_breaker = None  # type: ignore[assignment]
 
     if get_default_breaker is not None:
         breaker = get_default_breaker()
@@ -2175,8 +3250,15 @@ async def health_check() -> HealthResponse:
 
 app = FastAPI(title="RAG Support Assistant API", version="0.3.0", lifespan=_lifespan)
 
-# CORS
-_cors_settings = get_settings()
+# Session + CORS
+_app_settings = get_settings()
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=getattr(_app_settings, "session_secret_key", "dev-secret-change-in-production!"),
+    same_site="lax",
+    https_only=getattr(_app_settings, "rag_env", "development") == "production",
+)
+_cors_settings = _app_settings
 if "*" in _cors_settings.cors_origins:
     if _cors_settings.rag_env == "development":
         logger.warning(
@@ -2324,12 +3406,33 @@ async def _tenant_context(request: Request, call_next: Any) -> Any:
         set_current_tenant(None)
 
 
+@app.middleware("http")
+async def _cookie_auth_bridge(request: Request, call_next: Any) -> Any:
+    if "authorization" not in request.headers:
+        access_token = request.cookies.get("access_token")
+        if access_token:
+            headers = list(request.scope.get("headers", []))
+            headers.append((b"authorization", f"Bearer {access_token}".encode("utf-8")))
+            request.scope["headers"] = headers
+    return await call_next(request)
+
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_rejected)
 app.include_router(router)
 _static_dir = PROJECT_ROOT / "static"
 if _static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+
+
+@app.get("/agent", response_class=HTMLResponse)
+async def agent_dashboard(
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> HTMLResponse:
+    agent_path = PROJECT_ROOT / "static" / "agent.html"
+    if not agent_path.exists():
+        raise HTTPException(status_code=404, detail="agent dashboard not found")
+    return HTMLResponse(agent_path.read_text(encoding="utf-8"))
 
 
 @app.get("/metrics")
