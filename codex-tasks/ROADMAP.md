@@ -1,0 +1,81 @@
+# RAG Support Assistant — post-arc roadmap (CLOSED 2026-04-21)
+
+Слияние `commercial-upgrade-plan.md` + `rec.md` с учётом фактического
+состояния кода после арка 68-101. Каждый открытый пункт переработан в
+Codex-спеку; закрытые пункты сюда **не включены** (см. `Archive/`).
+
+> **Status (2026-04-21):** все 21 task arc 102-122 реализованы и закоммичены.
+> Tests: 293 passed. Ruff clean. Verification sweep (task-123) выявил
+> 6 функциональных gaps → fix-tasks 130/131/132 написаны, висят для следующей
+> Codex-сессии. Arc считается закрытой с TODO на 3 fix-таска.
+
+## Baseline (на момент 2026-04-20)
+- 71 коммит в арке 68-101, 222 теста passing, ruff clean
+- Arc закрыл: Phase 0 (security hardening), Phase 1 Foundation почти
+  полностью (DB-1..4, AUTH-1, AUTH-2, ASYNC-1/2, Redis cache), Phase 4
+  OBS-2/3 (Prometheus + Alertmanager), COMP-1/2/3 (audit, PII, retention),
+  DEPLOY-1/2/3 (Helm, CI, graceful shutdown), multi-tenancy Phase 1-4,
+  UX-2/3/4 (suggested Q, talk-to-human, copy+timestamps), FEAT-1/2
+  (semantic chunking on, HyDE feature-flagged), RQ-1/2 (Langfuse, eval gate).
+
+## Batches (ALL CLOSED)
+
+### Batch A — UX Commercial Grade (Phase 2) ✅
+Быстрые visible wins. Приоритет 1 — дают наиболее заметный product-lift.
+- [task-102] — inline citations `[N]` + source panel ✅
+- [task-103] — mobile breakpoints + tap targets ✅
+- [task-104] — WCAG AA audit — ⚠️ static review only, axe-core прогон выделен в [task-132](../task-132-run-axe-audit.md)
+- [task-105] — upload progress bar, error recovery retry, onboarding ✅
+- [task-106] — operator dashboard + context panel (COPILOT-1/2) ✅
+
+### Batch B — Advanced RAG & Intelligence (Phase 3) ✅
+- [task-107] — LangGraph tool-use framework + multi-step + confirmation ✅
+- [task-108] — nightly eval pipeline + drift alert ✅
+- [task-109] — auto-ticket на "не знаю" кластеры ✅
+- [task-110] — активация contextual headers в ingestion ✅
+
+### Batch C — Enterprise Hardening (Phase 4) ✅
+- [task-111] — OTel SDK для distributed tracing ✅
+- [task-112] — SSO через authlib (Google/Azure OIDC) ✅
+- [task-113] — pgcrypto для sensitive fields ✅
+
+### Batch D — Product Differentiation (Phase 5) ✅
+- [task-114] — resolved tickets → draft KB articles ✅
+- [task-115] — stale-doc monitoring + alerts ✅
+- [task-116] — auto-tag docs при upload ✅
+- [task-117] — top topics, resolution rate — ❌ cost tracking пишет 0.0, follow-up [task-130](../task-130-fix-analytics-cost-calc.md)
+- [task-118] — Slack/email weekly digest ✅
+- [task-119] — IMAP/webhook email channel — ❌ poller/webhook no-op, follow-up [task-131](../task-131-fix-email-channel.md)
+
+### Batch E — Code Quality & Integration Tests ✅
+- [task-120] — снять дубли root-level `graph.py`/`state.py` — ✅ (manager.py — двухслойная архитектура, не дубликат)
+- [task-121] — вынести magic numbers в settings ✅ (fixed settings drift post-hoc)
+- [task-122] — end-to-end integration suite (PROD-4) ✅
+
+## Closing tasks (post-arc)
+
+- [task-123] — verification sweep arc 102-122 → `verification-report.md` ✅
+- [task-124] — README update для arc 102-122 ✅
+- [task-125] — arc-6 proposal → `arc-6-proposal.md` ✅
+- [task-126] — hygiene & consistency audit → `cleanup-report.md` ✅
+- [task-127] — CI pipeline (.pre-commit + GitHub Actions ci.yml) ✅
+- [task-128] — `docs/CHANGELOG.md` ✅
+- [task-129] — `docs/operations/backup-restore.md` ✅
+
+## Pending fix-tasks (для следующей Codex-сессии)
+
+- [task-130] — fix cost calculation в analytics dashboard
+- [task-131] — fix email channel (IMAP poller + webhook + tenant delimiter)
+- [task-132] — real axe-core audit на UI + keyboard test + docs/a11y/
+
+## DONE WHEN (для всего roadmap)
+
+- [x] 21 базовая задача arc 102-122 реализована
+- [x] 293 теста passing (>280 target)
+- [x] README обновлён с новыми фичами/env vars (task-124)
+- [ ] Lighthouse mobile ≥90, axe-core 0 critical — после task-132
+- [ ] Resolution rate ≥50% (если появится production трафик) — постпродакшн
+
+## Next arc (TBD)
+
+См. [arc-6-proposal.md](../arc-6-proposal.md) — 3 кандидата с рекомендацией.
