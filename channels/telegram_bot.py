@@ -33,15 +33,12 @@ async def _ensure_pipeline() -> None:
         if _session_class is not None and _retriever is not None and _llm is not None:
             return
 
-        try:
-            from graph import ConversationSession, LocalOllamaLLM
-        except ImportError:
-            from agent.graph import ConversationSession, LocalOllamaLLM
+        from agent.graph import ConversationSession, LocalOllamaLLM
 
         try:
-            from manager import get_embeddings, get_retriever
-        except ImportError:
             from vectordb.manager import get_embeddings, get_retriever
+        except ImportError:
+            from manager import get_embeddings, get_retriever
 
         try:
             from langchain_chroma import Chroma

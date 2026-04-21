@@ -14,6 +14,5 @@ data/
 *.swp
 .DS_Store
 Thumbs.db
-Сброс настрок COMET.py
 *.db
 .claude/

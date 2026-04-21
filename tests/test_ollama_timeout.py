@@ -7,7 +7,7 @@ import pytest
 
 @pytest.fixture
 def _reset_graph_state():
-    import graph
+    import agent.graph as graph
 
     graph._default_breaker = None
     yield
@@ -26,7 +26,7 @@ def test_default_timeout_is_60_seconds(monkeypatch, _reset_graph_state) -> None:
         captured_kwargs.update(kwargs)
         return MagicMock()
 
-    import graph
+    import agent.graph as graph
 
     monkeypatch.setattr("langchain_community.llms.Ollama", fake_ollama)
 
@@ -48,7 +48,7 @@ def test_custom_timeout_from_env(monkeypatch, _reset_graph_state) -> None:
         captured_kwargs.update(kwargs)
         return MagicMock()
 
-    import graph
+    import agent.graph as graph
 
     monkeypatch.setattr("langchain_community.llms.Ollama", fake_ollama)
 

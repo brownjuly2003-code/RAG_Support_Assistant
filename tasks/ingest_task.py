@@ -37,11 +37,16 @@ def ingest_document(self, file_path: str) -> dict:
 
     try:
         try:
-            from manager import build_vector_store, get_embeddings
-        except ImportError:
             from vectordb.manager import build_vector_store, get_embeddings
+        except ImportError:
+            from manager import build_vector_store, get_embeddings
+        from config.settings import get_settings
 
-        chunk_config = {"chunk_size": 800, "chunk_overlap": 200}
+        settings = get_settings()
+        chunk_config = {
+            "chunk_size": getattr(settings, "chunk_size", 800),
+            "chunk_overlap": getattr(settings, "chunk_overlap", 200),
+        }
         embeddings = get_embeddings()
         build_vector_store(docs, chunk_config, embeddings=embeddings)
     except Exception as exc:

@@ -40,6 +40,7 @@ def test_explicit_origins_ok_in_production(monkeypatch: pytest.MonkeyPatch) -> N
         "CORS_ORIGINS",
         "https://app.example.com,https://admin.example.com",
     )
+    monkeypatch.setenv("DB_ENCRYPTION_KEY", "test-key-prod-cors-happy-path")
 
     settings = _reload_settings()
 

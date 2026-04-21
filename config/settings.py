@@ -32,6 +32,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+from pydantic import SecretStr
+
 
 # Определяем корень проекта как родительскую директорию для config/
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -78,7 +80,11 @@ class Settings:
 
     # Лучшая конфигурация чанков
     chunking_config_path: Path = data_dir / "chunking" / "best_chunk_config.json"
-
+    categories_config_path: Path = field(
+        default_factory=lambda: Path(
+            os.getenv("CATEGORIES_CONFIG_PATH", str(PROJECT_ROOT / "config" / "categories.yml"))
+        )
+    )
     # --- Настройки LLM (Ollama / локальная модель) ---
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     ollama_model_name: str = os.getenv("OLLAMA_MODEL_NAME", "qwen2.5:7b")
@@ -112,9 +118,27 @@ class Settings:
     # Retrieval parameters
     retrieval_top_k: int = int(os.getenv("RAG_RETRIEVAL_TOP_K", "20"))   # candidates before reranking
     rerank_top_k: int = int(os.getenv("RAG_RERANK_TOP_K", "5"))          # final docs after reranking
+    rrf_k: int = int(os.getenv("RRF_K", "60"))
+    rrf_doc_key_chars: int = int(os.getenv("RRF_DOC_KEY_CHARS", "200"))
+    quality_threshold: int = int(os.getenv("QUALITY_THRESHOLD", "80"))
+    chunk_size: int = int(os.getenv("CHUNK_SIZE") or os.getenv("RAG_CHUNK_SIZE") or "800")
+    chunk_overlap: int = int(os.getenv("CHUNK_OVERLAP") or os.getenv("RAG_CHUNK_OVERLAP") or "200")
+    api_default_page_size: int = int(os.getenv("API_DEFAULT_PAGE_SIZE", "50"))
+    agent_max_tool_loops: int = int(os.getenv("AGENT_MAX_TOOL_LOOPS", "5"))
+    escalation_threshold: float = float(os.getenv("ESCALATION_THRESHOLD", "0.7"))
 
     # --- Level 2: Semantic Chunking ---
     semantic_chunking: bool = os.getenv("RAG_SEMANTIC_CHUNKING", "true").strip().lower() in ("1", "true", "yes")
+    contextual_headers: bool = field(
+        default_factory=lambda: os.getenv(
+            "RAG_CONTEXTUAL_HEADERS", "true"
+        ).strip().lower() in ("1", "true", "yes")
+    )
+    agentic_mode: bool = field(
+        default_factory=lambda: os.getenv(
+            "RAG_AGENTIC_MODE", "false"
+        ).strip().lower() in ("1", "true", "yes")
+    )
 
     # --- HyDE (Hypothetical Document Embeddings) ---
     hyde: bool = field(
@@ -150,6 +174,115 @@ class Settings:
     # https://example.bitrix24.ru/rest/123/abcdefg123456/crm.timeline.comment.add.json
     bitrix_webhook_url: Optional[str] = os.getenv("BITRIX_WEBHOOK_URL") or None
     telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    google_oidc_client_id: Optional[str] = field(
+        default_factory=lambda: os.getenv("GOOGLE_OIDC_CLIENT_ID") or None
+    )
+    google_oidc_client_secret: SecretStr | None = field(
+        default_factory=lambda: (lambda value: SecretStr(value) if value else None)(
+            os.getenv("GOOGLE_OIDC_CLIENT_SECRET")
+        )
+    )
+    azure_oidc_tenant: Optional[str] = field(
+        default_factory=lambda: os.getenv("AZURE_OIDC_TENANT") or None
+    )
+    azure_oidc_client_id: Optional[str] = field(
+        default_factory=lambda: os.getenv("AZURE_OIDC_CLIENT_ID") or None
+    )
+    azure_oidc_client_secret: SecretStr | None = field(
+        default_factory=lambda: (lambda value: SecretStr(value) if value else None)(
+            os.getenv("AZURE_OIDC_CLIENT_SECRET")
+        )
+    )
+    tenant_email_domains: str = field(
+        default_factory=lambda: os.getenv("TENANT_EMAIL_DOMAINS", "")
+    )
+    llm_cost_per_1m_tokens: str = field(
+        default_factory=lambda: os.getenv("LLM_COST_PER_1M_TOKENS", "qwen2.5:0.0,gpt-4:10.0")
+    )
+    report_slack_webhook: str = field(
+        default_factory=lambda: os.getenv("REPORT_SLACK_WEBHOOK", "")
+    )
+    report_email_recipients: list[str] = field(
+        default_factory=lambda: [
+            item.strip()
+            for item in os.getenv("REPORT_EMAIL_RECIPIENTS", "").split(",")
+            if item.strip()
+        ]
+    )
+    report_smtp_host: str = field(
+        default_factory=lambda: os.getenv("REPORT_SMTP_HOST", os.getenv("SMTP_HOST", ""))
+    )
+    report_smtp_port: int = field(
+        default_factory=lambda: int(os.getenv("REPORT_SMTP_PORT", os.getenv("SMTP_PORT", "587") or "587"))
+    )
+    report_smtp_user: str = field(
+        default_factory=lambda: os.getenv("REPORT_SMTP_USER", os.getenv("SMTP_USER", ""))
+    )
+    report_smtp_pass: SecretStr | None = field(
+        default_factory=lambda: (lambda value: SecretStr(value) if value else None)(
+            os.getenv("REPORT_SMTP_PASS", os.getenv("SMTP_PASS", ""))
+        )
+    )
+    email_channel_mode: str = field(
+        default_factory=lambda: os.getenv("EMAIL_CHANNEL_MODE", "disabled").strip().lower()
+    )
+    imap_host: str = field(
+        default_factory=lambda: os.getenv("IMAP_HOST", "")
+    )
+    imap_port: int = field(
+        default_factory=lambda: int(os.getenv("IMAP_PORT", "993"))
+    )
+    imap_user: str = field(
+        default_factory=lambda: os.getenv("IMAP_USER", "")
+    )
+    imap_pass: SecretStr | None = field(
+        default_factory=lambda: (lambda value: SecretStr(value) if value else None)(
+            os.getenv("IMAP_PASS", "")
+        )
+    )
+    imap_folder: str = field(
+        default_factory=lambda: os.getenv("IMAP_FOLDER", "INBOX")
+    )
+    smtp_host: str = field(
+        default_factory=lambda: os.getenv("SMTP_HOST", "")
+    )
+    smtp_port: int = field(
+        default_factory=lambda: int(os.getenv("SMTP_PORT", "587"))
+    )
+    smtp_user: str = field(
+        default_factory=lambda: os.getenv("SMTP_USER", "")
+    )
+    smtp_pass: SecretStr | None = field(
+        default_factory=lambda: (lambda value: SecretStr(value) if value else None)(
+            os.getenv("SMTP_PASS", "")
+        )
+    )
+    smtp_from_address: str = field(
+        default_factory=lambda: os.getenv("SMTP_FROM_ADDRESS", "support@example.com")
+    )
+    email_webhook_secret: SecretStr | None = field(
+        default_factory=lambda: (lambda value: SecretStr(value) if value else None)(
+            os.getenv("EMAIL_WEBHOOK_SECRET", "")
+        )
+    )
+    session_secret_key: str = field(
+        default_factory=lambda: os.getenv("SESSION_SECRET_KEY")
+        or os.getenv("JWT_SECRET", "dev-secret-change-in-production!")
+    )
+    otel_enabled: bool = field(
+        default_factory=lambda: os.getenv("OTEL_ENABLED", "false").strip().lower()
+        in ("1", "true", "yes")
+    )
+    otel_exporter_otlp_endpoint: str = field(
+        default_factory=lambda: os.getenv(
+            "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
+        )
+    )
+    otel_service_name: str = field(
+        default_factory=lambda: os.getenv(
+            "OTEL_SERVICE_NAME", "rag-support-assistant"
+        )
+    )
 
     # --- Продакшн-режим ---
     # REQUIRE_OLLAMA=true → fail fast если Ollama недоступна при старте.
@@ -209,6 +342,9 @@ class Settings:
     langfuse_secret_key: str = os.getenv("LANGFUSE_SECRET_KEY", "")
     langfuse_host: str = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    db_encryption_key: SecretStr = field(
+        default_factory=lambda: SecretStr(os.getenv("DB_ENCRYPTION_KEY", ""))
+    )
     llm_cache_enabled: bool = field(
         default_factory=lambda: os.getenv("LLM_CACHE_ENABLED", "false").strip().lower() in ("1", "true", "yes")
     )
@@ -269,6 +405,16 @@ class Settings:
                 "       Set CORS_ORIGINS to an explicit comma-separated list of allowed origins,\n"
                 "       e.g. CORS_ORIGINS='https://app.example.com,https://admin.example.com'\n"
                 f"       Current RAG_ENV={self.rag_env}, CORS_ORIGINS={self.cors_origins}"
+            )
+        if self.rag_env == "production" and not self.db_encryption_key.get_secret_value():
+            raise RuntimeError(
+                "\nERROR: DB_ENCRYPTION_KEY is required in production.\n"
+                "       Set DB_ENCRYPTION_KEY to a strong secret stored outside git."
+            )
+        if self.rag_env != "production" and not self.db_encryption_key.get_secret_value():
+            log.warning(
+                "DB_ENCRYPTION_KEY is not set; encryption operations will fail. "
+                "Set it in .env for local dev — see .env.example."
             )
 
         # Проверка Ollama
