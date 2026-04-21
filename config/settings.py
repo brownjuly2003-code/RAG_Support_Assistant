@@ -27,6 +27,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,6 +38,45 @@ from pydantic import SecretStr
 
 # Определяем корень проекта как родительскую директорию для config/
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _load_llm_model_prices() -> dict[str, dict[str, float]]:
+    raw_json = (os.getenv("LLM_MODEL_PRICES", "") or "").strip()
+    if raw_json:
+        try:
+            parsed = json.loads(raw_json)
+        except json.JSONDecodeError:
+            parsed = {}
+        if isinstance(parsed, dict):
+            result: dict[str, dict[str, float]] = {}
+            for model_name, prices in parsed.items():
+                if not isinstance(prices, dict):
+                    continue
+                try:
+                    input_price = float(prices.get("input", 0.0) or 0.0)
+                    output_price = float(prices.get("output", 0.0) or 0.0)
+                except (TypeError, ValueError):
+                    continue
+                result[str(model_name)] = {
+                    "input": input_price,
+                    "output": output_price,
+                }
+            return result
+
+    legacy = (os.getenv("LLM_COST_PER_1M_TOKENS", "") or "").strip()
+    result: dict[str, dict[str, float]] = {}
+    for chunk in legacy.split(","):
+        model_name, _, price = chunk.partition(":")
+        model_name = model_name.strip()
+        price = price.strip()
+        if not model_name or not price:
+            continue
+        try:
+            amount = float(price)
+        except ValueError:
+            continue
+        result[model_name] = {"input": amount, "output": amount}
+    return result
 
 
 @dataclass
@@ -97,6 +137,15 @@ class Settings:
         default_factory=lambda: os.getenv(
             "MODEL_ROUTING_ENABLED", "false"
         ).strip().lower() in ("1", "true", "yes")
+    )
+    llm_input_price_per_1m_tokens: float = field(
+        default_factory=lambda: float(os.getenv("LLM_INPUT_PRICE_PER_1M_TOKENS", "0.0") or "0.0")
+    )
+    llm_output_price_per_1m_tokens: float = field(
+        default_factory=lambda: float(os.getenv("LLM_OUTPUT_PRICE_PER_1M_TOKENS", "0.0") or "0.0")
+    )
+    llm_model_prices: dict[str, dict[str, float]] = field(
+        default_factory=_load_llm_model_prices
     )
 
     # --- Embedding Model ---
@@ -197,7 +246,7 @@ class Settings:
         default_factory=lambda: os.getenv("TENANT_EMAIL_DOMAINS", "")
     )
     llm_cost_per_1m_tokens: str = field(
-        default_factory=lambda: os.getenv("LLM_COST_PER_1M_TOKENS", "qwen2.5:0.0,gpt-4:10.0")
+        default_factory=lambda: os.getenv("LLM_COST_PER_1M_TOKENS", "")
     )
     report_slack_webhook: str = field(
         default_factory=lambda: os.getenv("REPORT_SLACK_WEBHOOK", "")
@@ -237,11 +286,14 @@ class Settings:
     )
     imap_pass: SecretStr | None = field(
         default_factory=lambda: (lambda value: SecretStr(value) if value else None)(
-            os.getenv("IMAP_PASS", "")
+            os.getenv("IMAP_PASSWORD", os.getenv("IMAP_PASS", ""))
         )
     )
     imap_folder: str = field(
         default_factory=lambda: os.getenv("IMAP_FOLDER", "INBOX")
+    )
+    imap_poll_interval_sec: int = field(
+        default_factory=lambda: int(os.getenv("IMAP_POLL_INTERVAL_SEC", "60"))
     )
     smtp_host: str = field(
         default_factory=lambda: os.getenv("SMTP_HOST", "")
@@ -254,7 +306,7 @@ class Settings:
     )
     smtp_pass: SecretStr | None = field(
         default_factory=lambda: (lambda value: SecretStr(value) if value else None)(
-            os.getenv("SMTP_PASS", "")
+            os.getenv("SMTP_PASSWORD", os.getenv("SMTP_PASS", ""))
         )
     )
     smtp_from_address: str = field(
@@ -262,7 +314,12 @@ class Settings:
     )
     email_webhook_secret: SecretStr | None = field(
         default_factory=lambda: (lambda value: SecretStr(value) if value else None)(
-            os.getenv("EMAIL_WEBHOOK_SECRET", "")
+            os.getenv("EMAIL_WEBHOOK_SIGNING_SECRET", os.getenv("EMAIL_WEBHOOK_SECRET", ""))
+        )
+    )
+    email_webhook_signing_secret: SecretStr | None = field(
+        default_factory=lambda: (lambda value: SecretStr(value) if value else None)(
+            os.getenv("EMAIL_WEBHOOK_SIGNING_SECRET", os.getenv("EMAIL_WEBHOOK_SECRET", ""))
         )
     )
     session_secret_key: str = field(

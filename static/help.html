@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/styles/components.css">
     <title>О системе - RAG Support Assistant</title>
     <style>
-        :root {
+        html:root {
             --bg-primary: #1a1a2e;
             --bg-secondary: #16213e;
             --bg-chat: #0f1729;
@@ -113,8 +113,13 @@
         }
 
         th {
-            color: var(--accent);
+            color: #9fd0ff;
             font-weight: 600;
+        }
+
+        table,
+        td {
+            color: var(--text-primary);
         }
 
         .badge {
@@ -127,11 +132,11 @@
         }
 
         .badge-quality {
-            background: var(--badge-quality);
+            background: #166534;
         }
 
         .badge-human {
-            background: var(--badge-human);
+            background: #b91c1c;
         }
 
         .back-link {
@@ -139,13 +144,33 @@
             align-items: center;
             min-height: 44px;
             margin-top: 20px;
-            color: var(--accent);
+            padding: 10px 16px;
+            border-radius: 999px;
+            background: #e8f1fb;
+            color: #1f5f99;
             text-decoration: none;
             font-weight: 600;
         }
 
         .back-link:hover {
-            color: var(--accent-hover);
+            background: #d9e8f8;
+            color: #174a76;
+        }
+
+        .inline-link {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #e8f1fb;
+            color: #1f5f99;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .inline-link:hover {
+            background: #d9e8f8;
+            color: #174a76;
         }
 
         @media (max-width: 1024px) {
@@ -305,7 +330,7 @@ quality score + route auto/human
 
         <section>
             <h2>Для операторов</h2>
-            <p>Открыть внутренний мониторинг можно на странице <a href="/static/metrics.html" style="color:var(--accent)">/static/metrics.html</a>. Она обновляет latency, quality, escalation и feedback каждые 30 секунд.</p>
+            <p>Открыть внутренний мониторинг можно на странице <a href="/static/metrics.html" class="inline-link">/static/metrics.html</a>. Она обновляет latency, quality, escalation и feedback каждые 30 секунд.</p>
         </section>
 
         <section id="statsSection" style="display:none">

@@ -162,10 +162,25 @@ def _init_db() -> None:
                 step_order  INTEGER,
                 node_name   TEXT,
                 state_json  TEXT,
-                ts          TEXT
+                ts          TEXT,
+                prompt_tokens INTEGER,
+                completion_tokens INTEGER,
+                model_name TEXT,
+                cost_usd REAL
             );
             """
         )
+
+        cur.execute("PRAGMA table_info(trace_steps)")
+        trace_step_columns = {row[1] for row in cur.fetchall()}
+        if "prompt_tokens" not in trace_step_columns:
+            cur.execute("ALTER TABLE trace_steps ADD COLUMN prompt_tokens INTEGER")
+        if "completion_tokens" not in trace_step_columns:
+            cur.execute("ALTER TABLE trace_steps ADD COLUMN completion_tokens INTEGER")
+        if "model_name" not in trace_step_columns:
+            cur.execute("ALTER TABLE trace_steps ADD COLUMN model_name TEXT")
+        if "cost_usd" not in trace_step_columns:
+            cur.execute("ALTER TABLE trace_steps ADD COLUMN cost_usd REAL")
 
         cur.execute(
             """
@@ -272,6 +287,49 @@ def log_step(trace_id: str, node_name: str, state: Any) -> None:
     state_dict = _state_to_dict(state)
     state_json = json.dumps(state_dict, ensure_ascii=False)
     ts = _now_iso()
+    usage_metadata = state_dict.get("usage_metadata") or {}
+    prompt_tokens = state_dict.get("prompt_tokens", state_dict.get("input_tokens"))
+    if prompt_tokens is None and isinstance(usage_metadata, dict):
+        prompt_tokens = usage_metadata.get("input_tokens")
+    completion_tokens = state_dict.get("completion_tokens", state_dict.get("output_tokens"))
+    if completion_tokens is None and isinstance(usage_metadata, dict):
+        completion_tokens = usage_metadata.get("output_tokens")
+    model_name = state_dict.get("model_name") or state_dict.get("llm_model_name")
+    cost_usd = state_dict.get("cost_usd")
+
+    try:
+        prompt_tokens = int(prompt_tokens) if prompt_tokens is not None else None
+    except (TypeError, ValueError):
+        prompt_tokens = None
+    try:
+        completion_tokens = int(completion_tokens) if completion_tokens is not None else None
+    except (TypeError, ValueError):
+        completion_tokens = None
+    if model_name is not None:
+        model_name = str(model_name)
+    try:
+        cost_usd = float(cost_usd) if cost_usd is not None else None
+    except (TypeError, ValueError):
+        cost_usd = None
+
+    if cost_usd is None and model_name:
+        try:
+            from config.settings import get_settings
+
+            settings = get_settings()
+            prices = (getattr(settings, "llm_model_prices", {}) or {}).get(model_name, {})
+            input_price = float(
+                prices.get("input", getattr(settings, "llm_input_price_per_1m_tokens", 0.0) or 0.0)
+            )
+            output_price = float(
+                prices.get("output", getattr(settings, "llm_output_price_per_1m_tokens", 0.0) or 0.0)
+            )
+            cost_usd = (
+                ((prompt_tokens or 0) * input_price)
+                + ((completion_tokens or 0) * output_price)
+            ) / 1_000_000
+        except Exception:
+            cost_usd = None
 
     with _get_connection() as conn:
         cur = conn.cursor()
@@ -287,10 +345,30 @@ def log_step(trace_id: str, node_name: str, state: Any) -> None:
 
         cur.execute(
             """
-            INSERT INTO trace_steps (trace_id, step_order, node_name, state_json, ts)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO trace_steps (
+                trace_id,
+                step_order,
+                node_name,
+                state_json,
+                ts,
+                prompt_tokens,
+                completion_tokens,
+                model_name,
+                cost_usd
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (trace_id, step_order, node_name, state_json, ts),
+            (
+                trace_id,
+                step_order,
+                node_name,
+                state_json,
+                ts,
+                prompt_tokens,
+                completion_tokens,
+                model_name,
+                cost_usd,
+            ),
         )
         conn.commit()
 

@@ -436,39 +436,116 @@ def _touch_tenant_document(tenant_id: str, doc_id: str) -> bool:
 
 def _load_recent_trace_summaries(tenant_id: str, days: int) -> list[dict[str, Any]]:
     import json  # noqa: PLC0415
+    import sqlite3  # noqa: PLC0415
     from datetime import datetime, timedelta, timezone  # noqa: PLC0415
 
     import sqlite_trace  # noqa: PLC0415
 
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    settings = get_settings()
+    model_prices = getattr(settings, "llm_model_prices", {}) or {}
+    default_input_price = float(getattr(settings, "llm_input_price_per_1m_tokens", 0.0) or 0.0)
+    default_output_price = float(getattr(settings, "llm_output_price_per_1m_tokens", 0.0) or 0.0)
+    input_price_case = "?"
+    output_price_case = "?"
+    input_price_params: list[Any] = [default_input_price]
+    output_price_params: list[Any] = [default_output_price]
+
+    if model_prices:
+        input_price_case = (
+            "CASE latest.model_name "
+            + " ".join("WHEN ? THEN ?" for _ in model_prices.items())
+            + " ELSE ? END"
+        )
+        output_price_case = (
+            "CASE latest.model_name "
+            + " ".join("WHEN ? THEN ?" for _ in model_prices.items())
+            + " ELSE ? END"
+        )
+        input_price_params = []
+        output_price_params = []
+        for model_name, prices in model_prices.items():
+            input_price_params.extend(
+                [str(model_name), float(prices.get("input", default_input_price) or 0.0)]
+            )
+            output_price_params.extend(
+                [str(model_name), float(prices.get("output", default_output_price) or 0.0)]
+            )
+        input_price_params.append(default_input_price)
+        output_price_params.append(default_output_price)
+
     summaries: list[dict[str, Any]] = []
     with sqlite_trace._get_connection() as conn:
         cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT trace_id, started_at, final_route, final_quality
-            FROM traces
-            WHERE tenant_id = ? AND started_at >= ?
-            ORDER BY started_at DESC
-            """,
-            (tenant_id, cutoff),
-        )
-        for trace_id, started_at, final_route, final_quality in cur.fetchall():
+        try:
+            cur.execute(
+                f"""
+                SELECT
+                    traces.trace_id,
+                    traces.started_at,
+                    traces.final_route,
+                    traces.final_quality,
+                    latest.state_json,
+                    latest.model_name,
+                    COALESCE(
+                        NULLIF(latest.cost_usd, 0.0),
+                        (
+                            (
+                                COALESCE(latest.prompt_tokens, 0) * {input_price_case}
+                            ) + (
+                                COALESCE(latest.completion_tokens, 0) * {output_price_case}
+                            )
+                        ) / 1000000.0
+                    ) AS cost_usd
+                FROM traces
+                LEFT JOIN trace_steps AS latest
+                    ON latest.id = (
+                        SELECT step.id
+                        FROM trace_steps AS step
+                        WHERE step.trace_id = traces.trace_id
+                        ORDER BY step.step_order DESC, step.id DESC
+                        LIMIT 1
+                    )
+                WHERE traces.tenant_id = ? AND traces.started_at >= ?
+                ORDER BY traces.started_at DESC
+                """,
+                (
+                    *input_price_params,
+                    *output_price_params,
+                    tenant_id,
+                    cutoff,
+                ),
+            )
+        except sqlite3.OperationalError:
             cur.execute(
                 """
-                SELECT state_json
-                FROM trace_steps
-                WHERE trace_id = ?
-                ORDER BY step_order DESC
-                LIMIT 1
+                SELECT
+                    traces.trace_id,
+                    traces.started_at,
+                    traces.final_route,
+                    traces.final_quality,
+                    latest.state_json,
+                    NULL AS model_name,
+                    0.0 AS cost_usd
+                FROM traces
+                LEFT JOIN trace_steps AS latest
+                    ON latest.id = (
+                        SELECT step.id
+                        FROM trace_steps AS step
+                        WHERE step.trace_id = traces.trace_id
+                        ORDER BY step.step_order DESC, step.id DESC
+                        LIMIT 1
+                    )
+                WHERE traces.tenant_id = ? AND traces.started_at >= ?
+                ORDER BY traces.started_at DESC
                 """,
-                (trace_id,),
+                (tenant_id, cutoff),
             )
-            row = cur.fetchone()
+        for trace_id, started_at, final_route, final_quality, state_json, model_name, cost_usd in cur.fetchall():
             state: dict[str, Any] = {}
-            if row and row[0]:
+            if state_json:
                 try:
-                    state = json.loads(row[0])
+                    state = json.loads(state_json)
                 except Exception:
                     state = {}
             docs = state.get("graded_docs") or state.get("context_docs") or []
@@ -488,7 +565,8 @@ def _load_recent_trace_summaries(tenant_id: str, days: int) -> list[dict[str, An
                     "route": final_route or state.get("route") or "unknown",
                     "quality_score": int(final_quality or state.get("quality_score") or 0),
                     "categories": sorted(categories) or ["uncategorized"],
-                    "cost_usd": 0.0,
+                    "cost_usd": float(cost_usd or 0.0),
+                    "model_name": str(model_name or state.get("model_name") or "unknown"),
                 }
             )
     return summaries
@@ -2455,18 +2533,27 @@ async def analytics_cost_summary(
     summaries = _load_recent_trace_summaries(tenant, days)
     total_cost = round(sum(float(item["cost_usd"] or 0.0) for item in summaries), 6)
     per_category: dict[str, float] = {}
+    per_model: dict[str, float] = {}
     for item in summaries:
         for category in item["categories"]:
             per_category[category] = round(per_category.get(category, 0.0) + float(item["cost_usd"] or 0.0), 6)
+        model_name = str(item.get("model_name") or "unknown")
+        per_model[model_name] = round(per_model.get(model_name, 0.0) + float(item["cost_usd"] or 0.0), 6)
     return JSONResponse(
         content={
             "summary": {
                 "total_cost_usd": total_cost,
                 "label": "self-hosted (no cost)" if total_cost == 0 else f"${total_cost:.2f}",
+                "tooltip": "local models are not billed" if total_cost == 0 else "",
+                "free_tier": total_cost == 0,
             },
             "per_category": [
                 {"category": category, "cost_usd": cost}
                 for category, cost in sorted(per_category.items())
+            ],
+            "per_model": [
+                {"model_name": model_name, "cost_usd": cost}
+                for model_name, cost in sorted(per_model.items())
             ],
         }
     )
@@ -2502,36 +2589,20 @@ async def analytics_trends(
 
 @router.post("/channels/email/inbound")
 async def email_inbound_webhook(request: Request) -> JSONResponse:
-    from channels.email_channel import resolve_tenant_from_recipient, send_reply_smtp  # noqa: PLC0415
     from channels.email_webhook import process_webhook_payload, verify_signature  # noqa: PLC0415
 
     settings = get_settings()
     body = await request.body()
-    signature = request.headers.get("X-Webhook-Signature")
-    if not verify_signature(body, signature, settings.email_webhook_secret):
+    signature = request.headers.get("X-Signature") or request.headers.get("X-Webhook-Signature")
+    webhook_secret = (
+        getattr(settings, "email_webhook_signing_secret", None)
+        or getattr(settings, "email_webhook_secret", None)
+    )
+    if not verify_signature(body, signature, webhook_secret):
         raise HTTPException(status_code=401, detail="invalid webhook signature")
 
     payload = _json.loads(body.decode("utf-8") or "{}")
-
-    async def _run_qa(question: str, tenant_id: str) -> dict[str, Any]:
-        session_result = _get_or_create_session(None, tenant_id)
-        if asyncio.iscoroutine(session_result):
-            _session_id, session = await session_result
-        else:
-            _session_id, session = session_result
-        return await asyncio.to_thread(session.ask, question, tenant_id=tenant_id)
-
-    async def _forward_message(sender: str, subject: str, body_text: str, result: dict[str, Any]) -> None:
-        _ = sender, subject, body_text, result
-        return None
-
-    await process_webhook_payload(
-        payload,
-        run_qa=_run_qa,
-        send_reply=send_reply_smtp,
-        forward_message=_forward_message,
-        tenant_resolver=resolve_tenant_from_recipient,
-    )
+    await process_webhook_payload(payload)
     return JSONResponse(content={"ok": True})
 
 
@@ -3420,6 +3491,7 @@ async def _cookie_auth_bridge(request: Request, call_next: Any) -> Any:
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_rejected)
 app.include_router(router)
+app.add_api_route("/webhook/email", email_inbound_webhook, methods=["POST"])
 _static_dir = PROJECT_ROOT / "static"
 if _static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")

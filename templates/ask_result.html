@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang=\"ru\">
+<html lang="ru">
   <head>
-    <meta charset=\"utf-8\" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Результат запроса — RAG PoC</title>
     <style>
@@ -22,15 +22,15 @@
         font-size: 13px;
       }
       code {
-        font-family: SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         font-size: 12px;
       }
     </style>
   </head>
   <body>
-    <div class=\"container\">
-      <p><a href=\"/\">← На главную</a></p>
-      <div class=\"card\">
+    <div class="container">
+      <p><a href="/">← На главную</a></p>
+      <div class="card">
         <h1>Результат запроса</h1>
 
         <h3>Вопрос</h3>
@@ -41,9 +41,9 @@
 
         <p>
           <b>route:</b> {{ response.route }}<br />
-          <b>quality:</b> {{ response.quality if response.quality is not none else \"—\" }}<br />
-          <b>relevance:</b> {{ response.relevance if response.relevance is not none else \"—\" }}<br />
-          <b>trace_id:</b> <a href=\"/traces-ui/{{ response.trace_id }}\"><code>{{ response.trace_id }}</code></a>
+          <b>quality:</b> {{ response.quality if response.quality is not none else "—" }}<br />
+          <b>relevance:</b> {{ response.relevance if response.relevance is not none else "—" }}<br />
+          <b>trace_id:</b> <a href="/traces-ui/{{ response.trace_id }}"><code>{{ response.trace_id }}</code></a>
         </p>
       </div>
     </div>

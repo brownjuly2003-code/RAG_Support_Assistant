@@ -9,7 +9,7 @@
   body {
     font-family: Georgia, "Times New Roman", serif;
     margin: 0;
-    background: linear-gradient(180deg, #f6f1e8 0%, #ffffff 100%);
+    background: #f6f1e8;
     color: #1f2328;
   }
   header, main {
@@ -21,11 +21,15 @@
     gap: 20px;
   }
   .card {
-    background: rgba(255, 255, 255, 0.92);
+    background: #ffffff;
     border: 1px solid rgba(31, 35, 40, 0.12);
     border-radius: 18px;
     padding: 18px;
     box-shadow: 0 12px 30px rgba(31, 35, 40, 0.08);
+  }
+  #cost-label {
+    color: #2f4f3f;
+    font-weight: 600;
   }
   canvas {
     width: 100% !important;
@@ -52,6 +56,7 @@
       <h2>Cost Summary</h2>
       <canvas id="cost-chart"></canvas>
       <p id="cost-label"></p>
+      <p id="cost-breakdown"></p>
     </section>
     <section class="card">
       <h2>Quality Trend</h2>
@@ -127,12 +132,24 @@
       var resolution = results[1].topics || [];
       var cost = results[2];
       var trend = results[3].points || [];
+      var costSummary = cost.summary || {};
+      var costLabel = document.getElementById("cost-label");
+      var costBreakdown = document.getElementById("cost-breakdown");
 
       barChart("topics-chart", topics.map(function (item) { return item.category; }), topics.map(function (item) { return item.count; }), "Questions", false);
       barChart("resolution-chart", resolution.map(function (item) { return item.category; }), resolution.map(function (item) { return Math.round((item.resolution_rate || 0) * 100); }), "Resolution %", true);
       barChart("cost-chart", (cost.per_category || []).map(function (item) { return item.category; }), (cost.per_category || []).map(function (item) { return item.cost_usd; }), "Cost USD", false);
       lineChart("trend-chart", trend.map(function (item) { return item.date; }), trend.map(function (item) { return item.value; }), "Quality");
-      document.getElementById("cost-label").textContent = (cost.summary || {}).label || "";
+      if (costSummary.free_tier) {
+        costLabel.textContent = "Free tier";
+        costLabel.title = costSummary.tooltip || "";
+      } else {
+        costLabel.textContent = costSummary.label || "";
+        costLabel.title = "";
+      }
+      costBreakdown.textContent = (cost.per_model || []).map(function (item) {
+        return item.model_name + " " + "$" + (item.cost_usd || 0).toFixed(2);
+      }).join(" · ");
     });
   })();
 </script>

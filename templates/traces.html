@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang=\"ru\">
+<html lang="ru">
   <head>
-    <meta charset=\"utf-8\" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Трассы — RAG PoC</title>
     <style>
@@ -19,15 +19,15 @@
       th, td { border: 1px solid #e2e8f0; padding: 6px 8px; font-size: 13px; }
       th { background: #edf2f7; }
       code {
-        font-family: SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         font-size: 11px;
       }
     </style>
   </head>
   <body>
-    <div class=\"container\">
-      <p><a href=\"/\">← На главную</a></p>
-      <div class=\"card\">
+    <div class="container">
+      <p><a href="/">← На главную</a></p>
+      <div class="card">
         <h1>Трассы</h1>
         {% if traces %}
         <table>
@@ -44,12 +44,12 @@
           <tbody>
           {% for t in traces %}
             <tr>
-              <td><a href=\"/traces-ui/{{ t.trace_id }}\"><code>{{ t.trace_id }}</code></a></td>
+              <td><a href="/traces-ui/{{ t.trace_id }}"><code>{{ t.trace_id }}</code></a></td>
               <td>{{ t.started_at }}</td>
-              <td>{{ t.finished_at or \"\\" }}</td>
-              <td>{{ t.final_route or \"\\" }}</td>
-              <td>{{ t.final_quality if t.final_quality is not none else \"\\" }}</td>
-              <td>{{ t.final_relevance if t.final_relevance is not none else \"\\" }}</td>
+              <td>{{ t.finished_at or "\\" }}</td>
+              <td>{{ t.final_route or "\\" }}</td>
+              <td>{{ t.final_quality if t.final_quality is not none else "\\" }}</td>
+              <td>{{ t.final_relevance if t.final_relevance is not none else "\\" }}</td>
             </tr>
           {% endfor %}
           </tbody>

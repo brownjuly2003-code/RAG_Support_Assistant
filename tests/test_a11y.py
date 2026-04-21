@@ -1,7 +1,17 @@
 from __future__ import annotations
 
+import json
+import os
 import re
+import shutil
+import subprocess
+import threading
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+import pytest
+from jinja2 import Environment, FileSystemLoader
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -12,6 +22,117 @@ TABLE_PAGES = [
     PROJECT_ROOT / "templates" / "escalations.html",
     PROJECT_ROOT / "templates" / "traces.html",
 ]
+STATIC_A11Y_PATHS = [
+    "/static/chat.html",
+    "/static/help.html",
+    "/static/admin.html",
+    "/static/metrics.html",
+    "/static/agent.html",
+    "/static/analytics.html",
+    "/static/login.html",
+]
+TEMPLATE_A11Y_CONTEXTS = {
+    "index.html": {
+        "inbox_stats": {"total": 3},
+        "traces": [
+            {
+                "trace_id": "trace-001",
+                "started_at": "2026-04-21T08:00:00Z",
+                "final_route": "auto",
+                "final_quality": 88,
+                "final_relevance": 91,
+            }
+        ],
+    },
+    "ask_result.html": {
+        "question": "Как вернуть товар?",
+        "response": {
+            "answer": "Возврат доступен в течение 14 дней.",
+            "route": "auto",
+            "quality": 90,
+            "relevance": 93,
+            "trace_id": "trace-001",
+        },
+    },
+    "escalations.html": {
+        "total": 1,
+        "items": [
+            {
+                "ts": "2026-04-21T08:00:00Z",
+                "entity_id": "ORD-1",
+                "question": "Где мой заказ?",
+                "answer": "Передано оператору",
+                "route": "human",
+                "quality": 45,
+                "relevance": 55,
+            }
+        ],
+    },
+    "traces.html": {
+        "traces": [
+            {
+                "trace_id": "trace-001",
+                "started_at": "2026-04-21T08:00:00Z",
+                "finished_at": "2026-04-21T08:00:03Z",
+                "final_route": "auto",
+                "final_quality": 90,
+                "final_relevance": 92,
+            }
+        ],
+    },
+    "trace_detail.html": {
+        "trace": {
+            "trace_id": "trace-001",
+            "started_at": "2026-04-21T08:00:00Z",
+            "finished_at": "2026-04-21T08:00:03Z",
+            "final_route": "auto",
+            "final_quality": 90,
+            "final_relevance": 92,
+        },
+        "steps": [
+            {
+                "step_order": 1,
+                "node_name": "retrieve",
+                "ts": "2026-04-21T08:00:01Z",
+                "state_pretty": '{"docs": 3}',
+            }
+        ],
+    },
+}
+TEMPLATE_A11Y_PATHS = [f"/{name}" for name in TEMPLATE_A11Y_CONTEXTS]
+ALL_A11Y_PATHS = STATIC_A11Y_PATHS + TEMPLATE_A11Y_PATHS
+
+
+class _QuietStaticHandler(SimpleHTTPRequestHandler):
+    def log_message(self, format: str, *args: object) -> None:  # noqa: A003
+        return
+
+
+@pytest.fixture(scope="module")
+def rendered_a11y_site(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    output_root = tmp_path_factory.mktemp("a11y-site")
+    shutil.copytree(PROJECT_ROOT / "static", output_root / "static")
+
+    env = Environment(loader=FileSystemLoader(str(PROJECT_ROOT / "templates")))
+    for template_name, context in TEMPLATE_A11Y_CONTEXTS.items():
+        rendered = env.get_template(template_name).render(**context)
+        (output_root / template_name).write_text(rendered, encoding="utf-8")
+
+    return output_root
+
+
+@pytest.fixture(scope="module")
+def a11y_base_url(rendered_a11y_site: Path) -> str:
+    handler = partial(_QuietStaticHandler, directory=str(rendered_a11y_site))
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        host, port = server.server_address
+        yield f"http://{host}:{port}"
+    finally:
+        server.shutdown()
+        thread.join()
 
 
 def test_all_table_headers_define_scope() -> None:
@@ -44,3 +165,56 @@ def test_components_css_defines_focus_visible_styles() -> None:
     assert ":focus-visible" in css
     assert "outline" in css
 
+
+@pytest.mark.parametrize("template_name", TEMPLATE_A11Y_CONTEXTS)
+def test_a11y_templates_render_for_snapshot(template_name: str) -> None:
+    env = Environment(loader=FileSystemLoader(str(PROJECT_ROOT / "templates")))
+
+    rendered = env.get_template(template_name).render(**TEMPLATE_A11Y_CONTEXTS[template_name])
+
+    assert "<html" in rendered
+
+
+@pytest.mark.parametrize("page_path", ALL_A11Y_PATHS)
+def test_axe_has_no_serious_or_critical_findings(
+    a11y_base_url: str,
+    page_path: str,
+    tmp_path: Path,
+) -> None:
+    report_name = f"{Path(page_path).name}.json"
+    report_path = tmp_path / report_name
+    command = [
+        shutil.which("npx.cmd") or shutil.which("npx") or "npx",
+        "@axe-core/cli",
+        f"{a11y_base_url}{page_path}",
+        "--save",
+        report_name,
+        "--timeout",
+        "120",
+        "--load-delay",
+        "1000",
+        "--no-reporter",
+        "--chrome-options=--headless=new --disable-gpu --disable-dev-shm-usage --no-sandbox",
+    ]
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+
+    completed = subprocess.run(
+        command,
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+
+    data = json.loads(report_path.read_text(encoding="utf-8"))[0]
+    blocking = []
+    for section_name in ("violations", "incomplete"):
+        for finding in data.get(section_name, []):
+            if finding.get("impact") in {"critical", "serious"}:
+                blocking.append(f"{section_name}:{finding['id']}:{finding['impact']}")
+
+    assert not blocking, f"{page_path} blocking axe findings: {', '.join(blocking)}"

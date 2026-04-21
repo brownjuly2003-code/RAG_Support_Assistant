@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang=\"ru\">
+<html lang="ru">
   <head>
-    <meta charset=\"utf-8\" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Эскалации — RAG PoC</title>
     <style>
@@ -19,15 +19,15 @@
       th, td { border: 1px solid #e2e8f0; padding: 6px 8px; font-size: 13px; vertical-align: top; }
       th { background: #edf2f7; }
       code {
-        font-family: SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         font-size: 11px;
       }
     </style>
   </head>
   <body>
-    <div class=\"container\">
-      <p><a href=\"/\">← На главную</a></p>
-      <div class=\"card\">
+    <div class="container">
+      <p><a href="/">← На главную</a></p>
+      <div class="card">
         <h1>Эскалации (mock inbox)</h1>
         <p>Всего записей: <b>{{ total }}</b></p>
         {% if items %}
@@ -46,13 +46,13 @@
           <tbody>
           {% for e in items %}
             <tr>
-              <td>{{ e.ts if e.ts is defined else e.get(\"ts\",\"\") }}</td>
-              <td><code>{{ e.entity_id if e.entity_id is defined else e.get(\"entity_id\",\"\") }}</code></td>
-              <td>{{ e.question if e.question is defined else e.get(\"question\",\"\") }}</td>
-              <td>{{ e.answer if e.answer is defined else e.get(\"answer\",\"\") }}</td>
-              <td>{{ e.route if e.route is defined else e.get(\"route\",\"\") }}</td>
-              <td>{{ e.quality if e.quality is defined else e.get(\"quality\",\"\") }}</td>
-              <td>{{ e.relevance if e.relevance is defined else e.get(\"relevance\",\"\") }}</td>
+              <td>{{ e.ts if e.ts is defined else e.get("ts","") }}</td>
+              <td><code>{{ e.entity_id if e.entity_id is defined else e.get("entity_id","") }}</code></td>
+              <td>{{ e.question if e.question is defined else e.get("question","") }}</td>
+              <td>{{ e.answer if e.answer is defined else e.get("answer","") }}</td>
+              <td>{{ e.route if e.route is defined else e.get("route","") }}</td>
+              <td>{{ e.quality if e.quality is defined else e.get("quality","") }}</td>
+              <td>{{ e.relevance if e.relevance is defined else e.get("relevance","") }}</td>
             </tr>
           {% endfor %}
           </tbody>

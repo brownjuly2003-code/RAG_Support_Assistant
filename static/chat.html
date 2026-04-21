@@ -136,7 +136,7 @@
         .header-logo {
             width: 36px;
             height: 36px;
-            background: var(--accent);
+            background: #1f5f99;
             border-radius: 8px;
             display: flex;
             align-items: center;
@@ -1127,14 +1127,14 @@
     </div>
 
     <div class="source-panel-overlay" id="sourcePanelOverlay" hidden></div>
-    <aside class="source-panel" id="sourcePanel" role="complementary" aria-label="Источник цитаты" aria-hidden="true">
+    <aside class="source-panel" id="sourcePanel" role="complementary" aria-label="Источник цитаты" aria-hidden="true" inert>
         <div class="source-panel-header">
             <div>
                 <div class="source-panel-kicker">Источник</div>
                 <h3 class="source-panel-title" id="sourcePanelTitle">Источник не выбран</h3>
                 <div class="source-panel-meta" id="sourcePanelMeta"></div>
             </div>
-            <button class="btn-icon" id="sourcePanelClose" type="button" aria-label="Закрыть">×</button>
+            <button class="btn-icon" id="sourcePanelClose" type="button" aria-label="Закрыть" tabindex="-1">×</button>
         </div>
         <div class="source-panel-body">
             <div class="source-panel-content" id="sourcePanelContent">Выберите цитату в ответе, чтобы открыть содержимое источника.</div>
@@ -1194,6 +1194,7 @@
         const escalateCancel = document.getElementById('escalateCancel');
         const appToast = document.getElementById('appToast');
         let activeSourcePanelTrigger = null;
+        let activeModalTrigger = null;
         let toastTimer = null;
 
         function getErrorMessage(error, context) {
@@ -1268,8 +1269,12 @@
             if (!sourcePanel || !sourcePanelOverlay) return;
             sourcePanel.classList.remove('open');
             sourcePanel.setAttribute('aria-hidden', 'true');
+            sourcePanel.setAttribute('inert', '');
             sourcePanelOverlay.classList.remove('active');
             sourcePanelOverlay.hidden = true;
+            if (sourcePanelClose) {
+                sourcePanelClose.setAttribute('tabindex', '-1');
+            }
             if (activeSourcePanelTrigger) {
                 activeSourcePanelTrigger.focus();
                 activeSourcePanelTrigger = null;
@@ -1285,9 +1290,11 @@
             sourcePanelOverlay.hidden = false;
             sourcePanelOverlay.classList.add('active');
             sourcePanel.classList.add('open');
+            sourcePanel.removeAttribute('inert');
             sourcePanel.setAttribute('aria-hidden', 'false');
             hideCitationTooltip();
             if (sourcePanelClose) {
+                sourcePanelClose.removeAttribute('tabindex');
                 sourcePanelClose.focus();
             }
         }
@@ -1497,11 +1504,17 @@
         }
 
         escalateBtn.addEventListener('click', function() {
+            activeModalTrigger = document.activeElement;
             escalateModal.classList.add('active');
+            escalateCancel.focus();
         });
 
         escalateCancel.addEventListener('click', function() {
             escalateModal.classList.remove('active');
+            if (activeModalTrigger && typeof activeModalTrigger.focus === 'function') {
+                activeModalTrigger.focus();
+                activeModalTrigger = null;
+            }
         });
 
         escalateConfirm.addEventListener('click', async function() {
@@ -1543,6 +1556,10 @@
         escalateModal.addEventListener('click', function(e) {
             if (e.target === escalateModal) {
                 escalateModal.classList.remove('active');
+                if (activeModalTrigger && typeof activeModalTrigger.focus === 'function') {
+                    activeModalTrigger.focus();
+                    activeModalTrigger = null;
+                }
             }
         });
 
@@ -2009,20 +2026,32 @@
         // File upload
         // ---------------------------------------------------------------------------
         uploadBtn.addEventListener('click', function() {
+            activeModalTrigger = document.activeElement;
             uploadOverlay.classList.add('active');
             uploadStatus.textContent = '';
             uploadStatus.className = 'upload-status';
             if (uploadProgress) uploadProgress.hidden = true;
             if (uploadProgressBar) uploadProgressBar.value = 0;
             if (uploadProgressValue) uploadProgressValue.textContent = '0%';
+            uploadDropzone.focus();
         });
 
         uploadClose.addEventListener('click', function() {
             uploadOverlay.classList.remove('active');
+            if (activeModalTrigger && typeof activeModalTrigger.focus === 'function') {
+                activeModalTrigger.focus();
+                activeModalTrigger = null;
+            }
         });
 
         uploadOverlay.addEventListener('click', function(e) {
-            if (e.target === uploadOverlay) uploadOverlay.classList.remove('active');
+            if (e.target === uploadOverlay) {
+                uploadOverlay.classList.remove('active');
+                if (activeModalTrigger && typeof activeModalTrigger.focus === 'function') {
+                    activeModalTrigger.focus();
+                    activeModalTrigger = null;
+                }
+            }
         });
 
         uploadDropzone.addEventListener('click', function() { fileInput.click(); });
@@ -2194,6 +2223,22 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape' && sourcePanel && sourcePanel.classList.contains('open')) {
                 closeSourcePanel();
+                return;
+            }
+            if (e.key === 'Escape' && escalateModal && escalateModal.classList.contains('active')) {
+                escalateModal.classList.remove('active');
+                if (activeModalTrigger && typeof activeModalTrigger.focus === 'function') {
+                    activeModalTrigger.focus();
+                    activeModalTrigger = null;
+                }
+                return;
+            }
+            if (e.key === 'Escape' && uploadOverlay && uploadOverlay.classList.contains('active')) {
+                uploadOverlay.classList.remove('active');
+                if (activeModalTrigger && typeof activeModalTrigger.focus === 'function') {
+                    activeModalTrigger.focus();
+                    activeModalTrigger = null;
+                }
             }
         });
         sidebarMobileMQ.addEventListener('change', handleSidebarMQ);

@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/styles/components.css">
     <title>Метрики - RAG Support Assistant</title>
     <style>
-        :root {
+        html:root {
             --bg-primary: #1a1a2e;
             --bg-secondary: #16213e;
             --bg-chat: #0f1729;
@@ -92,19 +92,19 @@
 
         .metric-label {
             font-size: 12px;
-            color: var(--text-secondary);
+            color: #dbe7ff;
             margin-bottom: 4px;
         }
 
         .metric-value {
             font-size: 28px;
             font-weight: 700;
-            color: var(--accent);
+            color: #9fd0ff;
         }
 
         .metric-unit {
             font-size: 12px;
-            color: var(--text-secondary);
+            color: #dbe7ff;
         }
 
         .status-ok {
@@ -130,13 +130,17 @@
             align-items: center;
             min-height: 44px;
             margin-top: 20px;
-            color: var(--accent);
+            padding: 10px 16px;
+            border-radius: 999px;
+            background: #e8f1fb;
+            color: #1f5f99;
             text-decoration: none;
             font-weight: 600;
         }
 
         .back-link:hover {
-            color: var(--accent-hover);
+            background: #d9e8f8;
+            color: #174a76;
         }
 
         @media (max-width: 1024px) {

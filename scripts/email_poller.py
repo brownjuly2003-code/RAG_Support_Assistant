@@ -2,17 +2,19 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import sys
 
-from channels.email_channel import poll_once
-
-
-async def _noop_process(message) -> None:
-    _ = message
-    return None
+from channels.email_channel import poll_forever, poll_once
 
 
 async def main() -> int:
-    await poll_once(_noop_process)
+    logging.basicConfig(level=logging.INFO)
+    if "--once" in sys.argv:
+        await poll_once()
+        return 0
+
+    await poll_forever()
     return 0
 
 

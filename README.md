@@ -256,14 +256,25 @@ Resilience layers apply in this order:
 | `IMAP_HOST` | `""` | IMAP server hostname |
 | `IMAP_PORT` | `993` | IMAP server port |
 | `IMAP_USER` | `""` | IMAP username |
-| `IMAP_PASS` | `-` | IMAP password |
+| `IMAP_PASS` | `-` | IMAP password (`IMAP_PASSWORD` is also accepted) |
 | `IMAP_FOLDER` | `INBOX` | IMAP folder polled by `scripts/email_poller.py` |
+| `IMAP_POLL_INTERVAL_SEC` | `60` | Delay between IMAP polling cycles |
 | `SMTP_HOST` | `""` | SMTP hostname for email replies |
 | `SMTP_PORT` | `587` | SMTP port for email replies |
 | `SMTP_USER` | `""` | SMTP username |
-| `SMTP_PASS` | `-` | SMTP password |
+| `SMTP_PASS` | `-` | SMTP password (`SMTP_PASSWORD` is also accepted) |
 | `SMTP_FROM_ADDRESS` | `support@example.com` | Default sender address for outbound replies |
-| `EMAIL_WEBHOOK_SECRET` | `-` | Shared secret used to verify inbound email webhooks |
+| `EMAIL_WEBHOOK_SIGNING_SECRET` | `-` | Shared secret used to verify inbound email webhooks (`EMAIL_WEBHOOK_SECRET` remains a legacy fallback) |
+
+### Email channel
+
+- IMAP mode runs through `scripts/email_poller.py` and polls `IMAP_FOLDER` every `IMAP_POLL_INTERVAL_SEC` seconds.
+- `python scripts/email_poller.py --once` is the easiest dev-mode smoke check for one poll cycle.
+- Webhook mode supports **SendGrid Inbound Parse** style payloads with `from`, `to`, `subject`, `text`, optional `html`, and optional raw `headers`.
+- The webhook accepts `POST /webhook/email`; `/api/channels/email/inbound` remains as a compatibility alias.
+- Signatures use `HMAC-SHA256(body, EMAIL_WEBHOOK_SIGNING_SECRET)` in the `X-Signature` header.
+- Tenant routing uses the sender email domain from `TENANT_EMAIL_DOMAINS`, for example `TENANT_EMAIL_DOMAINS=acme.com:acme,*:default`.
+- Low-quality email answers are persisted into `escalated_tickets` with `status="pending_response"` for the existing operator flow.
 
 ### LLM response caching
 
@@ -321,7 +332,8 @@ Resilience layers apply in this order:
 | GET | `/api/analytics/resolution-rate` | agent/admin | Resolution-rate breakdown by category |
 | GET | `/api/analytics/cost-summary` | agent/admin | Total and per-category LLM cost summaries |
 | GET | `/api/analytics/trends` | agent/admin | Time-series analytics for quality/cost metrics |
-| POST | `/api/channels/email/inbound` | webhook secret | Inbound email webhook receiver |
+| POST | `/webhook/email` | webhook secret | Preferred inbound email webhook receiver |
+| POST | `/api/channels/email/inbound` | webhook secret | Backward-compatible inbound email webhook alias |
 
 ### Auth, health, and metrics
 
@@ -434,7 +446,7 @@ Tenant isolation is built into the application:
   admin read/purge endpoints are filtered by `tenant_id`.
 - ChromaDB uses per-tenant collections named `rag_docs_{tenant_id}`.
 - Response cache keys are tenant-scoped.
-- OIDC and email flows can resolve tenants from `TENANT_EMAIL_DOMAINS`.
+- OIDC and email flows can resolve tenants from `TENANT_EMAIL_DOMAINS`, for example `acme.com:acme,*:default`.
 
 For an existing legacy collection named `rag_docs`, use the one-time migration:
 
@@ -454,6 +466,14 @@ python scripts/migrate_default_collection.py
 - `/agent` and `/static/agent.html` - agent copilot dashboard
 - `/static/analytics.html` - product analytics dashboard
 - `/static/widget.html` - embeddable support widget
+
+## Accessibility
+
+- Latest axe audit: [docs/a11y/axe-audit-2026-04-21.md](docs/a11y/axe-audit-2026-04-21.md)
+- Current blocking status: **PASS** for scanned UI pages and rendered Jinja
+  templates (`0` critical, `0` serious)
+- Remaining non-blocking work: moderate landmark/region cleanup and heading
+  normalization documented in the audit report
 
 ## Tests
 
