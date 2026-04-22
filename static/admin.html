@@ -77,6 +77,7 @@
   <button type="button" data-tab="stale-docs">Stale Docs</button>
   <button type="button" data-tab="audit">Audit Log</button>
   <button type="button" data-tab="metrics">Metrics</button>
+  <button type="button" data-tab="experiment-comparison">Experiment Comparison</button>
 </nav>
 
 <p style="padding: 0 32px;"><a href="/static/analytics.html">Open Analytics Dashboard</a></p>
@@ -267,6 +268,18 @@
     <h2>Metrics</h2>
     <p class="muted">Refreshes every 5 seconds while this tab is open.</p>
     <pre id="metrics-output"></pre>
+  </section>
+
+  <section id="tab-experiment-comparison">
+    <h2>Experiment Comparison</h2>
+    <div class="controls">
+      <label>Deployed <input id="exp-cmp-deployed" type="text" placeholder="experiment id"></label>
+      <label>Staged <input id="exp-cmp-staged" type="text" placeholder="experiment id"></label>
+      <label>Candidate <input id="exp-cmp-candidate" type="text" placeholder="experiment id"></label>
+      <button id="btn-load-experiment-comparison" type="button">Load comparison</button>
+    </div>
+    <p class="muted">Side-by-side view of deployed (live traces), staged (latest regression run) and candidate experiments.</p>
+    <pre id="experiment-comparison-output" aria-live="polite"></pre>
   </section>
 </main>
 

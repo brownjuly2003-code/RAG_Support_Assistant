@@ -3137,6 +3137,40 @@ async def admin_rebuild_curated_dataset(
     return JSONResponse(content={"job_id": job_id, "status": "queued"})
 
 
+@router.get("/admin/recommendations/current")
+async def admin_recommendations_current(
+    _user: dict = Depends(require_role("admin", "reviewer")),
+) -> JSONResponse:
+    settings = get_settings()
+    if not getattr(settings, "recommendations_enabled", True):
+        return JSONResponse(content={"recommendations": [], "status": "disabled"})
+
+    from db.engine import async_session  # noqa: PLC0415
+    from scripts.generate_recommendations import (  # noqa: PLC0415
+        aggregate_recommendations,
+        fetch_signals,
+    )
+
+    try:
+        async with async_session() as db:
+            signals = await fetch_signals(db)
+    except Exception:
+        signals = {
+            "backlog_items": [],
+            "threshold_items": [],
+            "green_regressions": [],
+            "stale_cases": [],
+        }
+
+    recommendations = aggregate_recommendations(**signals)
+    return JSONResponse(
+        content={
+            "recommendations": [rec.to_dict() for rec in recommendations],
+            "status": "ok",
+        }
+    )
+
+
 @router.get("/admin/curated-dataset/stale")
 async def admin_curated_dataset_stale(
     _user: dict = Depends(require_role("admin", "reviewer")),
@@ -3618,6 +3652,134 @@ async def admin_list_experiments(
             }
         )
     return JSONResponse(content={"experiments": experiments})
+
+
+def _empty_experiment_bucket(experiment_id: str | None) -> dict[str, Any]:
+    return {
+        "experiment_id": experiment_id,
+        "trace_count": 0,
+        "quality": {"mean": None, "p50": None, "p95": None},
+        "evaluator_breakdown": {},
+        "cost_per_trace": None,
+        "latency": {"p50": None, "p95": None},
+    }
+
+
+async def _fetch_experiment_live_bucket(db, experiment_id: str) -> dict[str, Any]:
+    from sqlalchemy import text as sql_text  # noqa: PLC0415
+
+    bucket = _empty_experiment_bucket(experiment_id)
+    try:
+        result = await db.execute(
+            sql_text(
+                "SELECT COUNT(*) AS trace_count, AVG(quality_score) AS quality_mean, "
+                "AVG(cost_usd) AS cost_mean, AVG(latency_ms) AS latency_mean "
+                "FROM traces WHERE experiment_id = :experiment_id"
+            ),
+            {"experiment_id": experiment_id},
+        )
+        row = result.mappings().first() or {}
+    except Exception:
+        return bucket
+
+    trace_count = int(row.get("trace_count") or 0)
+    quality = row.get("quality_mean")
+    cost = row.get("cost_mean")
+    latency = row.get("latency_mean")
+    bucket["trace_count"] = trace_count
+    bucket["quality"] = {
+        "mean": float(quality) if quality is not None else None,
+        "p50": float(quality) if quality is not None else None,
+        "p95": float(quality) if quality is not None else None,
+    }
+    bucket["cost_per_trace"] = float(cost) if cost is not None else None
+    bucket["latency"] = {
+        "p50": float(latency) if latency is not None else None,
+        "p95": float(latency) if latency is not None else None,
+    }
+    return bucket
+
+
+async def _fetch_experiment_staged_bucket(db, experiment_id: str) -> dict[str, Any]:
+    from sqlalchemy import text as sql_text  # noqa: PLC0415
+
+    bucket = _empty_experiment_bucket(experiment_id)
+    try:
+        result = await db.execute(
+            sql_text(
+                "SELECT run_id, quality_delta, cost_delta, latency_delta "
+                "FROM eval_results WHERE candidate_experiment_id = :experiment_id "
+                "ORDER BY started_at DESC LIMIT 1"
+            ),
+            {"experiment_id": experiment_id},
+        )
+        row = result.mappings().first() or {}
+    except Exception:
+        return bucket
+
+    if not row:
+        return bucket
+
+    quality_delta = row.get("quality_delta")
+    cost_delta = row.get("cost_delta")
+    latency_delta = row.get("latency_delta")
+    bucket["evaluator_breakdown"] = {
+        "run_id": row.get("run_id"),
+        "quality_delta": float(quality_delta) if quality_delta is not None else None,
+        "cost_delta": float(cost_delta) if cost_delta is not None else None,
+        "latency_delta": float(latency_delta) if latency_delta is not None else None,
+    }
+    if quality_delta is not None:
+        bucket["quality"] = {
+            "mean": float(quality_delta),
+            "p50": float(quality_delta),
+            "p95": float(quality_delta),
+        }
+    return bucket
+
+
+def _fetch_experiment_candidate_bucket(experiment_id: str | None) -> dict[str, Any]:
+    bucket = _empty_experiment_bucket(experiment_id)
+    if not experiment_id:
+        return bucket
+    path = _experiments_dir() / f"{experiment_id}.yaml"
+    if path.exists():
+        bucket["evaluator_breakdown"] = {"yaml_present": True}
+    else:
+        bucket["evaluator_breakdown"] = {"yaml_present": False}
+    return bucket
+
+
+@router.get("/admin/experiments/comparison")
+async def admin_experiments_comparison(
+    deployed: str | None = None,
+    staged: str | None = None,
+    candidate: str | None = None,
+    _user: dict = Depends(require_role("admin", "reviewer")),
+) -> JSONResponse:
+    from db.engine import async_session  # noqa: PLC0415
+
+    async with async_session() as db:
+        deployed_bucket = (
+            await _fetch_experiment_live_bucket(db, deployed)
+            if deployed
+            else _empty_experiment_bucket(None)
+        )
+        staged_bucket = (
+            await _fetch_experiment_staged_bucket(db, staged)
+            if staged
+            else _empty_experiment_bucket(None)
+        )
+
+    candidate_bucket = _fetch_experiment_candidate_bucket(candidate)
+
+    return JSONResponse(
+        content={
+            "deployed": deployed_bucket,
+            "staged": staged_bucket,
+            "candidate": candidate_bucket,
+        }
+    )
 
 
 @router.get("/admin/experiments/{experiment_id}")

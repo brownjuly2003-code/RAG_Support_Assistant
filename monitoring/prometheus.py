@@ -231,6 +231,13 @@ else:
         registry=REGISTRY,
     )
 
+    EXPERIMENT_AUTO_ROLLBACK_TOTAL = Counter(
+        "rag_experiment_auto_rollback_total",
+        "Auto-rollback events triggered by the drift watcher",
+        ["experiment_id", "reason"],
+        registry=REGISTRY,
+    )
+
     FEEDBACK_COUNT = Counter(
         "rag_feedback_total",
         "Feedback events",

@@ -125,6 +125,28 @@ Batch K closed on 2026-04-22.
 - API/UI surface now exposes `/api/chat/stream` plus health-driven UI switching via `STREAMING_ENABLED`.
 - Ingestion has opt-in batch contextual-header preprocessing via `INGESTION_BATCH_ENABLED` with sequential fallback.
 
+## Batch I fully closed on 2026-04-23
+
+Batch I originally landed partially on 2026-04-22 (admin + migration slices
+of tasks 153/154/156). The remaining tasks landed on 2026-04-23:
+
+- task-155 auto-rollback watcher (`evaluation/rollback_watcher.py`,
+  `AUTO_ROLLBACK_ENABLED`, `ROLLBACK_DRIFT_THRESHOLD_PCT`,
+  `ROLLBACK_TRACE_WINDOW`, `TENANT_ADMIN_EMAIL`, Prometheus
+  `experiment_auto_rollback_total{experiment_id,reason}`).
+- task-157 recommendation engine (`scripts/generate_recommendations.py`,
+  `RECOMMENDATIONS_ENABLED=true`, admin
+  `GET /admin/recommendations/current`, markdown report writer).
+- task-158 comparison dashboard (`GET /admin/experiments/comparison?...`,
+  admin UI tab in `static/admin.html`).
+
+Still deferred (not blocking Batch I closure):
+- task-154 sticky hash rollout inside `resolve_active_experiment` (admin
+  CRUD is live; the resolver currently returns `None`).
+- task-156 staleness detection cronjob that populates
+  `curated_case_status` rows (the read-side `/admin/curated-dataset/stale`
+  endpoint is live).
+
 ## Batch I partial — task-153/154/156 admin + migration layer closed on 2026-04-22
 
 Batch I started in parallel with Batch K and was left partial by Codex.

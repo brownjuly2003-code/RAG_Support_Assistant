@@ -2,6 +2,24 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Arc 7 / Batch I continued] — 2026-04-23 — Continuous learning close-out
+
+### Automatic rollback watcher (task-155)
+- **`evaluation/rollback_watcher.py`** — pure `compute_drift()` scorer plus async `check_and_rollback(session, notifier)` that reads active deployments, compares candidate vs baseline mean evaluator scores across `rollback_trace_window` traces, rolls back deployments that degrade by `rollback_drift_threshold_pct`, and calls the provided notifier. `default_notifier` reuses `scripts.weekly_report.send_email` and `TENANT_ADMIN_EMAIL`.
+- **Feature flags** (`config/settings.py`) — `AUTO_ROLLBACK_ENABLED=false`, `ROLLBACK_DRIFT_THRESHOLD_PCT=10.0`, `ROLLBACK_TRACE_WINDOW=1000`, `TENANT_ADMIN_EMAIL=""`.
+- **Prometheus** — `rag_experiment_auto_rollback_total{experiment_id,reason}` counter in `monitoring/prometheus.py`.
+
+### Recommendation engine (task-157)
+- **`scripts/generate_recommendations.py`** — deterministic rule-based aggregator across improvement-backlog items, threshold-analyzer hints, latest green regression candidates and curated stale cases; emits a ranked list with action + evidence per item and renders markdown via `render_markdown(recs, week=...)`. CLI writes to `reports/recommendations/<week>.md`.
+- **Admin endpoint** — `GET /admin/recommendations/current` returns `{recommendations, status}` gated by `RECOMMENDATIONS_ENABLED=true` (safe default, read-only generation only).
+
+### Experiment comparison dashboard (task-158)
+- **Admin endpoint** — `GET /admin/experiments/comparison?deployed=<id>&staged=<id>&candidate=<id>` returns three stable buckets with `experiment_id`, `trace_count`, `quality{mean,p50,p95}`, `evaluator_breakdown`, `cost_per_trace`, `latency{p50,p95}`. Deployed bucket reads live trace aggregates, staged reads the latest regression-run row, candidate reflects YAML presence.
+- **Admin UI** — `static/admin.html` gains an "Experiment Comparison" tab with `deployed`/`staged`/`candidate` inputs and a JSON output pane, guarded by the existing admin layout.
+
+### Tests
+- Added `tests/test_rollback_watcher.py` (8), `tests/test_recommendation_engine.py` (7), `tests/test_experiment_comparison.py` (4). Combined Batch I + K targeted sweep: 130 passed / 0 failed.
+
 ## [Arc 7 / Batch I partial] — 2026-04-22 — Continuous learning admin + migrations
 
 ### Experiment deployment lifecycle (task-153)

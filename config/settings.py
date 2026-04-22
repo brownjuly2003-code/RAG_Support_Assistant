@@ -349,6 +349,34 @@ class Settings:
     fact_verification_min_score: int = field(
         default_factory=lambda: int(os.getenv("FACT_VERIFICATION_MIN_SCORE", "70"))
     )
+
+    # --- Auto-rollback (task-155) ---
+    auto_rollback_enabled: bool = field(
+        default_factory=lambda: os.getenv("AUTO_ROLLBACK_ENABLED", "false").strip().lower()
+        in ("1", "true", "yes")
+    )
+    rollback_drift_threshold_pct: float = field(
+        default_factory=lambda: float(os.getenv("ROLLBACK_DRIFT_THRESHOLD_PCT", "10.0"))
+    )
+    rollback_trace_window: int = field(
+        default_factory=lambda: int(os.getenv("ROLLBACK_TRACE_WINDOW", "1000"))
+    )
+    tenant_admin_email: str = field(
+        default_factory=lambda: os.getenv("TENANT_ADMIN_EMAIL", "").strip()
+    )
+
+    # --- Recommendations (task-157) ---
+    recommendations_enabled: bool = field(
+        default_factory=lambda: os.getenv("RECOMMENDATIONS_ENABLED", "true").strip().lower()
+        in ("1", "true", "yes")
+    )
+
+    # --- Experiment assignment sticky rollout (task-154 future) ---
+    experiment_assignment_enabled: bool = field(
+        default_factory=lambda: os.getenv("EXPERIMENT_ASSIGNMENT_ENABLED", "false").strip().lower()
+        in ("1", "true", "yes")
+    )
+
     slow_trace_threshold_ms: int = int(os.getenv("SLOW_TRACE_THRESHOLD_MS", "10000"))
     threshold_analysis_min_labels: int = int(os.getenv("THRESHOLD_ANALYSIS_MIN_LABELS", "20"))
     review_queue_enabled: bool = field(
