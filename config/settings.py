@@ -377,6 +377,14 @@ class Settings:
         in ("1", "true", "yes")
     )
 
+    # --- Backup / restore (task-159, 163) ---
+    backup_dir: str = field(
+        default_factory=lambda: os.getenv("BACKUP_DIR", "").strip()
+    )
+    backup_retention_days: int = field(
+        default_factory=lambda: int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
+    )
+
     slow_trace_threshold_ms: int = int(os.getenv("SLOW_TRACE_THRESHOLD_MS", "10000"))
     threshold_analysis_min_labels: int = int(os.getenv("THRESHOLD_ANALYSIS_MIN_LABELS", "20"))
     review_queue_enabled: bool = field(

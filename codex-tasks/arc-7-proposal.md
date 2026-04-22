@@ -125,6 +125,27 @@ Batch K closed on 2026-04-22.
 - API/UI surface now exposes `/api/chat/stream` plus health-driven UI switching via `STREAMING_ENABLED`.
 - Ingestion has opt-in batch contextual-header preprocessing via `INGESTION_BATCH_ENABLED` with sequential fallback.
 
+## Batch J closed on 2026-04-23
+
+- task-159 snapshot backup (`scripts/backup_snapshot.py`, SHA256 manifest,
+  key fingerprint only, `BACKUP_DIR`, `BACKUP_RETENTION_DAYS`).
+- task-160 disposable restore verification
+  (`scripts/restore_verify.py`, sqlite integrity + tarball extraction in
+  a temp root, structured exit codes).
+- task-161 chaos drills (`scripts/chaos_drill.py`, six faults:
+  `ollama_timeout`, `ollama_down`, `postgres_unavailable`,
+  `redis_unavailable`, `network_slow`, `network_flaky`).
+- task-162 post-deploy smoke suite (`scripts/post_deploy_smoke.py`,
+  checks: liveness, readiness, metrics, ask, admin_providers).
+- task-163 backup integrity / retention audit
+  (`scripts/backup_integrity.py`, SHA verification + expired-candidate
+  report, no destructive actions).
+- task-164 disaster recovery checklist (`docs/disaster-recovery.md`,
+  scenarios A-E with RTO/RPO plus script mapping).
+
+Batch J targeted sweep: 37 passed. Combined Arc 7 (K + I + J) sweep: 167
+passed, ruff clean.
+
 ## Batch I fully closed on 2026-04-23
 
 Batch I originally landed partially on 2026-04-22 (admin + migration slices

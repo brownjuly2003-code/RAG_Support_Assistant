@@ -2,6 +2,24 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Arc 7 / Batch J] — 2026-04-23 — Backup / restore / chaos
+
+### Snapshot backup + integrity (task-159, task-163)
+- **`scripts/backup_snapshot.py`** — cross-platform Python CLI that writes an atomic snapshot with `pg_dump` (optional), SQLite backup-API for `data/tracing/traces.db`, tarballs for `data/uploads` and the ChromaDB persistent dir, a `DB_ENCRYPTION_KEY` SHA256 fingerprint (raw key never persisted), and `snapshot_manifest.json` with alembic revision + per-component SHA256/size. `--skip-chroma` is honoured; missing stores are skipped rather than failing hard.
+- **`scripts/backup_integrity.py`** — walks a backup directory, verifies every component against the manifest, flags snapshots past `BACKUP_RETENTION_DAYS` (default 30) as deletion candidates and emits a markdown audit report. Never deletes.
+- **Settings** — `BACKUP_DIR` and `BACKUP_RETENTION_DAYS` in `config/settings.py`.
+
+### Restore + smoke (task-160, task-162)
+- **`scripts/restore_verify.py`** — stages a snapshot into a disposable temp root, runs SQLite `PRAGMA integrity_check`, unpacks tarballs and asserts the resulting layout. Structured exit codes (`EXIT_RESTORE_FAILED`, `EXIT_SMOKE_FAILED`, `EXIT_INFRA_ERROR`) and auto-cleanup of the temp root on both success and failure.
+- **`scripts/post_deploy_smoke.py`** — under-30s sanity check (`/healthz/live`, `/healthz/ready`, `/metrics` Prometheus body with `rag_model_routing` + `rag_llm_cost_usd_total` + `rag_experiment_auto_rollback_total`, `POST /api/ask`, `GET /api/admin/providers`). Uses an injected `httpx.Client` for test isolation.
+
+### Chaos drills + DR docs (task-161, task-164)
+- **`scripts/chaos_drill.py`** — six fault scenarios (`ollama_timeout`, `ollama_down`, `postgres_unavailable`, `redis_unavailable`, `network_slow`, `network_flaky`) emitting a timeline + acceptance verdict. Manual-trigger only by design; never wired into CI.
+- **`docs/disaster-recovery.md`** — scenarios A-E (`data/` lost, Postgres corrupted, Ollama models lost, full host compromise, `DB_ENCRYPTION_KEY` lost) with RTO/RPO table, step-by-step procedures, verification checks, and explicit mapping to Batch J scripts. Acknowledges that chaos drills are unit-level and documents the Windows `pg_dump` path caveat.
+
+### Tests
+- `tests/test_backup_snapshot.py` (7), `tests/test_backup_integrity.py` (7), `tests/test_restore_verify.py` (6), `tests/test_chaos_drill.py` (8), `tests/test_post_deploy_smoke.py` (6), `tests/test_dr_checklist.py` (3). Batch J targeted sweep: 37 passed. Combined K + I + J + sanity sweep: 167 passed.
+
 ## [Arc 7 / Batch I continued] — 2026-04-23 — Continuous learning close-out
 
 ### Automatic rollback watcher (task-155)
