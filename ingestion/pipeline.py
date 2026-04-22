@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import inspect
 import logging
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -76,6 +77,7 @@ class IngestPipeline:
         self._documents: List[Document] = []
         self._store: Any = None
         self._chunks: List[Document] = []
+        self._last_batch_contextual_headers: Dict[str, Any] = {"mode": "disabled"}
 
     # ------------------------------------------------------------------
     # Public API
@@ -109,6 +111,8 @@ class IngestPipeline:
                 "chunk_size": getattr(settings, "chunk_size", 800),
                 "chunk_overlap": getattr(settings, "chunk_overlap", 200),
             }
+        else:
+            settings = get_settings()
 
         build_vector_store = tenant_manager.build_vector_store
         if legacy_manager.build_vector_store is not _ORIGINAL_LEGACY_BUILD_VECTOR_STORE:
@@ -120,6 +124,73 @@ class IngestPipeline:
             raise ValueError(f"No documents found in {docs_dir}")
         annotate_documents_with_categories(docs, tenant_id=tenant_id)
         self._documents = docs
+        self._last_batch_contextual_headers = {"mode": "disabled"}
+
+        if getattr(settings, "ingestion_batch_enabled", False) and getattr(settings, "contextual_headers", False):
+            try:
+                from llm.providers import build_provider_runtime
+
+                runtime = build_provider_runtime(settings)
+            except Exception as exc:
+                logger.warning("[IngestPipeline] Batch contextual headers unavailable: %s", exc)
+            else:
+                llm = runtime.strong
+                if not (
+                    callable(getattr(llm, "generate_batch", None))
+                    or callable(getattr(llm, "generate", None))
+                ):
+                    llm = runtime.fast
+                if (
+                    callable(getattr(llm, "generate_batch", None))
+                    or callable(getattr(llm, "generate", None))
+                ):
+                    batches = [
+                        [
+                            {
+                                "role": "user",
+                                "content": (
+                                    "Write one concise contextual header under 30 words for retrieval. "
+                                    "Return only the header text.\n\n"
+                                    f"Source: {str((doc.metadata or {}).get('source') or 'unknown')}\n"
+                                    f"Document excerpt:\n{str(doc.page_content or '')[:1500]}"
+                                ),
+                            }
+                        ]
+                        for doc in docs
+                    ]
+                    started = time.perf_counter()
+                    try:
+                        if bool(getattr(llm, "supports_batch", False)) and callable(
+                            getattr(llm, "generate_batch", None)
+                        ):
+                            responses = llm.generate_batch(batches, purpose="contextual_headers")
+                            mode = "provider_batch"
+                        else:
+                            responses = [llm.generate(messages) for messages in batches]
+                            mode = "sequential_fallback"
+                    except Exception as exc:
+                        logger.warning("[IngestPipeline] Contextual header generation failed: %s", exc)
+                    else:
+                        for doc, response in zip(docs, responses):
+                            header = str(getattr(response, "text", "") or "").strip()
+                            if not header:
+                                continue
+                            header = header[:200]
+                            doc.page_content = f"[Контекст: {header}]\n{doc.page_content}"
+                            metadata = getattr(doc, "metadata", None)
+                            if not isinstance(metadata, dict):
+                                metadata = {}
+                                setattr(doc, "metadata", metadata)
+                            metadata["batch_contextual_header"] = header
+                        duration_ms = round((time.perf_counter() - started) * 1000, 2)
+                        self._last_batch_contextual_headers = {
+                            "mode": mode,
+                            "provider": getattr(llm, "provider_id", None),
+                            "model": getattr(llm, "model_name", None),
+                            "documents": len(docs),
+                            "duration_ms": duration_ms,
+                            "per_document_latency_ms": round(duration_ms / max(len(docs), 1), 2),
+                        }
 
         # Step 2 -- build vector store
         build_params = inspect.signature(build_vector_store).parameters
@@ -256,6 +327,7 @@ class IngestPipeline:
     ) -> None:
         """Write (overwrite) the full ingestion log."""
         entry = self._build_log_entry(docs, chunks, str(docs_dir), chunk_config)
+        entry["batch_contextual_headers"] = dict(self._last_batch_contextual_headers)
 
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         self.log_path.write_text(

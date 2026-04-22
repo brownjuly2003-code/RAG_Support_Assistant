@@ -238,6 +238,13 @@ except ImportError:
             otel_service_name = "rag-support-assistant"
         return _S()
 
+_build_provider_runtime = None
+try:
+    from llm.providers import build_provider_runtime
+    _build_provider_runtime = build_provider_runtime
+except ImportError:
+    pass
+
 
 # ---------------------------------------------------------------------------
 # Pydantic models
@@ -338,6 +345,7 @@ class HealthResponse(BaseModel):
     sessions_count: int
     pipeline_available: bool
     circuit_breakers: List[Dict[str, Any]] = Field(default_factory=list)
+    features: Dict[str, bool] = Field(default_factory=dict)
 
 
 class UploadResponse(BaseModel):
@@ -2025,6 +2033,16 @@ async def ask(
     return response
 
 
+@router.post("/chat")
+@limiter.limit("60/minute")
+async def chat(
+    request: Request,
+    body: AskRequest,
+    _user: dict = Depends(get_current_user),
+):
+    return await ask(request, body, _user)
+
+
 @router.post("/ask/stream")
 @limiter.limit("60/minute")
 async def ask_stream(
@@ -2123,19 +2141,43 @@ async def ask_stream(
 
             settings = get_settings()
             full_answer = ""
+            streaming_llm = getattr(session, "_llm", None)
+            if not (
+                streaming_llm is not None
+                and callable(getattr(streaming_llm, "generate_stream", None))
+            ) and _build_provider_runtime is not None:
+                try:
+                    runtime = _build_provider_runtime(settings)
+                except Exception as runtime_exc:
+                    logger.warning("Streaming runtime unavailable: %s", runtime_exc)
+                else:
+                    for candidate in (runtime.strong, runtime.fast):
+                        if callable(getattr(candidate, "generate_stream", None)):
+                            streaming_llm = candidate
+                            break
 
             yield "data: " + _json.dumps({"type": "token_start"}) + "\n\n"
             try:
-                async for token in _stream_ollama(
-                    prompt,
-                    settings.ollama_model_name,
-                    settings.ollama_base_url,
-                ):
-                    full_answer += token
-                    yield "data: " + _json.dumps({
-                        "type": "token",
-                        "token": token,
-                    }) + "\n\n"
+                if streaming_llm is not None and callable(getattr(streaming_llm, "generate_stream", None)):
+                    async for token in streaming_llm.generate_stream(
+                        [{"role": "user", "content": prompt}],
+                    ):
+                        full_answer += token
+                        yield "data: " + _json.dumps({
+                            "type": "token",
+                            "token": token,
+                        }) + "\n\n"
+                else:
+                    async for token in _stream_ollama(
+                        prompt,
+                        settings.ollama_model_name,
+                        settings.ollama_base_url,
+                    ):
+                        full_answer += token
+                        yield "data: " + _json.dumps({
+                            "type": "token",
+                            "token": token,
+                        }) + "\n\n"
             except Exception as exc:
                 logger.warning("Streaming error in /ask/stream: %s", exc)
                 if not full_answer:
@@ -2357,6 +2399,16 @@ async def ask_stream(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.post("/chat/stream")
+@limiter.limit("60/minute")
+async def chat_stream(
+    request: Request,
+    body: AskRequest,
+    _user: dict = Depends(get_current_user),
+) -> StreamingResponse:
+    return await ask_stream(request, body, _user)
 
 
 @router.post("/feedback", status_code=204)
@@ -4550,6 +4602,9 @@ async def health_check() -> HealthResponse:
         sessions_count=len(_sessions),
         pipeline_available=_run_qa_pipeline is not None,
         circuit_breakers=breakers_snap,
+        features={
+            "streaming_enabled": bool(getattr(settings, "streaming_enabled", False)),
+        },
     )
 
     status_code = 503 if critical_down else 200

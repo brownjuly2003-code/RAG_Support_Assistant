@@ -10,8 +10,10 @@ providers:
       fast: qwen2.5:7b
       strong: qwen2.5:7b
     capabilities:
-      supports_tool_use: false
-      supports_structured_output: false
+      supports_tool_use: true
+      supports_structured_output: true
+      supports_streaming: true
+      supports_batch: false
       supports_vision: false
     rate_limits:
       requests_per_minute: 0
@@ -35,8 +37,10 @@ providers:
       fast: mistral-small
       strong: claude-sonnet-4-6-api
     capabilities:
-      supports_tool_use: false
-      supports_structured_output: false
+      supports_tool_use: true
+      supports_structured_output: true
+      supports_streaming: true
+      supports_batch: true
       supports_vision: false
     rate_limits:
       requests_per_minute: 0
@@ -66,6 +70,8 @@ providers:
     capabilities:
       supports_tool_use: true
       supports_structured_output: true
+      supports_streaming: true
+      supports_batch: false
       supports_vision: false
     rate_limits:
       requests_per_minute: 60

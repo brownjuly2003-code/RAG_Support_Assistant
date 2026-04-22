@@ -19,6 +19,7 @@ __all__ = [
     "DB_POOL_SIZE",
     "EVAL_DRIFT",
     "ESCALATION_TOTAL",
+    "FACT_VERIFICATION_CONSENSUS_TOTAL",
     "FACTUALITY_SCORE",
     "FEEDBACK_COUNT",
     "HTTP_REQUESTS",
@@ -123,6 +124,7 @@ except ImportError:
     QUALITY_SCORE = _NoopMetric()
     FACTUALITY_SCORE = _NoopMetric()
     ESCALATION_TOTAL = _NoopMetric()
+    FACT_VERIFICATION_CONSENSUS_TOTAL = _NoopMetric()
     FEEDBACK_COUNT = _NoopMetric()
     ACTIVE_SESSIONS = _NoopMetric()
     VECTOR_STORE_DOCS = _NoopMetric()
@@ -219,6 +221,13 @@ else:
     ESCALATION_TOTAL = Counter(
         "rag_escalation_total",
         "Total escalations to human",
+        registry=REGISTRY,
+    )
+
+    FACT_VERIFICATION_CONSENSUS_TOTAL = Counter(
+        "rag_fact_verification_consensus_total",
+        "Structured fact verification verdicts grouped by reliability level",
+        ["level", "verdict"],
         registry=REGISTRY,
     )
 

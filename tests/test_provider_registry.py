@@ -36,6 +36,23 @@ def test_provider_registry_resolves_model_alias_and_pricing() -> None:
     assert resolved.output_price_per_1m_tokens == 0.0
 
 
+def test_provider_registry_exposes_streaming_and_batch_capabilities() -> None:
+    from config.provider_schema import load_provider_registry
+
+    registry = load_provider_registry(
+        Path(__file__).resolve().parent.parent / "config" / "providers.yml"
+    )
+
+    gracekelly = registry.get_provider("gracekelly")
+    ollama = registry.get_provider("ollama")
+
+    assert gracekelly is not None
+    assert gracekelly.capabilities.supports_streaming is True
+    assert gracekelly.capabilities.supports_batch is True
+    assert ollama is not None
+    assert ollama.capabilities.supports_streaming is True
+
+
 def test_provider_registry_rejects_unknown_default_model(tmp_path: Path) -> None:
     from config.provider_schema import load_provider_registry
 

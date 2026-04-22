@@ -500,6 +500,116 @@ def _apply_llm_usage(state: GraphState, usage: Dict[str, Any]) -> GraphState:
     }
 
 
+def _llm_supports_structured_output(llm: Any) -> bool:
+    return bool(
+        getattr(llm, "supports_structured_output", False) is True
+        or callable(inspect.getattr_static(llm, "generate_with_schema", None))
+    )
+
+
+def _llm_supports_tool_use(llm: Any) -> bool:
+    return bool(
+        getattr(llm, "supports_tool_use", False) is True
+        or callable(inspect.getattr_static(llm, "generate_with_tools", None))
+    )
+
+
+def _invoke_with_schema(
+    llm: Any,
+    prompt: str,
+    schema: dict[str, Any],
+    **kwargs: Any,
+) -> dict[str, Any] | list[Any] | None:
+    method = getattr(llm, "generate_with_schema", None)
+    if not callable(method):
+        return None
+    response = method([{"role": "user", "content": prompt}], schema, **kwargs)
+    structured_output = getattr(response, "structured_output", None)
+    if isinstance(structured_output, (dict, list)):
+        return structured_output
+    return None
+
+
+def _normalize_tool_call(tool_call: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
+    name = tool_call.get("name")
+    if not isinstance(name, str):
+        function = tool_call.get("function")
+        if isinstance(function, dict):
+            name = function.get("name")
+
+    raw_arguments = tool_call.get("arguments")
+    if raw_arguments is None:
+        function = tool_call.get("function")
+        if isinstance(function, dict):
+            raw_arguments = function.get("arguments")
+
+    if isinstance(raw_arguments, dict):
+        arguments = dict(raw_arguments)
+    elif isinstance(raw_arguments, str):
+        try:
+            import json as _json
+
+            parsed = _json.loads(raw_arguments)
+        except Exception:
+            parsed = {}
+        arguments = parsed if isinstance(parsed, dict) else {}
+    else:
+        arguments = {}
+
+    return (str(name).strip() if isinstance(name, str) and name.strip() else None), arguments
+
+
+def _agentic_tool_definitions() -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": "search_kb",
+                "description": "Search the knowledge base and return relevant excerpts.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                    },
+                    "required": ["query"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "check_order_status",
+                "description": "Check the status of a customer order by ID.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "order_id": {"type": "string"},
+                    },
+                    "required": ["order_id"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "create_ticket",
+                "description": "Create an escalation ticket. Requires confirmation before execution.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "summary": {"type": "string"},
+                        "priority": {"type": "string"},
+                    },
+                    "required": ["summary", "priority"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+    ]
+
+
 def _build_agentic_search_query(question: str) -> str:
     normalized = question.lower()
     if "достав" in normalized and "москв" in normalized:
@@ -533,7 +643,29 @@ def make_classify_complexity_node(
             question = state.get("question", "")
             prompt = build_classify_complexity_prompt(question)
             model = _get_llm_model_name(classifier_llm) or ""
-            raw = classifier_llm.invoke(prompt).strip().upper()
+            if _llm_supports_structured_output(classifier_llm):
+                structured = _invoke_with_schema(
+                    classifier_llm,
+                    prompt,
+                    {
+                        "type": "object",
+                        "properties": {
+                            "complexity": {
+                                "type": "string",
+                                "enum": ["simple", "complex"],
+                            }
+                        },
+                        "required": ["complexity"],
+                        "additionalProperties": False,
+                    },
+                )
+                raw = (
+                    str(structured.get("complexity") or "")
+                    if isinstance(structured, dict)
+                    else ""
+                ).strip().upper()
+            else:
+                raw = classifier_llm.invoke(prompt).strip().upper()
             usage = _capture_llm_usage(classifier_llm, "classify_complexity")
             trace_llm_call(
                 trace_id=trace_id,
@@ -731,7 +863,31 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
                     prompt = build_doc_grade_prompt(question=question, document=doc)
                     try:
                         t0 = time.monotonic()
-                        raw_verdict = llm.invoke(prompt).strip()
+                        if _llm_supports_structured_output(llm):
+                            structured = _invoke_with_schema(
+                                llm,
+                                prompt,
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "relevant": {"type": "boolean"},
+                                        "reason": {"type": "string"},
+                                    },
+                                    "required": ["relevant", "reason"],
+                                    "additionalProperties": False,
+                                },
+                            )
+                            is_relevant = bool(
+                                isinstance(structured, dict) and structured.get("relevant")
+                            )
+                            raw_verdict = (
+                                str(structured.get("reason") or "")
+                                if isinstance(structured, dict)
+                                else ""
+                            )
+                        else:
+                            raw_verdict = llm.invoke(prompt).strip()
+                            is_relevant = raw_verdict.upper().startswith("YES")
                         usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "grade_docs"))
                         usage_recorded = True
                         trace_llm_call(
@@ -742,7 +898,6 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
                             model=model,
                             duration_ms=(time.monotonic() - t0) * 1000,
                         )
-                        is_relevant = raw_verdict.upper().startswith("YES")
                     except Exception as exc:
                         logger.warning("[grade_docs] LLM error: %s", exc, extra={"trace_id": trace_id})
                         is_relevant = True
@@ -933,9 +1088,47 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                 if line.strip().startswith("-")
             ]
             claim_lines = claim_lines[:10]
+            consensus_enabled = bool(
+                getattr(settings, "fact_verify_consensus_enabled", False)
+            )
+            reliability_level = str(
+                getattr(settings, "fact_verify_reliability_level", "standard") or "standard"
+            ).strip() or "standard"
 
             claims_result: list[dict] = []
             for claim in claim_lines:
+                if consensus_enabled and _llm_supports_structured_output(llm):
+                    structured = _invoke_with_schema(
+                        llm,
+                        build_verify_claim_prompt(claim, context_text),
+                        {
+                            "type": "object",
+                            "properties": {
+                                "supported": {"type": "boolean"},
+                                "evidence": {"type": "string"},
+                            },
+                            "required": ["supported", "evidence"],
+                            "additionalProperties": False,
+                        },
+                        reliability_level=reliability_level,
+                    )
+                    usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "verify_facts"))
+                    if isinstance(structured, dict):
+                        supported = bool(structured.get("supported"))
+                        evidence = str(structured.get("evidence") or "").strip()[:200]
+                        claims_result.append(
+                            {"text": claim, "supported": supported, "evidence": evidence}
+                        )
+                        try:
+                            from monitoring.prometheus import FACT_VERIFICATION_CONSENSUS_TOTAL
+
+                            FACT_VERIFICATION_CONSENSUS_TOTAL.labels(
+                                level=reliability_level,
+                                verdict="supported" if supported else "unsupported",
+                            ).inc()
+                        except Exception:
+                            pass
+                        continue
                 verdict = llm.invoke(build_verify_claim_prompt(claim, context_text)).strip()
                 usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "verify_facts"))
                 supported = verdict.upper().startswith("SUPPORTED")
@@ -1478,6 +1671,154 @@ class ConversationSession:
         if len(self._history) > self._max_history * 2:
             self._history = self._history[-(self._max_history * 2):]
 
+    def _select_agentic_llm(self) -> Any | None:
+        if self._llm is not None and _llm_supports_tool_use(self._llm):
+            return self._llm
+        if build_provider_runtime is None:
+            return None
+        try:
+            settings = get_settings()
+            runtime = build_provider_runtime(settings)
+        except Exception:
+            return None
+        for candidate in (runtime.strong, runtime.fast):
+            if _llm_supports_tool_use(candidate):
+                return candidate
+        return None
+
+    def _run_provider_tool_loop(
+        self,
+        question: str,
+        state: GraphState,
+        *,
+        active_trace_id: str,
+        tenant_id: str,
+        user_id: str,
+        session_id: str | None,
+    ) -> GraphState | None:
+        from agent import tools as agent_tools
+
+        tool_llm = self._select_agentic_llm()
+        if tool_llm is None:
+            return None
+
+        try:
+            settings = get_settings()
+        except Exception:
+            settings = None
+        max_loops = int(getattr(settings, "agent_max_tool_loops", 5) or 5)
+        messages: list[dict[str, Any]] = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a support agent. Use tools when they help answer the user. "
+                    "If tools are not needed, answer directly."
+                ),
+            },
+            {"role": "user", "content": question},
+        ]
+        tool_calls: list[str] = []
+        usage = _new_llm_usage("agentic")
+
+        for _ in range(max_loops):
+            try:
+                response = tool_llm.generate_with_tools(messages, _agentic_tool_definitions())
+            except Exception as exc:
+                logger.warning("[agentic] provider tool loop unavailable: %s", exc)
+                return None
+            usage = _merge_llm_usage(usage, _capture_llm_usage(tool_llm, "agentic"))
+            raw_tool_calls = getattr(response, "tool_calls", None) or []
+            if not raw_tool_calls:
+                answer = str(response.text or "").strip()
+                if not answer:
+                    return None
+                final_state: GraphState = {
+                    **state,
+                    "answer": answer,
+                    "route": "agentic",
+                    "quality_score": 85,
+                    "relevance_score": 0.85,
+                    "tool_calls": tool_calls,
+                    "requires_confirmation": False,
+                    "action_summary": "",
+                }
+                final_state = _apply_llm_usage(final_state, usage)
+                log_step(active_trace_id, "agentic_answer", final_state)
+                return final_state
+
+            assistant_message: dict[str, Any] = {
+                "role": "assistant",
+                "content": str(response.text or ""),
+                "tool_calls": raw_tool_calls,
+            }
+            messages.append(assistant_message)
+
+            for raw_tool_call in raw_tool_calls:
+                if not isinstance(raw_tool_call, dict):
+                    continue
+                tool_name, arguments = _normalize_tool_call(raw_tool_call)
+                if not tool_name:
+                    continue
+                if tool_name == "search_kb":
+                    result = agent_tools.search_kb(
+                        str(arguments.get("query") or question),
+                        tenant_id,
+                        retriever=self._retriever,
+                    )
+                elif tool_name == "check_order_status":
+                    order_id = str(arguments.get("order_id") or _extract_order_id(question) or "")
+                    result = agent_tools.check_order_status(order_id, tenant_id)
+                elif tool_name == "create_ticket":
+                    summary = str(arguments.get("summary") or question).strip()
+                    priority = str(arguments.get("priority") or "medium").strip() or "medium"
+                    action_summary = f"создать тикет по запросу: {summary[:120]}"
+                    self._pending_action = {
+                        "summary": summary,
+                        "priority": priority,
+                        "action_summary": action_summary,
+                    }
+                    confirmation_state: GraphState = {
+                        **state,
+                        "answer": f"Подтвердите: {action_summary}",
+                        "route": "agentic",
+                        "quality_score": 80,
+                        "relevance_score": 0.8,
+                        "tool_calls": tool_calls + [tool_name],
+                        "requires_confirmation": True,
+                        "action_summary": action_summary,
+                    }
+                    confirmation_state = _apply_llm_usage(confirmation_state, usage)
+                    log_step(active_trace_id, "confirmation_gate", confirmation_state)
+                    return confirmation_state
+                else:
+                    continue
+
+                tool_calls.append(tool_name)
+                tool_state = {**state, "tool_calls": list(tool_calls), "tool_output": result}
+                log_step(active_trace_id, tool_name, tool_state)
+                messages.append({"role": "tool", "name": tool_name, "content": result})
+
+        answer_parts = [
+            str(item.get("content") or "")
+            for item in messages
+            if item.get("role") == "tool" and str(item.get("content") or "").strip()
+        ]
+        if not answer_parts:
+            return None
+        final_state = {
+            **state,
+            "answer": "\n\n".join(answer_parts),
+            "route": "agentic",
+            "quality_score": 80,
+            "relevance_score": 0.8,
+            "tool_calls": tool_calls,
+            "requires_confirmation": False,
+            "action_summary": "",
+        }
+        final_state = _apply_llm_usage(final_state, usage)
+        log_step(active_trace_id, "agentic_fallback", final_state)
+        return final_state
+
     def _run_agentic_flow(
         self,
         question: str,
@@ -1562,6 +1903,18 @@ class ConversationSession:
             log_step(active_trace_id, "await_confirmation", state)
             finish_trace(active_trace_id, state)
             return state
+
+        provider_agentic_result = self._run_provider_tool_loop(
+            question,
+            state,
+            active_trace_id=active_trace_id,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            session_id=session_id,
+        )
+        if provider_agentic_result is not None:
+            finish_trace(active_trace_id, provider_agentic_result)
+            return provider_agentic_result
 
         if has_ticket_intent:
             summary = question.strip()

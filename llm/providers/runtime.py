@@ -59,24 +59,45 @@ def _instantiate_provider(settings: Any, provider_id: str, model_name: str) -> A
         "timeout_sec": timeout_sec,
     }
     if provider_id == "ollama":
-        return OllamaProvider(
+        provider = OllamaProvider(
             base_url=str(getattr(settings, "ollama_base_url", "http://localhost:11434")),
             **common_kwargs,
         )
+        provider.supports_tool_use = provider_config.capabilities.supports_tool_use
+        provider.supports_structured_output = provider_config.capabilities.supports_structured_output
+        provider.supports_streaming = provider_config.capabilities.supports_streaming
+        provider.supports_batch = provider_config.capabilities.supports_batch
+        return provider
     if provider_id == "mistral":
-        return MistralProvider(api_key_env=str(provider_config.api_key_env or ""), **common_kwargs)
+        provider = MistralProvider(
+            api_key_env=str(provider_config.api_key_env or ""),
+            **common_kwargs,
+        )
+        provider.supports_tool_use = provider_config.capabilities.supports_tool_use
+        provider.supports_structured_output = provider_config.capabilities.supports_structured_output
+        provider.supports_streaming = provider_config.capabilities.supports_streaming
+        provider.supports_batch = provider_config.capabilities.supports_batch
+        return provider
     if provider_id == "gracekelly":
-        return GraceKellyProvider(
+        provider = GraceKellyProvider(
             base_url=str(getattr(settings, "gracekelly_base_url", "http://127.0.0.1:8011")),
             api_key_env=str(getattr(settings, "gracekelly_api_key_env", provider_config.api_key_env or "")),
             health_check_timeout_sec=float(
                 getattr(settings, "gracekelly_health_check_timeout_sec", 2.0)
             ),
             timeout_sec=float(getattr(settings, "gracekelly_request_timeout_sec", 30.0)),
+            use_orchestrate_for_tools=bool(
+                getattr(settings, "gracekelly_use_orchestrate_for_tools", True)
+            ),
             model_name=model.name,
             input_price_per_1m_tokens=model.input_price_per_1m_tokens,
             output_price_per_1m_tokens=model.output_price_per_1m_tokens,
         )
+        provider.supports_tool_use = provider_config.capabilities.supports_tool_use
+        provider.supports_structured_output = provider_config.capabilities.supports_structured_output
+        provider.supports_streaming = provider_config.capabilities.supports_streaming
+        provider.supports_batch = provider_config.capabilities.supports_batch
+        return provider
     raise KeyError(f"unsupported provider '{provider_id}'")
 
 

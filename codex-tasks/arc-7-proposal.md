@@ -115,3 +115,12 @@ direct Mistral fallback и удаление неиспользуемых direct 
 - **Batch K — GraceKelly advanced orchestration.** Tool-use,
   structured-output и, при необходимости, streaming через отдельный endpoint
   вместо текущего `/api/v1/smart`.
+
+## Batch K closed
+
+Batch K closed on 2026-04-22.
+
+- GraceKelly provider now supports smart/orchestrate dispatch, tool-use, structured output and streaming hooks through the shared provider runtime.
+- `agent/graph.py` uses provider-native tool calls and schema outputs for classification, document grading and consensus-enabled fact verification.
+- API/UI surface now exposes `/api/chat/stream` plus health-driven UI switching via `STREAMING_ENABLED`.
+- Ingestion has opt-in batch contextual-header preprocessing via `INGESTION_BATCH_ENABLED` with sequential fallback.

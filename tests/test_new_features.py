@@ -119,6 +119,15 @@ def test_parent_child_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> No
     assert settings.parent_child is False
 
 
+def test_streaming_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("STREAMING_ENABLED", raising=False)
+
+    from config.settings import Settings
+
+    settings = Settings()
+    assert settings.streaming_enabled is False
+
+
 def test_build_retriever_default_returns_hybrid_when_parent_child_false() -> None:
     from langchain_core.documents import Document
     from manager import HybridRetriever, build_retriever

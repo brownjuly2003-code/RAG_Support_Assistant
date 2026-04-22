@@ -60,6 +60,8 @@ EXPERIMENT_SETTINGS_KEYS = (
     "self_rag_max_iterations",
     "self_rag_min_quality",
     "fact_verification_enabled",
+    "fact_verify_consensus_enabled",
+    "fact_verify_reliability_level",
     "fact_verification_min_score",
     "chunk_size",
     "chunk_overlap",
@@ -84,6 +86,8 @@ _EXPERIMENT_SETTING_ENV_VARS: dict[str, tuple[str, ...]] = {
     "self_rag_max_iterations": ("RAG_SELF_RAG_MAX_ITER",),
     "self_rag_min_quality": ("RAG_SELF_RAG_MIN_QUALITY",),
     "fact_verification_enabled": ("FACT_VERIFICATION_ENABLED",),
+    "fact_verify_consensus_enabled": ("FACT_VERIFY_CONSENSUS_ENABLED",),
+    "fact_verify_reliability_level": ("FACT_VERIFY_RELIABILITY_LEVEL",),
     "fact_verification_min_score": ("FACT_VERIFICATION_MIN_SCORE",),
     "chunk_size": ("CHUNK_SIZE", "RAG_CHUNK_SIZE"),
     "chunk_overlap": ("CHUNK_OVERLAP", "RAG_CHUNK_OVERLAP"),
@@ -301,6 +305,10 @@ class Settings:
             "RAG_CONTEXTUAL_HEADERS", "true"
         ).strip().lower() in ("1", "true", "yes")
     )
+    ingestion_batch_enabled: bool = field(
+        default_factory=lambda: os.getenv("INGESTION_BATCH_ENABLED", "false").strip().lower()
+        in ("1", "true", "yes")
+    )
     agentic_mode: bool = field(
         default_factory=lambda: os.getenv(
             "RAG_AGENTIC_MODE", "false"
@@ -310,6 +318,10 @@ class Settings:
     # --- HyDE (Hypothetical Document Embeddings) ---
     hyde: bool = field(
         default_factory=lambda: os.getenv("RAG_HYDE", "false").strip().lower() in ("1", "true", "yes")
+    )
+    streaming_enabled: bool = field(
+        default_factory=lambda: os.getenv("STREAMING_ENABLED", "false").strip().lower()
+        in ("1", "true", "yes")
     )
 
     # --- Parent-Child Chunking ---
@@ -324,6 +336,15 @@ class Settings:
         default_factory=lambda: os.getenv(
             "FACT_VERIFICATION_ENABLED", "true"
         ).strip().lower() in ("1", "true", "yes")
+    )
+    fact_verify_consensus_enabled: bool = field(
+        default_factory=lambda: os.getenv(
+            "FACT_VERIFY_CONSENSUS_ENABLED", "false"
+        ).strip().lower() in ("1", "true", "yes")
+    )
+    fact_verify_reliability_level: str = field(
+        default_factory=lambda: os.getenv("FACT_VERIFY_RELIABILITY_LEVEL", "standard").strip()
+        or "standard"
     )
     fact_verification_min_score: int = field(
         default_factory=lambda: int(os.getenv("FACT_VERIFICATION_MIN_SCORE", "70"))

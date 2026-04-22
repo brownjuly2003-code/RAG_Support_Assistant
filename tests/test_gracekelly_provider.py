@@ -237,3 +237,111 @@ def test_gracekelly_provider_cost_is_always_zero(
 
     assert response.cost_usd == 0.0
     assert response.model == "claude-sonnet-4-6-api"
+
+
+def test_gracekelly_provider_routes_tool_requests_to_orchestrate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {"health": 0}
+
+    def _fake_get(url: str, *, timeout: float):
+        _ = url, timeout
+        captured["health"] += 1
+        return _FakeResponse(status_code=200)
+
+    def _fake_post(url: str, *, headers: dict[str, str], json: dict[str, Any], timeout: float):
+        captured["post_url"] = url
+        captured["headers"] = headers
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return _FakeResponse(
+            payload={
+                "task_id": "task-165",
+                "status": "completed",
+                "result": {
+                    "answer": "Нужно вызвать поиск по базе.",
+                    "tool_calls": [
+                        {
+                            "id": "call-1",
+                            "name": "search_kb",
+                            "arguments": {"query": "reset password"},
+                        }
+                    ],
+                    "structured_output": {"relevant": True},
+                    "consensus_details": {"reliability_level": "standard"},
+                },
+            }
+        )
+
+    monkeypatch.delenv("GRACEKELLY_API_KEY", raising=False)
+    monkeypatch.setattr("httpx.get", _fake_get)
+    monkeypatch.setattr("httpx.post", _fake_post)
+
+    provider = _build_provider()
+    response = provider.generate_with_tools(
+        [{"role": "user", "content": "Найди статью про сброс пароля"}],
+        [
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_kb",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"query": {"type": "string"}},
+                        "required": ["query"],
+                    },
+                },
+            }
+        ],
+        reliability_level="standard",
+        requested_models=["claude-sonnet-4-6-api", "gpt-5-4-api"],
+        merge_strategy="consensus",
+    )
+
+    assert captured["health"] == 1
+    assert captured["post_url"] == "http://127.0.0.1:8011/api/v1/orchestrate"
+    assert captured["json"]["tools"][0]["function"]["name"] == "search_kb"
+    assert captured["json"]["requested_models"] == ["claude-sonnet-4-6-api", "gpt-5-4-api"]
+    assert captured["json"]["reliability_level"] == "standard"
+    assert captured["json"]["merge_strategy"] == "consensus"
+    assert response.text == "Нужно вызвать поиск по базе."
+    assert response.tool_calls is not None
+    assert response.tool_calls[0]["name"] == "search_kb"
+    assert response.structured_output == {"relevant": True}
+    assert response.metadata["status"] == "completed"
+
+
+def test_gracekelly_provider_keeps_simple_requests_on_smart_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: _FakeResponse(status_code=200))
+
+    def _fake_post(url: str, *, headers: dict[str, str], json: dict[str, Any], timeout: float):
+        captured["post_url"] = url
+        captured["json"] = json
+        _ = headers, timeout
+        return _FakeResponse(
+            payload={
+                "answer": "Простой ответ",
+                "task_type": "support",
+                "complexity_level": "simple",
+                "pattern_used": "single_call",
+                "reliability_level": "quick",
+                "was_decomposed": False,
+                "used_consensus": False,
+                "used_roles": False,
+                "total_llm_calls": 1,
+                "model_id": "mistral-small",
+            }
+        )
+
+    monkeypatch.setattr("httpx.post", _fake_post)
+
+    provider = _build_provider()
+    response = provider.generate([{"role": "user", "content": "hello"}])
+
+    assert captured["post_url"] == "http://127.0.0.1:8011/api/v1/smart"
+    assert "tools" not in captured["json"]
+    assert response.text == "Простой ответ"

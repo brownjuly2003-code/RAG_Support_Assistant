@@ -154,3 +154,103 @@ def test_mistral_provider_maps_rate_limit_to_retryable_error(
         provider.generate([{"role": "user", "content": "hello"}])
 
     assert is_retryable_error(exc_info.value)
+
+
+def test_mistral_provider_generate_with_tools_returns_tool_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def _fake_post(url: str, *, headers: dict[str, str], json: dict[str, Any], timeout: float):
+        captured["url"] = url
+        captured["headers"] = headers
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return _FakeResponse(
+            payload={
+                "choices": [
+                    {
+                        "message": {
+                            "content": "",
+                            "tool_calls": [
+                                {
+                                    "id": "call-1",
+                                    "type": "function",
+                                    "function": {
+                                        "name": "lookup_order",
+                                        "arguments": "{\"order_id\":\"42\"}",
+                                    },
+                                }
+                            ],
+                        },
+                        "finish_reason": "tool_calls",
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": 42,
+                    "completion_tokens": 7,
+                },
+            }
+        )
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "mistral-test-key")
+    monkeypatch.setattr("httpx.post", _fake_post)
+
+    provider = _build_provider()
+    response = provider.generate_with_tools(
+        [{"role": "user", "content": "Проверь заказ #42"}],
+        [{"type": "function", "function": {"name": "lookup_order"}}],
+    )
+
+    assert captured["json"]["tools"][0]["function"]["name"] == "lookup_order"
+    assert response.tool_calls is not None
+    assert response.tool_calls[0]["function"]["name"] == "lookup_order"
+    assert response.finish_reason == "tool_calls"
+
+
+def test_mistral_provider_generate_with_schema_returns_structured_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def _fake_post(url: str, *, headers: dict[str, str], json: dict[str, Any], timeout: float):
+        captured["url"] = url
+        captured["headers"] = headers
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return _FakeResponse(
+            payload={
+                "choices": [
+                    {
+                        "message": {"content": "{\"complexity\":\"simple\"}"},
+                        "finish_reason": "stop",
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": 24,
+                    "completion_tokens": 8,
+                },
+            }
+        )
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "mistral-test-key")
+    monkeypatch.setattr("httpx.post", _fake_post)
+
+    provider = _build_provider()
+    response = provider.generate_with_schema(
+        [{"role": "user", "content": "Определи сложность"}],
+        {
+            "type": "object",
+            "properties": {
+                "complexity": {
+                    "type": "string",
+                    "enum": ["simple", "complex"],
+                }
+            },
+            "required": ["complexity"],
+            "additionalProperties": False,
+        },
+    )
+
+    assert captured["json"]["response_format"]["type"] == "json_schema"
+    assert response.structured_output == {"complexity": "simple"}

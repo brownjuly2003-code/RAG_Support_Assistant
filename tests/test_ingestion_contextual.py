@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 from config.settings import Settings
 from ingestion.pipeline import IngestPipeline
+from llm.providers import LLMResponse
 import manager
 import vectordb.manager as tenant_manager
 
@@ -15,6 +16,14 @@ def test_contextual_headers_enabled_by_default(monkeypatch) -> None:
     settings = Settings()
 
     assert settings.contextual_headers is True
+
+
+def test_ingestion_batch_disabled_by_default(monkeypatch) -> None:
+    monkeypatch.delenv("INGESTION_BATCH_ENABLED", raising=False)
+
+    settings = Settings()
+
+    assert settings.ingestion_batch_enabled is False
 
 
 def test_ingest_pipeline_uses_tenant_vector_store_builder(
@@ -180,3 +189,109 @@ def test_build_vector_store_skips_contextual_headers_when_disabled(
 
     assert not chunks[0].page_content.startswith("[Контекст:")
     assert "has_context_header" not in chunks[0].metadata
+
+
+def test_ingest_pipeline_uses_provider_batch_for_contextual_headers(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    captured: dict[str, object] = {}
+    pipeline = IngestPipeline(log_path=tmp_path / "ingestion_log.json")
+    pipeline.loader = MagicMock()
+    pipeline.loader.load_documents.return_value = [
+        manager.Document(page_content="Правила возврата для магазина.", metadata={"source": "returns.md"}),
+    ]
+
+    class _BatchLLM:
+        provider_id = "gracekelly"
+        model_name = "claude-sonnet-4-6-api"
+        supports_batch = True
+
+        def generate_batch(self, batches, **kwargs):
+            captured["batches"] = batches
+            captured["kwargs"] = kwargs
+            return [
+                LLMResponse(
+                    text="Batch header",
+                    provider=self.provider_id,
+                    model=self.model_name,
+                )
+            ]
+
+    monkeypatch.setattr(
+        "config.settings.get_settings",
+        lambda: SimpleNamespace(
+            chunk_size=400,
+            chunk_overlap=50,
+            contextual_headers=True,
+            ingestion_batch_enabled=True,
+        ),
+    )
+    monkeypatch.setattr(
+        "llm.providers.build_provider_runtime",
+        lambda settings: SimpleNamespace(strong=_BatchLLM(), fast=_BatchLLM()),
+    )
+
+    def _fake_build_vector_store(docs, chunk_config, **kwargs):
+        captured["docs"] = list(docs)
+        _ = chunk_config, kwargs
+        return object(), []
+
+    monkeypatch.setattr(tenant_manager, "build_vector_store", _fake_build_vector_store)
+
+    pipeline.ingest(tmp_path, tenant_id="acme")
+
+    assert captured["batches"]
+    assert captured["docs"][0].page_content.startswith("[Контекст: Batch header]")
+
+
+def test_ingest_pipeline_falls_back_to_sequential_headers_when_batch_unsupported(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    captured: dict[str, object] = {"calls": 0}
+    pipeline = IngestPipeline(log_path=tmp_path / "ingestion_log.json")
+    pipeline.loader = MagicMock()
+    pipeline.loader.load_documents.return_value = [
+        manager.Document(page_content="Условия доставки в Москву.", metadata={"source": "shipping.md"}),
+    ]
+
+    class _SequentialLLM:
+        provider_id = "ollama"
+        model_name = "qwen2.5:7b"
+        supports_batch = False
+
+        def generate(self, messages, tools=None, **kwargs):
+            _ = messages, tools, kwargs
+            captured["calls"] = int(captured["calls"]) + 1
+            return LLMResponse(
+                text="Sequential header",
+                provider=self.provider_id,
+                model=self.model_name,
+            )
+
+    monkeypatch.setattr(
+        "config.settings.get_settings",
+        lambda: SimpleNamespace(
+            chunk_size=400,
+            chunk_overlap=50,
+            contextual_headers=True,
+            ingestion_batch_enabled=True,
+        ),
+    )
+    monkeypatch.setattr(
+        "llm.providers.build_provider_runtime",
+        lambda settings: SimpleNamespace(strong=_SequentialLLM(), fast=_SequentialLLM()),
+    )
+
+    def _fake_build_vector_store(docs, chunk_config, **kwargs):
+        captured["docs"] = list(docs)
+        _ = chunk_config, kwargs
+        return object(), []
+
+    monkeypatch.setattr(tenant_manager, "build_vector_store", _fake_build_vector_store)
+
+    pipeline.ingest(tmp_path, tenant_id="acme")
+
+    assert captured["calls"] == 1
+    assert captured["docs"][0].page_content.startswith("[Контекст: Sequential header]")

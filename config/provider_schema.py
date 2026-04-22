@@ -14,6 +14,8 @@ _REGISTRY_CACHE: dict[Path, "ProviderRegistry"] = {}
 class ProviderCapabilities(BaseModel):
     supports_tool_use: bool = False
     supports_structured_output: bool = False
+    supports_streaming: bool = False
+    supports_batch: bool = False
     supports_vision: bool = False
 
 

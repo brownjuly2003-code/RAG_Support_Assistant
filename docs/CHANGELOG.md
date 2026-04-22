@@ -2,6 +2,21 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Arc 7 / Batch K] — 2026-04-22 — GraceKelly advanced orchestration
+
+### Provider capabilities and graph integration
+- **Advanced provider surface** — `llm/providers/base.py`, `gracekelly.py`, `mistral.py`, `ollama.py` and `runtime.py` expanded the runtime to `generate_with_tools`, `generate_with_schema`, `generate_stream` and `generate_batch`, while registry capabilities became the source of truth for tool-use, structured output, streaming and batch support.
+- **GraceKelly advanced routing** — `GraceKellyProvider` now keeps simple requests on `/api/v1/smart`, moves tool/schema/consensus requests to `/api/v1/orchestrate`, parses `tool_calls` and `structured_output`, and preserves orchestration metadata.
+- **Graph migration to provider-native orchestration** — `agent/graph.py` now uses provider-native tool loops and schema-constrained nodes for `classify_complexity`, `grade_docs` and `verify_facts`, including opt-in consensus mode via `FACT_VERIFY_CONSENSUS_ENABLED` and `FACT_VERIFY_RELIABILITY_LEVEL`.
+
+### Streaming and ingestion
+- **Provider-aware streaming API** — `api/app.py` added `/api/chat` and `/api/chat/stream`; the SSE path now tries provider `generate_stream()` before falling back to Ollama-only `_stream_ollama`, and `/api/health` exports `features.streaming_enabled` for the UI.
+- **Streaming UI switch** — `static/chat.html` keeps `/api/ask/stream` for compatibility but switches to `/api/chat/stream` when `STREAMING_ENABLED=true`.
+- **Opt-in batch contextual headers** — `ingestion/pipeline.py` added `INGESTION_BATCH_ENABLED=false`, provider-batch contextual-header preprocessing for ingestion, and sequential fallback when batch capability is unavailable, with latency metrics written into the ingestion log.
+
+### Observability and tests
+- **Consensus metric** — `monitoring/prometheus.py` added `fact_verification_consensus_total{level,verdict}` for explicit visibility into multi-model fact verification.
+- **New regression coverage** — added `tests/test_ollama_provider.py`, `tests/test_chat_streaming.py`, and batch-K expansions in provider/graph/ingestion suites covering advanced GraceKelly routing, unified tool/schema paths, provider streaming and ingestion batch fallback.
 ## [Arc 7 / Batch H] — 2026-04-22 — GraceKelly + Mistral providers
 
 ### Provider runtime and routing cleanup

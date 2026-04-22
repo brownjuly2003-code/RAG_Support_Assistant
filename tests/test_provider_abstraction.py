@@ -63,6 +63,75 @@ def test_provider_backed_llm_invoke_tracks_last_response() -> None:
     assert llm.last_response.cost_usd == 0.123
 
 
+def test_provider_backed_llm_delegates_generate_with_schema() -> None:
+    from llm.providers import LLMProvider, LLMResponse, ProviderBackedLLM
+
+    class _FakeProvider(LLMProvider):
+        provider_id = "fake"
+        model_name = "fake-model"
+        supports_structured_output = True
+
+        def generate(self, messages, tools=None, **kwargs):
+            _ = messages, tools, kwargs
+            return LLMResponse(text="fallback", provider="fake", model="fake-model")
+
+        def generate_with_schema(self, messages, schema, **kwargs):
+            _ = messages, schema, kwargs
+            return LLMResponse(
+                text='{"complexity":"simple"}',
+                provider="fake",
+                model="fake-model",
+                structured_output={"complexity": "simple"},
+            )
+
+    llm = ProviderBackedLLM(_FakeProvider())
+
+    response = llm.generate_with_schema(
+        [{"role": "user", "content": "Classify this"}],
+        {
+            "type": "object",
+            "properties": {"complexity": {"type": "string"}},
+            "required": ["complexity"],
+        },
+    )
+
+    assert response.structured_output == {"complexity": "simple"}
+    assert llm.last_response is response
+
+
+def test_provider_backed_llm_rejects_tool_use_for_unsupported_provider() -> None:
+    from llm.providers import LLMProvider, LLMResponse, ProviderBackedLLM
+
+    class _FakeProvider(LLMProvider):
+        provider_id = "fake"
+        model_name = "fake-model"
+        supports_tool_use = False
+
+        def generate(self, messages, tools=None, **kwargs):
+            _ = messages, tools, kwargs
+            return LLMResponse(text="fallback", provider="fake", model="fake-model")
+
+    llm = ProviderBackedLLM(_FakeProvider())
+
+    with pytest.raises(RuntimeError, match="does not support tool use"):
+        llm.generate_with_tools(
+            [{"role": "user", "content": "Search the KB"}],
+            [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "search_kb",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {"query": {"type": "string"}},
+                            "required": ["query"],
+                        },
+                    },
+                }
+            ],
+        )
+
+
 def test_build_provider_runtime_prefers_experiment_profile_override() -> None:
     from agent.prompt_registry import reset_current_experiment, set_current_experiment
     from llm.providers import build_provider_runtime
