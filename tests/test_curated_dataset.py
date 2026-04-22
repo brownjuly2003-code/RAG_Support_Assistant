@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import json
 import sqlite3
 import uuid
@@ -579,3 +580,133 @@ def test_admin_curated_dataset_rebuild_returns_job_id_and_tracks_queue_state(
     assert body["job_id"]
     assert tracker_events[0][0].endswith(body["job_id"])
     assert tracker_events[0][1]["status"] == "queued"
+
+
+class _CuratedStatusResult:
+    def __init__(self, rows: list[dict[str, object]] | None = None) -> None:
+        self._rows = rows or []
+
+    def mappings(self) -> "_CuratedStatusResult":
+        return self
+
+    def all(self) -> list[dict[str, object]]:
+        return list(self._rows)
+
+
+class _CuratedStatusSession:
+    def __init__(self, rows: list[dict[str, object]] | None = None) -> None:
+        self.rows = rows or []
+
+    async def __aenter__(self) -> "_CuratedStatusSession":
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    async def execute(self, statement, params: dict[str, object] | None = None) -> _CuratedStatusResult:
+        sql = " ".join(str(statement).split()).upper()
+        values = dict(params or {})
+        if "FROM CURATED_CASE_STATUS" not in sql:
+            raise AssertionError(f"Unexpected SQL: {statement}")
+        rows = list(self.rows)
+        tenant_id = values.get("tenant_id")
+        if tenant_id is not None:
+            rows = [row for row in rows if row.get("tenant_id") == tenant_id]
+        return _CuratedStatusResult(rows)
+
+    async def commit(self) -> None:
+        return None
+
+
+def test_curated_case_status_migration_upgrade_creates_table_and_indexes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    migration_path = (
+        Path(__file__).resolve().parent.parent
+        / "alembic"
+        / "versions"
+        / "017_curated_case_status.py"
+    )
+    spec = importlib.util.spec_from_file_location("migration_017_curated_case_status", migration_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    table_calls: list[str] = []
+    index_calls: list[tuple[str, tuple[str, ...]]] = []
+
+    monkeypatch.setattr(module.op, "create_table", lambda name, *args, **kwargs: table_calls.append(name))
+    monkeypatch.setattr(
+        module.op,
+        "create_index",
+        lambda name, table_name, columns, **kwargs: index_calls.append((table_name, tuple(columns))),
+    )
+
+    module.upgrade()
+
+    assert table_calls == ["curated_case_status"]
+    assert ("curated_case_status", ("tenant_id",)) in index_calls
+    assert ("curated_case_status", ("status",)) in index_calls
+
+
+def test_admin_curated_dataset_stale_lists_stale_cases(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    tmp_path: Path,
+) -> None:
+    import api.app as api_app
+
+    evaluation_dir = tmp_path / "evaluation"
+    evaluation_dir.mkdir(parents=True)
+    curated_path = evaluation_dir / "curated_cases.jsonl"
+    curated_path.write_text(
+        json.dumps(
+            {
+                "case_id": "case-stale-1",
+                "tenant_id": "acme",
+                "input": {"query": "Q1", "context_hint": "", "channel": "web"},
+                "expected": {
+                    "answer_contains": ["foo"],
+                    "answer_not_contains": [],
+                    "route": "auto",
+                    "min_quality": 70,
+                    "min_factuality": 70,
+                    "citations_min_count": 1,
+                },
+                "human_verdict": "good",
+                "reviewer_notes": "",
+                "source_trace_id": "trace-1",
+                "created_at": "2025-01-01T10:00:00+00:00",
+            }
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    settings = api_app.get_settings()
+    settings.project_root = tmp_path
+    monkeypatch.setattr(
+        "db.engine.async_session",
+        lambda: _CuratedStatusSession(
+            [
+                {
+                    "case_id": "case-stale-1",
+                    "tenant_id": "acme",
+                    "status": "stale_needs_review",
+                    "staleness_reason": "quality_drop",
+                    "last_checked_at": "2026-04-22T12:00:00+00:00",
+                }
+            ]
+        ),
+    )
+
+    response = client_with_key.get(
+        "/api/admin/curated-dataset/stale",
+        headers=_token("acme", "admin"),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"][0]["case_id"] == "case-stale-1"
+    assert payload["items"][0]["status"] == "stale_needs_review"
+    assert payload["items"][0]["staleness_reason"] == "quality_drop"

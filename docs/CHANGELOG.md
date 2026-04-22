@@ -2,6 +2,24 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Arc 7 / Batch I partial] — 2026-04-22 — Continuous learning admin + migrations
+
+### Experiment deployment lifecycle (task-153)
+- **Migration 015 `experiment_deployments`** — per-experiment deployment history with `staged_at`, `deployed_at`, `rolled_back_at`, `regression_run_id`, indexed on each timestamp column and on `experiment_id`.
+- **Admin deploy/rollback endpoints** — `POST /admin/experiments/{id}/deploy` requires a green regression run on the curated dataset (returns `409` otherwise), updates the experiment YAML status to `deployed`, writes `config/deployed_experiment.yaml` runtime file. `POST /admin/experiments/{id}/rollback` marks the active deployment row and resets YAML status to `completed`, deleting the runtime file.
+
+### Tenant experiment assignments (task-154 admin surface)
+- **Migration 016 `experiment_assignments`** — `tenant_id`, `experiment_id`, `rollout_percentage`, `rolled_out_at`, indexed on tenant and experiment.
+- **Admin assignments endpoints** — `POST /admin/experiments/{id}/assignments` upserts `{tenant_id, rollout_percentage}`, `GET /admin/experiments/{id}/assignments` lists them.
+- **`resolve_active_experiment()` hook** — `agent/prompt_registry.py` now exposes a placeholder resolver that `run_qa_pipeline` consults for `{tenant_id, user_id, session_id}` before falling back to the staged-experiment loader; tests monkeypatch the resolver to simulate tenant assignment.
+
+### Curated dataset freshness (task-156 read side)
+- **Migration 017 `curated_case_status`** — `{case_id, tenant_id, status, staleness_reason, last_checked_at}`, indexed on `tenant_id` and `status`.
+- **Stale listing endpoint** — `GET /admin/curated-dataset/stale` returns cases with `status='stale_needs_review'`, tenant-scoped via the current admin context.
+
+### Scope
+Partial Batch I closure. task-155 auto-rollback, task-157 recommendation engine, task-158 comparison dashboard, sticky rollout evaluation in `resolve_active_experiment`, and the background stale detection job remain for a follow-up batch.
+
 ## [Arc 7 / Batch K] — 2026-04-22 — GraceKelly advanced orchestration
 
 ### Provider capabilities and graph integration

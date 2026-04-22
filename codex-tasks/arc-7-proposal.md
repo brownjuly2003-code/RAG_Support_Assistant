@@ -124,3 +124,23 @@ Batch K closed on 2026-04-22.
 - `agent/graph.py` uses provider-native tool calls and schema outputs for classification, document grading and consensus-enabled fact verification.
 - API/UI surface now exposes `/api/chat/stream` plus health-driven UI switching via `STREAMING_ENABLED`.
 - Ingestion has opt-in batch contextual-header preprocessing via `INGESTION_BATCH_ENABLED` with sequential fallback.
+
+## Batch I partial — task-153/154/156 admin + migration layer closed on 2026-04-22
+
+Batch I started in parallel with Batch K and was left partial by Codex.
+The admin + migration slices that keep Batch K green on master landed:
+
+- Migration 015 `experiment_deployments` + admin `POST /admin/experiments/{id}/deploy`
+  and `POST /admin/experiments/{id}/rollback` (task-153).
+- Migration 016 `experiment_assignments` + admin `POST`/`GET /admin/experiments/{id}/assignments`
+  and `resolve_active_experiment` hook in `run_qa_pipeline` (task-154 foundation).
+- Migration 017 `curated_case_status` + admin `GET /admin/curated-dataset/stale`
+  (task-156 read-side).
+
+Still open for a follow-up Batch I closure:
+
+- task-155 automatic rollback watcher + `AUTO_ROLLBACK_ENABLED` flag.
+- task-157 weekly recommendation engine (`scripts/generate_recommendations.py`).
+- task-158 experiment comparison dashboard (admin UI tab + endpoint).
+- task-154 sticky hash rollout in `resolve_active_experiment` (admin CRUD only for now).
+- task-156 stale detection job that populates `curated_case_status` rows.

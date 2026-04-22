@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -252,3 +253,282 @@ def test_admin_experiment_archive_updates_status(
 
     payload = yaml.safe_load(path.read_text(encoding="utf-8"))
     assert payload["status"] == "archived"
+
+
+class _AsyncMappingResult:
+    def __init__(self, rows: list[dict[str, object]] | None = None) -> None:
+        self._rows = rows or []
+
+    def mappings(self) -> "_AsyncMappingResult":
+        return self
+
+    def all(self) -> list[dict[str, object]]:
+        return list(self._rows)
+
+    def first(self) -> dict[str, object] | None:
+        return self._rows[0] if self._rows else None
+
+
+class _ExperimentControlSession:
+    def __init__(
+        self,
+        *,
+        regression_rows: list[dict[str, object]] | None = None,
+        deployment_rows: list[dict[str, object]] | None = None,
+        assignment_rows: list[dict[str, object]] | None = None,
+    ) -> None:
+        self.regression_rows = regression_rows or []
+        self.deployment_rows = deployment_rows or []
+        self.assignment_rows = assignment_rows or []
+        self.commits = 0
+
+    async def __aenter__(self) -> "_ExperimentControlSession":
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    async def execute(self, statement, params: dict[str, object] | None = None) -> _AsyncMappingResult:
+        sql = str(statement)
+        values = dict(params or {})
+        normalized = " ".join(sql.split()).upper()
+
+        if "FROM EVAL_RESULTS" in normalized:
+            experiment_id = values.get("experiment_id")
+            rows = [
+                dict(row)
+                for row in self.regression_rows
+                if experiment_id is None or row.get("candidate_experiment_id") == experiment_id
+            ]
+            return _AsyncMappingResult(rows[:1])
+
+        if normalized.startswith("INSERT INTO EXPERIMENT_DEPLOYMENTS"):
+            self.deployment_rows.append(dict(values))
+            return _AsyncMappingResult()
+
+        if normalized.startswith("UPDATE EXPERIMENT_DEPLOYMENTS"):
+            for row in self.deployment_rows:
+                if values.get("experiment_id") and row.get("experiment_id") != values["experiment_id"]:
+                    continue
+                if values.get("regression_run_id") and row.get("regression_run_id") != values["regression_run_id"]:
+                    continue
+                row.update(values)
+            return _AsyncMappingResult()
+
+        if "FROM EXPERIMENT_DEPLOYMENTS" in normalized:
+            experiment_id = values.get("experiment_id")
+            rows = [
+                dict(row)
+                for row in self.deployment_rows
+                if experiment_id is None or row.get("experiment_id") == experiment_id
+            ]
+            if "ROLLED_BACK_AT IS NULL" in normalized:
+                rows = [row for row in rows if row.get("rolled_back_at") is None]
+            return _AsyncMappingResult(rows[:1] if "LIMIT" in normalized else rows)
+
+        if normalized.startswith("DELETE FROM EXPERIMENT_ASSIGNMENTS"):
+            tenant_id = values.get("tenant_id")
+            self.assignment_rows = [
+                row for row in self.assignment_rows if row.get("tenant_id") != tenant_id
+            ]
+            return _AsyncMappingResult()
+
+        if normalized.startswith("INSERT INTO EXPERIMENT_ASSIGNMENTS"):
+            self.assignment_rows.append(dict(values))
+            return _AsyncMappingResult()
+
+        if "FROM EXPERIMENT_ASSIGNMENTS" in normalized:
+            experiment_id = values.get("experiment_id")
+            rows = [
+                dict(row)
+                for row in self.assignment_rows
+                if experiment_id is None or row.get("experiment_id") == experiment_id
+            ]
+            return _AsyncMappingResult(rows)
+
+        raise AssertionError(f"Unexpected SQL: {sql}")
+
+    async def commit(self) -> None:
+        self.commits += 1
+
+
+def test_experiment_deployments_migration_upgrade_creates_table_and_indexes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    migration_path = (
+        Path(__file__).resolve().parent.parent
+        / "alembic"
+        / "versions"
+        / "015_experiment_deployments.py"
+    )
+    spec = importlib.util.spec_from_file_location("migration_015_experiment_deployments", migration_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    table_calls: list[str] = []
+    index_calls: list[tuple[str, tuple[str, ...]]] = []
+
+    monkeypatch.setattr(module.op, "create_table", lambda name, *args, **kwargs: table_calls.append(name))
+    monkeypatch.setattr(
+        module.op,
+        "create_index",
+        lambda name, table_name, columns, **kwargs: index_calls.append((table_name, tuple(columns))),
+    )
+
+    module.upgrade()
+
+    assert table_calls == ["experiment_deployments"]
+    assert ("experiment_deployments", ("experiment_id",)) in index_calls
+    assert ("experiment_deployments", ("deployed_at",)) in index_calls
+    assert ("experiment_deployments", ("rolled_back_at",)) in index_calls
+
+
+def test_experiment_deployments_migration_downgrade_drops_table_and_indexes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    migration_path = (
+        Path(__file__).resolve().parent.parent
+        / "alembic"
+        / "versions"
+        / "015_experiment_deployments.py"
+    )
+    spec = importlib.util.spec_from_file_location("migration_015_experiment_deployments", migration_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    events: list[tuple[str, str]] = []
+    monkeypatch.setattr(module.op, "drop_index", lambda name, table_name=None: events.append(("drop_index", name)))
+    monkeypatch.setattr(module.op, "drop_table", lambda name: events.append(("drop_table", name)))
+
+    module.downgrade()
+
+    assert ("drop_table", "experiment_deployments") in events
+
+
+def test_admin_experiment_deploy_blocks_without_green_regression(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    tmp_path: Path,
+) -> None:
+    experiment_id = "2026-04-22-deploy-blocked"
+    _write_experiment_yaml(tmp_path, experiment_id, status="running")
+    monkeypatch.setattr("db.engine.async_session", lambda: _ExperimentControlSession())
+
+    response = client_with_key.post(
+        f"/api/admin/experiments/{experiment_id}/deploy",
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 409
+    assert "regression" in response.json()["detail"]
+
+
+def test_admin_experiment_deploy_updates_status_and_writes_runtime_file(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    tmp_path: Path,
+) -> None:
+    experiment_id = "2026-04-22-deploy-green"
+    experiment_path = _write_experiment_yaml(tmp_path, experiment_id, status="running")
+    session = _ExperimentControlSession(
+        regression_rows=[
+            {
+                "run_id": "regression-green-1",
+                "candidate_experiment_id": experiment_id,
+                "drift_alert": False,
+            }
+        ]
+    )
+    monkeypatch.setattr("db.engine.async_session", lambda: session)
+
+    response = client_with_key.post(
+        f"/api/admin/experiments/{experiment_id}/deploy",
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "deployed"
+    assert payload["deployment"]["regression_run_id"] == "regression-green-1"
+    assert yaml.safe_load(experiment_path.read_text(encoding="utf-8"))["status"] == "deployed"
+
+    deployed_path = tmp_path / "config" / "deployed_experiment.yaml"
+    assert deployed_path.exists()
+    assert yaml.safe_load(deployed_path.read_text(encoding="utf-8"))["experiment_id"] == experiment_id
+
+
+def test_admin_experiment_rollback_marks_deployment_and_clears_runtime_file(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    tmp_path: Path,
+) -> None:
+    experiment_id = "2026-04-22-rollback"
+    experiment_path = _write_experiment_yaml(tmp_path, experiment_id, status="deployed")
+    deployed_path = tmp_path / "config" / "deployed_experiment.yaml"
+    deployed_path.parent.mkdir(parents=True, exist_ok=True)
+    deployed_path.write_text(
+        yaml.safe_dump({"experiment_id": experiment_id}, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+        newline="\n",
+    )
+    session = _ExperimentControlSession(
+        deployment_rows=[
+            {
+                "experiment_id": experiment_id,
+                "regression_run_id": "regression-green-1",
+                "staged_at": "2026-04-22T10:00:00+00:00",
+                "deployed_at": "2026-04-22T10:05:00+00:00",
+                "rolled_back_at": None,
+            }
+        ]
+    )
+    monkeypatch.setattr("db.engine.async_session", lambda: session)
+
+    response = client_with_key.post(
+        f"/api/admin/experiments/{experiment_id}/rollback",
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "rolled_back"
+    assert yaml.safe_load(experiment_path.read_text(encoding="utf-8"))["status"] == "completed"
+    assert not deployed_path.exists()
+    assert session.deployment_rows[0]["rolled_back_at"] is not None
+
+
+def test_admin_experiment_assignments_upsert_and_list(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    tmp_path: Path,
+) -> None:
+    experiment_id = "2026-04-22-assignment"
+    _write_experiment_yaml(tmp_path, experiment_id, status="running")
+    session = _ExperimentControlSession()
+    monkeypatch.setattr("db.engine.async_session", lambda: session)
+
+    create = client_with_key.post(
+        f"/api/admin/experiments/{experiment_id}/assignments",
+        headers=ADMIN_HEADERS,
+        json={"tenant_id": "acme", "rollout_percentage": 25},
+    )
+
+    assert create.status_code == 200
+    assert create.json()["assignment"]["tenant_id"] == "acme"
+    assert create.json()["assignment"]["rollout_percentage"] == 25
+
+    listing = client_with_key.get(
+        f"/api/admin/experiments/{experiment_id}/assignments",
+        headers=ADMIN_HEADERS,
+    )
+
+    assert listing.status_code == 200
+    assert listing.json()["assignments"] == [
+        {
+            "tenant_id": "acme",
+            "experiment_id": experiment_id,
+            "rollout_percentage": 25,
+            "rolled_out_at": listing.json()["assignments"][0]["rolled_out_at"],
+        }
+    ]

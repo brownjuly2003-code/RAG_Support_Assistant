@@ -3137,6 +3137,43 @@ async def admin_rebuild_curated_dataset(
     return JSONResponse(content={"job_id": job_id, "status": "queued"})
 
 
+@router.get("/admin/curated-dataset/stale")
+async def admin_curated_dataset_stale(
+    _user: dict = Depends(require_role("admin", "reviewer")),
+) -> JSONResponse:
+    from sqlalchemy import text as sql_text  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or None
+    params: dict[str, object] = {}
+    if tenant and tenant != "*":
+        params["tenant_id"] = tenant
+
+    statement = sql_text(
+        "SELECT case_id, tenant_id, status, staleness_reason, last_checked_at "
+        "FROM curated_case_status "
+        "WHERE (:tenant_id IS NULL OR tenant_id = :tenant_id) "
+        "AND status = 'stale_needs_review' "
+        "ORDER BY last_checked_at DESC"
+    )
+    params.setdefault("tenant_id", None)
+
+    async with async_session() as db:
+        result = await db.execute(statement, params)
+        rows = list(result.mappings().all())
+
+    items: list[dict[str, object]] = []
+    for row in rows:
+        item = dict(row)
+        checked = item.get("last_checked_at")
+        if hasattr(checked, "isoformat"):
+            item["last_checked_at"] = checked.isoformat()
+        items.append(item)
+
+    return JSONResponse(content={"items": items})
+
+
 @router.get("/admin/thresholds/analysis")
 async def admin_threshold_analysis(
     days: int = 30,
@@ -3648,6 +3685,263 @@ async def admin_run_experiment_regression(
         status_code=202,
         content={"job_id": run_id, "status": "queued"},
     )
+
+
+def _deployed_experiment_runtime_path() -> Path:
+    return _project_root_path() / "config" / "deployed_experiment.yaml"
+
+
+def _write_deployed_experiment_runtime_file(experiment_id: str) -> None:
+    import yaml as _yaml  # noqa: PLC0415
+
+    path = _deployed_experiment_runtime_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        _yaml.safe_dump({"experiment_id": experiment_id}, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def _clear_deployed_experiment_runtime_file() -> None:
+    path = _deployed_experiment_runtime_path()
+    if path.exists():
+        try:
+            path.unlink()
+        except OSError:
+            pass
+
+
+@router.post("/admin/experiments/{experiment_id}/deploy")
+async def admin_deploy_experiment(
+    experiment_id: str,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from sqlalchemy import text as sql_text  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+    from evaluation.experiment_schema import load_experiment, save_experiment  # noqa: PLC0415
+
+    path = _experiments_dir() / f"{experiment_id}.yaml"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="experiment not found")
+
+    now = datetime.now(timezone.utc)
+    async with async_session() as db:
+        regression_stmt = sql_text(
+            "SELECT run_id, candidate_experiment_id, drift_alert "
+            "FROM eval_results "
+            "WHERE candidate_experiment_id = :experiment_id "
+            "AND drift_alert = false "
+            "ORDER BY started_at DESC LIMIT 1"
+        )
+        regression_result = await db.execute(
+            regression_stmt,
+            {"experiment_id": experiment_id},
+        )
+        regression_row = regression_result.mappings().first()
+        if not regression_row:
+            raise HTTPException(
+                status_code=409,
+                detail="green regression run on curated dataset is required before deploy",
+            )
+
+        run_id = regression_row["run_id"]
+        await db.execute(
+            sql_text(
+                "INSERT INTO experiment_deployments "
+                "(experiment_id, regression_run_id, staged_at, deployed_at) "
+                "VALUES (:experiment_id, :regression_run_id, :staged_at, :deployed_at)"
+            ),
+            {
+                "experiment_id": experiment_id,
+                "regression_run_id": run_id,
+                "staged_at": now,
+                "deployed_at": now,
+            },
+        )
+        await db.commit()
+
+    experiment = load_experiment(path)
+    experiment.status = "deployed"
+    save_experiment(experiment, path)
+    _write_deployed_experiment_runtime_file(experiment_id)
+
+    return JSONResponse(
+        content={
+            "status": "deployed",
+            "id": experiment_id,
+            "deployment": {
+                "regression_run_id": run_id,
+                "staged_at": now.isoformat(),
+                "deployed_at": now.isoformat(),
+            },
+        }
+    )
+
+
+@router.post("/admin/experiments/{experiment_id}/rollback")
+async def admin_rollback_experiment(
+    experiment_id: str,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from sqlalchemy import text as sql_text  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+    from evaluation.experiment_schema import load_experiment, save_experiment  # noqa: PLC0415
+
+    path = _experiments_dir() / f"{experiment_id}.yaml"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="experiment not found")
+
+    now = datetime.now(timezone.utc)
+    async with async_session() as db:
+        active_stmt = sql_text(
+            "SELECT experiment_id, regression_run_id, staged_at, deployed_at "
+            "FROM experiment_deployments "
+            "WHERE experiment_id = :experiment_id "
+            "AND rolled_back_at IS NULL "
+            "ORDER BY deployed_at DESC LIMIT 1"
+        )
+        active_result = await db.execute(
+            active_stmt,
+            {"experiment_id": experiment_id},
+        )
+        active_row = active_result.mappings().first()
+        if not active_row:
+            raise HTTPException(
+                status_code=409,
+                detail="no active deployment to rollback",
+            )
+
+        regression_run_id = active_row.get("regression_run_id")
+        await db.execute(
+            sql_text(
+                "UPDATE experiment_deployments "
+                "SET rolled_back_at = :rolled_back_at "
+                "WHERE experiment_id = :experiment_id "
+                "AND regression_run_id = :regression_run_id "
+                "AND rolled_back_at IS NULL"
+            ),
+            {
+                "rolled_back_at": now,
+                "experiment_id": experiment_id,
+                "regression_run_id": regression_run_id,
+            },
+        )
+        await db.commit()
+
+    experiment = load_experiment(path)
+    experiment.status = "completed"
+    save_experiment(experiment, path)
+    _clear_deployed_experiment_runtime_file()
+
+    return JSONResponse(
+        content={
+            "status": "rolled_back",
+            "id": experiment_id,
+            "rolled_back_at": now.isoformat(),
+        }
+    )
+
+
+@router.post("/admin/experiments/{experiment_id}/assignments")
+async def admin_upsert_experiment_assignment(
+    experiment_id: str,
+    body: dict,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from sqlalchemy import text as sql_text  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+
+    path = _experiments_dir() / f"{experiment_id}.yaml"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="experiment not found")
+
+    tenant_id = str(body.get("tenant_id") or "").strip()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="tenant_id is required")
+
+    rollout_percentage_raw = body.get("rollout_percentage", 0)
+    try:
+        rollout_percentage = int(rollout_percentage_raw)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="rollout_percentage must be integer")
+    if not 0 <= rollout_percentage <= 100:
+        raise HTTPException(status_code=400, detail="rollout_percentage must be within [0, 100]")
+
+    now = datetime.now(timezone.utc)
+    async with async_session() as db:
+        await db.execute(
+            sql_text(
+                "DELETE FROM experiment_assignments "
+                "WHERE tenant_id = :tenant_id"
+            ),
+            {"tenant_id": tenant_id},
+        )
+        await db.execute(
+            sql_text(
+                "INSERT INTO experiment_assignments "
+                "(tenant_id, experiment_id, rollout_percentage, rolled_out_at) "
+                "VALUES (:tenant_id, :experiment_id, :rollout_percentage, :rolled_out_at)"
+            ),
+            {
+                "tenant_id": tenant_id,
+                "experiment_id": experiment_id,
+                "rollout_percentage": rollout_percentage,
+                "rolled_out_at": now,
+            },
+        )
+        await db.commit()
+
+    return JSONResponse(
+        content={
+            "assignment": {
+                "tenant_id": tenant_id,
+                "experiment_id": experiment_id,
+                "rollout_percentage": rollout_percentage,
+                "rolled_out_at": now.isoformat(),
+            }
+        }
+    )
+
+
+@router.get("/admin/experiments/{experiment_id}/assignments")
+async def admin_list_experiment_assignments(
+    experiment_id: str,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    from sqlalchemy import text as sql_text  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+
+    async with async_session() as db:
+        result = await db.execute(
+            sql_text(
+                "SELECT tenant_id, experiment_id, rollout_percentage, rolled_out_at "
+                "FROM experiment_assignments "
+                "WHERE experiment_id = :experiment_id "
+                "ORDER BY rolled_out_at DESC"
+            ),
+            {"experiment_id": experiment_id},
+        )
+        rows = list(result.mappings().all())
+
+    assignments: list[dict[str, object]] = []
+    for row in rows:
+        record = dict(row)
+        value = record.get("rolled_out_at")
+        if hasattr(value, "isoformat"):
+            record["rolled_out_at"] = value.isoformat()
+        assignments.append(record)
+    return JSONResponse(content={"assignments": assignments})
 
 
 @router.get("/admin/regression-runs")

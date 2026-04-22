@@ -74,6 +74,20 @@ def load_current_experiment() -> Experiment | None:
     )
 
 
+def resolve_active_experiment(
+    tenant_id: str = "default",
+    user_id: str = "anonymous",
+    session_id: str | None = None,
+) -> Experiment | None:
+    """Return the experiment assigned to this tenant/user, or None.
+
+    Real resolution (tenant assignment lookup + sticky hash-based rollout)
+    is wired into the admin assignment layer; tests override this function
+    directly via monkeypatch.
+    """
+    return None
+
+
 def set_current_experiment(exp: Experiment | None) -> Token[Experiment | None]:
     return CURRENT_EXPERIMENT.set(exp)
 

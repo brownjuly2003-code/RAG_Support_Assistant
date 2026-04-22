@@ -175,3 +175,61 @@ def test_experiment_context_isolated_per_task() -> None:
 
     assert rendered_one == "ONE alpha"
     assert rendered_two == "TWO beta"
+
+
+def test_graph_uses_assigned_experiment_when_resolver_returns_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    graph = importlib.import_module("agent.graph")
+    prompts = importlib.import_module("agent.prompts")
+    registry = importlib.import_module("agent.prompt_registry")
+
+    class _FakeGraph:
+        def invoke(self, state):
+            return {
+                **state,
+                "answer": prompts.build_qa_prompt(state["question"], []),
+                "route": "auto",
+                "quality_score": 91,
+            }
+
+    experiment = Experiment(
+        id="2026-04-22-assigned-exp",
+        name="assigned",
+        created_at=datetime(2026, 4, 22, tzinfo=timezone.utc),
+        created_by="tests",
+        description="assigned override",
+        prompt_overrides={"qa": "ASSIGNED {question}"},
+        settings_overrides={},
+        parent_experiment_id=None,
+        status="running",
+        tags=[],
+    )
+
+    monkeypatch.delenv("EXPERIMENT_ID", raising=False)
+    monkeypatch.setattr(graph, "get_settings", lambda: _settings(), raising=False)
+    monkeypatch.setattr(
+        graph,
+        "start_trace",
+        lambda trace_id=None, tenant_id="default", experiment_id=None: "trace-assigned",
+    )
+    monkeypatch.setattr(graph, "finish_trace", lambda trace_id, final_state: None)
+    monkeypatch.setattr(graph, "build_support_graph", lambda **kwargs: _FakeGraph())
+    monkeypatch.setattr(
+        registry,
+        "resolve_active_experiment",
+        lambda tenant_id="default", user_id="anonymous", session_id=None: experiment,
+        raising=False,
+    )
+    monkeypatch.setitem(prompts.PROMPT_REGISTRY["qa"], "text", "DEFAULT PROMPT {question}")
+
+    result = graph.run_qa_pipeline(
+        question="hello",
+        retriever=object(),
+        llm=object(),
+        tenant_id="acme",
+        user_id="user-42",
+        session_id="session-42",
+    )
+
+    assert result["answer"] == "ASSIGNED hello"

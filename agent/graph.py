@@ -1552,6 +1552,8 @@ def run_qa_pipeline(
     chat_history: List[Dict[str, str]] | None = None,
     trace_id: str | None = None,
     tenant_id: str = "default",
+    user_id: str = "anonymous",
+    session_id: str | None = None,
 ) -> GraphState:
     """Обрабатывает один вопрос через граф.
 
@@ -1563,9 +1565,23 @@ def run_qa_pipeline(
         chat_history: история диалога (Level 3).
     """
     trace_id = start_trace(trace_id=trace_id, tenant_id=tenant_id)
+    assigned_experiment = None
+    try:
+        from agent.prompt_registry import resolve_active_experiment as _resolve_active
+        assigned_experiment = _resolve_active(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            session_id=session_id,
+        )
+    except Exception:
+        assigned_experiment = None
     experiment_token = (
-        set_current_experiment(load_current_experiment())
-        if load_current_experiment is not None and set_current_experiment is not None
+        set_current_experiment(
+            assigned_experiment
+            if assigned_experiment is not None
+            else (load_current_experiment() if load_current_experiment is not None else None)
+        )
+        if set_current_experiment is not None
         else None
     )
     try:
