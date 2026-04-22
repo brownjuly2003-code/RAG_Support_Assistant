@@ -1,4 +1,4 @@
-default_profile: latency-first
+default_profile: local-first
 
 providers:
   - id: ollama
@@ -26,84 +26,67 @@ providers:
         input_price_per_1m_tokens: 0.0
         output_price_per_1m_tokens: 0.0
 
-  - id: claude
-    label: Anthropic Claude
-    kind: paid
+  - id: gracekelly
+    label: GraceKelly local orchestrator
+    kind: local
     enabled: true
-    api_key_env: ANTHROPIC_API_KEY
+    api_key_env: GRACEKELLY_API_KEY
     default_models:
-      fast: claude-haiku-4-5
-      strong: claude-sonnet-4-6
+      fast: mistral-small
+      strong: claude-sonnet-4-6-api
     capabilities:
-      supports_tool_use: true
-      supports_structured_output: true
-      supports_vision: true
+      supports_tool_use: false
+      supports_structured_output: false
+      supports_vision: false
     rate_limits:
-      requests_per_minute: 50
-      tokens_per_minute: 400000
+      requests_per_minute: 0
+      tokens_per_minute: 0
     models:
-      - name: claude-haiku-4-5
-        aliases: [claude-haiku, claude-fast]
-        input_price_per_1m_tokens: 1.0
-        output_price_per_1m_tokens: 5.0
-      - name: claude-sonnet-4-6
-        aliases: [claude-sonnet, claude-strong]
-        input_price_per_1m_tokens: 3.0
-        output_price_per_1m_tokens: 15.0
+      - name: mistral-small
+        aliases: [gk-mistral, gk-fast]
+        input_price_per_1m_tokens: 0.0
+        output_price_per_1m_tokens: 0.0
+      - name: claude-sonnet-4-6-api
+        aliases: [gk-claude-sonnet, gk-strong]
+        input_price_per_1m_tokens: 0.0
+        output_price_per_1m_tokens: 0.0
+      - name: gpt-5-4-api
+        aliases: [gk-gpt-5]
+        input_price_per_1m_tokens: 0.0
+        output_price_per_1m_tokens: 0.0
 
-  - id: openai
-    label: OpenAI
+  - id: mistral
+    label: Mistral
     kind: paid
     enabled: true
-    api_key_env: OPENAI_API_KEY
+    api_key_env: MISTRAL_API_KEY
     default_models:
-      fast: gpt-5.4-mini
-      strong: gpt-5.4
+      fast: ministral-3b-latest
+      strong: mistral-small-latest
     capabilities:
       supports_tool_use: true
       supports_structured_output: true
-      supports_vision: true
+      supports_vision: false
     rate_limits:
       requests_per_minute: 60
       tokens_per_minute: 500000
     models:
-      - name: gpt-5.4-mini
-        aliases: [openai-fast, gpt-5-mini]
-        input_price_per_1m_tokens: 0.75
-        output_price_per_1m_tokens: 4.5
-      - name: gpt-5.4
-        aliases: [openai-strong, gpt-5]
-        input_price_per_1m_tokens: 2.5
-        output_price_per_1m_tokens: 15.0
-
-  - id: gemini
-    label: Google Gemini
-    kind: paid
-    enabled: true
-    api_key_env: GEMINI_API_KEY
-    default_models:
-      fast: gemini-3-flash-preview
-      strong: gemini-3.1-pro-preview
-    capabilities:
-      supports_tool_use: true
-      supports_structured_output: true
-      supports_vision: true
-    rate_limits:
-      requests_per_minute: 60
-      tokens_per_minute: 500000
-    models:
-      - name: gemini-3-flash-preview
-        aliases: [gemini-flash, gemini-fast]
-        input_price_per_1m_tokens: 0.5
-        output_price_per_1m_tokens: 3.0
-      - name: gemini-3.1-pro-preview
-        aliases: [gemini-pro, gemini-strong]
-        input_price_per_1m_tokens: 2.0
-        output_price_per_1m_tokens: 12.0
+      - name: ministral-3b-latest
+        aliases: [ministral-3b, mistral-tiny]
+        input_price_per_1m_tokens: 0.04
+        output_price_per_1m_tokens: 0.04
+      - name: ministral-8b-latest
+        aliases: [ministral-8b]
+        input_price_per_1m_tokens: 0.10
+        output_price_per_1m_tokens: 0.10
+      - name: mistral-small-latest
+        aliases: [mistral-small]
+        input_price_per_1m_tokens: 0.20
+        output_price_per_1m_tokens: 0.60
 
 routing_profiles:
-  latency-first:
-    description: Local-only routing through Ollama for the lowest latency and zero paid spend.
+  local-first:
+    description: Local-only Ollama routing, zero paid spend (default).
     fast:
       provider: ollama
       model: qwen2.5:7b
@@ -111,20 +94,23 @@ routing_profiles:
       provider: ollama
       model: qwen2.5:7b
 
-  cost-first:
-    description: Cheapest paid routing profile using Claude Haiku for strong reasoning and Gemini Flash for fast helper calls.
+  gracekelly-primary:
+    description: GraceKelly orchestrator for both tiers (Perplexity Pro-backed), with Ollama fallback on failure.
     fast:
-      provider: gemini
-      model: gemini-3-flash-preview
+      provider: gracekelly
+      model: mistral-small
     strong:
-      provider: claude
-      model: claude-haiku-4-5
+      provider: gracekelly
+      model: claude-sonnet-4-6-api
+    fallback:
+      provider: ollama
+      model: qwen2.5:7b
 
-  quality-first:
-    description: Highest answer quality profile with Claude Sonnet as the strong model.
+  external-mistral:
+    description: Direct Mistral API for external deployments without GraceKelly; cheap, dependable, no local orchestrator dependency.
     fast:
-      provider: openai
-      model: gpt-5.4-mini
+      provider: mistral
+      model: ministral-3b-latest
     strong:
-      provider: claude
-      model: claude-sonnet-4-6
+      provider: mistral
+      model: mistral-small-latest

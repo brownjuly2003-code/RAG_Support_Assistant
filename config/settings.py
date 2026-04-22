@@ -213,8 +213,8 @@ class Settings:
     )
     # --- Настройки LLM (Ollama / локальная модель) ---
     llm_provider_profile: str = field(
-        default_factory=lambda: os.getenv("LLM_PROVIDER_PROFILE", "latency-first").strip()
-        or "latency-first"
+        default_factory=lambda: os.getenv("LLM_PROVIDER_PROFILE", "local-first").strip()
+        or "local-first"
     )
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     ollama_model_name: str = os.getenv("OLLAMA_MODEL_NAME", "qwen2.5:7b")
@@ -244,6 +244,26 @@ class Settings:
     )
     daily_cost_limit_usd: float = field(
         default_factory=lambda: float(os.getenv("DAILY_COST_LIMIT_USD", "5.0") or "5.0")
+    )
+    gracekelly_base_url: str = field(
+        default_factory=lambda: os.getenv("GRACEKELLY_BASE_URL", "http://127.0.0.1:8011")
+    )
+    gracekelly_api_key_env: str = field(
+        default_factory=lambda: os.getenv("GRACEKELLY_API_KEY_ENV", "GRACEKELLY_API_KEY")
+    )
+    gracekelly_health_check_timeout_sec: float = field(
+        default_factory=lambda: float(os.getenv("GRACEKELLY_HEALTH_CHECK_TIMEOUT_SEC", "2.0") or "2.0")
+    )
+    gracekelly_request_timeout_sec: float = field(
+        default_factory=lambda: float(os.getenv("GRACEKELLY_REQUEST_TIMEOUT_SEC", "30.0") or "30.0")
+    )
+    failover_chain_enabled: bool = field(
+        default_factory=lambda: os.getenv(
+            "FAILOVER_CHAIN_ENABLED", "true"
+        ).strip().lower() in ("1", "true", "yes")
+    )
+    failover_fallback_cache_seconds: int = field(
+        default_factory=lambda: int(os.getenv("FAILOVER_FALLBACK_CACHE_SECONDS", "300") or "300")
     )
 
     # --- Embedding Model ---
@@ -655,7 +675,7 @@ class Settings:
             raise RuntimeError(
                 f"\nERROR: LLM provider profile '{self.llm_provider_profile}' requires paid provider credentials.\n"
                 f"       Missing env vars: {missing}\n"
-                "       Set the required keys in .env or switch to LLM_PROVIDER_PROFILE=latency-first."
+                "       Set the required keys in .env or switch to LLM_PROVIDER_PROFILE=local-first."
             )
 
         # Проверка Ollama

@@ -14,10 +14,11 @@ def test_load_provider_registry_from_yaml() -> None:
         Path(__file__).resolve().parent.parent / "config" / "providers.yml"
     )
 
-    assert registry.default_profile == "latency-first"
-    assert set(registry.provider_ids()) == {"claude", "gemini", "ollama", "openai"}
-    assert registry.get_profile("quality-first").strong.provider == "claude"
+    assert registry.default_profile == "local-first"
+    assert set(registry.provider_ids()) == {"gracekelly", "mistral", "ollama"}
+    assert registry.get_profile("gracekelly-primary").strong.provider == "gracekelly"
     assert registry.get_provider("ollama").default_models.fast == "qwen2.5:7b"
+    assert registry.get_provider("mistral").default_models.fast == "ministral-3b-latest"
 
 
 def test_provider_registry_resolves_model_alias_and_pricing() -> None:
@@ -27,12 +28,12 @@ def test_provider_registry_resolves_model_alias_and_pricing() -> None:
         Path(__file__).resolve().parent.parent / "config" / "providers.yml"
     )
 
-    resolved = registry.resolve_model("claude-haiku")
+    resolved = registry.resolve_model("gk-fast")
 
-    assert resolved.provider == "claude"
-    assert resolved.model == "claude-haiku-4-5"
-    assert resolved.input_price_per_1m_tokens > 0
-    assert resolved.output_price_per_1m_tokens > 0
+    assert resolved.provider == "gracekelly"
+    assert resolved.model == "mistral-small"
+    assert resolved.input_price_per_1m_tokens == 0.0
+    assert resolved.output_price_per_1m_tokens == 0.0
 
 
 def test_provider_registry_rejects_unknown_default_model(tmp_path: Path) -> None:
@@ -42,7 +43,7 @@ def test_provider_registry_rejects_unknown_default_model(tmp_path: Path) -> None
     config_path.write_text(
         yaml.safe_dump(
             {
-                "default_profile": "latency-first",
+                "default_profile": "local-first",
                 "providers": [
                     {
                         "id": "ollama",
@@ -74,7 +75,7 @@ def test_provider_registry_rejects_unknown_default_model(tmp_path: Path) -> None
                     }
                 ],
                 "routing_profiles": {
-                    "latency-first": {
+                    "local-first": {
                         "description": "Local profile",
                         "fast": {"provider": "ollama", "model": "qwen2.5:7b"},
                         "strong": {"provider": "ollama", "model": "qwen2.5:7b"},

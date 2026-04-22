@@ -10,22 +10,27 @@ import pytest
 from evaluation.experiment_schema import Experiment
 
 
-def _settings(profile: str = "latency-first") -> SimpleNamespace:
+def _settings(profile: str = "local-first") -> SimpleNamespace:
     return SimpleNamespace(
         provider_registry_path=Path(__file__).resolve().parent.parent / "config" / "providers.yml",
         llm_provider_profile=profile,
         ollama_base_url="http://ollama.test",
         ollama_request_timeout_sec=30.0,
+        gracekelly_base_url="http://127.0.0.1:8011",
+        gracekelly_request_timeout_sec=30.0,
+        gracekelly_health_check_timeout_sec=2.0,
+        failover_chain_enabled=True,
+        failover_fallback_cache_seconds=300,
         daily_cost_limit_usd=5.0,
     )
 
 
-def test_build_provider_runtime_resolves_latency_first_profile() -> None:
+def test_build_provider_runtime_resolves_local_first_profile() -> None:
     from llm.providers import build_provider_runtime
 
-    runtime = build_provider_runtime(settings=_settings("latency-first"))
+    runtime = build_provider_runtime(settings=_settings("local-first"))
 
-    assert runtime.profile_name == "latency-first"
+    assert runtime.profile_name == "local-first"
     assert runtime.fast.provider_id == "ollama"
     assert runtime.strong.provider_id == "ollama"
     assert runtime.fast.model_name == "qwen2.5:7b"
@@ -69,7 +74,7 @@ def test_build_provider_runtime_prefers_experiment_profile_override() -> None:
         created_by="tests",
         description="override provider profile",
         prompt_overrides={},
-        settings_overrides={"llm_provider_profile": "quality-first"},
+        settings_overrides={"llm_provider_profile": "gracekelly-primary"},
         parent_experiment_id=None,
         status="draft",
         tags=[],
@@ -77,15 +82,15 @@ def test_build_provider_runtime_prefers_experiment_profile_override() -> None:
 
     token = set_current_experiment(experiment)
     try:
-        runtime = build_provider_runtime(settings=_settings("latency-first"))
+        runtime = build_provider_runtime(settings=_settings("local-first"))
     finally:
         reset_current_experiment(token)
 
-    assert runtime.profile_name == "quality-first"
-    assert runtime.strong.provider_id == "claude"
+    assert runtime.profile_name == "gracekelly-primary"
+    assert runtime.strong.provider_id == "gracekelly"
 
 
-def test_build_provider_runtime_rejects_paid_profile_when_daily_cost_limit_exceeded(
+def test_build_provider_runtime_rejects_external_mistral_profile_when_daily_cost_limit_exceeded(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -108,18 +113,22 @@ def test_build_provider_runtime_rejects_paid_profile_when_daily_cost_limit_excee
             INSERT INTO trace_steps (provider_name, cost_usd, ts)
             VALUES (?, ?, ?)
             """,
-            ("claude", 0.75, datetime.now(timezone.utc).isoformat()),
+            ("mistral", 0.75, datetime.now(timezone.utc).isoformat()),
         )
         conn.commit()
 
-    monkeypatch.setenv("OPENAI_API_KEY", "changeme")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "changeme")
+    monkeypatch.setenv("MISTRAL_API_KEY", "changeme")
 
     settings = SimpleNamespace(
         provider_registry_path=Path(__file__).resolve().parent.parent / "config" / "providers.yml",
-        llm_provider_profile="quality-first",
+        llm_provider_profile="external-mistral",
         ollama_base_url="http://ollama.test",
         ollama_request_timeout_sec=30.0,
+        gracekelly_base_url="http://127.0.0.1:8011",
+        gracekelly_request_timeout_sec=30.0,
+        gracekelly_health_check_timeout_sec=2.0,
+        failover_chain_enabled=True,
+        failover_fallback_cache_seconds=300,
         daily_cost_limit_usd=0.5,
         tracing_db_path=db_path,
     )

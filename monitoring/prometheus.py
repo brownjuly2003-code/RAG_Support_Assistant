@@ -24,6 +24,7 @@ __all__ = [
     "HTTP_REQUESTS",
     "HTTP_REQUEST_DURATION",
     "LLM_COST_USD_TOTAL",
+    "LLM_PROVIDER_FALLBACK_TOTAL",
     "LLM_CACHE_HITS",
     "LLM_CACHE_MISSES",
     "OLLAMA_RETRY_EVENTS",
@@ -52,6 +53,7 @@ __all__ = [
     "generate_latest",
     "record_component_health",
     "record_llm_cost",
+    "record_provider_fallback",
     "record_http_request",
     "record_audit_purged",
     "record_auth_failure",
@@ -117,6 +119,7 @@ except ImportError:
     HTTP_REQUESTS = _NoopMetric()
     HTTP_REQUEST_DURATION = _NoopMetric()
     LLM_COST_USD_TOTAL = _NoopMetric()
+    LLM_PROVIDER_FALLBACK_TOTAL = _NoopMetric()
     QUALITY_SCORE = _NoopMetric()
     FACTUALITY_SCORE = _NoopMetric()
     ESCALATION_TOTAL = _NoopMetric()
@@ -191,6 +194,13 @@ else:
         "llm_cost_usd_total",
         "Accumulated LLM cost in USD grouped by provider, model, and tenant",
         ["provider", "model", "tenant"],
+        registry=REGISTRY,
+    )
+
+    LLM_PROVIDER_FALLBACK_TOTAL = Counter(
+        "llm_provider_fallback_total",
+        "Automatic provider failover events grouped by primary, fallback, and reason",
+        ["from_provider", "to_provider", "reason"],
         registry=REGISTRY,
     )
 
@@ -491,6 +501,14 @@ def record_llm_cost(provider: str, model: str, tenant: str, cost_usd: float) -> 
         model=model,
         tenant=tenant,
     ).inc(float(cost_usd))
+
+
+def record_provider_fallback(from_provider: str, to_provider: str, reason: str) -> None:
+    LLM_PROVIDER_FALLBACK_TOTAL.labels(
+        from_provider=from_provider,
+        to_provider=to_provider,
+        reason=reason,
+    ).inc()
 
 
 def record_circuit_breaker_change(name: str, from_state: str, to_state: str) -> None:

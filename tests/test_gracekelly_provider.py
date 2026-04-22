@@ -1,0 +1,239 @@
+from __future__ import annotations
+
+from typing import Any
+
+import pytest
+
+
+class _FakeResponse:
+    def __init__(
+        self,
+        *,
+        status_code: int = 200,
+        payload: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        self.status_code = status_code
+        self._payload = payload or {}
+        self.headers = headers or {}
+
+    def json(self) -> dict[str, Any]:
+        return self._payload
+
+    def raise_for_status(self) -> None:
+        if self.status_code < 400:
+            return None
+        raise RuntimeError(f"http {self.status_code}")
+
+
+def _build_provider():
+    from llm.providers.gracekelly import GraceKellyProvider
+
+    return GraceKellyProvider(
+        model_name="mistral-small",
+        base_url="http://127.0.0.1:8011",
+        api_key_env="GRACEKELLY_API_KEY",
+        timeout_sec=30.0,
+        health_check_timeout_sec=2.0,
+        input_price_per_1m_tokens=0.0,
+        output_price_per_1m_tokens=0.0,
+    )
+
+
+def test_gracekelly_provider_generates_answer_after_ready_check(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {"health": 0}
+
+    def _fake_get(url: str, *, timeout: float):
+        captured["health"] += 1
+        captured["health_url"] = url
+        captured["health_timeout"] = timeout
+        return _FakeResponse(status_code=200)
+
+    def _fake_post(url: str, *, headers: dict[str, str], json: dict[str, Any], timeout: float):
+        captured["post_url"] = url
+        captured["headers"] = headers
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return _FakeResponse(
+            payload={
+                "answer": "GraceKelly answer",
+                "task_type": "support",
+                "complexity_level": "simple",
+                "pattern_used": "single_call",
+                "reliability_level": "quick",
+                "was_decomposed": False,
+                "used_consensus": False,
+                "used_roles": False,
+                "total_llm_calls": 1,
+                "model_id": "mistral-small",
+            }
+        )
+
+    monkeypatch.delenv("GRACEKELLY_API_KEY", raising=False)
+    monkeypatch.setattr("httpx.get", _fake_get)
+    monkeypatch.setattr("httpx.post", _fake_post)
+
+    provider = _build_provider()
+    response = provider.generate([{"role": "user", "content": "hello"}])
+
+    assert captured["health"] == 1
+    assert captured["health_url"] == "http://127.0.0.1:8011/healthz/ready"
+    assert captured["post_url"] == "http://127.0.0.1:8011/api/v1/smart"
+    assert captured["json"]["model"] == "mistral-small"
+    assert captured["json"]["reliability_level"] == "quick"
+    assert captured["json"]["dry_run"] is False
+    assert "USER:\nhello" in captured["json"]["prompt"]
+    assert response.text == "GraceKelly answer"
+    assert response.provider == "gracekelly"
+    assert response.model == "mistral-small"
+    assert response.cost_usd == 0.0
+    assert response.metadata["total_llm_calls"] == 1
+    assert response.metadata["task_type"] == "support"
+
+
+def test_gracekelly_provider_adds_authorization_header_when_api_key_present(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    monkeypatch.setenv("GRACEKELLY_API_KEY", "secret-key")
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: _FakeResponse(status_code=200))
+    monkeypatch.setattr(
+        "httpx.post",
+        lambda url, *, headers, json, timeout: captured.setdefault(
+            "response",
+            _FakeResponse(
+                payload={
+                    "answer": "ok",
+                    "task_type": "support",
+                    "complexity_level": "simple",
+                    "pattern_used": "single_call",
+                    "reliability_level": "quick",
+                    "was_decomposed": False,
+                    "used_consensus": False,
+                    "used_roles": False,
+                    "total_llm_calls": 1,
+                    "model_id": "mistral-small",
+                },
+                headers={"captured-authorization": headers.get("Authorization", "")},
+            ),
+        ),
+    )
+
+    provider = _build_provider()
+    provider.generate([{"role": "user", "content": "hello"}])
+
+    assert captured["response"].headers["captured-authorization"] == "Bearer secret-key"
+
+
+def test_gracekelly_provider_skips_authorization_header_when_api_key_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def _fake_post(url: str, *, headers: dict[str, str], json: dict[str, Any], timeout: float):
+        _ = url, json, timeout
+        captured["headers"] = headers
+        return _FakeResponse(
+            payload={
+                "answer": "ok",
+                "task_type": "support",
+                "complexity_level": "simple",
+                "pattern_used": "single_call",
+                "reliability_level": "quick",
+                "was_decomposed": False,
+                "used_consensus": False,
+                "used_roles": False,
+                "total_llm_calls": 1,
+                "model_id": "mistral-small",
+            }
+        )
+
+    monkeypatch.delenv("GRACEKELLY_API_KEY", raising=False)
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: _FakeResponse(status_code=200))
+    monkeypatch.setattr("httpx.post", _fake_post)
+
+    provider = _build_provider()
+    provider.generate([{"role": "user", "content": "hello"}])
+
+    assert "Authorization" not in captured["headers"]
+
+
+def test_gracekelly_provider_raises_provider_unavailable_when_ready_check_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from llm.providers.base import ProviderUnavailable
+
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: _FakeResponse(status_code=503))
+
+    provider = _build_provider()
+
+    with pytest.raises(ProviderUnavailable):
+        provider.generate([{"role": "user", "content": "hello"}])
+
+
+def test_gracekelly_provider_reuses_successful_ready_check(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = {"health": 0}
+
+    def _fake_get(url: str, *, timeout: float):
+        _ = url, timeout
+        calls["health"] += 1
+        return _FakeResponse(status_code=200)
+
+    monkeypatch.setattr("httpx.get", _fake_get)
+    monkeypatch.setattr(
+        "httpx.post",
+        lambda *args, **kwargs: _FakeResponse(
+            payload={
+                "answer": "ok",
+                "task_type": "support",
+                "complexity_level": "simple",
+                "pattern_used": "single_call",
+                "reliability_level": "quick",
+                "was_decomposed": False,
+                "used_consensus": False,
+                "used_roles": False,
+                "total_llm_calls": 1,
+                "model_id": "mistral-small",
+            }
+        ),
+    )
+
+    provider = _build_provider()
+    provider.generate([{"role": "user", "content": "hello"}])
+    provider.generate([{"role": "user", "content": "hello again"}])
+
+    assert calls["health"] == 1
+
+
+def test_gracekelly_provider_cost_is_always_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: _FakeResponse(status_code=200))
+    monkeypatch.setattr(
+        "httpx.post",
+        lambda *args, **kwargs: _FakeResponse(
+            payload={
+                "answer": "ok",
+                "task_type": "support",
+                "complexity_level": "simple",
+                "pattern_used": "single_call",
+                "reliability_level": "quick",
+                "was_decomposed": False,
+                "used_consensus": False,
+                "used_roles": False,
+                "total_llm_calls": 3,
+                "model_id": "claude-sonnet-4-6-api",
+            }
+        ),
+    )
+
+    provider = _build_provider()
+    response = provider.generate([{"role": "user", "content": "hello"}])
+
+    assert response.cost_usd == 0.0
+    assert response.model == "claude-sonnet-4-6-api"

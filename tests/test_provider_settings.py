@@ -13,34 +13,36 @@ class _OkResponse:
         return None
 
 
-def test_settings_validate_allows_latency_first_without_paid_keys(
+def test_settings_validate_allows_local_first_without_paid_keys(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from config.settings import Settings
 
-    monkeypatch.setenv("LLM_PROVIDER_PROFILE", "latency-first")
+    monkeypatch.setenv("LLM_PROVIDER_PROFILE", "local-first")
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("MISTRAL_API_KEY", raising=False)
     monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: _OkResponse())
 
     settings = Settings()
 
     settings.validate()
 
-    assert settings.llm_provider_profile == "latency-first"
+    assert settings.llm_provider_profile == "local-first"
     assert settings.daily_cost_limit_usd == 5.0
 
 
-def test_settings_validate_requires_paid_provider_api_key_for_quality_profile(
+def test_settings_validate_requires_mistral_api_key_for_external_mistral_profile(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from config.settings import Settings
 
-    monkeypatch.setenv("LLM_PROVIDER_PROFILE", "quality-first")
+    monkeypatch.setenv("LLM_PROVIDER_PROFILE", "external-mistral")
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("MISTRAL_API_KEY", raising=False)
     monkeypatch.setattr(
         "urllib.request.urlopen",
         lambda *args, **kwargs: (_ for _ in ()).throw(urllib.error.URLError("offline")),
@@ -48,40 +50,40 @@ def test_settings_validate_requires_paid_provider_api_key_for_quality_profile(
 
     settings = Settings()
 
-    with pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY"):
+    with pytest.raises(RuntimeError, match="MISTRAL_API_KEY"):
         settings.validate()
 
 
-def test_settings_validate_accepts_paid_profile_when_required_keys_exist(
+def test_settings_validate_accepts_gracekelly_primary_without_paid_keys(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from config.settings import Settings
 
-    monkeypatch.setenv("LLM_PROVIDER_PROFILE", "cost-first")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-test-key")
-    monkeypatch.setenv("GEMINI_API_KEY", "gemini-test-key")
+    monkeypatch.setenv("LLM_PROVIDER_PROFILE", "gracekelly-primary")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("MISTRAL_API_KEY", raising=False)
     monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: _OkResponse())
 
     settings = Settings()
 
     settings.validate()
 
-    assert settings.llm_provider_profile == "cost-first"
+    assert settings.llm_provider_profile == "gracekelly-primary"
 
 
-def test_settings_validate_rejects_placeholder_api_keys_for_paid_profile(
+def test_settings_validate_rejects_placeholder_api_key_for_external_mistral(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from config.settings import Settings
 
-    monkeypatch.setenv("LLM_PROVIDER_PROFILE", "cost-first")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "changeme")
-    monkeypatch.setenv("GEMINI_API_KEY", "changeme")
+    monkeypatch.setenv("LLM_PROVIDER_PROFILE", "external-mistral")
+    monkeypatch.setenv("MISTRAL_API_KEY", "changeme")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: _OkResponse())
 
     settings = Settings()
 
-    with pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY|GEMINI_API_KEY"):
+    with pytest.raises(RuntimeError, match="MISTRAL_API_KEY"):
         settings.validate()

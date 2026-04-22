@@ -2,11 +2,28 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Arc 7 / Batch H] — 2026-04-22 — GraceKelly + Mistral providers
+
+### Provider runtime and routing cleanup
+- **GraceKelly provider** — `llm/providers/gracekelly.py`, `llm/providers/base.py` и `llm/providers/runtime.py` добавили локальный orchestrator backend с lazy readiness check через `/healthz/ready`, проксированием в `/api/v1/smart` и `cost_usd=0.0` в наших trace'ах.
+- **Direct Mistral provider** — `llm/providers/mistral.py`, `config/providers.yml` и `.env.example` добавили OpenAI-compatible direct provider для `https://api.mistral.ai/v1/chat/completions`, чтение usage из ответа и fail-fast на placeholder `MISTRAL_API_KEY`.
+- **Routing profiles revamp** — `local-first`, `gracekelly-primary` и `external-mistral` заменили старые `latency-first` / `cost-first` / `quality-first`; default теперь остаётся zero-spend local-only через Ollama.
+- **Dead paid-provider cleanup** — direct `anthropic.py`, `openai.py` и `gemini.py` удалены из runtime как неиспользуемый код для этого deployment profile.
+
+### Failover and observability
+- **GraceKelly -> Ollama failover** — runtime теперь перехватывает `ProviderUnavailable`, автоматически переключает запрос на локальный fallback только для declared GraceKelly profiles и кеширует fallback decision на 5 минут.
+- **Fallback Prometheus metric** — `monitoring/prometheus.py` добавил `llm_provider_fallback_total{from_provider,to_provider,reason}`, чтобы silent local failover был виден в monitoring.
+- **Benchmark refresh** — `scripts/regression_eval.py` и provider tests перешли на `ollama` / `gracekelly` / `mistral` вместо удалённых direct paid providers.
+
+### Docs and operator surface
+- **Operator docs refreshed** — README, `.env.example`, roadmap и Arc 7 proposal синхронизированы с новым active set: local Ollama, GraceKelly orchestrator и direct Mistral.
+- **Provider/failover test suites** — добавлены `tests/test_mistral_provider.py`, `tests/test_gracekelly_provider.py`, `tests/test_failover_chain.py`, а batch G provider tests переписаны под новый routing surface.
+
 ## [Arc 7 / Batch G] — 2026-04-22 — Provider abstraction
 
 ### Provider runtime, routing, and economics
-- **Provider registry** — `config/providers.yml` и `config/provider_schema.py` добавили единый source of truth для Ollama / Claude / OpenAI / Gemini: aliases, pricing tables, capabilities, rate limits и routing profiles `latency-first`, `cost-first`, `quality-first`.
-- **Unified provider runtime** — пакет `llm/providers/*` и integration в `agent/graph.py` перевели pipeline на общий provider-backed runtime без отказа от Ollama-first safe default: `latency-first` остаётся локальным profile по умолчанию.
+- **Provider registry** — `config/providers.yml` и `config/provider_schema.py` добавили единый source of truth для Ollama и direct-provider routing: aliases, pricing tables, capabilities, rate limits и routing profiles `latency-first`, `cost-first`, `quality-first`.
+- **Unified provider runtime** — пакет `llm/providers/*` и integration в `agent/graph.py` перевели pipeline на общий provider-backed runtime без отказа от Ollama-first safe default: локальный profile по умолчанию остался zero-spend.
 - **Provider-aware trace accounting** — `agent/state.py`, `sqlite_trace.py` и `tracing/sqlite_trace.py` начали сохранять `provider_name`, `model_name`, prompt/completion tokens, usage metadata и `cost_usd` на уровне шагов trace вместо безымянного cost-only режима.
 - **Paid guardrails** — `config/settings.py` и `llm/providers/runtime.py` добавили fail-fast validation для paid profiles, считают placeholder secrets вроде `changeme` отсутствующими ключами и блокируют paid runtime при превышении `DAILY_COST_LIMIT_USD`.
 

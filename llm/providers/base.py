@@ -2,10 +2,23 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 
 
 Message = dict[str, str]
+
+
+class ProviderUnavailable(RuntimeError):
+    def __init__(
+        self,
+        message: str,
+        *,
+        provider_id: str | None = None,
+        reason: str = "unavailable",
+    ) -> None:
+        super().__init__(message)
+        self.provider_id = provider_id
+        self.reason = reason
 
 
 @dataclass
@@ -75,8 +88,21 @@ def calculate_cost(
 
 
 class ProviderBackedLLM:
-    def __init__(self, provider: LLMProvider) -> None:
+    def __init__(
+        self,
+        provider: LLMProvider,
+        fallback_provider: LLMProvider | None = None,
+        fallback_cache_is_active: Callable[[], bool] | None = None,
+        fallback_cache_activate: Callable[[float], None] | None = None,
+        fallback_cache_ttl_sec: float = 0.0,
+        on_fallback: Callable[[str, str, str], None] | None = None,
+    ) -> None:
         self._provider = provider
+        self._fallback_provider = fallback_provider
+        self._fallback_cache_is_active = fallback_cache_is_active
+        self._fallback_cache_activate = fallback_cache_activate
+        self._fallback_cache_ttl_sec = fallback_cache_ttl_sec
+        self._on_fallback = on_fallback
         self.last_response: LLMResponse | None = None
 
     @property
@@ -93,7 +119,29 @@ class ProviderBackedLLM:
         tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        response = self._provider.generate(messages, tools=tools, **kwargs)
+        if (
+            self._fallback_provider is not None
+            and self._fallback_cache_is_active is not None
+            and self._fallback_cache_is_active()
+        ):
+            response = self._fallback_provider.generate(messages, tools=tools, **kwargs)
+            self.last_response = response
+            return response
+
+        try:
+            response = self._provider.generate(messages, tools=tools, **kwargs)
+        except ProviderUnavailable as exc:
+            if self._fallback_provider is None:
+                raise
+            if self._fallback_cache_activate is not None and self._fallback_cache_ttl_sec > 0:
+                self._fallback_cache_activate(self._fallback_cache_ttl_sec)
+            if self._on_fallback is not None:
+                self._on_fallback(
+                    self._provider.provider_id,
+                    self._fallback_provider.provider_id,
+                    getattr(exc, "reason", "unavailable") or "unavailable",
+                )
+            response = self._fallback_provider.generate(messages, tools=tools, **kwargs)
         self.last_response = response
         return response
 

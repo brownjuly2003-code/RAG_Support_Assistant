@@ -155,12 +155,17 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | Variable | Default | Description |
 |---|---|---|
 | `PROVIDER_REGISTRY_PATH` | `config/providers.yml` | YAML registry with providers, pricing, capabilities, and routing profiles |
-| `LLM_PROVIDER_PROFILE` | `latency-first` | Active routing profile; defaults to Ollama-only local inference |
+| `LLM_PROVIDER_PROFILE` | `local-first` | Active routing profile; defaults to Ollama-only local inference |
 | `LLM_BENCHMARK_ALLOW_PAID_APIS` | `false` | Allow live paid-provider calls in provider benchmarks |
 | `DAILY_COST_LIMIT_USD` | `5.0` | Fail fast when paid-provider spend for the current UTC day reaches this limit |
-| `ANTHROPIC_API_KEY` | `changeme` | Anthropic API key; placeholder values are treated as missing |
-| `OPENAI_API_KEY` | `changeme` | OpenAI API key; placeholder values are treated as missing |
-| `GEMINI_API_KEY` | `changeme` | Gemini API key; placeholder values are treated as missing |
+| `MISTRAL_API_KEY` | `changeme` | Direct Mistral API key; placeholder values are treated as missing |
+| `GRACEKELLY_BASE_URL` | `http://127.0.0.1:8011` | Base URL for the local GraceKelly orchestrator |
+| `GRACEKELLY_API_KEY` | `-` | Optional GraceKelly bearer token for non-public endpoints |
+| `GRACEKELLY_API_KEY_ENV` | `GRACEKELLY_API_KEY` | Env var name used by the runtime to look up the optional GraceKelly API key |
+| `GRACEKELLY_HEALTH_CHECK_TIMEOUT_SEC` | `2.0` | Readiness-probe timeout before GraceKelly is considered unavailable |
+| `GRACEKELLY_REQUEST_TIMEOUT_SEC` | `30.0` | Timeout for a single GraceKelly `/api/v1/smart` call |
+| `FAILOVER_CHAIN_ENABLED` | `true` | Enable GraceKelly -> Ollama automatic failover for profiles that declare a local fallback |
+| `FAILOVER_FALLBACK_CACHE_SECONDS` | `300` | Cache a successful local fallback decision for this many seconds |
 
 ### RAG pipeline
 
@@ -465,19 +470,35 @@ Admin endpoints:
 
 Provider routing is configured through `config/providers.yml`, which defines:
 
-- enabled providers (`ollama`, `claude`, `openai`, `gemini`)
-- model aliases such as `ollama-small`, `claude-haiku`, and `gpt-5`
+- enabled providers (`ollama`, `gracekelly`, `mistral`)
+- model aliases such as `ollama-small`, `gk-fast`, and `mistral-small-latest`
 - per-model input/output pricing, rate limits, and capability flags
-- routing profiles `latency-first`, `cost-first`, and `quality-first`
+- routing profiles `local-first`, `gracekelly-primary`, and `external-mistral`
 
 Runtime behavior:
 
-- `latency-first` is the default profile and keeps both fast/strong lanes on Ollama.
-- `cost-first` routes helper calls to Gemini Flash and strong calls to Claude Haiku.
-- `quality-first` uses OpenAI for the fast lane and Claude Sonnet for the strong lane.
+- `local-first` is the default profile and keeps both fast/strong lanes on Ollama.
+- `gracekelly-primary` routes both tiers through the local GraceKelly orchestrator and falls back only to Ollama when GraceKelly is unavailable.
+- `external-mistral` uses the direct Mistral API and is the intended non-local deployment option when GraceKelly is not present.
 - Startup validation loads the registry, verifies `LLM_PROVIDER_PROFILE`, and treats placeholder credentials such as `changeme` as missing.
 - Each traced LLM step now records `provider_name`, `model_name`, token usage, and cost; Prometheus exports `llm_cost_usd_total{provider,model,tenant}`.
+- Automatic failover events are exported as `llm_provider_fallback_total{from_provider,to_provider,reason}`.
+- `mistral-small` is GraceKelly's local fast-lane model name; use `mistral-small-latest` when you want the direct Mistral alias.
 - The admin UI exposes a **Providers** tab backed by `GET /api/admin/providers`, including active profile, configured providers, 1-minute usage, 24-hour cost, and the last successful call timestamp.
+
+### GraceKelly provider
+
+- `gracekelly-primary` is intended for local setups where `D:\GraceKelly\` runs on `http://127.0.0.1:8011`.
+- The provider uses `GET /healthz/ready` before the first request and calls `POST /api/v1/smart` with `reliability_level=quick`.
+- If GraceKelly is down or times out, the runtime switches only to the declared local fallback (`ollama`) and caches that decision for `FAILOVER_FALLBACK_CACHE_SECONDS`.
+- GraceKelly calls are treated as proxy/orchestrator traffic, so `cost_usd` remains `0.0` in local traces.
+
+### Mistral provider
+
+- `external-mistral` is the direct paid fallback for deployments where GraceKelly is unavailable.
+- The provider uses `POST https://api.mistral.ai/v1/chat/completions` with OpenAI-compatible chat payloads and reads token usage from `usage.prompt_tokens` / `usage.completion_tokens`.
+- Placeholder `MISTRAL_API_KEY=changeme` is treated as missing both in startup validation and in the provider constructor.
+- `DAILY_COST_LIMIT_USD` applies to the direct Mistral profile and blocks new runtime creation after the current UTC-day spend is exhausted.
 
 ## Regression eval
 
@@ -514,7 +535,7 @@ registry aliases instead of experiment ids.
 ```bash
 python scripts/regression_eval.py \
   --baseline ollama-small \
-  --candidate claude-haiku \
+  --candidate mistral-small-latest \
   --dataset evaluation/curated_cases.jsonl \
   --tenant all \
   --max-cases 50 \
@@ -522,7 +543,9 @@ python scripts/regression_eval.py \
 ```
 
 - Alias resolution comes from `config/providers.yml`, so `ollama-small`,
-  `claude-haiku`, `openai-fast`, and `gemini-pro` can be used directly.
+  `gk-fast`, `gk-strong`, and `mistral-small-latest` can be used directly.
+- Use `mistral-small-latest` for direct Mistral benchmarks; bare `mistral-small`
+  belongs to the GraceKelly profile.
 - Default mode is `mock-provider-benchmark`: answers are derived from the
   curated dataset and pricing/latency/refusal metrics are simulated so CI does
   not spend paid API budget accidentally.

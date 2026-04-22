@@ -122,21 +122,18 @@ def _build_mock_provider_result(case: CuratedCase, target: str, resolution: dict
     expected = case.expected
     provider_quality_bias = {
         "ollama": 0,
-        "gemini": 2,
-        "openai": 3,
-        "claude": 4,
+        "mistral": 2,
+        "gracekelly": 4,
     }
     provider_latency_ms = {
         "ollama": 180,
-        "gemini": 420,
-        "openai": 560,
-        "claude": 640,
+        "mistral": 420,
+        "gracekelly": 640,
     }
     provider_factuality_bias = {
         "ollama": 0,
-        "gemini": 1,
-        "openai": 2,
-        "claude": 3,
+        "mistral": 1,
+        "gracekelly": 3,
     }
 
     answer_parts = list(expected.answer_contains or [])

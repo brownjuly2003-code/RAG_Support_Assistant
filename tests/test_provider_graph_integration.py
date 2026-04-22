@@ -32,7 +32,7 @@ def test_build_support_graph_uses_provider_runtime_when_llm_missing(
             return self
 
     runtime = SimpleNamespace(
-        profile_name="latency-first",
+        profile_name="local-first",
         fast=SimpleNamespace(invoke=lambda prompt: "SIMPLE", provider_id="ollama", model_name="qwen2.5:7b"),
         strong=SimpleNamespace(invoke=lambda prompt: "SIMPLE", provider_id="ollama", model_name="qwen2.5:7b"),
     )

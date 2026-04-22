@@ -88,7 +88,7 @@ def test_admin_providers_endpoint_returns_registry_and_recent_usage(
         lambda: SimpleNamespace(
             provider_registry_path=Path(__file__).resolve().parent.parent / "config" / "providers.yml",
             tracing_db_path=db_path,
-            llm_provider_profile="latency-first",
+            llm_provider_profile="local-first",
         ),
     )
 
@@ -99,8 +99,8 @@ def test_admin_providers_endpoint_returns_registry_and_recent_usage(
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["active_profile"] == "latency-first"
-    assert payload["default_profile"] == "latency-first"
+    assert payload["active_profile"] == "local-first"
+    assert payload["default_profile"] == "local-first"
 
     ollama = next(item for item in payload["providers"] if item["id"] == "ollama")
     assert ollama["configured"] is True

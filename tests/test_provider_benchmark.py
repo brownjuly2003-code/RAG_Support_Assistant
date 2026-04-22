@@ -44,14 +44,14 @@ def test_run_regression_supports_provider_targets_in_mock_mode(
 
     report = regression_eval.run_regression(
         baseline="ollama-small",
-        candidate="claude-haiku",
+        candidate="mistral-small-latest",
         dataset_path=dataset_path,
         now=datetime(2026, 4, 22, 12, 0, tzinfo=timezone.utc),
     )
 
     assert report["mode"] == "mock-provider-benchmark"
     assert report["baseline"] == "ollama-small"
-    assert report["candidate"] == "claude-haiku"
+    assert report["candidate"] == "mistral-small-latest"
     assert report["aggregate"]["total_cases"] == 1
     assert report["aggregate"]["candidate_total_cost_usd"] > report["aggregate"]["baseline_total_cost_usd"]
     assert report["aggregate"]["candidate_avg_latency_ms"] > report["aggregate"]["baseline_avg_latency_ms"]
@@ -69,7 +69,7 @@ def test_parse_args_accepts_allow_paid_apis_flag() -> None:
             "--baseline",
             "ollama-small",
             "--candidate",
-            "claude-haiku",
+            "mistral-small-latest",
             "--allow-paid-apis",
         ]
     )

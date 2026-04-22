@@ -1,14 +1,15 @@
-# RAG Support Assistant — post-arc roadmap (CLOSED 2026-04-21)
+# RAG Support Assistant — post-arc roadmap (CLOSED 2026-04-22)
 
 Слияние `commercial-upgrade-plan.md` + `rec.md` с учётом фактического
 состояния кода после арка 68-101. Каждый открытый пункт переработан в
 Codex-спеку; закрытые пункты сюда **не включены** (см. `Archive/`).
 
-> **Status (2026-04-22):** все 21 task arc 102-122 и follow-up fix-tasks
-> 130/131/132 реализованы, закоммичены и заархивированы.
-> Current repo state после закрытия follow-up'ов и Batch F: 393 passed,
-> Ruff clean. Gaps из verification sweep (task-123) закрыты коммитом
-> `ee5ff51`; у этого roadmap больше нет pending fix-tasks.
+> **Status (2026-04-22):** все 21 task arc 102-122, follow-up fix-tasks
+> 130/131/132, Batch G и Batch H закрыты.
+> Current repo state: roadmap по arc 102-122 больше не имеет pending fix-tasks,
+> provider surface переведён на `ollama + gracekelly + mistral`, а следующими
+> кандидатами остаются continuous learning phase 2, backup/restore + chaos и
+> GraceKelly advanced orchestration.
 
 ## Baseline (на момент 2026-04-20)
 - 71 коммит в арке 68-101, 222 теста passing, ruff clean
@@ -80,7 +81,7 @@ Codex-спеку; закрытые пункты сюда **не включены
 
 ## Next arc (Arc 7)
 
-- [arc-7-proposal.md](./arc-7-proposal.md) — новый proposal с кандидатами G/H/I и рекомендацией брать Batch G.
-- Batch G — provider abstraction: registry `config/providers.yml`, unified `llm/providers/*`, provider-aware cost accounting, mock-by-default benchmarking, admin Providers tab.
-- Batch H — continuous learning phase 2 остаётся deferred до появления большего production traffic и A/B signals.
-- Batch I — backup/restore/chaos остаётся deferred: базовый runbook уже есть, но расширение не критично для current single-user setup.
+- [arc-7-proposal.md](./arc-7-proposal.md) — proposal обновлён постфактум: Batch G и Batch H закрыты, дальше перечислены новые кандидаты.
+- Batch G — provider abstraction — ✅ закрыт.
+- Batch H — GraceKelly + Mistral providers, failover chain и cleanup dead paid-provider code — ✅ закрыт.
+- Следующие кандидаты: continuous learning phase 2, backup/restore + chaos drills, и GraceKelly tool-use/structured-output integration отдельным batch'ем.

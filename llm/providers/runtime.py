@@ -1,22 +1,27 @@
 from __future__ import annotations
 
 import sqlite3
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from config.provider_schema import load_provider_registry
-from llm.providers.anthropic import ClaudeProvider
 from llm.providers.base import ProviderBackedLLM
-from llm.providers.gemini import GeminiProvider
+from llm.providers.gracekelly import GraceKellyProvider
+from llm.providers.mistral import MistralProvider
 from llm.providers.ollama import OllamaProvider
-from llm.providers.openai import OpenAIProvider
 
 try:
     from agent.prompt_registry import CURRENT_EXPERIMENT
 except ImportError:  # pragma: no cover
     CURRENT_EXPERIMENT = None  # type: ignore[assignment]
+
+
+_FAILOVER_CACHE_UNTIL: dict[tuple[str, str, str, str, str, str], float] = {}
 
 
 @dataclass
@@ -34,10 +39,10 @@ def _active_profile_name(settings: Any) -> str:
             override_value = overrides.get("llm_provider_profile")
             if override_value:
                 return str(override_value)
-    return str(getattr(settings, "llm_provider_profile", "latency-first") or "latency-first")
+    return str(getattr(settings, "llm_provider_profile", "local-first") or "local-first")
 
 
-def _build_provider(settings: Any, provider_id: str, model_name: str) -> ProviderBackedLLM:
+def _instantiate_provider(settings: Any, provider_id: str, model_name: str) -> Any:
     registry = load_provider_registry(getattr(settings, "provider_registry_path"))
     provider_config = registry.get_provider(provider_id)
     if provider_config is None:
@@ -54,19 +59,121 @@ def _build_provider(settings: Any, provider_id: str, model_name: str) -> Provide
         "timeout_sec": timeout_sec,
     }
     if provider_id == "ollama":
-        provider = OllamaProvider(
+        return OllamaProvider(
             base_url=str(getattr(settings, "ollama_base_url", "http://localhost:11434")),
             **common_kwargs,
         )
-    elif provider_id == "claude":
-        provider = ClaudeProvider(api_key_env=str(provider_config.api_key_env or ""), **common_kwargs)
-    elif provider_id == "openai":
-        provider = OpenAIProvider(api_key_env=str(provider_config.api_key_env or ""), **common_kwargs)
-    elif provider_id == "gemini":
-        provider = GeminiProvider(api_key_env=str(provider_config.api_key_env or ""), **common_kwargs)
-    else:  # pragma: no cover
-        raise KeyError(f"unsupported provider '{provider_id}'")
-    return ProviderBackedLLM(provider)
+    if provider_id == "mistral":
+        return MistralProvider(api_key_env=str(provider_config.api_key_env or ""), **common_kwargs)
+    if provider_id == "gracekelly":
+        return GraceKellyProvider(
+            base_url=str(getattr(settings, "gracekelly_base_url", "http://127.0.0.1:8011")),
+            api_key_env=str(getattr(settings, "gracekelly_api_key_env", provider_config.api_key_env or "")),
+            health_check_timeout_sec=float(
+                getattr(settings, "gracekelly_health_check_timeout_sec", 2.0)
+            ),
+            timeout_sec=float(getattr(settings, "gracekelly_request_timeout_sec", 30.0)),
+            model_name=model.name,
+            input_price_per_1m_tokens=model.input_price_per_1m_tokens,
+            output_price_per_1m_tokens=model.output_price_per_1m_tokens,
+        )
+    raise KeyError(f"unsupported provider '{provider_id}'")
+
+
+def _load_profile_fallback(
+    settings: Any,
+    profile_name: str,
+) -> tuple[str, str] | None:
+    if not bool(getattr(settings, "failover_chain_enabled", True)):
+        return None
+    registry_path = Path(getattr(settings, "provider_registry_path"))
+    payload = yaml.safe_load(registry_path.read_text(encoding="utf-8")) or {}
+    profile = ((payload.get("routing_profiles") or {}).get(profile_name)) or {}
+    fallback = profile.get("fallback") if isinstance(profile, dict) else None
+    if not isinstance(fallback, dict):
+        return None
+    provider = str(fallback.get("provider") or "").strip()
+    model = str(fallback.get("model") or "").strip()
+    if not provider or not model:
+        return None
+    return provider, model
+
+
+def _failover_cache_key(
+    settings: Any,
+    profile_name: str,
+    provider_id: str,
+    model_name: str,
+    fallback_provider_id: str,
+    fallback_model_name: str,
+) -> tuple[str, str, str, str, str, str]:
+    return (
+        str(Path(getattr(settings, "provider_registry_path")).resolve()),
+        profile_name,
+        provider_id,
+        model_name,
+        fallback_provider_id,
+        fallback_model_name,
+    )
+
+
+def _is_failover_cache_active(key: tuple[str, str, str, str, str, str]) -> bool:
+    until = _FAILOVER_CACHE_UNTIL.get(key, 0.0)
+    if until <= time.monotonic():
+        _FAILOVER_CACHE_UNTIL.pop(key, None)
+        return False
+    return True
+
+
+def _activate_failover_cache(key: tuple[str, str, str, str, str, str], ttl_sec: float) -> None:
+    if ttl_sec <= 0:
+        return
+    _FAILOVER_CACHE_UNTIL[key] = time.monotonic() + ttl_sec
+
+
+def _record_provider_fallback(from_provider: str, to_provider: str, reason: str) -> None:
+    try:
+        from monitoring.prometheus import record_provider_fallback
+
+        record_provider_fallback(from_provider, to_provider, reason)
+    except Exception:
+        return None
+
+
+def _build_provider(
+    settings: Any,
+    profile_name: str,
+    provider_id: str,
+    model_name: str,
+    fallback_target: tuple[str, str] | None = None,
+) -> ProviderBackedLLM:
+    provider = _instantiate_provider(settings, provider_id, model_name)
+    if provider_id != "gracekelly" or fallback_target is None:
+        return ProviderBackedLLM(provider)
+
+    fallback_provider_id, fallback_model_name = fallback_target
+    registry = load_provider_registry(getattr(settings, "provider_registry_path"))
+    fallback_provider_config = registry.get_provider(fallback_provider_id)
+    if fallback_provider_config is None or fallback_provider_config.kind != "local":
+        return ProviderBackedLLM(provider)
+
+    fallback_provider = _instantiate_provider(settings, fallback_provider_id, fallback_model_name)
+    cache_key = _failover_cache_key(
+        settings,
+        profile_name,
+        provider.provider_id,
+        provider.model_name,
+        fallback_provider.provider_id,
+        fallback_provider.model_name,
+    )
+    return ProviderBackedLLM(
+        provider,
+        fallback_provider=fallback_provider,
+        fallback_cache_is_active=lambda key=cache_key: _is_failover_cache_active(key),
+        fallback_cache_activate=lambda ttl_sec, key=cache_key: _activate_failover_cache(key, ttl_sec),
+        fallback_cache_ttl_sec=float(getattr(settings, "failover_fallback_cache_seconds", 300) or 300),
+        on_fallback=_record_provider_fallback,
+    )
 
 
 def _daily_paid_cost_usd(settings: Any, provider_ids: set[str]) -> float:
@@ -118,8 +225,9 @@ def build_provider_runtime(settings: Any) -> ProviderRuntime:
     profile_name = _active_profile_name(settings)
     _enforce_daily_cost_limit(settings, registry, profile_name)
     profile = registry.get_profile(profile_name)
+    fallback_target = _load_profile_fallback(settings, profile_name)
     return ProviderRuntime(
         profile_name=profile_name,
-        fast=_build_provider(settings, profile.fast.provider, profile.fast.model),
-        strong=_build_provider(settings, profile.strong.provider, profile.strong.model),
+        fast=_build_provider(settings, profile_name, profile.fast.provider, profile.fast.model, fallback_target),
+        strong=_build_provider(settings, profile_name, profile.strong.provider, profile.strong.model, fallback_target),
     )
