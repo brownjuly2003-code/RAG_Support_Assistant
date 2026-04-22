@@ -41,6 +41,7 @@ from pydantic import SecretStr
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 EXPERIMENT_OVERRIDE_PATH = PROJECT_ROOT / "config" / "experiment_override.yaml"
 EXPERIMENT_SETTINGS_KEYS = (
+    "llm_provider_profile",
     "ollama_model_name",
     "ollama_fast_model_name",
     "model_routing_enabled",
@@ -64,6 +65,7 @@ EXPERIMENT_SETTINGS_KEYS = (
     "chunk_overlap",
 )
 _EXPERIMENT_SETTING_ENV_VARS: dict[str, tuple[str, ...]] = {
+    "llm_provider_profile": ("LLM_PROVIDER_PROFILE",),
     "ollama_model_name": ("OLLAMA_MODEL_NAME",),
     "ollama_fast_model_name": ("OLLAMA_FAST_MODEL_NAME",),
     "model_routing_enabled": ("MODEL_ROUTING_ENABLED",),
@@ -201,7 +203,19 @@ class Settings:
             os.getenv("CATEGORIES_CONFIG_PATH", str(PROJECT_ROOT / "config" / "categories.yml"))
         )
     )
+    provider_registry_path: Path = field(
+        default_factory=lambda: Path(
+            os.getenv(
+                "PROVIDER_REGISTRY_PATH",
+                str(PROJECT_ROOT / "config" / "providers.yml"),
+            )
+        )
+    )
     # --- Настройки LLM (Ollama / локальная модель) ---
+    llm_provider_profile: str = field(
+        default_factory=lambda: os.getenv("LLM_PROVIDER_PROFILE", "latency-first").strip()
+        or "latency-first"
+    )
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     ollama_model_name: str = os.getenv("OLLAMA_MODEL_NAME", "qwen2.5:7b")
     ollama_fast_model_name: str = field(
@@ -222,6 +236,14 @@ class Settings:
     )
     llm_model_prices: dict[str, dict[str, float]] = field(
         default_factory=_load_llm_model_prices
+    )
+    llm_benchmark_allow_paid_apis: bool = field(
+        default_factory=lambda: os.getenv(
+            "LLM_BENCHMARK_ALLOW_PAID_APIS", "false"
+        ).strip().lower() in ("1", "true", "yes")
+    )
+    daily_cost_limit_usd: float = field(
+        default_factory=lambda: float(os.getenv("DAILY_COST_LIMIT_USD", "5.0") or "5.0")
     )
 
     # --- Embedding Model ---
@@ -595,6 +617,45 @@ class Settings:
             log.warning(
                 "DB_ENCRYPTION_KEY is not set; encryption operations will fail. "
                 "Set it in .env for local dev — see .env.example."
+            )
+
+        try:
+            from config.provider_schema import load_provider_registry
+
+            provider_registry = load_provider_registry(self.provider_registry_path)
+        except Exception as exc:
+            raise RuntimeError(
+                "\nERROR: Failed to load provider registry.\n"
+                f"       Path: {self.provider_registry_path}\n"
+                f"       Reason: {exc}"
+            ) from exc
+
+        if self.llm_provider_profile not in provider_registry.routing_profiles:
+            available_profiles = ", ".join(sorted(provider_registry.routing_profiles))
+            raise RuntimeError(
+                f"\nERROR: Unknown LLM_PROVIDER_PROFILE='{self.llm_provider_profile}'.\n"
+                f"       Available profiles: {available_profiles}"
+            )
+
+        required_env_vars: list[str] = []
+        active_profile = provider_registry.get_profile(self.llm_provider_profile)
+        for target in (active_profile.fast, active_profile.strong):
+            provider = provider_registry.get_provider(target.provider)
+            if provider is None or provider.kind != "paid":
+                continue
+            raw_api_key = (os.getenv(provider.api_key_env or "", "") or "").strip()
+            if provider.api_key_env and (
+                not raw_api_key
+                or raw_api_key.lower() in {"changeme", "change-me", "change_me"}
+            ):
+                required_env_vars.append(provider.api_key_env)
+
+        if required_env_vars:
+            missing = ", ".join(sorted(set(required_env_vars)))
+            raise RuntimeError(
+                f"\nERROR: LLM provider profile '{self.llm_provider_profile}' requires paid provider credentials.\n"
+                f"       Missing env vars: {missing}\n"
+                "       Set the required keys in .env or switch to LLM_PROVIDER_PROFILE=latency-first."
             )
 
         # Проверка Ollama

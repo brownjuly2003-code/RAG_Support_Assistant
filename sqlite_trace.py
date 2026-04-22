@@ -166,6 +166,7 @@ def _init_db() -> None:
                 prompt_tokens INTEGER,
                 completion_tokens INTEGER,
                 model_name TEXT,
+                provider_name TEXT,
                 cost_usd REAL
             );
             """
@@ -179,6 +180,8 @@ def _init_db() -> None:
             cur.execute("ALTER TABLE trace_steps ADD COLUMN completion_tokens INTEGER")
         if "model_name" not in trace_step_columns:
             cur.execute("ALTER TABLE trace_steps ADD COLUMN model_name TEXT")
+        if "provider_name" not in trace_step_columns:
+            cur.execute("ALTER TABLE trace_steps ADD COLUMN provider_name TEXT")
         if "cost_usd" not in trace_step_columns:
             cur.execute("ALTER TABLE trace_steps ADD COLUMN cost_usd REAL")
 
@@ -275,6 +278,47 @@ def start_trace(trace_id: str | None = None, tenant_id: str = "default") -> str:
     return trace_id
 
 
+def _resolve_model_pricing(
+    provider_name: str | None,
+    model_name: str | None,
+) -> tuple[float | None, float | None]:
+    if not model_name:
+        return None, None
+
+    try:
+        from config.provider_schema import load_provider_registry
+    except Exception:
+        return None, None
+
+    registry_path = None
+    try:
+        from config.settings import get_settings
+
+        registry_path = getattr(get_settings(), "provider_registry_path", None)
+    except Exception:
+        registry_path = None
+
+    try:
+        registry = load_provider_registry(registry_path)
+        if provider_name:
+            provider = registry.get_provider(provider_name)
+            if provider is not None:
+                model = provider.resolve_model(model_name)
+                if model is not None:
+                    return (
+                        float(model.input_price_per_1m_tokens),
+                        float(model.output_price_per_1m_tokens),
+                    )
+
+        resolved = registry.resolve_model(model_name)
+        return (
+            float(resolved.input_price_per_1m_tokens),
+            float(resolved.output_price_per_1m_tokens),
+        )
+    except Exception:
+        return None, None
+
+
 def log_step(trace_id: str, node_name: str, state: Any) -> None:
     """
     Логирует один шаг выполнения графа в таблицу trace_steps.
@@ -295,7 +339,9 @@ def log_step(trace_id: str, node_name: str, state: Any) -> None:
     if completion_tokens is None and isinstance(usage_metadata, dict):
         completion_tokens = usage_metadata.get("output_tokens")
     model_name = state_dict.get("model_name") or state_dict.get("llm_model_name")
+    provider_name = state_dict.get("provider_name") or state_dict.get("llm_provider_name")
     cost_usd = state_dict.get("cost_usd")
+    usage_node = state_dict.get("usage_node")
 
     try:
         prompt_tokens = int(prompt_tokens) if prompt_tokens is not None else None
@@ -307,29 +353,63 @@ def log_step(trace_id: str, node_name: str, state: Any) -> None:
         completion_tokens = None
     if model_name is not None:
         model_name = str(model_name)
+    if provider_name is not None:
+        provider_name = str(provider_name)
     try:
         cost_usd = float(cost_usd) if cost_usd is not None else None
     except (TypeError, ValueError):
         cost_usd = None
 
+    if usage_node is not None and str(usage_node) != node_name:
+        prompt_tokens = None
+        completion_tokens = None
+        model_name = None
+        provider_name = None
+        cost_usd = None
+
     if cost_usd is None and model_name:
         try:
-            from config.settings import get_settings
+            input_price, output_price = _resolve_model_pricing(provider_name, model_name)
+            if input_price is None or output_price is None:
+                raise LookupError("provider registry pricing not available")
 
-            settings = get_settings()
-            prices = (getattr(settings, "llm_model_prices", {}) or {}).get(model_name, {})
-            input_price = float(
-                prices.get("input", getattr(settings, "llm_input_price_per_1m_tokens", 0.0) or 0.0)
-            )
-            output_price = float(
-                prices.get("output", getattr(settings, "llm_output_price_per_1m_tokens", 0.0) or 0.0)
-            )
             cost_usd = (
                 ((prompt_tokens or 0) * input_price)
                 + ((completion_tokens or 0) * output_price)
             ) / 1_000_000
         except Exception:
-            cost_usd = None
+            try:
+                from config.settings import get_settings
+
+                settings = get_settings()
+                prices = (getattr(settings, "llm_model_prices", {}) or {}).get(model_name, {})
+                input_price = float(
+                    prices.get(
+                        "input",
+                        getattr(settings, "llm_input_price_per_1m_tokens", 0.0) or 0.0,
+                    )
+                )
+                output_price = float(
+                    prices.get(
+                        "output",
+                        getattr(settings, "llm_output_price_per_1m_tokens", 0.0) or 0.0,
+                    )
+                )
+                cost_usd = (
+                    ((prompt_tokens or 0) * input_price)
+                    + ((completion_tokens or 0) * output_price)
+                ) / 1_000_000
+            except Exception:
+                cost_usd = None
+
+    tenant_id = str(state_dict.get("tenant_id") or "default")
+    if provider_name and model_name and cost_usd is not None:
+        try:
+            from monitoring.prometheus import record_llm_cost
+
+            record_llm_cost(provider_name, model_name, tenant_id, float(cost_usd))
+        except Exception:
+            pass
 
     with _get_connection() as conn:
         cur = conn.cursor()
@@ -354,9 +434,10 @@ def log_step(trace_id: str, node_name: str, state: Any) -> None:
                 prompt_tokens,
                 completion_tokens,
                 model_name,
+                provider_name,
                 cost_usd
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 trace_id,
@@ -367,6 +448,7 @@ def log_step(trace_id: str, node_name: str, state: Any) -> None:
                 prompt_tokens,
                 completion_tokens,
                 model_name,
+                provider_name,
                 cost_usd,
             ),
         )

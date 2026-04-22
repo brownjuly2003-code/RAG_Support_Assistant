@@ -69,6 +69,7 @@
 
 <nav class="tabs" aria-label="Admin sections">
   <button type="button" data-tab="breaker" class="active">Circuit Breaker</button>
+  <button type="button" data-tab="providers">Providers</button>
   <button type="button" data-tab="traces">Traces</button>
   <button type="button" data-tab="review-queue">Review Queue</button>
   <button type="button" data-tab="kb-gaps">Knowledge Gaps</button>
@@ -87,6 +88,28 @@
       <button id="btn-reset" type="button">Reset Breaker</button>
     </div>
     <pre id="breaker-output"></pre>
+  </section>
+
+  <section id="tab-providers">
+    <h2>Providers</h2>
+    <div class="controls">
+      <button id="btn-load-providers" type="button">Load</button>
+    </div>
+    <table id="providers-table">
+      <thead>
+        <tr>
+          <th scope="col">provider</th>
+          <th scope="col">kind</th>
+          <th scope="col">active</th>
+          <th scope="col">configured</th>
+          <th scope="col">req/min</th>
+          <th scope="col">tokens/min</th>
+          <th scope="col">last success</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <pre id="providers-output"></pre>
   </section>
 
   <section id="tab-traces">
@@ -248,6 +271,76 @@
 </main>
 
 <script src="/static/admin.js"></script>
+<script>
+  (function () {
+    var storageKey = "rag_admin_token";
+    var button = document.getElementById("btn-load-providers");
+    var tableBody = document.querySelector("#providers-table tbody");
+    var output = document.getElementById("providers-output");
+
+    function headers() {
+      var token = (localStorage.getItem(storageKey) || "").trim();
+      var result = { "Content-Type": "application/json" };
+      if (token) {
+        result.Authorization = "Bearer " + token;
+      }
+      return result;
+    }
+
+    async function loadProviders() {
+      var response = await fetch("/api/admin/providers", {
+        method: "GET",
+        headers: headers()
+      });
+      var data = await response.json().catch(function () { return {}; });
+      tableBody.innerHTML = "";
+
+      if (!response.ok || !data || !Array.isArray(data.providers)) {
+        output.textContent = JSON.stringify({ status: response.status, body: data }, null, 2);
+        return;
+      }
+
+      data.providers.forEach(function (provider) {
+        var row = document.createElement("tr");
+        var providerCell = document.createElement("td");
+        var kindCell = document.createElement("td");
+        var activeCell = document.createElement("td");
+        var configuredCell = document.createElement("td");
+        var requestsCell = document.createElement("td");
+        var tokensCell = document.createElement("td");
+        var successCell = document.createElement("td");
+
+        providerCell.textContent = provider.label || provider.id || "";
+        kindCell.textContent = provider.kind || "";
+        activeCell.textContent = data.active_profile || "";
+        configuredCell.textContent = provider.configured ? "yes" : "no";
+        requestsCell.textContent = String((provider.usage_1m || {}).requests || 0);
+        tokensCell.textContent = String((provider.usage_1m || {}).tokens || 0);
+        successCell.textContent = provider.last_success_at || "";
+
+        row.appendChild(providerCell);
+        row.appendChild(kindCell);
+        row.appendChild(activeCell);
+        row.appendChild(configuredCell);
+        row.appendChild(requestsCell);
+        row.appendChild(tokensCell);
+        row.appendChild(successCell);
+        tableBody.appendChild(row);
+      });
+
+      output.textContent = JSON.stringify({
+        status: response.status,
+        active_profile: data.active_profile,
+        default_profile: data.default_profile,
+        providers: data.providers.length
+      }, null, 2);
+    }
+
+    if (button) {
+      button.addEventListener("click", loadProviders);
+    }
+  })();
+</script>
 <script>
   (function () {
     var storageKey = "rag_admin_token";

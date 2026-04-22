@@ -73,6 +73,113 @@ def _slug(value: str) -> str:
     return "-".join(parts) or "current"
 
 
+def _estimate_mock_tokens(text: str) -> int:
+    from llm.providers.base import estimate_tokens
+
+    return estimate_tokens(text)
+
+
+def _is_refusal_answer(answer: str) -> bool:
+    normalized = (answer or "").strip().lower()
+    if not normalized:
+        return False
+    patterns = (
+        "i don't know",
+        "cannot help",
+        "не знаю",
+        "не могу помочь",
+        "обратитесь",
+    )
+    return any(pattern in normalized for pattern in patterns)
+
+
+def _resolve_provider_target(target: str, provider_registry_path: Path | None) -> dict[str, Any] | None:
+    from config.provider_schema import load_provider_registry
+
+    try:
+        registry = load_provider_registry(provider_registry_path)
+        resolution = registry.resolve_model(target)
+        provider = registry.get_provider(resolution.provider)
+        model = provider.resolve_model(resolution.model) if provider is not None else None
+    except Exception:
+        return None
+
+    if provider is None or model is None:
+        return None
+
+    return {
+        "provider_id": provider.id,
+        "provider_kind": provider.kind,
+        "model_name": model.name,
+        "input_price_per_1m_tokens": float(model.input_price_per_1m_tokens),
+        "output_price_per_1m_tokens": float(model.output_price_per_1m_tokens),
+    }
+
+
+def _build_mock_provider_result(case: CuratedCase, target: str, resolution: dict[str, Any]) -> CaseRunResult:
+    provider_id = str(resolution["provider_id"])
+    model_name = str(resolution["model_name"])
+    expected = case.expected
+    provider_quality_bias = {
+        "ollama": 0,
+        "gemini": 2,
+        "openai": 3,
+        "claude": 4,
+    }
+    provider_latency_ms = {
+        "ollama": 180,
+        "gemini": 420,
+        "openai": 560,
+        "claude": 640,
+    }
+    provider_factuality_bias = {
+        "ollama": 0,
+        "gemini": 1,
+        "openai": 2,
+        "claude": 3,
+    }
+
+    answer_parts = list(expected.answer_contains or [])
+    if not answer_parts:
+        answer_parts.append(f"Mock provider response for {case.query}")
+    answer = " ".join(answer_parts).strip()
+    citations_count = max(1, int(expected.citations_min_count or 1))
+    citations = [
+        {
+            "index": index,
+            "doc_id": f"{provider_id}-doc-{index}",
+            "title": f"{provider_id}:{model_name}",
+            "excerpt": answer[:120],
+        }
+        for index in range(1, citations_count + 1)
+    ]
+
+    input_tokens = _estimate_mock_tokens(case.query)
+    output_tokens = _estimate_mock_tokens(answer)
+    cost_usd = round(
+        (
+            input_tokens * float(resolution["input_price_per_1m_tokens"])
+            + output_tokens * float(resolution["output_price_per_1m_tokens"])
+        )
+        / 1_000_000,
+        6,
+    )
+
+    return CaseRunResult(
+        answer=answer,
+        quality_score=min(100.0, max(float(expected.min_quality or 75), 75.0) + provider_quality_bias.get(provider_id, 0)),
+        factuality_score=min(
+            100.0,
+            max(float(expected.min_factuality or 80), 80.0) + provider_factuality_bias.get(provider_id, 0),
+        ),
+        citations=citations,
+        duration_ms=int(provider_latency_ms.get(provider_id, 500)),
+        cost_usd=cost_usd,
+        route=str(expected.route or "auto"),
+        trace_id=f"mock-{_slug(target)}-{case.case_id}",
+    )
+
+
 def load_curated_cases(path: Path) -> list[CuratedCase]:
     cases: list[CuratedCase] = []
     for raw_line in path.read_text(encoding="utf-8").splitlines():
@@ -163,6 +270,12 @@ def run_regression_cases(
 
     baseline_passes = 0
     candidate_passes = 0
+    baseline_total_cost = 0.0
+    candidate_total_cost = 0.0
+    baseline_total_latency_ms = 0
+    candidate_total_latency_ms = 0
+    baseline_refusals = 0
+    candidate_refusals = 0
 
     for case in cases:
         baseline_result = executor(case, baseline)
@@ -173,6 +286,12 @@ def run_regression_cases(
 
         baseline_passes += int(baseline_passed)
         candidate_passes += int(candidate_passed)
+        baseline_total_cost += float(baseline_result.cost_usd or 0.0)
+        candidate_total_cost += float(candidate_result.cost_usd or 0.0)
+        baseline_total_latency_ms += int(baseline_result.duration_ms or 0)
+        candidate_total_latency_ms += int(candidate_result.duration_ms or 0)
+        baseline_refusals += int(_is_refusal_answer(baseline_result.answer))
+        candidate_refusals += int(_is_refusal_answer(candidate_result.answer))
 
         outcome = "neutral"
         if baseline_passed and not candidate_passed:
@@ -252,6 +371,12 @@ def run_regression_cases(
             "regressions": len(regressions),
             "new_passes": len(new_passes),
             "neutral": neutral_count,
+            "baseline_total_cost_usd": round(baseline_total_cost, 6),
+            "candidate_total_cost_usd": round(candidate_total_cost, 6),
+            "baseline_avg_latency_ms": round(baseline_total_latency_ms / total_cases, 2) if total_cases else 0.0,
+            "candidate_avg_latency_ms": round(candidate_total_latency_ms / total_cases, 2) if total_cases else 0.0,
+            "baseline_refusal_rate": round(baseline_refusals / total_cases, 4) if total_cases else 0.0,
+            "candidate_refusal_rate": round(candidate_refusals / total_cases, 4) if total_cases else 0.0,
         },
         "gate": {
             "passed": gate_passed,
@@ -280,6 +405,12 @@ def _render_summary_table(report: dict[str, Any]) -> str:
             f"| Regressions | {aggregate['regressions']} |",
             f"| New passes | {aggregate['new_passes']} |",
             f"| Neutral | {aggregate['neutral']} |",
+            f"| Baseline avg latency | {aggregate['baseline_avg_latency_ms']} ms |",
+            f"| Candidate avg latency | {aggregate['candidate_avg_latency_ms']} ms |",
+            f"| Baseline total cost | ${aggregate['baseline_total_cost_usd']:.6f} |",
+            f"| Candidate total cost | ${aggregate['candidate_total_cost_usd']:.6f} |",
+            f"| Baseline refusal rate | {aggregate['baseline_refusal_rate']:.2%} |",
+            f"| Candidate refusal rate | {aggregate['candidate_refusal_rate']:.2%} |",
             f"| Gate | {'pass' if gate['passed'] else 'fail'} |",
         ]
     )
@@ -313,6 +444,7 @@ def render_markdown_report(report: dict[str, Any]) -> str:
         f"- Created at: `{report['created_at']}`",
         f"- Dataset: `{report['dataset'] or 'n/a'}`",
         f"- Tenant: `{report['tenant']}`",
+        f"- Mode: `{report.get('mode', 'experiment-regression')}`",
         "",
         "## Summary",
         "",
@@ -341,6 +473,12 @@ def render_markdown_report(report: dict[str, Any]) -> str:
             f"- Total cases: {report['aggregate']['total_cases']}",
             f"- Baseline pass rate: {report['aggregate']['baseline_pass_rate']:.2%}",
             f"- Candidate pass rate: {report['aggregate']['candidate_pass_rate']:.2%}",
+            f"- Baseline avg latency: {report['aggregate']['baseline_avg_latency_ms']} ms",
+            f"- Candidate avg latency: {report['aggregate']['candidate_avg_latency_ms']} ms",
+            f"- Baseline total cost: ${report['aggregate']['baseline_total_cost_usd']:.6f}",
+            f"- Candidate total cost: ${report['aggregate']['candidate_total_cost_usd']:.6f}",
+            f"- Baseline refusal rate: {report['aggregate']['baseline_refusal_rate']:.2%}",
+            f"- Candidate refusal rate: {report['aggregate']['candidate_refusal_rate']:.2%}",
             "",
         ]
     )
@@ -490,6 +628,80 @@ def _experiment_runtime(
             temp_dir.cleanup()
 
 
+@contextmanager
+def _provider_target_runtime(
+    target: str,
+    *,
+    project_root: Path = PROJECT_ROOT,
+):
+    import yaml
+
+    import agent.prompt_registry as prompt_registry
+    import config.settings as settings_module
+    from config.provider_schema import load_provider_registry
+
+    current_settings = settings_module.get_settings()
+    registry_path = Path(getattr(current_settings, "provider_registry_path", PROJECT_ROOT / "config" / "providers.yml"))
+    resolution = _resolve_provider_target(target, registry_path)
+    if resolution is None:
+        raise FileNotFoundError(f"provider target not found: {target}")
+
+    registry = load_provider_registry(registry_path)
+    profile_name = f"benchmark-{_slug(target)}"
+    payload = registry.model_dump(mode="python")
+    payload["routing_profiles"][profile_name] = {
+        "description": f"Benchmark runtime profile for {target}",
+        "fast": {"provider": resolution["provider_id"], "model": resolution["model_name"]},
+        "strong": {"provider": resolution["provider_id"], "model": resolution["model_name"]},
+    }
+
+    original_env = os.getenv("EXPERIMENT_ID")
+    original_settings_path = settings_module.EXPERIMENT_OVERRIDE_PATH
+    original_prompt_path = prompt_registry.EXPERIMENT_OVERRIDE_PATH
+    temp_dir: tempfile.TemporaryDirectory[str] | None = None
+
+    try:
+        temp_dir = tempfile.TemporaryDirectory()
+        temp_registry_path = Path(temp_dir.name) / "providers.yml"
+        temp_registry_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+            newline="\n",
+        )
+        override_path = Path(temp_dir.name) / "experiment_override.yaml"
+        override_path.write_text(
+            yaml.safe_dump(
+                {
+                    "experiment_id": profile_name,
+                    "prompt_overrides": {},
+                    "settings_overrides": {
+                        "llm_provider_profile": profile_name,
+                        "provider_registry_path": str(temp_registry_path),
+                    },
+                },
+                sort_keys=False,
+                allow_unicode=True,
+            ),
+            encoding="utf-8",
+            newline="\n",
+        )
+        os.environ["EXPERIMENT_ID"] = profile_name
+        settings_module.EXPERIMENT_OVERRIDE_PATH = override_path
+        prompt_registry.EXPERIMENT_OVERRIDE_PATH = override_path
+        _reset_settings_cache()
+        yield resolution
+    finally:
+        if original_env is None:
+            os.environ.pop("EXPERIMENT_ID", None)
+        else:
+            os.environ["EXPERIMENT_ID"] = original_env
+        settings_module.EXPERIMENT_OVERRIDE_PATH = original_settings_path
+        prompt_registry.EXPERIMENT_OVERRIDE_PATH = original_prompt_path
+        _reset_settings_cache()
+        if temp_dir is not None:
+            temp_dir.cleanup()
+
+
 def _resolve_retriever(tenant_id: str) -> Any:
     import api.app as api_app
 
@@ -620,6 +832,28 @@ def execute_case_with_runtime(
     return _normalize_result(result)
 
 
+def execute_case_with_provider_target(
+    case: CuratedCase,
+    target: str,
+    *,
+    project_root: Path = PROJECT_ROOT,
+) -> CaseRunResult:
+    from agent.graph import run_qa_pipeline
+    from config.settings import get_settings
+
+    with _provider_target_runtime(target, project_root=project_root), _force_ollama_temperature_zero():
+        retriever = _resolve_retriever(case.tenant_id)
+        result = run_qa_pipeline(
+            question=case.query,
+            retriever=retriever,
+            llm=None,
+            max_iterations=int(getattr(get_settings(), "self_rag_max_iterations", 2)),
+            trace_id=f"provider-benchmark-{uuid.uuid4()}",
+            tenant_id=case.tenant_id,
+        )
+    return _normalize_result(result)
+
+
 def run_regression(
     *,
     baseline: str,
@@ -628,6 +862,7 @@ def run_regression(
     tenant: str = "all",
     max_cases: int | None = None,
     seed: int = 42,
+    allow_paid_apis: bool | None = None,
     max_regressions: int | None = None,
     min_pass_rate: float | None = None,
     project_root: Path = PROJECT_ROOT,
@@ -647,20 +882,42 @@ def run_regression(
         if min_pass_rate is not None
         else float(getattr(settings, "regression_gate_min_pass_rate", 0.85))
     )
+    benchmark_allow_paid_apis = (
+        bool(allow_paid_apis)
+        if allow_paid_apis is not None
+        else bool(getattr(settings, "llm_benchmark_allow_paid_apis", False))
+    )
+    provider_registry_path = Path(getattr(settings, "provider_registry_path", PROJECT_ROOT / "config" / "providers.yml"))
+    baseline_provider_target = _resolve_provider_target(baseline, provider_registry_path)
+    candidate_provider_target = _resolve_provider_target(candidate, provider_registry_path)
 
     cases = load_curated_cases(dataset_path)
     if tenant != "all":
         cases = [case for case in cases if case.tenant_id == tenant]
     cases = sample_cases(cases, max_cases=max_cases, seed=seed)
 
-    selected_executor = executor or (
-        lambda case, experiment_id: execute_case_with_runtime(
-            case,
-            experiment_id,
-            project_root=project_root,
-        )
-    )
-    return run_regression_cases(
+    if executor is None:
+        def _selected_executor(case: CuratedCase, target: str) -> CaseRunResult:
+            provider_target = _resolve_provider_target(target, provider_registry_path)
+            if provider_target is None:
+                return execute_case_with_runtime(
+                    case,
+                    target,
+                    project_root=project_root,
+                )
+            if not benchmark_allow_paid_apis:
+                return _build_mock_provider_result(case, target, provider_target)
+            return execute_case_with_provider_target(
+                case,
+                target,
+                project_root=project_root,
+            )
+
+        selected_executor = _selected_executor
+    else:
+        selected_executor = executor
+
+    report = run_regression_cases(
         cases,
         baseline=baseline,
         candidate=candidate,
@@ -671,6 +928,13 @@ def run_regression(
         tenant=tenant,
         now=now,
     )
+    if baseline_provider_target or candidate_provider_target:
+        report["mode"] = (
+            "live-provider-benchmark" if benchmark_allow_paid_apis else "mock-provider-benchmark"
+        )
+    else:
+        report["mode"] = "experiment-regression"
+    return report
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -684,6 +948,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--tenant", default="all")
     parser.add_argument("--max-cases", type=int, default=None)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--allow-paid-apis", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -704,6 +969,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             tenant=args.tenant,
             max_cases=args.max_cases,
             seed=args.seed,
+            allow_paid_apis=True if args.allow_paid_apis else None,
         )
         markdown_path, json_path = write_report_files(report)
         asyncio.run(

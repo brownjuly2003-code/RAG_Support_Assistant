@@ -78,6 +78,9 @@ Codex-спеку; закрытые пункты сюда **не включены
 - [ ] Lighthouse mobile ≥90 — отдельный performance sweep, не часть закрытия этой roadmap
 - [ ] Resolution rate ≥50% (если появится production трафик) — постпродакшн
 
-## Next arc (TBD)
+## Next arc (Arc 7)
 
-См. [arc-6-proposal.md](../arc-6-proposal.md) — 3 кандидата с рекомендацией.
+- [arc-7-proposal.md](./arc-7-proposal.md) — новый proposal с кандидатами G/H/I и рекомендацией брать Batch G.
+- Batch G — provider abstraction: registry `config/providers.yml`, unified `llm/providers/*`, provider-aware cost accounting, mock-by-default benchmarking, admin Providers tab.
+- Batch H — continuous learning phase 2 остаётся deferred до появления большего production traffic и A/B signals.
+- Batch I — backup/restore/chaos остаётся deferred: базовый runbook уже есть, но расширение не критично для current single-user setup.

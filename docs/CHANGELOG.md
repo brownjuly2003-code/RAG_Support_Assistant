@@ -2,6 +2,23 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Arc 7 / Batch G] — 2026-04-22 — Provider abstraction
+
+### Provider runtime, routing, and economics
+- **Provider registry** — `config/providers.yml` и `config/provider_schema.py` добавили единый source of truth для Ollama / Claude / OpenAI / Gemini: aliases, pricing tables, capabilities, rate limits и routing profiles `latency-first`, `cost-first`, `quality-first`.
+- **Unified provider runtime** — пакет `llm/providers/*` и integration в `agent/graph.py` перевели pipeline на общий provider-backed runtime без отказа от Ollama-first safe default: `latency-first` остаётся локальным profile по умолчанию.
+- **Provider-aware trace accounting** — `agent/state.py`, `sqlite_trace.py` и `tracing/sqlite_trace.py` начали сохранять `provider_name`, `model_name`, prompt/completion tokens, usage metadata и `cost_usd` на уровне шагов trace вместо безымянного cost-only режима.
+- **Paid guardrails** — `config/settings.py` и `llm/providers/runtime.py` добавили fail-fast validation для paid profiles, считают placeholder secrets вроде `changeme` отсутствующими ключами и блокируют paid runtime при превышении `DAILY_COST_LIMIT_USD`.
+
+### Benchmarking and admin surface
+- **Provider benchmark** — `scripts/regression_eval.py` теперь принимает provider/model aliases как baseline/candidate, умеет режимы `mock-provider-benchmark` и `live-provider-benchmark`, а отчёты сравнивают pass rate, latency, total cost и refusal rate по curated dataset.
+- **Prometheus provider cost metric** — `monitoring/prometheus.py` и trace logging добавили `llm_cost_usd_total{provider,model,tenant}`, чтобы стоимость LLM стала видимой не только в analytics, но и в operational monitoring.
+- **Providers admin tab** — `api/app.py` и `static/admin.html` добавили `GET /api/admin/providers` и UI-вкладку Providers с active/default profile, configured flag, 1-minute usage, 24-hour cost и last successful call timestamp.
+
+### Docs and verification
+- **Operator docs refreshed** — `.env.example`, `README.md`, `codex-tasks/ROADMAP.md`, `codex-tasks/arc-7-proposal.md`, `codex-tasks/orchestrator-batch-g-provider-abstraction.md` и task-spec'и 143-149 синхронизированы с новым provider/runtime surface.
+- **Provider-focused test suites** — добавлены `tests/test_provider_registry.py`, `tests/test_provider_settings.py`, `tests/test_provider_abstraction.py`, `tests/test_provider_graph_integration.py`, `tests/test_provider_cost_accounting.py`, `tests/test_provider_benchmark.py`, `tests/test_provider_admin_surface.py`, покрывающие schema, runtime, graph integration, cost metrics, benchmark mode и admin API.
+
 ## [Arc 6 / Batch F] — 2026-04-22 — Continuous learning lab
 
 ### Learning loop foundation (tasks 133-140, fixes 141-142)

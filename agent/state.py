@@ -94,6 +94,13 @@ class GraphState(TypedDict, total=False):
     sub_queries: List[str]
     suggested_questions: List[str]
     citations: List[dict]
+    provider_name: Optional[str]
+    model_name: Optional[str]
+    prompt_tokens: Optional[int]
+    completion_tokens: Optional[int]
+    cost_usd: Optional[float]
+    usage_metadata: dict
+    usage_node: Optional[str]
 
 
 def create_initial_state(
@@ -143,5 +150,12 @@ def create_initial_state(
         sub_queries=[],
         suggested_questions=[],
         citations=[],
+        provider_name=None,
+        model_name=None,
+        prompt_tokens=None,
+        completion_tokens=None,
+        cost_usd=None,
+        usage_metadata={},
+        usage_node=None,
     )
     return state

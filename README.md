@@ -127,7 +127,7 @@ Open:
 - **http://localhost:8000** - chat UI
 - **http://localhost:8000/static/login.html** - password + SSO login page
 - **http://localhost:8000/static/admin.html** - admin UI for traces, audit,
-  review queue, KB gaps, KB drafts, stale docs, and breaker controls
+  review queue, providers, KB gaps, KB drafts, stale docs, and breaker controls
 - **http://localhost:8000/agent** - agent copilot dashboard
 - **http://localhost:8000/static/analytics.html** - analytics dashboard
 - **http://localhost:8000/static/metrics.html** - system metrics dashboard
@@ -149,6 +149,18 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `LANGFUSE_PUBLIC_KEY` | `-` | Optional Langfuse public key |
 | `LANGFUSE_SECRET_KEY` | `-` | Optional Langfuse secret key |
 | `LANGFUSE_HOST` | `https://cloud.langfuse.com` | Langfuse host for LLM observability |
+
+### Provider profiles and paid APIs
+
+| Variable | Default | Description |
+|---|---|---|
+| `PROVIDER_REGISTRY_PATH` | `config/providers.yml` | YAML registry with providers, pricing, capabilities, and routing profiles |
+| `LLM_PROVIDER_PROFILE` | `latency-first` | Active routing profile; defaults to Ollama-only local inference |
+| `LLM_BENCHMARK_ALLOW_PAID_APIS` | `false` | Allow live paid-provider calls in provider benchmarks |
+| `DAILY_COST_LIMIT_USD` | `5.0` | Fail fast when paid-provider spend for the current UTC day reaches this limit |
+| `ANTHROPIC_API_KEY` | `changeme` | Anthropic API key; placeholder values are treated as missing |
+| `OPENAI_API_KEY` | `changeme` | OpenAI API key; placeholder values are treated as missing |
+| `GEMINI_API_KEY` | `changeme` | Gemini API key; placeholder values are treated as missing |
 
 ### RAG pipeline
 
@@ -239,7 +251,10 @@ Resilience layers apply in this order:
 | `OTEL_ENABLED` | `false` | Enable OpenTelemetry SDK + instrumentation |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4317` | OTLP gRPC endpoint for Jaeger/Tempo/collectors |
 | `OTEL_SERVICE_NAME` | `rag-support-assistant` | `service.name` resource attribute |
-| `LLM_COST_PER_1M_TOKENS` | `qwen2.5:0.0,gpt-4:10.0` | Model-to-price mapping used by analytics cost summaries |
+| `LLM_INPUT_PRICE_PER_1M_TOKENS` | `0.0` | Fallback input-token price when a model is not listed in the provider registry |
+| `LLM_OUTPUT_PRICE_PER_1M_TOKENS` | `0.0` | Fallback output-token price when a model is not listed in the provider registry |
+| `LLM_MODEL_PRICES` | `-` | Optional JSON override for legacy analytics or unregistered models |
+| `LLM_COST_PER_1M_TOKENS` | legacy fallback | Backward-compatible legacy pricing format kept for old local setups |
 | `TRACE_RETENTION_DAYS` | `90` | Retention window for SQLite traces; `0` disables purge |
 | `TRACE_PURGE_INTERVAL_SEC` | `86400` | Background trace-purge interval |
 | `AUDIT_RETENTION_DAYS` | `180` | Retention window for `audit_log` |
@@ -352,6 +367,7 @@ Resilience layers apply in this order:
 | POST | `/api/admin/stale-docs/{doc_id}/review` | admin | Mark a stale document as reviewed |
 | GET | `/api/admin/curated-dataset/stats` | admin | Aggregate curated dataset counts by verdict, tenant, and channel |
 | POST | `/api/admin/curated-dataset/rebuild` | admin | Trigger an async rebuild of `evaluation/curated_cases.jsonl` |
+| GET | `/api/admin/providers` | admin | Return provider registry metadata, active profile, recent usage, and 24h cost |
 
 ### Analytics and channels
 
@@ -445,6 +461,24 @@ Admin endpoints:
 - `GET /api/admin/regression-runs`
 - `GET /api/admin/regression-runs/{run_id}`
 
+## Providers
+
+Provider routing is configured through `config/providers.yml`, which defines:
+
+- enabled providers (`ollama`, `claude`, `openai`, `gemini`)
+- model aliases such as `ollama-small`, `claude-haiku`, and `gpt-5`
+- per-model input/output pricing, rate limits, and capability flags
+- routing profiles `latency-first`, `cost-first`, and `quality-first`
+
+Runtime behavior:
+
+- `latency-first` is the default profile and keeps both fast/strong lanes on Ollama.
+- `cost-first` routes helper calls to Gemini Flash and strong calls to Claude Haiku.
+- `quality-first` uses OpenAI for the fast lane and Claude Sonnet for the strong lane.
+- Startup validation loads the registry, verifies `LLM_PROVIDER_PROFILE`, and treats placeholder credentials such as `changeme` as missing.
+- Each traced LLM step now records `provider_name`, `model_name`, token usage, and cost; Prometheus exports `llm_cost_usd_total{provider,model,tenant}`.
+- The admin UI exposes a **Providers** tab backed by `GET /api/admin/providers`, including active profile, configured providers, 1-minute usage, 24-hour cost, and the last successful call timestamp.
+
 ## Regression eval
 
 Curated regression runs compare a baseline against `current` or an experiment
@@ -471,6 +505,33 @@ python scripts/regression_eval.py \
 - GitHub Actions exposes an informational `regression-eval` job on pull
   requests that touch `agent/prompts.py`, `config/settings.py`, or
   `evaluation/experiments/*.yaml`.
+
+## Provider benchmarking
+
+The same regression runner also supports provider/model benchmarks by passing
+registry aliases instead of experiment ids.
+
+```bash
+python scripts/regression_eval.py \
+  --baseline ollama-small \
+  --candidate claude-haiku \
+  --dataset evaluation/curated_cases.jsonl \
+  --tenant all \
+  --max-cases 50 \
+  --seed 42
+```
+
+- Alias resolution comes from `config/providers.yml`, so `ollama-small`,
+  `claude-haiku`, `openai-fast`, and `gemini-pro` can be used directly.
+- Default mode is `mock-provider-benchmark`: answers are derived from the
+  curated dataset and pricing/latency/refusal metrics are simulated so CI does
+  not spend paid API budget accidentally.
+- Live calls require an explicit `--allow-paid-apis` flag or
+  `LLM_BENCHMARK_ALLOW_PAID_APIS=true`.
+- Reports compare pass rate, latency, total cost, and refusal rate for the
+  baseline and candidate provider targets.
+- Paid profiles are blocked when `DAILY_COST_LIMIT_USD` is already exhausted
+  for the current UTC day.
 
 ## Online evaluators
 
@@ -522,7 +583,7 @@ coloring for operators and admins.
 
 ### 2. `GET /metrics` - Prometheus
 
-`monitoring/prometheus.py` currently initializes **36** Prometheus collectors
+`monitoring/prometheus.py` currently initializes Prometheus collectors
 (`Counter`, `Gauge`, `Histogram`, or `Summary`):
 
 - **HTTP and latency:** `rag_requests_total{route}`,
@@ -546,6 +607,7 @@ coloring for operators and admins.
 - **Platform health and data:** `rag_component_up{component}`,
   `rag_db_pool_size`, `rag_db_pool_checked_out`, `rag_db_pool_overflow`,
   `rag_active_sessions`, `rag_vector_store_documents`,
+  `llm_cost_usd_total{provider,model,tenant}`,
   `rag_stale_important_docs_count`, `llm_cache_hits_total{tenant}`,
   `llm_cache_misses_total{tenant}`, `rag_traces_purged_total{table}`,
   `rag_audit_purged_total`, `rag_auth_failures_total{reason}`,

@@ -101,6 +101,11 @@ try:
 except ImportError:
     get_settings = None  # type: ignore[assignment]
 
+try:
+    from llm.providers import build_provider_runtime
+except ImportError:
+    build_provider_runtime = None  # type: ignore[assignment]
+
 
 # ---------------------------------------------------------------------------
 # Error escalation helpers
@@ -360,6 +365,141 @@ def _extract_order_id(question: str) -> str | None:
     return match.group(1)
 
 
+def _get_llm_provider_name(llm: SupportsInvoke) -> str | None:
+    return _normalize_optional_str(getattr(llm, "provider_id", None))
+
+
+def _get_llm_model_name(llm: SupportsInvoke) -> str | None:
+    model_name = _normalize_optional_str(getattr(llm, "model_name", None))
+    if model_name:
+        return model_name
+    return _normalize_optional_str(getattr(getattr(llm, "_llm", None), "model", None))
+
+
+def _normalize_optional_str(value: Any) -> str | None:
+    if value is None or not isinstance(value, (str, int, float)):
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _normalize_optional_int(value: Any) -> int | None:
+    if value is None or not isinstance(value, (str, int, float)):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_optional_float(value: Any) -> float | None:
+    if value is None or not isinstance(value, (str, int, float)):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _new_llm_usage(node_name: str) -> Dict[str, Any]:
+    return {
+        "provider_name": None,
+        "model_name": None,
+        "prompt_tokens": None,
+        "completion_tokens": None,
+        "cost_usd": None,
+        "usage_metadata": {},
+        "usage_node": node_name,
+    }
+
+
+def _capture_llm_usage(llm: SupportsInvoke, node_name: str) -> Dict[str, Any]:
+    usage = _new_llm_usage(node_name)
+    usage["provider_name"] = _get_llm_provider_name(llm)
+    usage["model_name"] = _get_llm_model_name(llm)
+    response = getattr(llm, "last_response", None)
+    if response is None:
+        return usage
+
+    prompt_tokens = _normalize_optional_int(getattr(response, "input_tokens", None))
+    completion_tokens = _normalize_optional_int(getattr(response, "output_tokens", None))
+    usage["provider_name"] = (
+        _normalize_optional_str(getattr(response, "provider", None)) or usage["provider_name"]
+    )
+    usage["model_name"] = (
+        _normalize_optional_str(getattr(response, "model", None)) or usage["model_name"]
+    )
+    usage["prompt_tokens"] = prompt_tokens
+    usage["completion_tokens"] = completion_tokens
+    usage["cost_usd"] = _normalize_optional_float(getattr(response, "cost_usd", None))
+    if prompt_tokens is not None and completion_tokens is not None:
+        usage["usage_metadata"] = {
+            "input_tokens": prompt_tokens,
+            "output_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+        }
+    return usage
+
+
+def _merge_llm_usage(total: Dict[str, Any], snapshot: Dict[str, Any]) -> Dict[str, Any]:
+    if snapshot.get("provider_name"):
+        total["provider_name"] = snapshot["provider_name"]
+    if snapshot.get("model_name"):
+        total["model_name"] = snapshot["model_name"]
+
+    snapshot_prompt_tokens = snapshot.get("prompt_tokens")
+    if snapshot_prompt_tokens is not None:
+        total_prompt_tokens = total.get("prompt_tokens")
+        if total_prompt_tokens is None:
+            total["prompt_tokens"] = int(snapshot_prompt_tokens)
+        else:
+            total["prompt_tokens"] = int(total_prompt_tokens) + int(snapshot_prompt_tokens)
+
+    snapshot_completion_tokens = snapshot.get("completion_tokens")
+    if snapshot_completion_tokens is not None:
+        total_completion_tokens = total.get("completion_tokens")
+        if total_completion_tokens is None:
+            total["completion_tokens"] = int(snapshot_completion_tokens)
+        else:
+            total["completion_tokens"] = int(total_completion_tokens) + int(
+                snapshot_completion_tokens
+            )
+
+    snapshot_cost = snapshot.get("cost_usd")
+    if snapshot_cost is not None:
+        total_cost = total.get("cost_usd")
+        if total_cost is None:
+            total["cost_usd"] = float(snapshot_cost)
+        else:
+            total["cost_usd"] = float(total_cost) + float(snapshot_cost)
+
+    prompt_tokens = total.get("prompt_tokens")
+    completion_tokens = total.get("completion_tokens")
+    if prompt_tokens is not None and completion_tokens is not None:
+        total["usage_metadata"] = {
+            "input_tokens": prompt_tokens,
+            "output_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+        }
+    else:
+        total["usage_metadata"] = {}
+
+    return total
+
+
+def _apply_llm_usage(state: GraphState, usage: Dict[str, Any]) -> GraphState:
+    return {
+        **state,
+        "provider_name": usage.get("provider_name"),
+        "model_name": usage.get("model_name"),
+        "prompt_tokens": usage.get("prompt_tokens"),
+        "completion_tokens": usage.get("completion_tokens"),
+        "cost_usd": usage.get("cost_usd"),
+        "usage_metadata": usage.get("usage_metadata", {}),
+        "usage_node": usage.get("usage_node"),
+    }
+
+
 def _build_agentic_search_query(question: str) -> str:
     normalized = question.lower()
     if "достав" in normalized and "москв" in normalized:
@@ -392,7 +532,17 @@ def make_classify_complexity_node(
 
             question = state.get("question", "")
             prompt = build_classify_complexity_prompt(question)
+            model = _get_llm_model_name(classifier_llm) or ""
             raw = classifier_llm.invoke(prompt).strip().upper()
+            usage = _capture_llm_usage(classifier_llm, "classify_complexity")
+            trace_llm_call(
+                trace_id=trace_id,
+                node_name="classify_complexity",
+                prompt=prompt,
+                response=raw,
+                model=model,
+                duration_ms=0.0,
+            )
             if raw.startswith("SIMPLE"):
                 complexity = "simple"
             elif raw.startswith("COMPLEX"):
@@ -400,7 +550,7 @@ def make_classify_complexity_node(
             else:
                 complexity = "complex"
 
-            new_state = {**state, "complexity": complexity}
+            new_state = _apply_llm_usage({**state, "complexity": complexity}, usage)
 
             try:
                 from monitoring.prometheus import record_model_routing
@@ -444,11 +594,15 @@ def make_transform_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Gra
                 prompt = build_conversational_query_transform_prompt(question, chat_history)
             else:
                 prompt = build_query_transform_prompt(question)
-            model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
+            model = _get_llm_model_name(llm) or ""
+            usage = _new_llm_usage("transform_query")
+            usage_recorded = False
 
             try:
                 t0 = time.monotonic()
                 raw_search_query = llm.invoke(prompt).strip()
+                usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "transform_query"))
+                usage_recorded = True
                 trace_llm_call(
                     trace_id=trace_id,
                     node_name="transform_query",
@@ -473,6 +627,8 @@ def make_transform_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Gra
                     hyde_prompt = _build_hyde_prompt(question)
                     t0 = time.monotonic()
                     hyde_doc = llm.invoke(hyde_prompt).strip()
+                    usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "transform_query"))
+                    usage_recorded = True
                     trace_llm_call(
                         trace_id=trace_id,
                         node_name="hyde",
@@ -492,6 +648,8 @@ def make_transform_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Gra
                 "search_query": search_query,
                 "hyde_query": hyde_query,
             }
+            if usage_recorded:
+                new_state = _apply_llm_usage(new_state, usage)
             log_step(trace_id, "transform_query", new_state)
             return new_state
         except Exception as exc:
@@ -554,7 +712,7 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
         try:
             question = state.get("question", "")
             context_docs = state.get("context_docs", []) or []
-            model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
+            model = _get_llm_model_name(llm) or ""
 
             if not context_docs:
                 new_state: GraphState = {**state, "graded_docs": [], "doc_grade_reason": "No documents retrieved"}
@@ -563,6 +721,8 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
 
             graded: List[Dict[str, Any]] = []
             filtered_count = 0
+            usage = _new_llm_usage("grade_docs")
+            usage_recorded = False
             tracer = get_otel_tracer()
             with tracer.start_as_current_span("rag.rerank") as span:
                 span.set_attribute("rag.tenant_id", str(state.get("tenant_id", "default")))
@@ -572,6 +732,8 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
                     try:
                         t0 = time.monotonic()
                         raw_verdict = llm.invoke(prompt).strip()
+                        usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "grade_docs"))
+                        usage_recorded = True
                         trace_llm_call(
                             trace_id=trace_id,
                             node_name="grade_docs",
@@ -593,6 +755,8 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
 
             reason = f"Kept {len(graded)}/{len(context_docs)}, filtered {filtered_count}"
             new_state = {**state, "graded_docs": graded, "doc_grade_reason": reason}
+            if usage_recorded:
+                new_state = _apply_llm_usage(new_state, usage)
             log_step(trace_id, "grade_docs", new_state)
             return new_state
         except Exception as exc:
@@ -622,7 +786,9 @@ def make_generate_node(
             chat_history = state.get("chat_history", [])
             complexity = state.get("complexity", "unknown")
             llm = llm_fast if complexity == "simple" else llm_strong
-            model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
+            model = _get_llm_model_name(llm) or ""
+            usage = _new_llm_usage("generate")
+            usage_recorded = False
 
             if chat_history:
                 prompt = build_conversational_qa_prompt(question=question, context_docs=docs, chat_history=chat_history)
@@ -636,6 +802,8 @@ def make_generate_node(
                 try:
                     t0 = time.monotonic()
                     answer = llm.invoke(prompt)
+                    usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "generate"))
+                    usage_recorded = True
                     trace_llm_call(
                         trace_id=trace_id,
                         node_name="generate",
@@ -680,6 +848,8 @@ def make_generate_node(
                 )
 
             new_state: GraphState = {**state, "answer": answer, "citations": citations}
+            if usage_recorded:
+                new_state = _apply_llm_usage(new_state, usage)
             log_step(trace_id, "generate", new_state)
             return new_state
         except Exception as exc:
@@ -741,7 +911,11 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                 log_step(trace_id, "verify_facts", new_state)
                 return new_state
 
+            usage = _new_llm_usage("verify_facts")
+            usage_recorded = False
             raw_claims = llm.invoke(build_extract_claims_prompt(answer)).strip()
+            usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "verify_facts"))
+            usage_recorded = True
             if raw_claims.upper().startswith("NONE"):
                 new_state = {
                     **state,
@@ -749,6 +923,7 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                     "fact_verification_skipped": False,
                     "factuality_score": 100,
                 }
+                new_state = _apply_llm_usage(new_state, usage)
                 log_step(trace_id, "verify_facts", new_state)
                 return new_state
 
@@ -762,6 +937,7 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
             claims_result: list[dict] = []
             for claim in claim_lines:
                 verdict = llm.invoke(build_verify_claim_prompt(claim, context_text)).strip()
+                usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "verify_facts"))
                 supported = verdict.upper().startswith("SUPPORTED")
                 evidence = ""
                 if supported and ":" in verdict:
@@ -783,6 +959,8 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                 "fact_verification_skipped": False,
                 "factuality_score": factuality,
             }
+            if usage_recorded:
+                new_state = _apply_llm_usage(new_state, usage)
 
             try:
                 from monitoring.prometheus import FACTUALITY_SCORE
@@ -823,13 +1001,17 @@ def make_evaluate_node(
             prompt = build_self_eval_prompt(question=question, answer=answer_for_eval, context_docs=docs)
             complexity = state.get("complexity", "unknown")
             llm = llm_fast if complexity == "simple" else llm_strong
-            model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
+            model = _get_llm_model_name(llm) or ""
+            usage = _new_llm_usage("evaluate")
+            usage_recorded = False
             tracer = get_otel_tracer()
             with tracer.start_as_current_span("rag.evaluate") as span:
                 span.set_attribute("rag.tenant_id", str(state.get("tenant_id", "default")))
                 try:
                     t0 = time.monotonic()
                     raw = llm.invoke(prompt)
+                    usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "evaluate"))
+                    usage_recorded = True
                     trace_llm_call(
                         trace_id=trace_id,
                         node_name="evaluate",
@@ -848,6 +1030,8 @@ def make_evaluate_node(
                 "quality_score": score,
                 "relevance_score": round(score / 100.0, 3),
             }
+            if usage_recorded:
+                new_state = _apply_llm_usage(new_state, usage)
             new_state["knowledge_gap"] = _is_knowledge_gap(new_state)
             log_step(trace_id, "evaluate", new_state)
             return new_state
@@ -878,7 +1062,7 @@ def make_suggest_questions_node(llm: SupportsInvoke) -> Callable[[GraphState], G
             for doc in docs[:2]
             if isinstance(doc, dict)
         )[:500]
-        model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
+        model = _get_llm_model_name(llm) or ""
 
         try:
             prompt = build_suggested_questions_prompt(
@@ -888,6 +1072,7 @@ def make_suggest_questions_node(llm: SupportsInvoke) -> Callable[[GraphState], G
             )
             t0 = time.monotonic()
             raw = llm.invoke(prompt)
+            usage = _capture_llm_usage(llm, "suggest_questions")
             trace_llm_call(
                 trace_id=trace_id,
                 node_name="suggest_questions",
@@ -901,7 +1086,10 @@ def make_suggest_questions_node(llm: SupportsInvoke) -> Callable[[GraphState], G
                 for line in raw.strip().splitlines()
                 if line.strip()
             ][:3]
-            new_state: GraphState = {**state, "suggested_questions": questions}
+            new_state: GraphState = _apply_llm_usage(
+                {**state, "suggested_questions": questions},
+                usage,
+            )
             log_step(trace_id, "suggest_questions", new_state)
             return new_state
         except Exception as exc:
@@ -984,10 +1172,14 @@ def make_rewrite_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Graph
             quality_score = state.get("quality_score") or 50
             iteration = state.get("iteration", 0)
             prompt = build_query_rewrite_prompt(question=question, previous_answer=previous_answer, quality_score=quality_score)
-            model = str(getattr(getattr(llm, "_llm", None), "model", "") or "")
+            model = _get_llm_model_name(llm) or ""
+            usage = _new_llm_usage("rewrite_query")
+            usage_recorded = False
             try:
                 t0 = time.monotonic()
                 raw_new_query = llm.invoke(prompt).strip()
+                usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "rewrite_query"))
+                usage_recorded = True
                 trace_llm_call(
                     trace_id=trace_id,
                     node_name="rewrite_query",
@@ -1016,6 +1208,8 @@ def make_rewrite_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Graph
                 "quality_score": None,
                 "relevance_score": None,
             }
+            if usage_recorded:
+                new_state = _apply_llm_usage(new_state, usage)
             log_step(trace_id, "rewrite_query", new_state)
             return new_state
         except Exception as exc:
@@ -1089,11 +1283,16 @@ def build_support_graph(
         min_quality = getattr(settings, "quality_threshold", 80)
 
     if llm is None:
-        llm_strong = LocalOllamaLLM(model_name=settings.ollama_model_name)
-        if getattr(settings, "model_routing_enabled", False):
-            llm_fast = LocalOllamaLLM(model_name=settings.ollama_fast_model_name)
+        if build_provider_runtime is not None:
+            runtime = build_provider_runtime(settings)
+            llm_fast = runtime.fast
+            llm_strong = runtime.strong
         else:
-            llm_fast = llm_strong
+            llm_strong = LocalOllamaLLM(model_name=settings.ollama_model_name)
+            if getattr(settings, "model_routing_enabled", False):
+                llm_fast = LocalOllamaLLM(model_name=settings.ollama_fast_model_name)
+            else:
+                llm_fast = llm_strong
     else:
         llm_fast = llm
         llm_strong = llm

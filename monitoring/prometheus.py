@@ -23,6 +23,7 @@ __all__ = [
     "FEEDBACK_COUNT",
     "HTTP_REQUESTS",
     "HTTP_REQUEST_DURATION",
+    "LLM_COST_USD_TOTAL",
     "LLM_CACHE_HITS",
     "LLM_CACHE_MISSES",
     "OLLAMA_RETRY_EVENTS",
@@ -50,6 +51,7 @@ __all__ = [
     "VECTOR_STORE_DOCS",
     "generate_latest",
     "record_component_health",
+    "record_llm_cost",
     "record_http_request",
     "record_audit_purged",
     "record_auth_failure",
@@ -114,6 +116,7 @@ except ImportError:
     REQUEST_DURATION = _NoopMetric()
     HTTP_REQUESTS = _NoopMetric()
     HTTP_REQUEST_DURATION = _NoopMetric()
+    LLM_COST_USD_TOTAL = _NoopMetric()
     QUALITY_SCORE = _NoopMetric()
     FACTUALITY_SCORE = _NoopMetric()
     ESCALATION_TOTAL = _NoopMetric()
@@ -181,6 +184,13 @@ else:
         "HTTP request duration by method and endpoint",
         ["method", "endpoint"],
         buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0),
+        registry=REGISTRY,
+    )
+
+    LLM_COST_USD_TOTAL = Counter(
+        "llm_cost_usd_total",
+        "Accumulated LLM cost in USD grouped by provider, model, and tenant",
+        ["provider", "model", "tenant"],
         registry=REGISTRY,
     )
 
@@ -471,6 +481,16 @@ def record_http_request(method: str, endpoint: str, status: int, duration_sec: f
         method=method,
         endpoint=endpoint,
     ).observe(duration_sec)
+
+
+def record_llm_cost(provider: str, model: str, tenant: str, cost_usd: float) -> None:
+    if cost_usd <= 0:
+        return
+    LLM_COST_USD_TOTAL.labels(
+        provider=provider,
+        model=model,
+        tenant=tenant,
+    ).inc(float(cost_usd))
 
 
 def record_circuit_breaker_change(name: str, from_state: str, to_state: str) -> None:

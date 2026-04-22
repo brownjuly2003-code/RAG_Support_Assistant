@@ -496,6 +496,127 @@ def _read_regression_report_assets(report_path: str | None) -> tuple[dict[str, A
     return report_payload, markdown
 
 
+def _load_provider_admin_snapshot(tenant_id: str) -> dict[str, Any]:
+    from datetime import datetime, timedelta, timezone  # noqa: PLC0415
+    import os  # noqa: PLC0415
+    import sqlite3  # noqa: PLC0415
+
+    from config.provider_schema import load_provider_registry  # noqa: PLC0415
+
+    settings = get_settings()
+    registry = load_provider_registry(getattr(settings, "provider_registry_path"))
+    db_path = Path(getattr(settings, "tracing_db_path", ""))
+    cutoff_1m = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+    cutoff_1d = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    stats_by_provider: dict[str, dict[str, Any]] = {}
+
+    if db_path.exists():
+        with sqlite3.connect(db_path) as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    trace_steps.provider_name,
+                    COUNT(CASE WHEN trace_steps.ts >= ? THEN 1 END) AS requests_1m,
+                    COALESCE(
+                        SUM(
+                            CASE
+                                WHEN trace_steps.ts >= ?
+                                THEN COALESCE(trace_steps.prompt_tokens, 0) + COALESCE(trace_steps.completion_tokens, 0)
+                                ELSE 0
+                            END
+                        ),
+                        0
+                    ) AS tokens_1m,
+                    MAX(trace_steps.ts) AS last_success_at,
+                    COALESCE(
+                        SUM(
+                            CASE
+                                WHEN trace_steps.ts >= ? THEN COALESCE(trace_steps.cost_usd, 0.0)
+                                ELSE 0.0
+                            END
+                        ),
+                        0.0
+                    ) AS cost_24h
+                FROM trace_steps
+                JOIN traces ON traces.trace_id = trace_steps.trace_id
+                WHERE trace_steps.provider_name IS NOT NULL
+                  AND traces.tenant_id = ?
+                GROUP BY trace_steps.provider_name
+                """,
+                (cutoff_1m, cutoff_1m, cutoff_1d, tenant_id),
+            ).fetchall()
+
+        for provider_name, requests_1m, tokens_1m, last_success_at, cost_24h in rows:
+            stats_by_provider[str(provider_name)] = {
+                "requests_1m": int(requests_1m or 0),
+                "tokens_1m": int(tokens_1m or 0),
+                "last_success_at": last_success_at,
+                "cost_24h": round(float(cost_24h or 0.0), 6),
+            }
+
+    providers = []
+    for provider in registry.providers:
+        stats = stats_by_provider.get(
+            provider.id,
+            {
+                "requests_1m": 0,
+                "tokens_1m": 0,
+                "last_success_at": None,
+                "cost_24h": 0.0,
+            },
+        )
+        configured = provider.kind != "paid"
+        if provider.api_key_env:
+            configured = configured or bool((os.getenv(provider.api_key_env, "") or "").strip())
+        providers.append(
+            {
+                "id": provider.id,
+                "label": provider.label,
+                "kind": provider.kind,
+                "enabled": provider.enabled,
+                "configured": configured,
+                "api_key_env": provider.api_key_env,
+                "default_models": provider.default_models.model_dump(mode="json"),
+                "capabilities": provider.capabilities.model_dump(mode="json"),
+                "rate_limits": provider.rate_limits.model_dump(mode="json"),
+                "models": [model.model_dump(mode="json") for model in provider.models],
+                "usage_1m": {
+                    "requests": stats["requests_1m"],
+                    "tokens": stats["tokens_1m"],
+                    "requests_pct": round(
+                        (stats["requests_1m"] / provider.rate_limits.requests_per_minute) * 100,
+                        2,
+                    )
+                    if provider.rate_limits.requests_per_minute
+                    else 0.0,
+                    "tokens_pct": round(
+                        (stats["tokens_1m"] / provider.rate_limits.tokens_per_minute) * 100,
+                        2,
+                    )
+                    if provider.rate_limits.tokens_per_minute
+                    else 0.0,
+                },
+                "cost_24h_usd": stats["cost_24h"],
+                "last_success_at": stats["last_success_at"],
+            }
+        )
+
+    profiles = {
+        profile_name: {
+            "description": profile.description,
+            "fast": profile.fast.model_dump(mode="json"),
+            "strong": profile.strong.model_dump(mode="json"),
+        }
+        for profile_name, profile in registry.routing_profiles.items()
+    }
+    return {
+        "default_profile": registry.default_profile,
+        "active_profile": str(getattr(settings, "llm_provider_profile", registry.default_profile)),
+        "profiles": profiles,
+        "providers": providers,
+    }
+
+
 async def _list_regression_run_rows(limit: int) -> list[dict[str, Any]]:
     from sqlalchemy import text  # noqa: PLC0415
 
@@ -3716,6 +3837,14 @@ async def email_inbound_webhook(request: Request) -> JSONResponse:
     payload = _json.loads(body.decode("utf-8") or "{}")
     await process_webhook_payload(payload)
     return JSONResponse(content={"ok": True})
+
+
+@router.get("/admin/providers")
+async def admin_list_providers(
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    return JSONResponse(content=_load_provider_admin_snapshot(tenant))
 
 
 @router.get("/admin/traces/{trace_id}")
