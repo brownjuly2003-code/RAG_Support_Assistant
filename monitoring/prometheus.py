@@ -26,6 +26,9 @@ __all__ = [
     "LLM_CACHE_HITS",
     "LLM_CACHE_MISSES",
     "OLLAMA_RETRY_EVENTS",
+    "ONLINE_EVALUATOR_ERRORS_TOTAL",
+    "ONLINE_EVALUATOR_RUNS_TOTAL",
+    "ONLINE_EVALUATOR_SCORE",
     "PROMETHEUS_AVAILABLE",
     "PIPELINE_REJECTIONS",
     "QUALITY_SCORE",
@@ -57,6 +60,8 @@ __all__ = [
     "record_eval_drift",
     "record_circuit_breaker_change",
     "record_ollama_retry_event",
+    "record_online_evaluator_error",
+    "record_online_evaluator_run",
     "record_model_routing",
     "record_pipeline_rejection",
     "record_regression_run",
@@ -122,6 +127,9 @@ except ImportError:
     DB_POOL_CHECKED_OUT = _NoopMetric()
     DB_POOL_OVERFLOW = _NoopMetric()
     OLLAMA_RETRY_EVENTS = _NoopMetric()
+    ONLINE_EVALUATOR_SCORE = _NoopMetric()
+    ONLINE_EVALUATOR_RUNS_TOTAL = _NoopMetric()
+    ONLINE_EVALUATOR_ERRORS_TOTAL = _NoopMetric()
     MODEL_ROUTING = _NoopMetric()
     RATE_LIMIT_REJECTIONS = _NoopMetric()
     REGRESSION_RUNS_TOTAL = _NoopMetric()
@@ -257,6 +265,28 @@ else:
         "rag_ollama_retry_events_total",
         "Retry wrapper events around Ollama calls",
         ["event"],
+        registry=REGISTRY,
+    )
+
+    ONLINE_EVALUATOR_SCORE = Histogram(
+        "online_evaluator_score",
+        "Scores emitted by lightweight online evaluators",
+        ["evaluator"],
+        buckets=(0.1, 0.25, 0.5, 0.75, 0.9, 1.0),
+        registry=REGISTRY,
+    )
+
+    ONLINE_EVALUATOR_RUNS_TOTAL = Counter(
+        "online_evaluator_runs_total",
+        "Completed online evaluator runs grouped by evaluator and verdict",
+        ["evaluator", "verdict"],
+        registry=REGISTRY,
+    )
+
+    ONLINE_EVALUATOR_ERRORS_TOTAL = Counter(
+        "online_evaluator_errors_total",
+        "Errors raised by online evaluators before fallback wrapping",
+        ["evaluator"],
         registry=REGISTRY,
     )
 
@@ -452,6 +482,17 @@ def record_circuit_breaker_change(name: str, from_state: str, to_state: str) -> 
 def record_ollama_retry_event(event: str) -> None:
     """Bump the retry counter for a retry wrapper event."""
     OLLAMA_RETRY_EVENTS.labels(event=event).inc()
+
+
+def record_online_evaluator_run(evaluator: str, verdict: str, score: float) -> None:
+    ONLINE_EVALUATOR_RUNS_TOTAL.labels(evaluator=evaluator, verdict=verdict).inc()
+    ONLINE_EVALUATOR_SCORE.labels(evaluator=evaluator).observe(
+        max(0.0, min(1.0, float(score)))
+    )
+
+
+def record_online_evaluator_error(evaluator: str) -> None:
+    ONLINE_EVALUATOR_ERRORS_TOTAL.labels(evaluator=evaluator).inc()
 
 
 def record_model_routing(complexity: str) -> None:

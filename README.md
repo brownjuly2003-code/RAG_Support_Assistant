@@ -68,6 +68,9 @@ User / Email / Widget
   ticket-creation tools, with confirmation required for irreversible actions.
 - **Nightly evaluation:** `scripts/nightly_eval.py` runs RAGAS-style checks on
   recent traces and stores drift against a rolling baseline.
+- **Online evaluators:** seven lightweight per-trace checks score citation
+  coverage, answer-length anomalies, retrieval hit rate, tool efficiency,
+  refusals, PII suspicion, and language mismatch without judge LLM calls.
 - **Knowledge-gap detection:** `scripts/kb_gap_detector.py` clusters unresolved
   questions into admin-visible KB gap records.
 - **Contextual ingestion:** New uploads can prepend contextual headers before
@@ -174,6 +177,7 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `SLOW_TRACE_THRESHOLD_MS` | `10000` | Trace-duration threshold for review queue collection |
 | `THRESHOLD_ANALYSIS_MIN_LABELS` | `20` | Minimum labeled traces required before suggesting a new threshold |
 | `REVIEW_QUEUE_ENABLED` | `true` | Enable review queue builder and admin endpoints |
+| `ONLINE_EVALUATORS_ENABLED` | `true` | Enable lightweight per-trace online evaluators, persistence, and admin views |
 | `REGRESSION_GATE_MAX_REGRESSIONS` | `2` | Maximum allowed curated regressions before the gate fails |
 | `REGRESSION_GATE_MIN_PASS_RATE` | `0.85` | Minimum candidate pass rate required by the regression gate |
 | `RAG_VECTOR_BACKEND` | `chroma` | Vector store backend |
@@ -335,6 +339,8 @@ Resilience layers apply in this order:
 | DELETE | `/api/admin/audit-log?older_than_days=N` | admin | Purge old audit-log entries |
 | POST | `/api/admin/circuit-breaker/reset` | admin | Force-reset the Ollama circuit breaker |
 | GET | `/api/admin/kb-gaps` | admin | List detected knowledge gaps |
+| GET | `/api/admin/evaluations/trends?evaluator=<name>&days=30` | admin | Return daily mean-score trends for one online evaluator |
+| GET | `/api/admin/evaluations/worst?evaluator=<name>&limit=20` | admin | Return the worst recent traces for one online evaluator |
 | GET | `/api/admin/categories` | admin | Return the active category taxonomy |
 | GET | `/api/admin/kb-drafts` | admin | List Knowledge Builder drafts |
 | PATCH | `/api/admin/kb-drafts/{draft_id}` | admin | Edit a pending KB draft |
@@ -462,6 +468,35 @@ python scripts/regression_eval.py \
   requests that touch `agent/prompts.py`, `config/settings.py`, or
   `evaluation/experiments/*.yaml`.
 
+## Online evaluators
+
+Online evaluators are synchronous, low-cost checks that run on the final trace
+state after the main graph finishes. They are enabled by
+`ONLINE_EVALUATORS_ENABLED=true` and persist one row per evaluator into
+`trace_evaluations`.
+
+- `citation_coverage` measures the share of answer sentences carrying `[N]`
+  citations.
+- `answer_length_anomaly` flags answers whose word-count z-score falls outside
+  the baseline.
+- `retrieval_hit_rate` measures the share of retrieved documents whose rerank
+  `relevance_score` is above `0.5`.
+- `tool_use_efficiency` compares final-answer tokens against tool-call token
+  spend.
+- `refusal_detected` flags refusal-style phrases from
+  `config/evaluator_patterns.yml`.
+- `pii_leak_suspicion` flags phone/email/card-like patterns and stores only the
+  matched pattern names, never raw values.
+- `language_mismatch` compares detected query and answer languages.
+
+Operational surfaces:
+
+- `GET /api/admin/evaluations/trends?evaluator=<name>&days=30`
+- `GET /api/admin/evaluations/worst?evaluator=<name>&limit=20`
+- `python scripts/eval_daily_snapshot.py --date 2026-04-20`
+- `deploy/helm/templates/cronjob-eval-snapshot.yaml` runs the daily snapshot at
+  `02:00 UTC`
+
 ## Monitoring
 
 The project exposes three observability surfaces.
@@ -483,7 +518,7 @@ coloring for operators and admins.
 
 ### 2. `GET /metrics` - Prometheus
 
-`monitoring/prometheus.py` currently initializes **33** Prometheus collectors
+`monitoring/prometheus.py` currently initializes **36** Prometheus collectors
 (`Counter`, `Gauge`, `Histogram`, or `Summary`):
 
 - **HTTP and latency:** `rag_requests_total{route}`,
@@ -493,7 +528,10 @@ coloring for operators and admins.
   `rag_escalation_total`, `rag_feedback_total{rating}`,
   `rag_model_routing_total{complexity}`, `rag_eval_drift{metric_name}`,
   `regression_runs_total{result}`, `regression_runs_duration_seconds`,
-  `regression_last_pass_rate{baseline,candidate}`
+  `regression_last_pass_rate{baseline,candidate}`,
+  `online_evaluator_score{evaluator}`,
+  `online_evaluator_runs_total{evaluator,verdict}`,
+  `online_evaluator_errors_total{evaluator}`
 - **Resilience and protection:** `rag_circuit_breaker_state{name}`,
   `rag_circuit_breaker_transitions_total{name,to_state}`,
   `rag_ollama_retry_events_total{event}`,
@@ -735,6 +773,7 @@ git and back it up separately from database backups.
 Deployment artifacts added in arc `102-122` include:
 
 - `deploy/helm/templates/cronjob.yaml` for nightly eval and KB-gap jobs
+- `deploy/helm/templates/cronjob-eval-snapshot.yaml` for daily online-evaluator snapshots
 - `deploy/helm/templates/cronjob-review-queue.yaml` for hourly review-queue builds
 - `deploy/helm/templates/cronjob-improvement-backlog.yaml` for weekly improvement backlog generation
 - `deploy/helm/templates/cronjob-report.yaml` for weekly reports
@@ -755,6 +794,8 @@ Alembic migrations introduced after the original README baseline:
   review state.
 - `011_trace_costs` - stores token usage and cost data for analytics.
 - `012_review_queue` - creates the `review_queue` table for human quality review.
+- `013_regression_eval_runs` - extends `eval_results` for curated regression runs.
+- `014_trace_evaluations` - stores per-trace online evaluator outputs.
 
 ## Project structure
 

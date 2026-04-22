@@ -293,6 +293,11 @@ class Settings:
             "REVIEW_QUEUE_ENABLED", "true"
         ).strip().lower() in ("1", "true", "yes")
     )
+    online_evaluators_enabled: bool = field(
+        default_factory=lambda: os.getenv(
+            "ONLINE_EVALUATORS_ENABLED", "true"
+        ).strip().lower() in ("1", "true", "yes")
+    )
     regression_gate_max_regressions: int = field(
         default_factory=lambda: int(os.getenv("REGRESSION_GATE_MAX_REGRESSIONS", "2"))
     )

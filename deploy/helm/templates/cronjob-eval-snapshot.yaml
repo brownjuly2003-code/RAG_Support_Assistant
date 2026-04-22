@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-eval-daily-snapshot
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: eval-daily-snapshot
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              command:
+                - python
+                - scripts/eval_daily_snapshot.py
+              envFrom:
+                - configMapRef:
+                    name: {{ .Release.Name }}-config

@@ -3078,6 +3078,127 @@ async def admin_list_traces(
     return JSONResponse(content={"traces": traces})
 
 
+@router.get("/admin/evaluations/trends")
+async def admin_evaluation_trends(
+    evaluator: str,
+    days: int = 30,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    _ = _user
+    if days < 1 or days > 365:
+        raise HTTPException(status_code=400, detail="days must be in [1, 365]")
+    if not getattr(get_settings(), "online_evaluators_enabled", True):
+        return JSONResponse(content={"evaluator": evaluator, "days": days, "points": []})
+
+    from datetime import datetime, timedelta, timezone  # noqa: PLC0415
+
+    from sqlalchemy import text  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+
+    async with async_session() as db:
+        rows = (
+            await db.execute(
+                text(
+                    """
+                    SELECT
+                        DATE(evaluated_at) AS bucket,
+                        AVG(score) AS mean_score,
+                        COUNT(*) AS runs
+                    FROM trace_evaluations
+                    WHERE evaluator_name = :evaluator_name
+                      AND evaluated_at >= :window_start
+                    GROUP BY DATE(evaluated_at)
+                    ORDER BY bucket ASC
+                    """
+                ),
+                {
+                    "evaluator_name": evaluator,
+                    "window_start": datetime.now(timezone.utc) - timedelta(days=days),
+                },
+            )
+        ).mappings().all()
+
+    return JSONResponse(
+        content={
+            "evaluator": evaluator,
+            "days": days,
+            "points": [
+                {
+                    "date": str(row.get("bucket") or ""),
+                    "mean_score": float(row.get("mean_score") or 0.0),
+                    "runs": int(row.get("runs") or 0),
+                }
+                for row in rows
+            ],
+        }
+    )
+
+
+@router.get("/admin/evaluations/worst")
+async def admin_evaluation_worst(
+    evaluator: str,
+    limit: int = 20,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    _ = _user
+    if limit < 1 or limit > 100:
+        raise HTTPException(status_code=400, detail="limit must be in [1, 100]")
+    if not getattr(get_settings(), "online_evaluators_enabled", True):
+        return JSONResponse(content={"evaluator": evaluator, "limit": limit, "items": []})
+
+    from sqlalchemy import text  # noqa: PLC0415
+
+    from db.engine import async_session  # noqa: PLC0415
+
+    async with async_session() as db:
+        rows = (
+            await db.execute(
+                text(
+                    """
+                    SELECT
+                        trace_id,
+                        score,
+                        verdict,
+                        metadata,
+                        evaluated_at
+                    FROM trace_evaluations
+                    WHERE evaluator_name = :evaluator_name
+                    ORDER BY score ASC, evaluated_at ASC
+                    LIMIT :limit
+                    """
+                ),
+                {
+                    "evaluator_name": evaluator,
+                    "limit": limit,
+                },
+            )
+        ).mappings().all()
+
+    return JSONResponse(
+        content={
+            "evaluator": evaluator,
+            "limit": limit,
+            "items": [
+                {
+                    "trace_id": str(row.get("trace_id") or ""),
+                    "score": float(row.get("score") or 0.0),
+                    "verdict": str(row.get("verdict") or ""),
+                    "metadata": row.get("metadata") if isinstance(row.get("metadata"), dict) else {},
+                    "evaluated_at": (
+                        row.get("evaluated_at").isoformat()
+                        if hasattr(row.get("evaluated_at"), "isoformat")
+                        else str(row.get("evaluated_at"))
+                        if row.get("evaluated_at") is not None
+                        else None
+                    ),
+                }
+                for row in rows
+            ],
+        }
+    )
+
+
 @router.get("/admin/kb-gaps")
 async def admin_list_kb_gaps(
     _user: dict = Depends(require_role("admin")),
