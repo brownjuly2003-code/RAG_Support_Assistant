@@ -2,6 +2,27 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Arc 6 / Batch F] — 2026-04-22 — Continuous learning lab
+
+### Learning loop foundation (tasks 133-140, fixes 141-142)
+- **Review queue** — `alembic/versions/012_review_queue.py`, `scripts/build_review_queue.py`, admin endpoint'ы `/api/admin/review-queue*`, Prometheus-метрики и секция в `static/admin.html` превратили traces/feedback в явную очередь ручного разбора вместо разрозненных сигналов (task-133).
+- **Curated dataset builder** — `scripts/build_curated_dataset.py`, `evaluation/dataset.py`, `evaluation/curated_cases.jsonl` и admin-trigger на rebuild начали собирать подтверждённые review cases в переиспользуемый eval/regression датасет вместо одноразового ручного отбора (task-134).
+- **Prompt / experiment registry** — `evaluation/experiment_schema.py`, `agent/prompt_registry.py`, `scripts/experiment_{new,apply}.py`, admin endpoint'ы для экспериментов и последующий runtime wire-in через `CURRENT_EXPERIMENT` в `agent/graph.py` сделали staged prompt overrides реально исполняемыми внутри pipeline, а не только описанными в конфиге (tasks 135, 142).
+- **Regression runner** — `scripts/regression_eval.py`, CI job `regression-eval`, gate-настройки в `config/settings.py` и API для запуска/просмотра regression runs превратили curated dataset + experiments в формальный pre-deploy quality gate (task-136).
+- **Online evaluators runtime** — `evaluation/online_evaluators.py`, `evaluation/evaluator_runner.py`, `alembic/versions/014_trace_evaluations.py`, `/api/admin/evaluations/{trends,worst}`, `scripts/eval_daily_snapshot.py`, `config/evaluator_patterns.yml` и Prometheus-метрики добавили production-оценку trace quality по hot-path и ежедневные snapshot-агрегаты вместо одного только offline eval (tasks 137, 141).
+- **Weekly improvement backlog** — `scripts/generate_improvement_backlog.py`, backlog endpoint'ы и cronjob начали агрегировать review queue, KB gaps, evaluator drift, slow traces и freshness signals в единый приоритизированный список улучшений (task-138).
+- **Threshold recommendations** — `scripts/analyze_thresholds.py`, `/api/admin/thresholds/*` и `reports/threshold_recommendations.md` перевели quality/review thresholds из ручной настройки в F1-ориентированный анализ на реальных label'ах (task-139).
+- **Offline review workflow** — `scripts/review_export.py`, `scripts/review_import.py` и `.gitignore` для review batch artifacts дали команде безопасный export/import ручной разметки вне production UI без потери auditability (task-140).
+
+### Migrations
+- **012_review_queue** — таблица `review_queue` и supporting indexes/status fields для human review workflow.
+- **013_regression_eval_runs** — расширение `eval_results` полями regression run metadata для baseline/candidate сравнений.
+- **014_trace_evaluations** — таблица `trace_evaluations` для online evaluator verdicts, score и evidence.
+
+### Testing
+- Полный набор вырос с **319** до **393** тестов (**+74**).
+- Closing sweep для Batch F завершился зелёным `pytest tests/ -q`, включая fix-spec'и для prompt-registry routing и online evaluators runtime.
+
 ## [Arc 102-122] — 2026-04-21 — Product, enterprise, polish
 
 ### Batch A — UX (tasks 102-106)
