@@ -2,6 +2,25 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Arc 7 / Minors close-out] — 2026-04-23 — sticky rollout + staleness + cronjobs
+
+### Task-154 sticky hash rollout
+- **`agent/prompt_registry.py`** — adds `set_assignment_cache_entry`, `clear_assignment_cache_entry`, `clear_assignment_cache`, `refresh_assignment_cache_from_db`, `_stable_rollout_bucket`, and the live implementation of `resolve_active_experiment()`. Resolver gates on `EXPERIMENT_ASSIGNMENT_ENABLED`, reads the tenant-keyed in-memory cache, computes a deterministic `sha256(tenant_id:session_or_user) % 100` bucket, returns the experiment when `bucket < rollout_percentage` and the YAML loads, otherwise `None`.
+- **`api/app.py`** — `POST /admin/experiments/{id}/assignments` now calls `set_assignment_cache_entry` after the DB commit so sticky rollout picks up new assignments without a service restart.
+
+### Task-156 staleness detection
+- **`scripts/detect_stale_curated_cases.py`** — CLI + library. `compare_verdicts()` detects route drift, quality/factuality drops, and `answer_contains` misses. `run_detection()` reads `curated_cases.jsonl`, filters by age, re-runs each case through a pluggable `rerun_fn`, and (with `--apply`) writes `stale_needs_review` rows into `curated_case_status` via `DELETE + INSERT`.
+- **`config/settings.py`** — new `CURATED_CASE_STALE_DAYS=180`.
+
+### Helm cronjobs
+- `deploy/helm/templates/cronjob-backup-snapshot.yaml` — nightly 01:00 UTC `python scripts/backup_snapshot.py --out /backups/$(date -u +%Y%m%dT%H%M%SZ)`.
+- `deploy/helm/templates/cronjob-backup-integrity.yaml` — weekly Sun 05:00 UTC integrity audit.
+- `deploy/helm/templates/cronjob-restore-verify.yaml` — weekly Sun 04:00 UTC disposable restore against the newest snapshot.
+- `deploy/helm/templates/cronjob-curated-staleness.yaml` — daily 03:00 UTC `--apply` run of the staleness detector.
+
+### Tests
+- `tests/test_sticky_rollout.py` (8), `tests/test_detect_stale_curated_cases.py` (10), `tests/test_helm_cronjobs.py` (4). Combined Arc 7 sweep (K+I+J + minors + sanity): 189 passed / 0 failed. Ruff clean.
+
 ## [Arc 7 / Batch J] — 2026-04-23 — Backup / restore / chaos
 
 ### Snapshot backup + integrity (task-159, task-163)

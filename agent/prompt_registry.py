@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import os
 from contextvars import ContextVar, Token
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -15,6 +17,12 @@ CURRENT_EXPERIMENT: ContextVar[Experiment | None] = ContextVar(
     "current_experiment",
     default=None,
 )
+
+# Task-154 sticky rollout: in-memory cache keyed by tenant_id. Populated by
+# the admin assignments upsert endpoint and (optionally) a lifespan refresh
+# hook. Kept deliberately simple because assignments change rarely and the
+# sync resolver must stay callable from the graph hot path.
+_ASSIGNMENTS_CACHE: dict[str, dict[str, Any]] = {}
 
 
 def _load_staged_override_payload() -> dict[str, object]:
@@ -74,18 +82,113 @@ def load_current_experiment() -> Experiment | None:
     )
 
 
+def set_assignment_cache_entry(
+    tenant_id: str,
+    experiment_id: str,
+    rollout_percentage: int,
+) -> None:
+    """Populate or update the sticky rollout cache for a tenant."""
+    _ASSIGNMENTS_CACHE[tenant_id] = {
+        "experiment_id": experiment_id,
+        "rollout_percentage": max(0, min(100, int(rollout_percentage))),
+    }
+
+
+def clear_assignment_cache_entry(tenant_id: str) -> None:
+    _ASSIGNMENTS_CACHE.pop(tenant_id, None)
+
+
+def clear_assignment_cache() -> None:
+    _ASSIGNMENTS_CACHE.clear()
+
+
+def _stable_rollout_bucket(tenant_id: str, user_id: str, session_id: str | None) -> int:
+    """Deterministic 0-99 bucket for sticky rollout decisions."""
+    key = f"{tenant_id}:{session_id or user_id or 'anonymous'}"
+    digest = hashlib.sha256(key.encode("utf-8")).digest()[:4]
+    return int.from_bytes(digest, "big") % 100
+
+
+async def refresh_assignment_cache_from_db(session) -> int:
+    """Async refresh of the sticky rollout cache from `experiment_assignments`.
+
+    Intended to be called from FastAPI lifespan/startup or a periodic task.
+    Returns the number of tenants loaded.
+    """
+    from sqlalchemy import text as sql_text  # noqa: PLC0415
+
+    result = await session.execute(
+        sql_text(
+            "SELECT tenant_id, experiment_id, rollout_percentage "
+            "FROM experiment_assignments"
+        ),
+        {},
+    )
+    rows = list(result.mappings().all())
+    _ASSIGNMENTS_CACHE.clear()
+    for row in rows:
+        tenant_id = str(row.get("tenant_id") or "").strip()
+        experiment_id = str(row.get("experiment_id") or "").strip()
+        if not tenant_id or not experiment_id:
+            continue
+        _ASSIGNMENTS_CACHE[tenant_id] = {
+            "experiment_id": experiment_id,
+            "rollout_percentage": int(row.get("rollout_percentage") or 0),
+        }
+    return len(_ASSIGNMENTS_CACHE)
+
+
 def resolve_active_experiment(
     tenant_id: str = "default",
     user_id: str = "anonymous",
     session_id: str | None = None,
 ) -> Experiment | None:
-    """Return the experiment assigned to this tenant/user, or None.
+    """Sticky hash-based rollout lookup.
 
-    Real resolution (tenant assignment lookup + sticky hash-based rollout)
-    is wired into the admin assignment layer; tests override this function
-    directly via monkeypatch.
+    Returns the experiment assigned to this tenant when:
+    - `EXPERIMENT_ASSIGNMENT_ENABLED` is true in settings;
+    - the tenant has a cached assignment with `rollout_percentage > 0`;
+    - the stable bucket for `(tenant_id, session_id or user_id)` falls
+      below `rollout_percentage`;
+    - the experiment YAML loads successfully.
+
+    Tests may still monkeypatch the function directly to simulate specific
+    resolver outputs.
     """
-    return None
+    settings = None
+    try:
+        from config.settings import get_settings  # noqa: PLC0415
+
+        settings = get_settings()
+        if not getattr(settings, "experiment_assignment_enabled", False):
+            return None
+    except Exception:
+        return None
+
+    assignment = _ASSIGNMENTS_CACHE.get(tenant_id)
+    if not assignment:
+        return None
+
+    rollout = int(assignment.get("rollout_percentage") or 0)
+    if rollout <= 0:
+        return None
+
+    bucket = _stable_rollout_bucket(tenant_id, user_id, session_id)
+    if bucket >= rollout:
+        return None
+
+    experiment_id = str(assignment.get("experiment_id") or "").strip()
+    if not experiment_id:
+        return None
+
+    project_root = Path(getattr(settings, "project_root", PROJECT_ROOT))
+    experiment_path = project_root / "evaluation" / "experiments" / f"{experiment_id}.yaml"
+    if not experiment_path.exists():
+        return None
+    try:
+        return load_experiment(experiment_path)
+    except Exception:
+        return None
 
 
 def set_current_experiment(exp: Experiment | None) -> Token[Experiment | None]:

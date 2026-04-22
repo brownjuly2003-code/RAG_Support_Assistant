@@ -385,6 +385,11 @@ class Settings:
         default_factory=lambda: int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
     )
 
+    # --- Curated dataset staleness (task-156 close-out) ---
+    curated_case_stale_days: int = field(
+        default_factory=lambda: int(os.getenv("CURATED_CASE_STALE_DAYS", "180"))
+    )
+
     slow_trace_threshold_ms: int = int(os.getenv("SLOW_TRACE_THRESHOLD_MS", "10000"))
     threshold_analysis_min_labels: int = int(os.getenv("THRESHOLD_ANALYSIS_MIN_LABELS", "20"))
     review_queue_enabled: bool = field(

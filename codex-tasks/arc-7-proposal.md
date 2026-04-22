@@ -125,6 +125,29 @@ Batch K closed on 2026-04-22.
 - API/UI surface now exposes `/api/chat/stream` plus health-driven UI switching via `STREAMING_ENABLED`.
 - Ingestion has opt-in batch contextual-header preprocessing via `INGESTION_BATCH_ENABLED` with sequential fallback.
 
+## Arc 7 minors closed on 2026-04-23
+
+Follow-up close-out for the two pieces that were deferred when Batch I +
+J landed:
+
+- task-154 sticky hash rollout — `agent/prompt_registry.py` now owns a
+  tenant-keyed assignments cache with `set_assignment_cache_entry`,
+  `clear_assignment_cache_entry`, `clear_assignment_cache`, async
+  `refresh_assignment_cache_from_db`. `resolve_active_experiment()` reads
+  the cache, gates on `EXPERIMENT_ASSIGNMENT_ENABLED`, computes a stable
+  `sha256(tenant:session_or_user) % 100` bucket, honours
+  `rollout_percentage`, and loads the experiment YAML from
+  `settings.project_root`. Admin upsert endpoint now hot-syncs the cache.
+- task-156 staleness detection — `scripts/detect_stale_curated_cases.py`
+  reads `curated_cases.jsonl`, re-runs each stale case through a
+  pluggable `rerun_fn`, compares verdicts (route/quality/factuality/
+  answer_contains), and optionally writes rows into
+  `curated_case_status` via `--apply`. `CURATED_CASE_STALE_DAYS=180`
+  setting lands alongside the script.
+- Helm `CronJob` manifests shipped for nightly backup, weekly backup
+  integrity, weekly restore-verify, and daily curated staleness
+  detection.
+
 ## Batch J closed on 2026-04-23
 
 - task-159 snapshot backup (`scripts/backup_snapshot.py`, SHA256 manifest,

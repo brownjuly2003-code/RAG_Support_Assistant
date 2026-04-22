@@ -4063,6 +4063,13 @@ async def admin_upsert_experiment_assignment(
         )
         await db.commit()
 
+    try:
+        from agent.prompt_registry import set_assignment_cache_entry  # noqa: PLC0415
+
+        set_assignment_cache_entry(tenant_id, experiment_id, rollout_percentage)
+    except Exception:
+        logger.debug("assignment cache update failed", exc_info=True)
+
     return JSONResponse(
         content={
             "assignment": {
