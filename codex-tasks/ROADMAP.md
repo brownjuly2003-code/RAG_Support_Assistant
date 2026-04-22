@@ -4,10 +4,11 @@
 состояния кода после арка 68-101. Каждый открытый пункт переработан в
 Codex-спеку; закрытые пункты сюда **не включены** (см. `Archive/`).
 
-> **Status (2026-04-21):** все 21 task arc 102-122 реализованы и закоммичены.
-> Tests: 293 passed. Ruff clean. Verification sweep (task-123) выявил
-> 6 функциональных gaps → fix-tasks 130/131/132 написаны, висят для следующей
-> Codex-сессии. Arc считается закрытой с TODO на 3 fix-таска.
+> **Status (2026-04-22):** все 21 task arc 102-122 и follow-up fix-tasks
+> 130/131/132 реализованы, закоммичены и заархивированы.
+> Current repo state после закрытия follow-up'ов и Batch F: 393 passed,
+> Ruff clean. Gaps из verification sweep (task-123) закрыты коммитом
+> `ee5ff51`; у этого roadmap больше нет pending fix-tasks.
 
 ## Baseline (на момент 2026-04-20)
 - 71 коммит в арке 68-101, 222 теста passing, ruff clean
@@ -24,7 +25,7 @@ Codex-спеку; закрытые пункты сюда **не включены
 Быстрые visible wins. Приоритет 1 — дают наиболее заметный product-lift.
 - [task-102] — inline citations `[N]` + source panel ✅
 - [task-103] — mobile breakpoints + tap targets ✅
-- [task-104] — WCAG AA audit — ⚠️ static review only, axe-core прогон выделен в [task-132](../task-132-run-axe-audit.md)
+- [task-104] — WCAG AA audit — ✅ static review закрыт в арке, real axe-core/keyboard audit закрыт follow-up [task-132](Archive/task-132-run-axe-audit.md)
 - [task-105] — upload progress bar, error recovery retry, onboarding ✅
 - [task-106] — operator dashboard + context panel (COPILOT-1/2) ✅
 
@@ -43,9 +44,9 @@ Codex-спеку; закрытые пункты сюда **не включены
 - [task-114] — resolved tickets → draft KB articles ✅
 - [task-115] — stale-doc monitoring + alerts ✅
 - [task-116] — auto-tag docs при upload ✅
-- [task-117] — top topics, resolution rate — ❌ cost tracking пишет 0.0, follow-up [task-130](../task-130-fix-analytics-cost-calc.md)
+- [task-117] — top topics, resolution rate — ✅ cost tracking исправлен follow-up [task-130](Archive/task-130-fix-analytics-cost-calc.md)
 - [task-118] — Slack/email weekly digest ✅
-- [task-119] — IMAP/webhook email channel — ❌ poller/webhook no-op, follow-up [task-131](../task-131-fix-email-channel.md)
+- [task-119] — IMAP/webhook email channel — ✅ poller/webhook/tenant delimiter исправлены follow-up [task-131](Archive/task-131-fix-email-channel.md)
 
 ### Batch E — Code Quality & Integration Tests ✅
 - [task-120] — снять дубли root-level `graph.py`/`state.py` — ✅ (manager.py — двухслойная архитектура, не дубликат)
@@ -62,18 +63,19 @@ Codex-спеку; закрытые пункты сюда **не включены
 - [task-128] — `docs/CHANGELOG.md` ✅
 - [task-129] — `docs/operations/backup-restore.md` ✅
 
-## Pending fix-tasks (для следующей Codex-сессии)
+## Closed follow-up fixes
 
-- [task-130] — fix cost calculation в analytics dashboard
-- [task-131] — fix email channel (IMAP poller + webhook + tenant delimiter)
-- [task-132] — real axe-core audit на UI + keyboard test + docs/a11y/
+- [task-130](Archive/task-130-fix-analytics-cost-calc.md) — cost calculation в analytics dashboard закрыт коммитом `ee5ff51`
+- [task-131](Archive/task-131-fix-email-channel.md) — email channel fix закрыт коммитом `ee5ff51`
+- [task-132](Archive/task-132-run-axe-audit.md) — real axe-core audit + keyboard test + `docs/a11y/` закрыт коммитом `ee5ff51`
 
 ## DONE WHEN (для всего roadmap)
 
 - [x] 21 базовая задача arc 102-122 реализована
 - [x] 293 теста passing (>280 target)
 - [x] README обновлён с новыми фичами/env vars (task-124)
-- [ ] Lighthouse mobile ≥90, axe-core 0 critical — после task-132
+- [x] axe-core: 0 critical/serious — follow-up [task-132](Archive/task-132-run-axe-audit.md)
+- [ ] Lighthouse mobile ≥90 — отдельный performance sweep, не часть закрытия этой roadmap
 - [ ] Resolution rate ≥50% (если появится production трафик) — постпродакшн
 
 ## Next arc (TBD)
