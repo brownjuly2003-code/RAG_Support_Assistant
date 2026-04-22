@@ -86,6 +86,17 @@ except ImportError:
     run_online_evaluators = None  # type: ignore[assignment]
 
 try:
+    from agent.prompt_registry import (
+        load_current_experiment,
+        reset_current_experiment,
+        set_current_experiment,
+    )
+except ImportError:
+    load_current_experiment = None  # type: ignore[assignment]
+    reset_current_experiment = None  # type: ignore[assignment]
+    set_current_experiment = None  # type: ignore[assignment]
+
+try:
     from config.settings import get_settings
 except ImportError:
     get_settings = None  # type: ignore[assignment]
@@ -1160,59 +1171,68 @@ def run_qa_pipeline(
         chat_history: история диалога (Level 3).
     """
     trace_id = start_trace(trace_id=trace_id, tenant_id=tenant_id)
-    if get_settings is not None and getattr(get_settings, "__module__", "") != "config.settings":
-        settings = get_settings()
-    else:
-        try:
-            from config.settings import get_settings as config_get_settings
-        except ImportError:
-            settings = get_settings() if get_settings is not None else None
+    experiment_token = (
+        set_current_experiment(load_current_experiment())
+        if load_current_experiment is not None and set_current_experiment is not None
+        else None
+    )
+    try:
+        if get_settings is not None and getattr(get_settings, "__module__", "") != "config.settings":
+            settings = get_settings()
         else:
-            settings = config_get_settings()
-    initial_state = create_initial_state(
-        question=question,
-        trace_id=trace_id,
-        tenant_id=tenant_id,
-    )
-    initial_state["max_iterations"] = max_iterations
-    if chat_history:
-        initial_state["chat_history"] = chat_history
+            try:
+                from config.settings import get_settings as config_get_settings
+            except ImportError:
+                settings = get_settings() if get_settings is not None else None
+            else:
+                settings = config_get_settings()
+        initial_state = create_initial_state(
+            question=question,
+            trace_id=trace_id,
+            tenant_id=tenant_id,
+        )
+        initial_state["max_iterations"] = max_iterations
+        if chat_history:
+            initial_state["chat_history"] = chat_history
 
-    graph = build_support_graph(
-        retriever=retriever,
-        llm=llm,
-        min_quality=getattr(settings, "quality_threshold", 80),
-        max_iterations=max_iterations,
-    )
+        graph = build_support_graph(
+            retriever=retriever,
+            llm=llm,
+            min_quality=getattr(settings, "quality_threshold", 80),
+            max_iterations=max_iterations,
+        )
 
-    final_state = graph.invoke(initial_state)
-    finish_trace(trace_id, final_state)
-    if (
-        getattr(settings, "online_evaluators_enabled", False)
-        and run_online_evaluators is not None
-        and persist_online_evaluations is not None
-    ):
-        try:
-            trace_state = dict(final_state)
-            trace_state["trace_id"] = trace_id
+        final_state = graph.invoke(initial_state)
+        finish_trace(trace_id, final_state)
+        if (
+            getattr(settings, "online_evaluators_enabled", False)
+            and run_online_evaluators is not None
+            and persist_online_evaluations is not None
+        ):
+            try:
+                trace_state = dict(final_state)
+                trace_state["trace_id"] = trace_id
 
-            async def _persist_results() -> None:
-                results = await asyncio.wait_for(
-                    asyncio.to_thread(run_online_evaluators, trace_state),
-                    timeout=1.0,
+                async def _persist_results() -> None:
+                    results = await asyncio.wait_for(
+                        asyncio.to_thread(run_online_evaluators, trace_state),
+                        timeout=1.0,
+                    )
+                    persisted = persist_online_evaluations(trace_id, results)
+                    if inspect.isawaitable(persisted):
+                        await persisted
+
+                asyncio.run(_persist_results())
+            except Exception as exc:
+                logger.warning(
+                    "Online evaluators failed: %s",
+                    exc,
+                    extra={"trace_id": trace_id},
                 )
-                persisted = persist_online_evaluations(trace_id, results)
-                if inspect.isawaitable(persisted):
-                    await persisted
-
-            asyncio.run(_persist_results())
-        except Exception as exc:
-            logger.warning(
-                "Online evaluators failed: %s",
-                exc,
-                extra={"trace_id": trace_id},
-            )
-    return final_state
+        return final_state
+    finally:
+        if experiment_token is not None and reset_current_experiment is not None:
+            reset_current_experiment(experiment_token)
 
 
 # ---------------------------------------------------------------------------

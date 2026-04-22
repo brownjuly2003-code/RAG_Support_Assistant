@@ -432,6 +432,10 @@ Recommended workflow:
 3. Run nightly or regression evaluation against the staged `EXPERIMENT_ID`.
 4. Deploy with `experiment_apply.py --mode deploy` once metrics look acceptable.
 
+In stage mode, `EXPERIMENT_ID` plus `config/experiment_override.yaml` applies to
+the runtime pipeline on the next request without any git edits or deploy-mode
+rewrite of `agent/prompts.py`.
+
 Admin endpoints:
 
 - `GET /api/admin/experiments`
