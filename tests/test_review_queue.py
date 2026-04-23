@@ -223,10 +223,13 @@ def test_review_queue_migration_upgrade_creates_table_and_indexes(monkeypatch: p
     table_calls: list[str] = []
     index_calls: list[tuple[str, tuple[str, ...]]] = []
 
-    class _FakeEnum:
-        def __init__(self, *values: str, name: str) -> None:
+    import sqlalchemy as _sa
+
+    class _FakeEnum(_sa.Enum):
+        def __init__(self, *values: str, name: str, create_type: bool = True) -> None:
+            super().__init__(*values, name=name)
             self.values = values
-            self.name = name
+            self.create_type = create_type
 
         def create(self, bind, checkfirst: bool = True) -> None:
             _ = bind, checkfirst
@@ -267,9 +270,12 @@ def test_review_queue_migration_downgrade_drops_table_and_enums(monkeypatch: pyt
 
     events: list[tuple[str, str]] = []
 
-    class _FakeEnum:
-        def __init__(self, *values: str, name: str) -> None:
-            self.name = name
+    import sqlalchemy as _sa
+
+    class _FakeEnum(_sa.Enum):
+        def __init__(self, *values: str, name: str, create_type: bool = True) -> None:
+            super().__init__(*values, name=name)
+            self.create_type = create_type
 
         def create(self, bind, checkfirst: bool = True) -> None:
             _ = bind, checkfirst

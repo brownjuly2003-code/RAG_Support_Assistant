@@ -56,12 +56,20 @@ def upgrade() -> None:
         sa.Column("tenant_id", sa.String(length=50), nullable=False),
         sa.Column(
             "reason",
-            sa.Enum(*_REVIEW_QUEUE_REASON_VALUES, name="review_queue_reason"),
+            postgresql.ENUM(
+                *_REVIEW_QUEUE_REASON_VALUES,
+                name="review_queue_reason",
+                create_type=False,
+            ),
             nullable=False,
         ),
         sa.Column(
             "status",
-            sa.Enum(*_REVIEW_QUEUE_STATUS_VALUES, name="review_queue_status"),
+            postgresql.ENUM(
+                *_REVIEW_QUEUE_STATUS_VALUES,
+                name="review_queue_status",
+                create_type=False,
+            ),
             nullable=False,
             server_default="pending",
         ),
