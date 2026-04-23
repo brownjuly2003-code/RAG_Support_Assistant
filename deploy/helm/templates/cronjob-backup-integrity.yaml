@@ -2,13 +2,30 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: {{ .Release.Name }}-backup-integrity
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/component: backup-integrity
 spec:
   schedule: "0 5 * * 0"
   successfulJobsHistoryLimit: 4
   failedJobsHistoryLimit: 8
   jobTemplate:
     spec:
+      backoffLimit: 6
       template:
+        metadata:
+          labels:
+            app: {{ .Release.Name }}-backup-integrity
+            app.kubernetes.io/name: {{ .Chart.Name }}
+            app.kubernetes.io/instance: {{ .Release.Name }}
+            app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+            app.kubernetes.io/managed-by: {{ .Release.Service }}
+            helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+            app.kubernetes.io/component: backup-integrity
         spec:
           restartPolicy: OnFailure
           containers:
@@ -24,6 +41,8 @@ spec:
               envFrom:
                 - configMapRef:
                     name: {{ .Release.Name }}-config
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
               volumeMounts:
                 - name: backups
                   mountPath: /backups

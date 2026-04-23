@@ -686,6 +686,51 @@ docker compose exec -T app alembic upgrade head
 
 Периодичность: ежемесячно.
 
+### Full-restore verification
+
+Для полной проверки `pg_dump -Fc` нужен отдельный disposable Postgres, а не
+только распаковка snapshot layout. Для этого в репозитории есть
+`docker-compose.test.yml` с единственным сервисом `postgres-test`
+(`postgres:16-alpine`, random host-port через `ports: - "5432"`, без named
+volume, healthcheck через `pg_isready`).
+
+Стандартный flow:
+
+```bash
+python scripts/backup_snapshot.py --out /tmp/test-snap/20260423T120000Z
+python scripts/restore_verify_integration.py \
+  --snapshot /tmp/test-snap/20260423T120000Z
+```
+
+Что делает `scripts/restore_verify_integration.py`:
+
+1. `docker-compose -f docker-compose.test.yml up -d postgres-test`
+2. ждёт readiness через `pg_isready`
+3. получает выделенный host-port через `docker-compose port postgres-test 5432`
+4. вызывает `python scripts/restore_verify.py --postgres-url ...`
+5. всегда выполняет `docker-compose -f docker-compose.test.yml down -v`
+
+Postgres-ветка внутри `scripts/restore_verify.py` делает не smoke-layout, а
+реальный restore:
+
+- `pg_restore --clean --if-exists --dbname=<url> <snapshot>/postgres/postgres.dump`
+- проверяет `alembic_version.version_num` против `snapshot_manifest.json`
+- проверяет количество таблиц в `public`
+- делает `SELECT * LIMIT 0` для всех ORM-таблиц из `db.models.Base.metadata`
+
+Коды возврата:
+
+- `0` — все restore/check steps зелёные
+- `2` — layout smoke провалился
+- `4` — ошибка `pg_restore` или post-restore проверки Postgres
+
+Если нужно убедиться, что контейнер не завис после прогона:
+
+```bash
+docker-compose -f docker-compose.test.yml ps
+docker-compose -f docker-compose.test.yml down -v
+```
+
 ### Обязательный сценарий
 
 1. Взять последний hourly backup Postgres и последний daily backup uploads / Chroma / SQLite.

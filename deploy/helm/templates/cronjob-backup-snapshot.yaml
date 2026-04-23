@@ -2,13 +2,30 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: {{ .Release.Name }}-backup-snapshot
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/component: backup-snapshot
 spec:
   schedule: "0 1 * * *"
   successfulJobsHistoryLimit: 7
   failedJobsHistoryLimit: 14
   jobTemplate:
     spec:
+      backoffLimit: 6
       template:
+        metadata:
+          labels:
+            app: {{ .Release.Name }}-backup-snapshot
+            app.kubernetes.io/name: {{ .Chart.Name }}
+            app.kubernetes.io/instance: {{ .Release.Name }}
+            app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+            app.kubernetes.io/managed-by: {{ .Release.Service }}
+            helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+            app.kubernetes.io/component: backup-snapshot
         spec:
           restartPolicy: OnFailure
           containers:
@@ -22,6 +39,8 @@ spec:
               envFrom:
                 - configMapRef:
                     name: {{ .Release.Name }}-config
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
               volumeMounts:
                 - name: backups
                   mountPath: /backups

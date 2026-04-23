@@ -12,6 +12,7 @@ import argparse
 import json
 import shutil
 import sqlite3
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -24,11 +25,16 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from db.models import Base  # noqa: E402
+
 
 EXIT_OK = 0
 EXIT_RESTORE_FAILED = 1
 EXIT_SMOKE_FAILED = 2
 EXIT_INFRA_ERROR = 3
+EXIT_POSTGRES_VERIFY_FAILED = 4
+EXPECTED_PUBLIC_TABLE_COUNT = 18
+EXPECTED_MODEL_TABLES = tuple(sorted(Base.metadata.tables))
 
 
 @dataclass
@@ -131,10 +137,99 @@ def _run_layout_smoke(target_root: Path, manifest: dict[str, Any]) -> StepResult
     return StepResult("layout_smoke", passed=True, detail=f"{len(found)} layout checks passed")
 
 
+def _verify_postgres(
+    snapshot_dir: Path,
+    component: dict[str, Any],
+    manifest: dict[str, Any],
+    postgres_url: str,
+) -> StepResult:
+    rel = component.get("path")
+    if not rel:
+        return StepResult("postgres", passed=False, detail="manifest missing path")
+
+    source = snapshot_dir / rel
+    if not source.exists():
+        return StepResult("postgres", passed=False, detail=f"{rel} missing")
+
+    try:
+        restore = subprocess.run(
+            [
+                "pg_restore",
+                f"--dbname={postgres_url}",
+                "--clean",
+                "--if-exists",
+                str(source),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        return StepResult("postgres", passed=False, detail="pg_restore binary not found")
+    except subprocess.CalledProcessError as exc:
+        detail = (exc.stderr or exc.stdout or "").strip() or f"pg_restore exit {exc.returncode}"
+        return StepResult("postgres", passed=False, detail=f"pg_restore failed: {detail}")
+
+    try:
+        import psycopg2
+        from psycopg2 import sql
+    except Exception as exc:
+        return StepResult("postgres", passed=False, detail=f"psycopg2 import failed: {exc}")
+
+    manifest_revision = manifest.get("alembic_revision")
+    if not isinstance(manifest_revision, str) or not manifest_revision:
+        return StepResult("postgres", passed=False, detail="manifest missing alembic_revision")
+
+    try:
+        with psycopg2.connect(postgres_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT version_num FROM alembic_version")
+                row = cur.fetchone()
+                live_revision = row[0] if row else None
+                if live_revision != manifest_revision:
+                    return StepResult(
+                        "postgres",
+                        passed=False,
+                        detail=f"alembic_version mismatch: expected {manifest_revision}, got {live_revision}",
+                    )
+
+                cur.execute(
+                    "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"
+                )
+                table_count = cur.fetchone()[0]
+                if table_count != EXPECTED_PUBLIC_TABLE_COUNT:
+                    return StepResult(
+                        "postgres",
+                        passed=False,
+                        detail=(
+                            "unexpected public table count: "
+                            f"expected {EXPECTED_PUBLIC_TABLE_COUNT}, got {table_count}"
+                        ),
+                    )
+
+                for table_name in EXPECTED_MODEL_TABLES:
+                    cur.execute(
+                        sql.SQL("SELECT * FROM public.{} LIMIT 0").format(sql.Identifier(table_name))
+                    )
+    except Exception as exc:
+        return StepResult("postgres", passed=False, detail=f"postgres verify failed: {exc}")
+
+    restore_note = restore.stderr.strip() if restore.stderr else "pg_restore ok"
+    return StepResult(
+        "postgres",
+        passed=True,
+        detail=(
+            f"{restore_note}; alembic={manifest_revision}; "
+            f"tables={EXPECTED_PUBLIC_TABLE_COUNT}; model_tables={len(EXPECTED_MODEL_TABLES)}"
+        ),
+    )
+
+
 def verify_snapshot(
     snapshot_dir: Path,
     *,
     target_root: Path | None = None,
+    postgres_url: str | None = None,
 ) -> RestoreReport:
     cleanup_target = False
     if target_root is None:
@@ -186,6 +281,21 @@ def verify_snapshot(
             report.exit_code = EXIT_RESTORE_FAILED
             return report
 
+        if postgres_url:
+            postgres_component = components.get("postgres")
+            if postgres_component and postgres_component.get("status") == "ok":
+                postgres_step = _verify_postgres(snapshot_dir, postgres_component, manifest, postgres_url)
+            else:
+                postgres_step = StepResult(
+                    "postgres",
+                    passed=False,
+                    detail="snapshot does not contain a restorable postgres component",
+                )
+            report.steps.append(postgres_step)
+            if not postgres_step.passed:
+                report.exit_code = EXIT_POSTGRES_VERIFY_FAILED
+                return report
+
         smoke = _run_layout_smoke(target_root, manifest)
         report.steps.append(smoke)
         if not smoke.passed:
@@ -225,6 +335,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--snapshot", required=True)
     parser.add_argument("--report", default=None)
+    parser.add_argument("--postgres-url", default=None)
     args = parser.parse_args(argv)
 
     snapshot_dir = Path(args.snapshot)
@@ -232,7 +343,7 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.write(f"snapshot path not found: {snapshot_dir}\n")
         return EXIT_INFRA_ERROR
 
-    report = verify_snapshot(snapshot_dir)
+    report = verify_snapshot(snapshot_dir, postgres_url=args.postgres_url)
     markdown = render_report(report)
 
     if args.report:

@@ -2,6 +2,25 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Arc 7 / Helm audit gate] — 2026-04-23 — lint + client dry-run
+
+### Helm chart hardening
+- **`deploy/helm/Chart.yaml`** — добавлен `icon`, чтобы `helm lint --strict` проходил без warnings.
+- **`deploy/helm/templates/*.yaml`** — ко всем rendered objects добавлены стандартные `app.kubernetes.io/*` и `helm.sh/chart` labels; для `deployment-email-poller` и всех CronJob-контейнеров добавлены `resources.requests/limits`; для всех CronJob'ов закреплён `jobTemplate.spec.backoffLimit: 6`.
+
+### CI gate + docs
+- **`.github/workflows/ci.yml`** — новый job `helm` запускается на `pull_request` и `push` в `master`, выполняет `helm lint`, `helm template`, поднимает временный `kind` cluster и затем гоняет `kubectl apply --dry-run=client -f /tmp/rendered.yaml`.
+- **`docs/operations/helm-lint.md`** — новый короткий runbook с локальными командами, примером вывода и пояснением, почему для `kubectl --dry-run=client` нужен временный API server.
+
+## [Arc 7 / Migration audit gate] — 2026-04-23 — alembic round-trip
+
+### Migration 012 + schema audit
+- **`alembic/versions/012_review_queue.py`** — подтверждён и закреплён фикс против double-create PG ENUM (`postgresql.ENUM(create_type=False)` после явного `create(checkfirst=True)`), который раньше падал на чистой Postgres 16.
+- **`scripts/migration_round_trip.py`** — новый standalone CLI для `upgrade head -> current -> downgrade base -> current -> upgrade head` с реальной Postgres-проверкой и итоговым diff по ожидаемому набору таблиц.
+
+### CI gate
+- **`.github/workflows/ci.yml`** — новый job `migrations` поднимает `postgres:16-alpine`, выставляет `DATABASE_URL` и dummy `DB_ENCRYPTION_KEY`, затем гоняет `python scripts/migration_round_trip.py` на `pull_request` и `push` в `master`.
+
 ## [Arc 7 / Minors close-out] — 2026-04-23 — sticky rollout + staleness + cronjobs
 
 ### Task-154 sticky hash rollout
@@ -32,12 +51,18 @@
 - **`scripts/restore_verify.py`** — stages a snapshot into a disposable temp root, runs SQLite `PRAGMA integrity_check`, unpacks tarballs and asserts the resulting layout. Structured exit codes (`EXIT_RESTORE_FAILED`, `EXIT_SMOKE_FAILED`, `EXIT_INFRA_ERROR`) and auto-cleanup of the temp root on both success and failure.
 - **`scripts/post_deploy_smoke.py`** — under-30s sanity check (`/healthz/live`, `/healthz/ready`, `/metrics` Prometheus body with `rag_model_routing` + `rag_llm_cost_usd_total` + `rag_experiment_auto_rollback_total`, `POST /api/ask`, `GET /api/admin/providers`). Uses an injected `httpx.Client` for test isolation.
 
+### Full restore verification (task-173)
+- **`docker-compose.test.yml`** — isolated `postgres-test` (`postgres:16-alpine`) with random host-port, `pg_isready` healthcheck, ephemeral storage and a dedicated `rag-restore-test` network for restore-only runs.
+- **`scripts/restore_verify.py`** — new optional `--postgres-url` path that runs a real `pg_restore --clean --if-exists`, validates `alembic_version`, checks the expected public-table count and probes every ORM table with `SELECT * LIMIT 0`. New `EXIT_POSTGRES_VERIFY_FAILED=4` keeps Postgres failures separate from layout smoke.
+- **`scripts/restore_verify_integration.py`** — thin wrapper that brings `postgres-test` up, waits for readiness, resolves the dynamic port, calls `restore_verify.main(... --postgres-url=...)` and always tears the container down with `docker-compose ... down -v`.
+- **`docs/operations/backup-restore.md`** — documents the disposable full-restore flow and operator commands.
+
 ### Chaos drills + DR docs (task-161, task-164)
 - **`scripts/chaos_drill.py`** — six fault scenarios (`ollama_timeout`, `ollama_down`, `postgres_unavailable`, `redis_unavailable`, `network_slow`, `network_flaky`) emitting a timeline + acceptance verdict. Manual-trigger only by design; never wired into CI.
 - **`docs/disaster-recovery.md`** — scenarios A-E (`data/` lost, Postgres corrupted, Ollama models lost, full host compromise, `DB_ENCRYPTION_KEY` lost) with RTO/RPO table, step-by-step procedures, verification checks, and explicit mapping to Batch J scripts. Acknowledges that chaos drills are unit-level and documents the Windows `pg_dump` path caveat.
 
 ### Tests
-- `tests/test_backup_snapshot.py` (7), `tests/test_backup_integrity.py` (7), `tests/test_restore_verify.py` (6), `tests/test_chaos_drill.py` (8), `tests/test_post_deploy_smoke.py` (6), `tests/test_dr_checklist.py` (3). Batch J targeted sweep: 37 passed. Combined K + I + J + sanity sweep: 167 passed.
+- `tests/test_backup_snapshot.py` (7), `tests/test_backup_integrity.py` (7), `tests/test_restore_verify.py` (6), `tests/test_restore_verify_postgres.py` (2, integration skips cleanly without Docker / postgres client), `tests/test_chaos_drill.py` (8), `tests/test_post_deploy_smoke.py` (6), `tests/test_dr_checklist.py` (3). Batch J targeted sweep grows to include real-Postgres restore coverage.
 
 ## [Arc 7 / Batch I continued] — 2026-04-23 — Continuous learning close-out
 
@@ -233,3 +258,8 @@ Partial Batch I closure. task-155 auto-rollback, task-157 recommendation engine,
 ### Testing
 - Арка стартовала примерно со **130** тестов и закрылась на **222** тестах.
 - Существенная часть роста пришлась на resilience, observability, health, multi-tenancy, fact verification и routing regressions, которые раньше вообще не были формализованы в test suite.
+## [Arc 7 / Batch H-K close-out] â€” 2026-04-23 â€” GraceKelly runtime smoke harness
+
+### Task-174 GraceKelly runtime smoke
+- **`scripts/gracekelly_smoke.py`** â€” manual-only standalone smoke CLI for a live GraceKelly-backed RAG deployment. Validates direct GraceKelly readiness, the active provider profile, `/api/ask` trace metadata, direct schema dispatch on `/api/v1/orchestrate`, SSE streaming on `/api/chat/stream`, Prometheus cost/fallback counters, and a dedicated `--simulate-down` failover-only mode. Steps the current runtime cannot prove externally are emitted as explicit `SKIPPED`.
+- **`docs/operations/gracekelly-smoke.md`** â€” operator runbook with prerequisites, auth expectations, healthy-path and failover-only commands, example output, exit-code mapping, and troubleshooting notes for `GRACEKELLY_BASE_URL`, `/api/admin/providers`, zero-cost metrics, and failover preparation.

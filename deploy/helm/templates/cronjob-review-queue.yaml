@@ -2,11 +2,28 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: {{ .Release.Name }}-review-queue
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/component: review-queue
 spec:
   schedule: "0 * * * *"
   jobTemplate:
     spec:
+      backoffLimit: 6
       template:
+        metadata:
+          labels:
+            app: {{ .Release.Name }}-review-queue
+            app.kubernetes.io/name: {{ .Chart.Name }}
+            app.kubernetes.io/instance: {{ .Release.Name }}
+            app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+            app.kubernetes.io/managed-by: {{ .Release.Service }}
+            helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+            app.kubernetes.io/component: review-queue
         spec:
           restartPolicy: OnFailure
           containers:
@@ -22,3 +39,5 @@ spec:
               envFrom:
                 - configMapRef:
                     name: {{ .Release.Name }}-config
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}

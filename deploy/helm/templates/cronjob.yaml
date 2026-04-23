@@ -2,11 +2,28 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: {{ .Release.Name }}-rag-nightly-eval
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/component: nightly-eval
 spec:
   schedule: "0 2 * * *"
   jobTemplate:
     spec:
+      backoffLimit: 6
       template:
+        metadata:
+          labels:
+            app: {{ .Release.Name }}-rag-nightly-eval
+            app.kubernetes.io/name: {{ .Chart.Name }}
+            app.kubernetes.io/instance: {{ .Release.Name }}
+            app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+            app.kubernetes.io/managed-by: {{ .Release.Service }}
+            helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+            app.kubernetes.io/component: nightly-eval
         spec:
           restartPolicy: OnFailure
           containers:
@@ -18,16 +35,35 @@ spec:
               envFrom:
                 - configMapRef:
                     name: {{ .Release.Name }}-config
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
 ---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: {{ .Release.Name }}-kb-gap-detector
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/component: kb-gap-detector
 spec:
   schedule: "0 3 * * 0"
   jobTemplate:
     spec:
+      backoffLimit: 6
       template:
+        metadata:
+          labels:
+            app: {{ .Release.Name }}-kb-gap-detector
+            app.kubernetes.io/name: {{ .Chart.Name }}
+            app.kubernetes.io/instance: {{ .Release.Name }}
+            app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+            app.kubernetes.io/managed-by: {{ .Release.Service }}
+            helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+            app.kubernetes.io/component: kb-gap-detector
         spec:
           restartPolicy: OnFailure
           containers:
@@ -39,16 +75,35 @@ spec:
               envFrom:
                 - configMapRef:
                     name: {{ .Release.Name }}-config
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
 ---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: {{ .Release.Name }}-kb-builder
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/component: kb-builder
 spec:
   schedule: "0 4 * * 1"
   jobTemplate:
     spec:
+      backoffLimit: 6
       template:
+        metadata:
+          labels:
+            app: {{ .Release.Name }}-kb-builder
+            app.kubernetes.io/name: {{ .Chart.Name }}
+            app.kubernetes.io/instance: {{ .Release.Name }}
+            app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+            app.kubernetes.io/managed-by: {{ .Release.Service }}
+            helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+            app.kubernetes.io/component: kb-builder
         spec:
           restartPolicy: OnFailure
           containers:
@@ -60,3 +115,5 @@ spec:
               envFrom:
                 - configMapRef:
                     name: {{ .Release.Name }}-config
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
