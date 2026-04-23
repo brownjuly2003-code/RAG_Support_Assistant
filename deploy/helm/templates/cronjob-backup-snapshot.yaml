@@ -34,8 +34,13 @@ spec:
               command:
                 - python
                 - scripts/backup_snapshot.py
-                - --out
-                - "/backups/$(date -u +%Y%m%dT%H%M%SZ)"
+                - --output-dir
+                - /backups
+              env:
+                - name: BACKUP_ENCRYPTION_ENABLED
+                  value: {{ .Values.backup.encryption.enabled | quote }}{{- if .Values.backup.encryption.enabled }}
+                - name: BACKUP_ENCRYPTION_RECIPIENT_FILE
+                  value: /secrets/recipient.pub{{- end }}
               envFrom:
                 - configMapRef:
                     name: {{ .Release.Name }}-config
@@ -43,8 +48,14 @@ spec:
                 {{- toYaml .Values.resources | nindent 16 }}
               volumeMounts:
                 - name: backups
-                  mountPath: /backups
+                  mountPath: /backups{{- if .Values.backup.encryption.enabled }}
+                - name: backup-encryption-key
+                  mountPath: /secrets
+                  readOnly: true{{- end }}
           volumes:
             - name: backups
               persistentVolumeClaim:
-                claimName: {{ .Release.Name }}-backups
+                claimName: {{ .Release.Name }}-backups{{- if .Values.backup.encryption.enabled }}
+            - name: backup-encryption-key
+              secret:
+                secretName: backup-encryption-key{{- end }}

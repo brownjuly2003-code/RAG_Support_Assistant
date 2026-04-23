@@ -62,3 +62,7 @@ ollama:
   resources:
     limits:
       nvidia.com/gpu: 1
+
+backup:
+  encryption:
+    enabled: false

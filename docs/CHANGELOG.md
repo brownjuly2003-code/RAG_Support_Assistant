@@ -2,6 +2,18 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Arc 7 / Task-175] — 2026-04-23 — backup encryption at rest
+
+### Snapshot encryption
+- **`scripts/backup_snapshot.py`** — nightly snapshots can now encrypt `postgres.dump`, `traces.sqlite`, `uploads.tar.gz`, and `chroma.tar.gz` on disk with `age`. Recipient mode is the primary path (`BACKUP_ENCRYPTION_RECIPIENT` or `BACKUP_ENCRYPTION_RECIPIENT_FILE`); passphrase mode is available as a fallback through `BACKUP_ENCRYPTION_PASSPHRASE_FILE`. Encrypted snapshots record per-component `encrypted`/`algorithm` metadata plus a top-level fingerprinted encryption block in `snapshot_manifest.json`.
+- **`scripts/restore_verify.py` / `scripts/restore_verify_integration.py`** — restore verification can now decrypt encrypted snapshot components before the existing SQLite/tar/Postgres checks. New CLI flags: `--age-identity-file` and `--age-passphrase-file`. New exit code: `EXIT_DECRYPT_FAILED=5`.
+- **`scripts/backup_integrity.py`** — integrity audit now reports whether each snapshot is encrypted and continues hashing the exact bytes stored on disk, including `.age` artifacts.
+
+### Helm + docs + tests
+- **`deploy/helm/templates/cronjob-backup-snapshot.yaml` / `deploy/helm/values.yaml`** — backup CronJob now supports `backup.encryption.enabled`, exports the backup-encryption env vars, and mounts `/secrets/recipient.pub` from the `backup-encryption-key` Secret when enabled.
+- **`docs/operations/backup-encryption.md` / `docs/disaster-recovery.md`** — added the operator runbook for key generation, storage, recovery, and manual re-encryption, plus a new DR scenario for leaked backup tarballs and explicit notes about the separate `age` key failure mode.
+- **Tests** — added `tests/test_backup_snapshot_encryption.py` and `tests/test_restore_verify_encryption.py` for end-to-end encrypted snapshot creation and restore verification. These tests skip cleanly when `age` tooling is unavailable.
+
 ## [Arc 7 / Helm audit gate] — 2026-04-23 — lint + client dry-run
 
 ### Helm chart hardening

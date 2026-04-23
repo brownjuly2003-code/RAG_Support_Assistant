@@ -68,6 +68,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--snapshot", required=True)
     parser.add_argument("--report", default=None)
+    parser.add_argument("--age-identity-file", default=None)
+    parser.add_argument("--age-passphrase-file", default=None)
     args = parser.parse_args(argv)
 
     snapshot_dir = Path(args.snapshot)
@@ -91,6 +93,10 @@ def main(argv: list[str] | None = None) -> int:
         restore_args = ["--snapshot", str(snapshot_dir), f"--postgres-url={postgres_url}"]
         if args.report:
             restore_args.extend(["--report", args.report])
+        if args.age_identity_file:
+            restore_args.extend(["--age-identity-file", args.age_identity_file])
+        if args.age_passphrase_file:
+            restore_args.extend(["--age-passphrase-file", args.age_passphrase_file])
         exit_code = restore_verify.main(restore_args)
     except FileNotFoundError as exc:
         sys.stderr.write(f"{exc}\n")

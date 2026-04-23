@@ -17,6 +17,7 @@ called out where relevant.
 | C | Ollama models lost | 0 | 2h | Yes (re-download) |
 | D | Full host compromise | 24h | 1 day | Yes |
 | E | `DB_ENCRYPTION_KEY` lost | — | — | **No** (irrecoverable) |
+| F | Backup tarball leaked | 0 | 30min | Yes, if the `age` private key stayed offline |
 
 Targets assume the nightly backup job (`scripts/backup_snapshot.py`) has
 been running and a successful weekly `scripts/restore_verify.py` is on
@@ -30,6 +31,8 @@ file. Without a recent verified snapshot, RTO doubles and RPO degrades.
 - Latest verified snapshot (`scripts/backup_integrity.py` reports `Valid`).
 - `DB_ENCRYPTION_KEY` from offline vault (not in the snapshot itself; only
   the SHA256 fingerprint is stored there).
+- `age` private key or backup passphrase if the snapshot manifest marks
+  components as `encrypted: true`.
 - Matching `alembic_revision` in `snapshot_manifest.json`.
 
 ### Procedure
@@ -38,6 +41,8 @@ file. Without a recent verified snapshot, RTO doubles and RPO degrades.
    `python scripts/backup_integrity.py --backup-dir <backup-root> --report tmp/integrity.md`.
 3. Stage the snapshot:
    `python scripts/restore_verify.py --snapshot <backup-root>/<snap-id>/ --report tmp/restore.md`
+   or, for encrypted snapshots,
+   `python scripts/restore_verify.py --snapshot <backup-root>/<snap-id>/ --age-identity-file <offline-age-key> --report tmp/restore.md`
    (this exits non-zero if extraction / SQLite integrity fails).
 4. Apply the snapshot over `data/`:
    - Copy `sqlite/traces.db` → `data/tracing/traces.db`.
@@ -62,12 +67,15 @@ file. Without a recent verified snapshot, RTO doubles and RPO degrades.
 ### Required inputs
 - Latest `postgres.dump` from the snapshot directory (or offsite copy).
 - `DB_ENCRYPTION_KEY`.
+- `age` private key or backup passphrase when `postgres.dump.age` is present.
 
 ### Procedure
 1. Stop the app.
-2. `pg_restore --clean --if-exists --no-owner --no-privileges "$DATABASE_URL" < postgres.dump`.
-3. `alembic upgrade head`.
-4. Start the app and run `scripts/post_deploy_smoke.py`.
+2. If the snapshot is encrypted, decrypt `postgres.dump.age` first or use
+   `scripts/restore_verify.py --postgres-url ... --age-identity-file ...`.
+3. `pg_restore --clean --if-exists --no-owner --no-privileges "$DATABASE_URL" < postgres.dump`.
+4. `alembic upgrade head`.
+5. Start the app and run `scripts/post_deploy_smoke.py`.
 
 ### Verification
 - `psql` reports the expected row counts in `messages`, `traces`,
@@ -101,6 +109,7 @@ file. Without a recent verified snapshot, RTO doubles and RPO degrades.
 ### Required inputs
 - Fresh host.
 - All required secrets (`DB_ENCRYPTION_KEY`, `POSTGRES_*`, `MISTRAL_API_KEY`,
+  `age` private key or backup passphrase,
   bearer admin token) from offline vault.
 - Latest verified snapshot on a separate medium (USB, external drive,
   offsite).
@@ -145,8 +154,8 @@ recovers ciphertext.
   the key that encrypted the snapshot.
 - Document dual-control access: key release requires two authorised
   humans.
-- Consider `age` / `gpg` encryption of snapshot tarballs at rest so
-  even if the snapshot medium leaks, ciphertext remains protected.
+- Store the backup `age` private key separately from the backup media so
+  snapshot leakage and key leakage are independent incidents.
 
 ### If the key is already lost
 1. Stop the app.
@@ -156,12 +165,50 @@ recovers ciphertext.
 4. Notify tenants/compliance that history before the loss is gone.
 5. Resume with the new key; new writes will be protected by it.
 
+## Scenario F — backup tarball leaked
+
+**RPO:** 0. **RTO:** 30min to validate exposure and rotate the backup recipient.
+
+### Reality check
+
+Encrypted snapshot components (`*.age`) remain unreadable if the `age` private
+key or passphrase did not leak with the backup medium. This scenario is
+different from Scenario E: `DB_ENCRYPTION_KEY` protects selected Postgres
+columns, while the `age` key protects the snapshot artifacts themselves.
+
+### Required inputs
+
+- The leaked snapshot manifest.
+- The offline inventory for the backup `age` key fingerprint.
+- The current backup recipient public key.
+
+### Procedure
+
+1. Confirm the leaked media contains only encrypted artifacts and
+   `snapshot_manifest.json`, not the `age` private key or passphrase.
+2. Compare the manifest fingerprint with the active backup recipient.
+3. Generate a new `age` key pair for future snapshots.
+4. Replace the cluster Secret or local recipient file used by
+   `scripts/backup_snapshot.py`.
+5. Continue taking encrypted snapshots with the new recipient.
+6. Re-encrypt retained snapshots if policy or compliance requires it.
+
+### Verification
+
+- New snapshots show a new `recipient_fingerprint` in `snapshot_manifest.json`.
+- `scripts/restore_verify.py --age-identity-file <new-key>` succeeds on a new
+  encrypted snapshot.
+- The old private key remains available only for the explicitly retained
+  historical snapshots that still need it.
+
 ## Backups + offsite recommendation
 
 - Keep the last 7 daily snapshots locally on a separate disk from the
   app's data volume.
 - Replicate to external cold storage (portable disk or `rclone` to a
   personal cloud) at least weekly.
+- Keep the backup `age` private key in a separate offline vault. Never store it
+  in the same bucket, PVC, or removable media as the snapshot files.
 - Run `scripts/backup_integrity.py` in a Sunday cronjob and alert on
   any `Corrupted`/`missing manifest` status.
 - Run `scripts/restore_verify.py` against the newest snapshot in a
@@ -170,11 +217,11 @@ recovers ciphertext.
 ## Scripts quick reference
 
 - Backup (nightly):
-  `python scripts/backup_snapshot.py --out backups/$(date -u +%Y%m%dT%H%M%S)Z/`
+  `python scripts/backup_snapshot.py --output-dir backups/`
 - Integrity audit (weekly Sun 05:00 UTC):
   `python scripts/backup_integrity.py --backup-dir backups/ --report reports/backup-integrity.md`
 - Restore verification (weekly Sun 04:00 UTC):
-  `python scripts/restore_verify.py --snapshot backups/<latest>/ --report reports/restore-verify.md`
+  `python scripts/restore_verify.py --snapshot backups/<latest>/ --age-identity-file <offline-age-key> --report reports/restore-verify.md`
 - Smoke suite (post-deploy / post-restore):
   `python scripts/post_deploy_smoke.py --base-url http://localhost:8000 --token <admin>`
 - Chaos drill (manual only):
@@ -188,6 +235,7 @@ recovers ciphertext.
   an explicit `PG_DUMP_PATH` env.
 - ChromaDB tarball is taken while the app is running; for large indexes
   you may want to stop the app briefly or use Chroma's snapshot API.
-- Backup encryption-at-rest is documented, not automated.
+- Encrypted snapshots are irrecoverable if the backup `age` private key or
+  passphrase is lost.
 - Helm manifests in `deploy/helm/` are still incomplete for production
   PVC + Secret wiring; real k8s DR still relies on the manual runbook.

@@ -32,6 +32,7 @@ class SnapshotStatus:
     created_at: str | None
     is_valid: bool
     is_expired: bool
+    encrypted: bool = False
     issues: list[str] = field(default_factory=list)
 
 
@@ -89,6 +90,7 @@ def audit_snapshot(
 
     created_raw = manifest.get("created_at")
     created_at = _parse_created_at(created_raw)
+    encrypted = any(bool(component.get("encrypted")) for component in (manifest.get("components") or []))
 
     for component in manifest.get("components", []) or []:
         if component.get("status") != "ok":
@@ -124,6 +126,7 @@ def audit_snapshot(
         created_at=created_raw,
         is_valid=not issues,
         is_expired=is_expired,
+        encrypted=encrypted,
         issues=issues,
     )
 
@@ -170,6 +173,7 @@ def render_report(statuses: list[SnapshotStatus], *, retention_days: int) -> str
         lines.append(f"### {Path(status.path).name} — {flag}")
         lines.append(f"- path: `{status.path}`")
         lines.append(f"- created_at: {status.created_at or 'unknown'}")
+        lines.append(f"- encrypted: {'yes' if status.encrypted else 'no'}")
         if status.issues:
             lines.append("- issues:")
             for issue in status.issues:
