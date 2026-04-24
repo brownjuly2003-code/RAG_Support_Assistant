@@ -286,6 +286,48 @@ def test_persist_online_evaluations_inserts_rows() -> None:
     assert params["evaluator_name"] == "citation_coverage"
 
 
+def test_persist_online_evaluations_uses_independent_sessions_per_evaluator() -> None:
+    from evaluation.evaluator_runner import persist_online_evaluations
+
+    class _TrackingSession(_PersistSession):
+        active_execute_count = 0
+        max_active_execute_count = 0
+
+        async def execute(self, statement, params: dict[str, object] | None = None) -> _Result:
+            type(self).active_execute_count += 1
+            type(self).max_active_execute_count = max(
+                type(self).max_active_execute_count,
+                type(self).active_execute_count,
+            )
+            try:
+                await asyncio.sleep(0.01)
+                return await super().execute(statement, params)
+            finally:
+                type(self).active_execute_count -= 1
+
+    sessions: list[_TrackingSession] = []
+
+    def _session_factory() -> _TrackingSession:
+        session = _TrackingSession()
+        sessions.append(session)
+        return session
+
+    asyncio.run(
+        persist_online_evaluations(
+            "trace-456",
+            {
+                "citation_coverage": {"score": 0.5, "verdict": "partial", "metadata": {}},
+                "retrieval_hit_rate": {"score": 1.0, "verdict": "ok", "metadata": {}},
+            },
+            session_factory=_session_factory,
+        )
+    )
+
+    assert len(sessions) == 2
+    assert all(session.committed for session in sessions)
+    assert _TrackingSession.max_active_execute_count == 2
+
+
 def test_online_evaluations_migration_upgrade_creates_table_and_indexes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

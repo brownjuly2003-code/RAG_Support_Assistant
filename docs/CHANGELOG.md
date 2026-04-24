@@ -2,6 +2,13 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Arc 7 / Task-176] — 2026-04-24 — regression eval warning cleanup
+
+### Regression pipeline fixes
+- **`agent/graph.py`** — `grade_docs` now accepts provider-native structured payloads with extra fields from Mistral tool-use output, requires only `relevant`, and falls back to text grading when structured output is unavailable.
+- **`evaluation/evaluator_runner.py`** — online evaluator verdicts now persist with an independent async session per evaluator insert, avoiding shared asyncpg connection races.
+- **`config/settings.py` / `ingestion/categorizer.py`** — ingestion categorizer model moved to `INGESTION_CATEGORIZER_MODEL`; missing or failing categorizer calls skip with a warning instead of emitting the old invalid-payload noise.
+
 ## [Arc 7 / Task-175] — 2026-04-23 — backup encryption at rest
 
 ### Snapshot encryption

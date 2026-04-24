@@ -864,27 +864,28 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
                     try:
                         t0 = time.monotonic()
                         if _llm_supports_structured_output(llm):
-                            structured = _invoke_with_schema(
-                                llm,
-                                prompt,
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "relevant": {"type": "boolean"},
-                                        "reason": {"type": "string"},
+                            try:
+                                structured = _invoke_with_schema(
+                                    llm,
+                                    prompt,
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "relevant": {"type": "boolean"},
+                                            "reason": {"type": "string"},
+                                        },
+                                        "required": ["relevant"],
+                                        "additionalProperties": True,
                                     },
-                                    "required": ["relevant", "reason"],
-                                    "additionalProperties": False,
-                                },
-                            )
-                            is_relevant = bool(
-                                isinstance(structured, dict) and structured.get("relevant")
-                            )
-                            raw_verdict = (
-                                str(structured.get("reason") or "")
-                                if isinstance(structured, dict)
-                                else ""
-                            )
+                                )
+                            except Exception:
+                                structured = None
+                            if isinstance(structured, dict) and isinstance(structured.get("relevant"), bool):
+                                is_relevant = bool(structured["relevant"])
+                                raw_verdict = str(structured.get("reason") or "")
+                            else:
+                                raw_verdict = llm.invoke(prompt).strip()
+                                is_relevant = raw_verdict.upper().startswith("YES")
                         else:
                             raw_verdict = llm.invoke(prompt).strip()
                             is_relevant = raw_verdict.upper().startswith("YES")

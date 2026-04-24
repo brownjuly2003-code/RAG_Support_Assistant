@@ -156,7 +156,7 @@ def _get_fast_llm() -> Any | None:
         from agent.graph import LocalOllamaLLM
 
         settings = get_settings()
-        return LocalOllamaLLM(model_name=settings.ollama_fast_model_name)
+        return LocalOllamaLLM(model_name=settings.ingestion_categorizer_model)
     except Exception as exc:
         logger.warning("Fast categorizer model unavailable: %s", exc)
         return None
@@ -179,7 +179,7 @@ def classify_document(
         raw = _invoke_llm(llm, _build_prompt(categories, preview))
         payload = json.loads(raw)
     except Exception as exc:
-        logger.warning("Categorizer returned invalid payload: %s", exc)
+        logger.warning("Categorizer skipped document: %s", exc)
         return ["uncategorized"]
 
     if isinstance(payload, str):

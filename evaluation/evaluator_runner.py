@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import Any
 
@@ -100,8 +101,8 @@ async def persist_online_evaluations(
     results: dict[str, dict[str, Any]],
     session_factory=async_session,
 ) -> None:
-    async with session_factory() as session:
-        for evaluator_name, payload in results.items():
+    async def _persist_one(evaluator_name: str, payload: dict[str, Any]) -> None:
+        async with session_factory() as session:
             metadata = payload.get("metadata")
             await session.execute(
                 _INSERT_TRACE_EVALUATION,
@@ -113,4 +114,11 @@ async def persist_online_evaluations(
                     "metadata": metadata if isinstance(metadata, dict) else {},
                 },
             )
-        await session.commit()
+            await session.commit()
+
+    await asyncio.gather(
+        *[
+            _persist_one(evaluator_name, payload)
+            for evaluator_name, payload in results.items()
+        ]
+    )

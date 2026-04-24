@@ -227,6 +227,11 @@ class Settings:
             "OLLAMA_FAST_MODEL_NAME", "llama3.2:3b"
         )
     )
+    ingestion_categorizer_model: str = field(
+        default_factory=lambda: os.getenv(
+            "INGESTION_CATEGORIZER_MODEL", "llama3.2:3b"
+        )
+    )
     model_routing_enabled: bool = field(
         default_factory=lambda: os.getenv(
             "MODEL_ROUTING_ENABLED", "false"
