@@ -1,0 +1,324 @@
+{
+  "run_id": "20260424T070519Z-0a36169e",
+  "created_at": "2026-04-24T07:05:19.035734+00:00",
+  "baseline": "ministral-3b-latest",
+  "candidate": "mistral-small-latest",
+  "dataset": "D:\\RAG_Support_Assistant\\evaluation\\curated_cases.jsonl",
+  "tenant": "all",
+  "aggregate": {
+    "total_cases": 3,
+    "baseline_pass_rate": 0.0,
+    "candidate_pass_rate": 0.0,
+    "regressions": 0,
+    "new_passes": 0,
+    "neutral": 3,
+    "baseline_total_cost_usd": 7.4e-05,
+    "candidate_total_cost_usd": 0.000454,
+    "baseline_avg_latency_ms": 0.0,
+    "candidate_avg_latency_ms": 0.0,
+    "baseline_refusal_rate": 0.6667,
+    "candidate_refusal_rate": 1.0
+  },
+  "gate": {
+    "passed": false,
+    "max_regressions": 2,
+    "min_pass_rate": 0.85,
+    "reasons": [
+      "candidate pass rate 0.00% below minimum 85.00%"
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "gdpr-export",
+      "tenant_id": "default",
+      "query": "User asks how to export all their data before cancelling the subscription. Give concrete steps.",
+      "baseline": {
+        "answer": "По имеющимся данным в базе знаний **не указано**, как пользователю экспортировать данные перед отменой подписки.\n\nПожалуйста, обратитесь в **сервисный центр** или службу поддержки для получения точной инструкции.",
+        "quality_score": 1.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 2,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 4,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 5,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 4.3e-05,
+        "route": "human",
+        "trace_id": "provider-benchmark-e408abc3-8db4-4b04-aa1e-d8c066babe4e"
+      },
+      "candidate": {
+        "answer": "По имеющимся данным контекста (документы warranty.md, returns_policy.md, errors_e10_e30.md) информация о том, как экспортировать данные перед отменой подписки, отсутствует.\n\nПожалуйста, обратитесь к специалисту службы поддержки для получения инструкций.",
+        "quality_score": 20.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 4,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 5,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.000219,
+        "route": "human",
+        "trace_id": "provider-benchmark-b9e913c8-de6f-4e54-889f-d7a5bd219e05"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'export'",
+        "answer missing 'data'"
+      ],
+      "candidate_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'export'",
+        "answer missing 'data'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 19.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": 0.000176
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "password-reset-expired",
+      "tenant_id": "default",
+      "query": "User cannot log in after password reset. Reset email says 'link expired'. What should I check first?",
+      "baseline": {
+        "answer": "По имеющимся данным ответить нельзя.\n\nВ вашем случае проблема связана с сбоем в системе аутентификации, а не с ошибками E10–E30 или гарантийными условиями. Для устранения неполадки необходимо:\n1. Проверить актуальность сброшенного пароля и подтвердить его через новый email.\n2. Обратиться в **сервисный центр** или службу поддержки для диагностики [D5].\n\nЕсли ошибка связана с временным ограничением (например, истёк срок действия ссылки), уточните у специалиста, как её обойти.",
+        "quality_score": 85.0,
+        "factuality_score": 16.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 3,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 4,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 5,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.9e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-ae55db9f-bfe6-41f6-8117-f47a28998cf0"
+      },
+      "candidate": {
+        "answer": "По имеющимся данным ответить нельзя. Обратитесь к специалисту поддержки.",
+        "quality_score": 1.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 9.4e-05,
+        "route": "human",
+        "trace_id": "provider-benchmark-1d4d8326-4d19-429d-855b-05eeb911fc5e"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "route expected 'support' but got 'auto'",
+        "answer missing 'reset'",
+        "answer missing 'link'"
+      ],
+      "candidate_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'reset'",
+        "answer missing 'link'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -84.0,
+        "factuality_delta": 84.0,
+        "route_changed": true,
+        "citations_delta": -4,
+        "cost_delta": 7.5e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "refund-double-charge",
+      "tenant_id": "default",
+      "query": "Customer says their invoice shows a double charge for order #4821. How do I confirm and refund the duplicate?",
+      "baseline": {
+        "answer": "По имеющимся данным ответить нельзя, так как в предоставленном контексте нет информации о процедуре обработки двойных оплат или механизме возврата/возврата денежных средств за дублирующиеся заказы.\n\n**Рекомендация:**\nПожалуйста, обратитесь в службу поддержки для проверки статуса заказа #4821 и получения точных инструкций по возврату.",
+        "quality_score": 85.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 4,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 5,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.2e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-2dc30a09-55a3-48fa-bb07-6f739c5e35c2"
+      },
+      "candidate": {
+        "answer": "По имеющимся данным (политика возвратов [1, 3]) подтверждение и возврат по ошибке двойного списания не регламентированы. Обратитесь к специалисту поддержки для разбирательства по заказу #4821.",
+        "quality_score": 50.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 3,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.000141,
+        "route": "human",
+        "trace_id": "provider-benchmark-99103200-b546-4a67-8234-99c057c34e55"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "route expected 'support' but got 'auto'",
+        "answer missing 'invoice'",
+        "answer missing 'refund'"
+      ],
+      "candidate_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'invoice'",
+        "answer missing 'refund'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -35.0,
+        "factuality_delta": -100.0,
+        "route_changed": true,
+        "citations_delta": -2,
+        "cost_delta": 0.000129
+      },
+      "outcome": "neutral"
+    }
+  ],
+  "regressions": [],
+  "new_passes": [],
+  "exit_code": 1,
+  "mode": "live-provider-benchmark"
+}

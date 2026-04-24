@@ -1,0 +1,496 @@
+{
+  "run_id": "20260424T065430Z-4e536f3c",
+  "created_at": "2026-04-24T06:54:30.756227+00:00",
+  "baseline": "mistral-small",
+  "candidate": "mistral-large",
+  "dataset": "D:\\RAG_Support_Assistant\\evaluation\\curated_cases.jsonl",
+  "tenant": "all",
+  "aggregate": {
+    "total_cases": 10,
+    "baseline_pass_rate": 0.0,
+    "candidate_pass_rate": 0.0,
+    "regressions": 0,
+    "new_passes": 0,
+    "neutral": 10,
+    "baseline_total_cost_usd": 0.0,
+    "candidate_total_cost_usd": 0.006376,
+    "baseline_avg_latency_ms": 0.0,
+    "candidate_avg_latency_ms": 0.0,
+    "baseline_refusal_rate": 0.0,
+    "candidate_refusal_rate": 0.0
+  },
+  "gate": {
+    "passed": false,
+    "max_regressions": 2,
+    "min_pass_rate": 0.85,
+    "reasons": [
+      "candidate pass rate 0.00% below minimum 85.00%"
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "refund-double-charge",
+      "tenant_id": "default",
+      "query": "Customer says their invoice shows a double charge for order #4821. How do I confirm and refund the duplicate?",
+      "baseline": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": null,
+        "route": "human",
+        "trace_id": "provider-benchmark-501db8aa-264e-419e-bf18-2ecd98e1b029"
+      },
+      "candidate": {
+        "answer": "К сожалению, по имеющимся данным я не могу подтвердить наличие двойного списания по заказу #4821 или дать инструкции по возврату средств, так как контекст отсутствует.\n\nРекомендую обратиться напрямую к специалисту службы поддержки для проверки транзакции и решения вопроса. Укажите номер заказа (#4821) и приложите скриншот счета — это ускорит обработку запроса.",
+        "quality_score": 85.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": 0.000686,
+        "route": "auto",
+        "trace_id": "provider-benchmark-65ddfa08-d49c-45f4-8376-ee48d35e11f9"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'invoice'",
+        "answer missing 'refund'"
+      ],
+      "candidate_failures": [
+        "route expected 'support' but got 'auto'",
+        "answer missing 'invoice'",
+        "answer missing 'refund'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 35.0,
+        "factuality_delta": 0.0,
+        "route_changed": true,
+        "citations_delta": 0,
+        "cost_delta": 0.000686
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "password-reset-expired",
+      "tenant_id": "default",
+      "query": "User cannot log in after password reset. Reset email says 'link expired'. What should I check first?",
+      "baseline": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": null,
+        "route": "human",
+        "trace_id": "provider-benchmark-20b19118-e084-4fdd-a2da-4b63e342b5b3"
+      },
+      "candidate": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": null,
+        "route": "human",
+        "trace_id": "provider-benchmark-d42f6a94-3d84-449d-9cd8-946b43bea0bf"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'reset'",
+        "answer missing 'link'"
+      ],
+      "candidate_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'reset'",
+        "answer missing 'link'"
+      ],
+      "diff": {
+        "answer_changed": false,
+        "quality_delta": 0.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": 0.0
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "package-delivered-missing",
+      "tenant_id": "default",
+      "query": "The package tracking number shows 'delivered' but the customer did not receive it. Give a three-step resolution plan.",
+      "baseline": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": null,
+        "route": "human",
+        "trace_id": "provider-benchmark-0f19a534-ca34-41c3-ad82-f3c5b81392f9"
+      },
+      "candidate": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": null,
+        "route": "human",
+        "trace_id": "provider-benchmark-e12c0877-43f8-464a-b7b4-18381bd8103e"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'tracking'",
+        "answer missing 'delivery'"
+      ],
+      "candidate_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'tracking'",
+        "answer missing 'delivery'"
+      ],
+      "diff": {
+        "answer_changed": false,
+        "quality_delta": 0.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": 0.0
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "refund-bank-delay",
+      "tenant_id": "default",
+      "query": "Refund was processed on our side 7 days ago but customer's bank has not received it. What do I tell them?",
+      "baseline": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": null,
+        "route": "human",
+        "trace_id": "provider-benchmark-38eb0de9-9af4-46f5-807b-f9d52f2e772a"
+      },
+      "candidate": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": 0.000596,
+        "route": "human",
+        "trace_id": "provider-benchmark-8541dcb5-c085-48bf-ae26-d7d0225cfbc7"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'bank'",
+        "answer missing 'refund'"
+      ],
+      "candidate_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'bank'",
+        "answer missing 'refund'"
+      ],
+      "diff": {
+        "answer_changed": false,
+        "quality_delta": 0.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": 0.000596
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "gdpr-export",
+      "tenant_id": "default",
+      "query": "User asks how to export all their data before cancelling the subscription. Give concrete steps.",
+      "baseline": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": null,
+        "route": "human",
+        "trace_id": "provider-benchmark-26248211-6def-4afd-9f6a-1ab65568f359"
+      },
+      "candidate": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": 0.000646,
+        "route": "human",
+        "trace_id": "provider-benchmark-a17819dc-962a-4f71-b7cc-868f48fc692b"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'export'",
+        "answer missing 'data'"
+      ],
+      "candidate_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'export'",
+        "answer missing 'data'"
+      ],
+      "diff": {
+        "answer_changed": false,
+        "quality_delta": 0.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": 0.000646
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "mobile-crash-startup",
+      "tenant_id": "default",
+      "query": "Customer reports the mobile app crashes on startup after the latest update (v3.4.1, Android 14). First triage.",
+      "baseline": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": null,
+        "route": "human",
+        "trace_id": "provider-benchmark-1faaeca4-60bb-46e9-b5ca-a074c380eed1"
+      },
+      "candidate": {
+        "answer": "К сожалению, по имеющимся данным я не могу определить причину сбоя приложения после обновления до версии 3.4.1 на Android 14.\n\nРекомендую обратиться в службу поддержки для дальнейшей диагностики. Пожалуйста, уточните:\n- Модель устройства.\n- Точное время возникновения ошибки.\n- Есть ли сообщение об ошибке при падении приложения.\n\nСпециалисты помогут быстрее решить проблему.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": 0.001264,
+        "route": "human",
+        "trace_id": "provider-benchmark-2f565e6f-3cfd-41a2-8004-45a46d7729e2"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'crash'",
+        "answer missing 'update'"
+      ],
+      "candidate_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'crash'",
+        "answer missing 'update'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 0.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": 0.001264
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "upgrade-proration",
+      "tenant_id": "default",
+      "query": "A business client wants to upgrade from Pro to Enterprise mid-cycle. Explain proration and contact handoff.",
+      "baseline": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": null,
+        "route": "human",
+        "trace_id": "provider-benchmark-9f8a81c1-a640-428a-9481-8d35b44a3344"
+      },
+      "candidate": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": 0.000886,
+        "route": "human",
+        "trace_id": "provider-benchmark-756e8b7f-c0ab-48e9-869a-3dbb32e1afdf"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'proration'",
+        "answer missing 'upgrade'"
+      ],
+      "candidate_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'proration'",
+        "answer missing 'upgrade'"
+      ],
+      "diff": {
+        "answer_changed": false,
+        "quality_delta": 0.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": 0.000886
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "account-locked-unusual-activity",
+      "tenant_id": "default",
+      "query": "Account flagged for unusual activity, legitimate owner locked out. How to verify and restore access.",
+      "baseline": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": null,
+        "route": "human",
+        "trace_id": "provider-benchmark-63467e6c-bd01-4ed8-9be2-026b4051ffa9"
+      },
+      "candidate": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": 0.000524,
+        "route": "human",
+        "trace_id": "provider-benchmark-435d5528-bf7b-45b0-b3ce-68c7ca38e2e5"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'verify'",
+        "answer missing 'restore'"
+      ],
+      "candidate_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'verify'",
+        "answer missing 'restore'"
+      ],
+      "diff": {
+        "answer_changed": false,
+        "quality_delta": 0.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": 0.000524
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "gdpr-deletion",
+      "tenant_id": "default",
+      "query": "User wants GDPR-compliant deletion of their account including backups. What is the process and timeline?",
+      "baseline": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": null,
+        "route": "human",
+        "trace_id": "provider-benchmark-1f97576f-e4d9-44b3-9b84-462c2ede7071"
+      },
+      "candidate": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 10.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": 0.000894,
+        "route": "human",
+        "trace_id": "provider-benchmark-6bcc2381-332e-4bba-b88e-ece758d90deb"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'delete'",
+        "answer missing 'backup'"
+      ],
+      "candidate_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'delete'",
+        "answer missing 'backup'"
+      ],
+      "diff": {
+        "answer_changed": false,
+        "quality_delta": -40.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": 0.000894
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "webhook-broken-after-rotation",
+      "tenant_id": "default",
+      "query": "Integration webhook stopped firing after the customer rotated API keys. Checklist to debug together.",
+      "baseline": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": null,
+        "route": "human",
+        "trace_id": "provider-benchmark-0c226c73-88d9-412f-bab1-8ecbfa5fff64"
+      },
+      "candidate": {
+        "answer": "Извините, при обработке запроса произошла внутренняя ошибка.",
+        "quality_score": 50.0,
+        "factuality_score": 100.0,
+        "citations": [],
+        "duration_ms": null,
+        "cost_usd": 0.00088,
+        "route": "human",
+        "trace_id": "provider-benchmark-bc3a20c4-ba20-4581-a7f8-c6c7ea2b4ebb"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'webhook'",
+        "answer missing 'api key'"
+      ],
+      "candidate_failures": [
+        "route expected 'support' but got 'human'",
+        "answer missing 'webhook'",
+        "answer missing 'api key'"
+      ],
+      "diff": {
+        "answer_changed": false,
+        "quality_delta": 0.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": 0.00088
+      },
+      "outcome": "neutral"
+    }
+  ],
+  "regressions": [],
+  "new_passes": [],
+  "exit_code": 1,
+  "mode": "live-provider-benchmark"
+}

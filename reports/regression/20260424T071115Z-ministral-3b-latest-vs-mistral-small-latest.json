@@ -1,0 +1,489 @@
+{
+  "run_id": "20260424T071115Z-885a2766",
+  "created_at": "2026-04-24T07:11:15.042043+00:00",
+  "baseline": "ministral-3b-latest",
+  "candidate": "mistral-small-latest",
+  "dataset": "D:\\RAG_Support_Assistant\\evaluation\\curated_cases.jsonl",
+  "tenant": "all",
+  "aggregate": {
+    "total_cases": 5,
+    "baseline_pass_rate": 1.0,
+    "candidate_pass_rate": 0.8,
+    "regressions": 1,
+    "new_passes": 0,
+    "neutral": 4,
+    "baseline_total_cost_usd": 6.8e-05,
+    "candidate_total_cost_usd": 0.000389,
+    "baseline_avg_latency_ms": 0.0,
+    "candidate_avg_latency_ms": 0.0,
+    "baseline_refusal_rate": 0.4,
+    "candidate_refusal_rate": 0.0
+  },
+  "gate": {
+    "passed": false,
+    "max_regressions": 2,
+    "min_pass_rate": 0.85,
+    "reasons": [
+      "candidate pass rate 80.00% below minimum 85.00%",
+      "candidate pass rate 80.00% below baseline 100.00%"
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "error-e10",
+      "tenant_id": "default",
+      "query": "What does error code E10 mean and how do I fix it?",
+      "baseline": {
+        "answer": "**Ошибка E10** означает **\"Недостаточный уровень воды\"** [1].\n\n**Что делать:**\n1. Проверьте давление воды в системе.\n2. Убедитесь, что устройство правильно подключено к водопроводу.",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 3,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 4,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 5,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.5e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-7a9b2406-4a38-4318-903a-72a3410f8c4f"
+      },
+      "candidate": {
+        "answer": "**Ошибка E10** означает, что в устройстве недостаточный уровень воды. Для устранения проблемы проверьте давление воды и подключение к водопроводу [1].",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 7.9e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-8fc838c7-1f87-4d83-b836-6b3df13f25f5"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 0.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": -3,
+        "cost_delta": 6.4e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "error-e30",
+      "tenant_id": "default",
+      "query": "Error E30 is on the device. Is it safe to keep it running or should the user unplug it?",
+      "baseline": {
+        "answer": "По имеющимся данным ответить нельзя.\n\nВ контексте указано, что **E30** — критическая системная ошибка, **отключите устройство от сети и обратитесь в сервисный центр** [1]. Однако нет информации о временном ограничении на использование устройства в данном состоянии.\n\n**Рекомендация:** отключите питание и свяжитесь с сервисом для дальнейших действий.",
+        "quality_score": 85.0,
+        "factuality_score": 80.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 3,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 4,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 5,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.8e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-cec93e49-18b5-4bdb-a8b7-e70b5396530e"
+      },
+      "candidate": {
+        "answer": "По имеющимся данным, при ошибке E30 необходимо отключить устройство от сети и обратиться в сервисный центр [2].",
+        "quality_score": 100.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 8.4e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-98834228-9101-458d-96c5-6da24a7d6ebb"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 15.0,
+        "factuality_delta": 20.0,
+        "route_changed": false,
+        "citations_delta": -3,
+        "cost_delta": 6.6e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "returns-refund-timeline",
+      "tenant_id": "default",
+      "query": "How long does the refund take after a return is accepted?",
+      "baseline": {
+        "answer": "Согласно **Документа 3** [N=3], срок возврата денежных средств после принятия товара составляет **до 10 рабочих дней**.",
+        "quality_score": 90.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 3,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 4,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 5,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 8e-06,
+        "route": "auto",
+        "trace_id": "provider-benchmark-c397a670-bd08-4488-bb18-fc10d75236a7"
+      },
+      "candidate": {
+        "answer": "The refund is processed within 10 business days after the item is accepted for return [2].",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 7e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-9ffcd392-0adc-4c59-8ae4-114dc9f29317"
+      },
+      "baseline_passed": true,
+      "candidate_passed": false,
+      "baseline_failures": [],
+      "candidate_failures": [
+        "answer missing 'дн'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 5.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": -2,
+        "cost_delta": 6.2e-05
+      },
+      "outcome": "regression"
+    },
+    {
+      "case_id": "warranty-excluded",
+      "tenant_id": "default",
+      "query": "Does the warranty cover mechanical damage or liquid spills?",
+      "baseline": {
+        "answer": "По имеющимся данным гарантия **не покрывает** механические повреждения и следы попадания жидкости [D2].\n\nЕсли у вас есть дополнительные вопросы или нужна помощь с процедурой обращения, обратитесь к специалисту поддержки.",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 2,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 3,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 4,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 5,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.4e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-91111f4a-12fc-4e6f-b16e-9fb3ce787efd"
+      },
+      "candidate": {
+        "answer": "По контексту гарантия не распространяется на механические повреждения и следы попадания жидкости [2].",
+        "quality_score": 100.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 2,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 3,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 4,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 7.7e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-b70a1536-de08-4321-b1cc-590efe6a05d6"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 5.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": -1,
+        "cost_delta": 6.3e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "warranty-period",
+      "tenant_id": "default",
+      "query": "What is the warranty period for products?",
+      "baseline": {
+        "answer": "Согласно гарантийным условиям, гарантийный срок на продукцию составляет **12 месяцев с момента покупки** [D1, D4].",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 4,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 5,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.3e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-ca814902-ad6e-4f03-845b-50c4b99641ee"
+      },
+      "candidate": {
+        "answer": "Гарантийный период на продукцию составляет 12 месяцев с момента покупки [2].",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 2,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 3,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 4,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 7.9e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-59828c9a-ac83-4a80-966d-733390d3489d"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 0.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": -1,
+        "cost_delta": 6.6e-05
+      },
+      "outcome": "neutral"
+    }
+  ],
+  "regressions": [
+    {
+      "case_id": "returns-refund-timeline",
+      "query": "How long does the refund take after a return is accepted?",
+      "baseline_answer": "Согласно **Документа 3** [N=3], срок возврата денежных средств после принятия товара составляет **до 10 рабочих дней**.",
+      "candidate_answer": "The refund is processed within 10 business days after the item is accepted for return [2].",
+      "why_failed": [
+        "answer missing 'дн'"
+      ]
+    }
+  ],
+  "new_passes": [],
+  "exit_code": 1,
+  "mode": "live-provider-benchmark"
+}

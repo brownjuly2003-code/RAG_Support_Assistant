@@ -89,6 +89,10 @@ providers:
         aliases: [mistral-small]
         input_price_per_1m_tokens: 0.20
         output_price_per_1m_tokens: 0.60
+      - name: mistral-large-latest
+        aliases: [mistral-large]
+        input_price_per_1m_tokens: 2.00
+        output_price_per_1m_tokens: 6.00
 
 routing_profiles:
   local-first:
