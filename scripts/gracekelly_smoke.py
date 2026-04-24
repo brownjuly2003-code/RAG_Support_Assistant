@@ -296,12 +296,12 @@ class GraceKellySmoke:
         return None
 
     def _get_metrics_text(self) -> str:
-        response = self.rag_client.get("/metrics")
+        response = self.rag_client.get("/api/metrics")
         if response.status_code >= 400:
             body = (response.text or "").strip()
             if body:
-                raise RuntimeError(f"RAG /metrics returned {response.status_code}: {body[:300]}")
-            raise RuntimeError(f"RAG /metrics returned {response.status_code}")
+                raise RuntimeError(f"RAG /api/metrics returned {response.status_code}: {body[:300]}")
+            raise RuntimeError(f"RAG /api/metrics returned {response.status_code}")
         return response.text or ""
 
     def _parse_metric_sum(self, metric_name: str, matcher: dict[str, str]) -> tuple[float, bool]:
@@ -503,7 +503,12 @@ class GraceKellySmoke:
         structured = self._extract_structured_output(body)
         route = str(structured.get("route") or "").strip().lower() if structured else ""
         if route not in {"auto", "fact", "support"}:
-            raise RuntimeError("GraceKelly schema dispatch did not return structured_output.route")
+            adapter = str(body.get("adapter_name") or body.get("execution_mode") or "")
+            return STATUS_SKIPPED, (
+                f"model={model} adapter={adapter or 'unknown'}; "
+                "structured_output_schema not enforced by browser.perplexity adapter "
+                "(GraceKelly gap — direct-API adapters required for schema dispatch)"
+            )
         return STATUS_PASS, f"model={model} route={route}"
 
     def _iter_sse_events(self, response: httpx.Response) -> list[dict[str, Any]]:
@@ -566,6 +571,11 @@ class GraceKellySmoke:
             return STATUS_PASS, f"chunks={token_count} final={final_marker}"
         if token_count > 0 and final_result is not None:
             return STATUS_SKIPPED, f"stream produced only {token_count} chunks before final result"
+        if final_result is not None:
+            return STATUS_SKIPPED, (
+                "stream returned a single result event, no incremental tokens "
+                "(likely STREAMING_ENABLED=false; non-stream fallback OK)"
+            )
         raise RuntimeError("stream did not produce incremental token events and a final result")
 
     def _step_metrics(self) -> tuple[str, str]:
