@@ -1623,6 +1623,46 @@ def run_qa_pipeline(
                 trace_state["trace_id"] = trace_id
 
                 async def _persist_results() -> None:
+                    # Bug 4 fix: finish_trace persists to SQLite only.
+                    # Postgres traces may not have a matching row yet, causing
+                    # FK violations when evaluators insert into trace_evaluations.
+                    # Upsert a minimal stub here so the FK holds.
+                    try:
+                        from db.engine import engine as _engine
+                        from sqlalchemy import text
+
+                        async with _engine.begin() as conn:
+                            await conn.execute(
+                                text(
+                                    """
+                                    INSERT INTO traces (
+                                        id, started_at, finished_at,
+                                        final_route, final_quality, final_relevance
+                                    )
+                                    VALUES (
+                                        :trace_id,
+                                        CURRENT_TIMESTAMP,
+                                        CURRENT_TIMESTAMP,
+                                        :final_route,
+                                        :final_quality,
+                                        :final_relevance
+                                    )
+                                    ON CONFLICT (id) DO NOTHING
+                                    """
+                                ),
+                                {
+                                    "trace_id": trace_id,
+                                    "final_route": final_state.get("route"),
+                                    "final_quality": final_state.get("quality_score"),
+                                    "final_relevance": final_state.get("relevance_score"),
+                                },
+                            )
+                    except Exception:
+                        # If the Postgres stub upsert fails (e.g. no DB configured),
+                        # evaluator_runner also has a defensive stub path, so we
+                        # proceed rather than hard-failing the whole pipeline.
+                        pass
+
                     results = await asyncio.wait_for(
                         asyncio.to_thread(run_online_evaluators, trace_state),
                         timeout=1.0,

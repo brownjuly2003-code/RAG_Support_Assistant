@@ -6,7 +6,7 @@ from typing import Any
 
 from sqlalchemy import JSON, bindparam, text
 
-from db.engine import async_session
+from db.engine import async_session, engine
 from evaluation.online_evaluators import (
     evaluate_answer_length_anomaly,
     evaluate_citation_coverage,
@@ -51,6 +51,14 @@ _INSERT_TRACE_EVALUATION = text(
     )
     """
 ).bindparams(bindparam("metadata", type_=JSON()))
+
+_UPSERT_TRACE_STUB = text(
+    """
+    INSERT INTO traces (id, started_at, finished_at, final_route, final_quality, final_relevance)
+    VALUES (:trace_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL, NULL, NULL)
+    ON CONFLICT (id) DO NOTHING
+    """
+)
 
 
 def run_online_evaluators(
@@ -99,10 +107,38 @@ def run_online_evaluators(
 async def persist_online_evaluations(
     trace_id: str,
     results: dict[str, dict[str, Any]],
-    session_factory=async_session,
+    session_factory: Any = None,
 ) -> None:
+    _factory = async_session if session_factory is None else session_factory
+
+    # Bug 2 deeper fix: when using the default global async_session we open a
+    # single engine connection, upsert a stub trace row, and then issue all
+    # evaluator INSERTs sequentially inside the same transaction.  This avoids
+    # the asyncpg "another operation is in progress" race that happens when
+    # multiple concurrent checkouts hit the same connection from the pool.
+    # Bug 4 fix: the stub is inserted in the same transaction as the
+    # trace_evaluations rows, so the FK constraint is guaranteed to hold.
+    if _factory is async_session:
+        async with engine.begin() as conn:
+            await conn.execute(_UPSERT_TRACE_STUB, {"trace_id": trace_id})
+            for evaluator_name, payload in results.items():
+                metadata = payload.get("metadata")
+                await conn.execute(
+                    _INSERT_TRACE_EVALUATION,
+                    {
+                        "trace_id": trace_id,
+                        "evaluator_name": evaluator_name,
+                        "score": float(payload.get("score") or 0.0),
+                        "verdict": str(payload.get("verdict") or "unknown"),
+                        "metadata": metadata if isinstance(metadata, dict) else {},
+                    },
+                )
+        return
+
+    # Custom session_factory path (unit tests): keep the concurrent per-evaluator
+    # session behaviour that existing tests depend on.
     async def _persist_one(evaluator_name: str, payload: dict[str, Any]) -> None:
-        async with session_factory() as session:
+        async with _factory() as session:
             metadata = payload.get("metadata")
             await session.execute(
                 _INSERT_TRACE_EVALUATION,
