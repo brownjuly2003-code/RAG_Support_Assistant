@@ -263,3 +263,56 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_regression_v
   - `M scripts/run_regression_via_gracekelly.ps1`
   - `?? reports/regression/20260425T*` (4 files — failing-run evidence)
 - GraceKelly uvicorn process: stopped (no port 8011 listener at end of session)
+
+---
+
+# Rev 3 (2026-04-25 EOD — final reflection after batch-108 + 4 smoke runs)
+
+RAG HEAD: `922ba4d` (rev 2 committed). GraceKelly HEAD: `40189f4` (batch-108 closure). Worktree clean in both repos at start of rev 3.
+
+## What changed since rev 2
+
+GraceKelly **batch-108** landed (HEAD `40189f4`): Sonar auto-route retry (`_MODEL_SELECT_RETRIES=2`, `_MODEL_SELECT_RETRY_DELAY_S=1.5`) + `submit.click(force=True)` to bypass Playwright actionability wait under overlay. This closed both UI flakiness modes from rev 2 ("Sonar auto-route" and "Locator.click timeout").
+
+After batch-108 closure, four 2-case smoke runs were executed against the now-stable GK browser pipeline. All evidence in `reports/regression/`:
+
+| Smoke | Config | Result | Inference |
+| --- | --- | --- | --- |
+| `smoke-2case.log` (13:41-13:53) | default `GRACEKELLY_REQUEST_TIMEOUT_SEC=30` | gate=pass via `effective_cases=1`, `infrastructure_failures=1` | misleading-green: 30s timeout cascades into circuit breaker (3 consecutive failures), case 2 hits open breaker → infrastructure_failure |
+| `smoke-2case-bump90.log` (13:58-14:09) | timeout=90s | gate=fail; candidate=`route=human` because `verify_facts → extract_claims` timed out at 90s | 90s insufficient for browser-routed extract_claims |
+| `smoke-2case-planC.log` (14:52-15:00) | `FACT_VERIFICATION_ENABLED=false` + `ONLINE_EVALUATORS_ENABLED=false` + timeout=120s | 0 timeout / 0 breaker / `regressions=0`; pass_rate 50% (dataset case-sensitivity in `regression_eval._evaluate_case_output:231`, unrelated) | **proves** root cause = Self-RAG nodes (`verify_facts/extract_claims`, online evaluators) overload the GK browser submit budget |
+| `smoke-2case-planB.log` (16:23-16:37) | new `gracekelly-mixed` routing profile (Mistral fast / GK browser strong) + full pipeline + default timeout | gate=fail; verify_facts again timed out via GK | `regression_eval._provider_target_runtime` (`scripts/regression_eval.py:658-682`) creates a synthetic single-model profile (`fast=strong=<candidate>`) per CLI run, **overriding** any routing_profile in registry — Plan B as config-only is invalid by design |
+
+## Root cause localized
+
+RAG pipeline through any GK-strong-tier routing profile makes 4-7 LLM calls per case (`classify_complexity`, `transform_query`, `grade_docs ×N`, `generate`, `verify_facts → extract_claims ×M + verify_each_claim ×M`, `evaluate`, `suggest_questions`, occasionally `rewrite_query`). All of these route through `gracekelly` provider → `browser.perplexity` adapter. Each browser submit on Perplexity = 30-100s. `extract_claims` particularly heavy (multi-claim extraction prompt yields long completions).
+
+Result: per-case wall time 5-10 minutes, single timeout cascades 3 consecutive failures → circuit breaker open → next case hits open breaker → infrastructure_failure. 20-case run wall time 2+ hours, with high probability of mid-run breaker storms.
+
+**Plan C** (disable verify_facts + online_evaluators) technically resolves the timeouts but **breaks the product**: Self-RAG / Corrective RAG / `auto/human/retry` auto-routing all depend on `factuality_score` from verify_facts and quality signals from online evaluators. Run under Plan C tests an emasculated subset of the pipeline, not the actual product. **Rejected by user.**
+
+**Plan B** (mixed routing — Mistral API for `llm_fast`, GK browser for `llm_strong`) is architecturally correct for production but cannot be activated through `regression_eval` without code change because of the synthetic-profile override above. Plan B as config-only is invalid.
+
+## Outcome — task-177 closes partial
+
+| What | Status |
+| --- | --- |
+| GK batch-108 (Sonar retry + force-click) closure | ✅ landed in GraceKelly HEAD `40189f4`, RAG-side verified — 0 mismatch / 0 click timeout / 0 thread discard across all four smoke runs |
+| Full 20-case live regression through `gracekelly-primary` | ⛔ NOT VIABLE without code change in `regression_eval` |
+| Root cause for incompatibility (Self-RAG nodes ×N + browser submit latency) | ✅ localized via Plan C / Plan B smoke evidence |
+| Plan B as Arc 9 candidate task | ⏳ spec written: `codex-tasks/task-178-regression-eval-profile-target.md` |
+
+## Recommendation accepted (user delegated)
+
+Close task-177 as partial. Open task-178 as Arc 9 prerequisite (regression_eval profile-target extension, ~30-50 LOC + tests). When task-178 lands, run full 20 cases through `--candidate-profile gracekelly-mixed`: `~3` browser submits per case (only `generate`, `evaluate`, `suggest_questions`) + Mistral API fast tier (~5-10 calls/case @ 1-3s each) → ~30-50 minutes total wall time, no quota crisis, **full Self-RAG pipeline intact**.
+
+## File state at end of rev 3
+
+- `D:\RAG_Support_Assistant\` working tree (after revert of dead-end Plan B config edits):
+  - `M codex-tasks/verification-report-regression-gracekelly.md` (this file — rev 3 append)
+  - `?? codex-tasks/task-178-regression-eval-profile-target.md` (CX spec for Arc 9)
+  - `?? reports/regression/20260425T134121Z-*`, `20260425T135829Z-*`, `20260425T145256Z-*`, `20260425T162309Z-*` (4 evidence runs)
+  - `?? reports/regression/smoke-2case.log`, `smoke-2case-bump90.log`, `smoke-2case-planC.log`, `smoke-2case-planB.log`, `full-20case-planC.log`, `full-20case-planC.err` (logs)
+- `D:\GraceKelly\` working tree: HEAD `40189f4`, only `?? CLAUDE.md`, `?? docs/plans/` (pre-existing, untracked by design).
+- GraceKelly uvicorn: running on port 8011, profile=hybrid (left running for any post-commit smoke).
+- `rag-regression-postgres` + `rag-regression-redis` containers: still running (idempotent reuse on next regression run).

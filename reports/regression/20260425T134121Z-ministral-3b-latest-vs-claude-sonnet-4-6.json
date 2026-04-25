@@ -1,0 +1,208 @@
+{
+  "run_id": "20260425T134121Z-87634c63",
+  "created_at": "2026-04-25T13:41:21.475321+00:00",
+  "baseline": "ministral-3b-latest",
+  "candidate": "claude-sonnet-4-6",
+  "dataset": "D:\\RAG_Support_Assistant\\evaluation\\curated_cases.jsonl",
+  "tenant": "all",
+  "aggregate": {
+    "total_cases": 2,
+    "effective_cases": 1,
+    "infrastructure_failures": 1,
+    "baseline_pass_rate": 1.0,
+    "candidate_pass_rate": 1.0,
+    "regressions": 0,
+    "new_passes": 0,
+    "neutral": 1,
+    "baseline_total_cost_usd": 1.2e-05,
+    "candidate_total_cost_usd": 0.0,
+    "baseline_avg_latency_ms": 0.0,
+    "candidate_avg_latency_ms": 0.0,
+    "baseline_refusal_rate": 0.0,
+    "candidate_refusal_rate": 0.0
+  },
+  "gate": {
+    "passed": true,
+    "max_regressions": 2,
+    "min_pass_rate": 0.85,
+    "reasons": []
+  },
+  "cases": [
+    {
+      "case_id": "warranty-period",
+      "tenant_id": "default",
+      "query": "Какой срок гарантии на продукцию?",
+      "baseline": {
+        "answer": "Срок гарантии на продукцию составляет **12 месяцев с момента покупки** [1].",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 3,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.2e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-9bd88ce4-3e5b-483e-bbc8-a57afacde945"
+      },
+      "candidate": {
+        "answer": "Срок гарантии на продукцию составляет 12 месяцев с момента покупки .\nПри этом гарантия действует при соблюдении условий: товар используется по инструкции, сохранён чек, и корпус устройства не вскрывался .",
+        "quality_score": 96.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 3,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 4,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "auto",
+        "trace_id": "provider-benchmark-8afac1c0-19c1-4266-ba61-c4df2c471d87"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 1.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 1,
+        "cost_delta": -1.2e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "warranty-receipt-storage",
+      "tenant_id": "default",
+      "query": "На какой срок нужно сохранять чек для гарантии?",
+      "baseline": {
+        "answer": "Согласно **гарантийным условиям** (Документ 1), чек необходимо сохранять **в течение всего срока гарантии (12 месяцев)**.\n\n[1]",
+        "quality_score": 95.0,
+        "factuality_score": 50.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.4e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-1d9845c9-152d-46bb-a7cb-1d390cf33f06"
+      },
+      "candidate": {
+        "answer": "[provider_unavailable] Adapter 'browser.perplexity' circuit breaker is open after 3 consecutive failures. Retry after 2026-04-25T13:54:59.531021Z.",
+        "quality_score": 3.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 3,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 4,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 5,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "human",
+        "trace_id": "provider-benchmark-cb111e73-a1e4-4010-90da-8bb6572a33e6"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [],
+      "candidate_failures": [
+        "infrastructure: provider unavailable"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -92.0,
+        "factuality_delta": 50.0,
+        "route_changed": true,
+        "citations_delta": 2,
+        "cost_delta": -1.4e-05
+      },
+      "outcome": "infrastructure_failure"
+    }
+  ],
+  "regressions": [],
+  "new_passes": [],
+  "exit_code": 0,
+  "mode": "live-provider-benchmark"
+}
