@@ -1,0 +1,256 @@
+{
+  "run_id": "20260425T044308Z-950ab5d4",
+  "created_at": "2026-04-25T04:43:08.203886+00:00",
+  "baseline": "ministral-3b-latest",
+  "candidate": "mistral-small-latest",
+  "dataset": "D:\\RAG_Support_Assistant\\evaluation\\curated_cases.jsonl",
+  "tenant": "all",
+  "aggregate": {
+    "total_cases": 3,
+    "baseline_pass_rate": 1.0,
+    "candidate_pass_rate": 1.0,
+    "regressions": 0,
+    "new_passes": 0,
+    "neutral": 3,
+    "baseline_total_cost_usd": 4e-05,
+    "candidate_total_cost_usd": 0.000234,
+    "baseline_avg_latency_ms": 0.0,
+    "candidate_avg_latency_ms": 0.0,
+    "baseline_refusal_rate": 0.3333,
+    "candidate_refusal_rate": 0.0
+  },
+  "gate": {
+    "passed": true,
+    "max_regressions": 2,
+    "min_pass_rate": 0.85,
+    "reasons": []
+  },
+  "cases": [
+    {
+      "case_id": "returns-different-card",
+      "tenant_id": "default",
+      "query": "Можно ли получить возврат денег на другую карту?",
+      "baseline": {
+        "answer": "По имеющимся данным ответить нельзя.\n\nВ документе **1** указано, что возврат денежных средств производится **на ту же карту или счёт**, с которых была оплата. Однако нет информации о возможности возврата на другую карту.\n\nПожалуйста, обратитесь к специалисту поддержки для уточнения.",
+        "quality_score": 90.0,
+        "factuality_score": 33.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 2,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.5e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-c1999a92-690c-49f1-bd62-d04785e81a3f"
+      },
+      "candidate": {
+        "answer": "По имеющимся данным, возврат денежных средств производится на ту же карту или счёт, с которых была оплата [1].",
+        "quality_score": 90.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 2,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 8.5e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-1d386a7e-f880-4acf-9032-c1358e31a76f"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 0.0,
+        "factuality_delta": 67.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": 7e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "warranty-period",
+      "tenant_id": "default",
+      "query": "Какой срок гарантии на продукцию?",
+      "baseline": {
+        "answer": "Срок гарантии на продукцию составляет **12 месяцев с момента покупки** [1].",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.2e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-74368513-70f8-4bbf-a5ac-16237e0a74a7"
+      },
+      "candidate": {
+        "answer": "Срок гарантии на продукцию составляет 12 месяцев с момента покупки [1].",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 7.2e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-22ab338e-7b10-4a53-8bf0-00eb3ebad780"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 0.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": -1,
+        "cost_delta": 6e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "warranty-receipt-storage",
+      "tenant_id": "default",
+      "query": "На какой срок нужно сохранять чек для гарантии?",
+      "baseline": {
+        "answer": "Согласно **гарантийным условиям** [1], чек необходимо сохранять **в течение 12 месяцев с момента покупки**.",
+        "quality_score": 95.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 4,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.3e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-838bc0c9-536f-4c5d-9f79-f4e53f5f3564"
+      },
+      "candidate": {
+        "answer": "Для гарантии чек нужно сохранять в течение всего срока действия гарантии (12 месяцев с момента покупки) [1].",
+        "quality_score": 90.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 3,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 4,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 7.7e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-a809ab31-e34d-49c8-a2db-2cd4af262b28"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -5.0,
+        "factuality_delta": 100.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": 6.4e-05
+      },
+      "outcome": "neutral"
+    }
+  ],
+  "regressions": [],
+  "new_passes": [],
+  "exit_code": 0,
+  "mode": "live-provider-benchmark"
+}

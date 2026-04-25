@@ -15,3 +15,4 @@ ignore = ["E501"]
 markers = [
     "integration: end-to-end integration tests",
 ]
+norecursedirs = [".*", "build", "dist", "CVS", "_darcs", "{arch}", "*.egg", "venv", "pytest-cache-files-*", "archive-legacy", "data"]

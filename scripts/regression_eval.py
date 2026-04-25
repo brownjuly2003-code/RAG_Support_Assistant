@@ -93,6 +93,11 @@ def _is_refusal_answer(answer: str) -> bool:
     return any(pattern in normalized for pattern in patterns)
 
 
+def _is_infrastructure_failure(answer: str) -> bool:
+    normalized = (answer or "").strip().lower()
+    return "[provider_unavailable]" in normalized
+
+
 def _resolve_provider_target(target: str, provider_registry_path: Path | None) -> dict[str, Any] | None:
     from config.provider_schema import load_provider_registry
 
@@ -273,10 +278,31 @@ def run_regression_cases(
     candidate_total_latency_ms = 0
     baseline_refusals = 0
     candidate_refusals = 0
+    infrastructure_failures = 0
 
     for case in cases:
         baseline_result = executor(case, baseline)
         candidate_result = executor(case, candidate)
+
+        baseline_infra = _is_infrastructure_failure(baseline_result.answer)
+        candidate_infra = _is_infrastructure_failure(candidate_result.answer)
+        if baseline_infra or candidate_infra:
+            infrastructure_failures += 1
+            case_payload = {
+                "case_id": case.case_id,
+                "tenant_id": case.tenant_id,
+                "query": case.query,
+                "baseline": baseline_result.model_dump(mode="json"),
+                "candidate": candidate_result.model_dump(mode="json"),
+                "baseline_passed": False,
+                "candidate_passed": False,
+                "baseline_failures": ["infrastructure: provider unavailable"] if baseline_infra else [],
+                "candidate_failures": ["infrastructure: provider unavailable"] if candidate_infra else [],
+                "diff": _build_diff(baseline_result, candidate_result),
+                "outcome": "infrastructure_failure",
+            }
+            comparisons.append(case_payload)
+            continue
 
         baseline_passed, baseline_failures = _evaluate_case_output(baseline_result, case.expected)
         candidate_passed, candidate_failures = _evaluate_case_output(candidate_result, case.expected)
@@ -333,9 +359,10 @@ def run_regression_cases(
             )
 
     total_cases = len(comparisons)
-    baseline_pass_rate = baseline_passes / total_cases if total_cases else 0.0
-    candidate_pass_rate = candidate_passes / total_cases if total_cases else 0.0
-    neutral_count = total_cases - len(regressions) - len(new_passes)
+    effective_total_cases = total_cases - infrastructure_failures
+    baseline_pass_rate = baseline_passes / effective_total_cases if effective_total_cases else 0.0
+    candidate_pass_rate = candidate_passes / effective_total_cases if effective_total_cases else 0.0
+    neutral_count = total_cases - len(regressions) - len(new_passes) - infrastructure_failures
 
     gate_reasons: list[str] = []
     if len(regressions) > max_regressions:
@@ -363,6 +390,8 @@ def run_regression_cases(
         "tenant": tenant,
         "aggregate": {
             "total_cases": total_cases,
+            "effective_cases": effective_total_cases,
+            "infrastructure_failures": infrastructure_failures,
             "baseline_pass_rate": round(baseline_pass_rate, 4),
             "candidate_pass_rate": round(candidate_pass_rate, 4),
             "regressions": len(regressions),
@@ -370,10 +399,10 @@ def run_regression_cases(
             "neutral": neutral_count,
             "baseline_total_cost_usd": round(baseline_total_cost, 6),
             "candidate_total_cost_usd": round(candidate_total_cost, 6),
-            "baseline_avg_latency_ms": round(baseline_total_latency_ms / total_cases, 2) if total_cases else 0.0,
-            "candidate_avg_latency_ms": round(candidate_total_latency_ms / total_cases, 2) if total_cases else 0.0,
-            "baseline_refusal_rate": round(baseline_refusals / total_cases, 4) if total_cases else 0.0,
-            "candidate_refusal_rate": round(candidate_refusals / total_cases, 4) if total_cases else 0.0,
+            "baseline_avg_latency_ms": round(baseline_total_latency_ms / effective_total_cases, 2) if effective_total_cases else 0.0,
+            "candidate_avg_latency_ms": round(candidate_total_latency_ms / effective_total_cases, 2) if effective_total_cases else 0.0,
+            "baseline_refusal_rate": round(baseline_refusals / effective_total_cases, 4) if effective_total_cases else 0.0,
+            "candidate_refusal_rate": round(candidate_refusals / effective_total_cases, 4) if effective_total_cases else 0.0,
         },
         "gate": {
             "passed": gate_passed,
@@ -969,6 +998,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             allow_paid_apis=True if args.allow_paid_apis else None,
         )
         markdown_path, json_path = write_report_files(report)
+
+        # Dispose async engine pool before creating a new event loop to avoid
+        # asyncpg "another operation is in progress" race when run_qa_pipeline
+        # already used asyncio.run internally.
+        from db.engine import engine
+        engine.dispose(close=True)
+
         asyncio.run(
             persist_regression_result(
                 session_factory=async_session,

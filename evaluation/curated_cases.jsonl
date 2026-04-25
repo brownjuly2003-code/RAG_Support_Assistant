@@ -1,10 +1,20 @@
-{"case_id": "warranty-period", "tenant_id": "default", "query": "What is the warranty period for products?", "expected": {"answer_contains": ["12", "месяц"], "min_quality": 0.5}}
-{"case_id": "warranty-excluded", "tenant_id": "default", "query": "Does the warranty cover mechanical damage or liquid spills?", "expected": {"answer_contains": ["механическ", "жидк"], "min_quality": 0.5}}
-{"case_id": "warranty-how-to-claim", "tenant_id": "default", "query": "How do I file a warranty claim? List the steps.", "expected": {"answer_contains": ["чек", "сервис"], "min_quality": 0.5}}
-{"case_id": "returns-window", "tenant_id": "default", "query": "Within how many days can I return a product of acceptable quality?", "expected": {"answer_contains": ["14", "дн"], "min_quality": 0.5}}
-{"case_id": "returns-refund-timeline", "tenant_id": "default", "query": "How long does the refund take after a return is accepted?", "expected": {"answer_contains": ["10", "дн"], "min_quality": 0.5}}
-{"case_id": "returns-no-receipt", "tenant_id": "default", "query": "Can I return a product without a sales receipt?", "expected": {"answer_contains": ["чек"], "min_quality": 0.4}}
-{"case_id": "error-e10", "tenant_id": "default", "query": "What does error code E10 mean and how do I fix it?", "expected": {"answer_contains": ["E10", "вод"], "min_quality": 0.5}}
-{"case_id": "error-e20", "tenant_id": "default", "query": "The appliance shows error E20. Give me the three most likely causes.", "expected": {"answer_contains": ["E20", "слив"], "min_quality": 0.5}}
-{"case_id": "error-e25", "tenant_id": "default", "query": "Error E25 appeared on the display. What should the customer try first?", "expected": {"answer_contains": ["E25", "перезагруз"], "min_quality": 0.4}}
-{"case_id": "error-e30", "tenant_id": "default", "query": "Error E30 is on the device. Is it safe to keep it running or should the user unplug it?", "expected": {"answer_contains": ["E30", "отключ"], "min_quality": 0.5}}
+{"case_id": "warranty-period", "tenant_id": "default", "query": "Какой срок гарантии на продукцию?", "expected": {"answer_contains": ["12", "месяц"], "min_quality": 0.5}}
+{"case_id": "warranty-excluded", "tenant_id": "default", "query": "Что не входит в гарантию: механические повреждения, жидкость или самостоятельный ремонт?", "expected": {"answer_contains": ["механическ", "жидк", "самостоятельн"], "min_quality": 0.5}}
+{"case_id": "warranty-how-to-claim", "tenant_id": "default", "query": "Как обратиться по гарантии? Перечисли шаги.", "expected": {"answer_contains": ["чек", "сервис"], "min_quality": 0.5}}
+{"case_id": "warranty-receipt-storage", "tenant_id": "default", "query": "На какой срок нужно сохранять чек для гарантии?", "expected": {"answer_contains": ["чек", "12"], "min_quality": 0.5}}
+{"case_id": "warranty-no-receipt-where", "tenant_id": "default", "query": "Чек утерян. Куда можно обратиться по гарантии?", "expected": {"answer_contains": ["сервис", "чек"], "min_quality": 0.4}}
+{"case_id": "returns-window", "tenant_id": "default", "query": "В течение скольких дней можно вернуть товар надлежащего качества?", "expected": {"answer_contains": ["14", "дн"], "min_quality": 0.5}}
+{"case_id": "returns-refund-timeline", "tenant_id": "default", "query": "Сколько рабочих дней занимает возврат денег после приёмки товара?", "expected": {"answer_contains": ["10", "дн"], "min_quality": 0.5}}
+{"case_id": "returns-no-receipt", "tenant_id": "default", "query": "Можно ли вернуть товар без кассового или товарного чека?", "expected": {"answer_contains": ["чек"], "min_quality": 0.4}}
+{"case_id": "returns-different-card", "tenant_id": "default", "query": "Можно ли получить возврат денег на другую карту?", "expected": {"answer_contains": ["ту же", "карту"], "min_quality": 0.5}}
+{"case_id": "returns-no-packaging", "tenant_id": "default", "query": "Можно ли вернуть товар без упаковки?", "expected": {"answer_contains": ["упаковка", "товарный вид"], "min_quality": 0.5}}
+{"case_id": "error-e10", "tenant_id": "default", "query": "Что означает ошибка E10 и что нужно проверить?", "expected": {"answer_contains": ["E10", "вод"], "min_quality": 0.5}}
+{"case_id": "error-e20", "tenant_id": "default", "query": "Устройство показывает E20. Назови три вероятные причины.", "expected": {"answer_contains": ["E20", "слив"], "min_quality": 0.5}}
+{"case_id": "error-e25", "tenant_id": "default", "query": "На дисплее появилась ошибка E25. Что сначала попробовать клиенту?", "expected": {"answer_contains": ["E25", "перезагруз"], "min_quality": 0.4}}
+{"case_id": "error-e30", "tenant_id": "default", "query": "При ошибке E30 можно продолжать пользоваться устройством или нужно отключить его от сети?", "expected": {"answer_contains": ["E30", "отключ"], "min_quality": 0.5}}
+{"case_id": "error-e20-clog-vs-pump", "tenant_id": "default", "query": "По ошибке E20 как отличить засор фильтра от неисправности насоса?", "expected": {"answer_contains": ["E20", "засор", "насос"], "min_quality": 0.5}}
+{"case_id": "error-e25-reset-steps", "tenant_id": "default", "query": "Как сбросить ошибку E25 пошагово?", "expected": {"answer_contains": ["E25", "перезагруз", "сброс"], "min_quality": 0.5}}
+{"case_id": "error-e30-actions", "tenant_id": "default", "query": "Какие действия нужно предпринять при ошибке E30?", "expected": {"answer_contains": ["E30", "отключ", "сервис"], "min_quality": 0.5}}
+{"case_id": "off-topic-wifi", "tenant_id": "default", "query": "Как настроить Wi-Fi в этом устройстве?", "expected": {"answer_contains": ["ответить нельзя", "обрат"], "min_quality": 0.3}}
+{"case_id": "off-topic-price", "tenant_id": "default", "query": "Сколько стоит этот товар?", "expected": {"answer_contains": ["ответить нельзя", "обрат"], "min_quality": 0.3}}
+{"case_id": "off-topic-delivery", "tenant_id": "default", "query": "Как доставляют товары?", "expected": {"answer_contains": ["ответить нельзя", "обрат"], "min_quality": 0.3}}
