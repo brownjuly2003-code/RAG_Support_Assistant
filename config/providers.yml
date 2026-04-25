@@ -124,3 +124,12 @@ routing_profiles:
     strong:
       provider: mistral
       model: mistral-small-latest
+
+  gracekelly-mixed:
+    description: Mixed routing — Mistral API for fast tier (classify/transform/grade_docs/verify_facts/extract_claims/online_evaluators), GraceKelly browser for strong tier (final answer + suggest_questions). Reduces browser submits per case from 4-7 to ~3 while keeping full Self-RAG / Corrective RAG / auto-route intact. Also a valid production routing for single-user local deploys with both Mistral key and GraceKelly available.
+    fast:
+      provider: mistral
+      model: ministral-3b-latest
+    strong:
+      provider: gracekelly
+      model: claude-sonnet-4-6
