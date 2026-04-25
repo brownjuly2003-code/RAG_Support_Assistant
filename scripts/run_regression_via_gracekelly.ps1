@@ -9,7 +9,8 @@
     3. Runs alembic migrations.
     4. Ingests docs/ into the vector store.
     5. Executes scripts/regression_eval.py baseline=ministral-3b-latest
-       candidate=claude-sonnet-4-6-api through gracekelly-primary profile.
+       candidate=claude-sonnet-4-6 (browser.perplexity adapter) through
+       gracekelly-primary profile.
     6. Cleans up disposable containers on exit.
 
 .EXAMPLE
@@ -29,7 +30,7 @@ param(
     [string]$PostgresPassword = "rag_test",
     [string]$PostgresDb = "rag_regression_test",
     [string]$Baseline = "ministral-3b-latest",
-    [string]$Candidate = "claude-sonnet-4-6-api",
+    [string]$Candidate = "claude-sonnet-4-6",
     [int]$MaxCases = 20
 )
 
@@ -201,32 +202,13 @@ Switch to real execution before running regression:
 Write-Host "GraceKelly OK (profile=$profile)"
 
 # ---------------------------------------------------------------------------
-# 2b. GraceKelly candidate provider availability guard
+# 2b. Browser-route candidate. The alias `claude-sonnet-4-6` resolves in
+#     GraceKelly to the browser.perplexity adapter; if the browser session
+#     is dead, the regression run will fail-fast on the first request with
+#     `[provider_unavailable]`. We do not pre-validate readiness here because
+#     /api/v1/readiness reports the session as `degraded` until first launch.
 # ---------------------------------------------------------------------------
-$adminProviders = Invoke-GraceKelly "/api/admin/providers"
-$providersList = Find-FirstPropertyValue $adminProviders @("providers")
-$anthropicConfigured = $true
-if ($providersList -and $providersList -is [System.Array]) {
-    foreach ($p in $providersList) {
-        $pid = Find-FirstPropertyValue $p @("id", "provider_id", "name")
-        if ($pid -eq "anthropic") {
-            $cfg = Find-FirstPropertyValue $p @("configured", "is_configured")
-            if ($cfg -eq $false -or $cfg -eq "false") {
-                $anthropicConfigured = $false
-            }
-        }
-    }
-}
-if (-not $anthropicConfigured) {
-    Write-Fatal @"
-GraceKelly reports anthropic provider as not configured.
-Candidate '$Candidate' requires Anthropic API key in GraceKelly:
-    cd D:\GraceKelly
-    `$env:ANTHROPIC_API_KEY = "sk-ant-..."
-    uvicorn gracekelly.main:create_app --factory --host 127.0.0.1 --port 8011
-"@
-}
-Write-Host "GraceKelly provider availability OK"
+Write-Host "Candidate '$Candidate' routes through browser.perplexity (lazy-launched on first request)."
 
 # ---------------------------------------------------------------------------
 # 3. Docker guards

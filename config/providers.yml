@@ -35,7 +35,7 @@ providers:
     api_key_env: GRACEKELLY_API_KEY
     default_models:
       fast: mistral-small
-      strong: claude-sonnet-4-6-api
+      strong: claude-sonnet-4-6
     capabilities:
       supports_tool_use: true
       supports_structured_output: true
@@ -50,8 +50,8 @@ providers:
         aliases: [gk-mistral, gk-fast]
         input_price_per_1m_tokens: 0.0
         output_price_per_1m_tokens: 0.0
-      - name: claude-sonnet-4-6-api
-        aliases: [gk-claude-sonnet, gk-strong]
+      - name: claude-sonnet-4-6
+        aliases: [gk-claude-sonnet, gk-strong, claude-sonnet-4-6-api]
         input_price_per_1m_tokens: 0.0
         output_price_per_1m_tokens: 0.0
       - name: gpt-5-4-api
@@ -111,7 +111,7 @@ routing_profiles:
       model: mistral-small
     strong:
       provider: gracekelly
-      model: claude-sonnet-4-6-api
+      model: claude-sonnet-4-6
     fallback:
       provider: ollama
       model: qwen2.5:7b

@@ -1,72 +1,265 @@
 # Verification Report — Regression via GraceKelly Claude
 
-Date: 2026-04-25
-HEAD: `54c8660`
+Date: 2026-04-25 (rev 2 — post thread fix)
+RAG HEAD: `f0fc81b` + 3 unstaged files
+GraceKelly HEAD: `fc2ee94` + 1 unstaged file
 
-## Scope
+## TL;DR for next session
 
-- Dataset expanded/validated: `evaluation/curated_cases.jsonl`
-- Wrapper added: `scripts/run_regression_via_gracekelly.ps1`
-- Live regression attempted with:
-  - baseline: `ministral-3b-latest`
-  - candidate: `claude-sonnet-4-6-api`
-  - profile: `gracekelly-primary`
+| What                                              | Status |
+| ------------------------------------------------- | ------ |
+| Routing fix (`claude-sonnet-4-6-api` → bare `claude-sonnet-4-6` via browser.perplexity) | ✅ done, live-verified |
+| GK threadpool fix (Option A: dedicated single-worker thread) | ✅ done, live-verified, 0 thread-switch errors after fix |
+| Manual smoke `POST /api/v1/smart` → "pong" through browser | ✅ |
+| RAG pipeline 2-case regression (8 LLM calls)      | ⚠️ partial — pipeline now executes through GK, but blocked by NEW unrelated GK-side flakiness |
+| Full 20-case live regression                      | ⛔ NOT achieved — blocked on GK UI flakiness, see "Open blockers" below |
+| Commits                                           | ⛔ none yet — held pending decision (see "Open question") |
 
-## Dataset
+## Scope of this session
 
-Validated with `scripts.regression_eval.CuratedCase`.
+Started from: `f0fc81b` task-177 partial. Previous blockers documented in rev 1
+of this report were:
+- `claude-sonnet-4-6-api` resolved in GraceKelly to the unconfigured Anthropic API.
+- `GRACEKELLY_EXECUTION_PROFILE=dry-run` in `D:\GraceKelly\.env`.
 
-Counts:
-- warranty: 5
-- returns: 5
-- error: 7
-- off-topic: 3
-- total: 20
+Both addressed below.
 
-## Wrapper Checks
+## Fix 1 — RAG-side alias rename (Option B from rev 1 fork)
 
-- `GraceKelly` unavailable guard verified: exits `1` with startup instructions.
-- Disposable Postgres/Redis startup verified.
-- Alembic requires a sync SQLAlchemy URL, so the wrapper uses `postgresql+psycopg2` only for migrations and restores `postgresql+asyncpg` for runtime.
-- Migration `008_enable_pgcrypto` requires `DB_ENCRYPTION_KEY`; the wrapper generates a disposable process-only key for the disposable DB.
-- Ingestion is scoped to the 3 seed KB docs: `warranty.md`, `returns_policy.md`, `errors_e10_e30.md`.
+### Files (UNSTAGED)
+- `config/providers.yml`
+  - `providers.gracekelly.models[1].name`: `claude-sonnet-4-6-api` → `claude-sonnet-4-6`
+  - `providers.gracekelly.models[1].aliases`: added `claude-sonnet-4-6-api` for compat
+  - `providers.gracekelly.default_models.strong`: `claude-sonnet-4-6-api` → `claude-sonnet-4-6` (the schema validates `default_models.strong` against model names, not aliases — alias-only would fail validation)
+  - `routing_profiles.gracekelly-primary.strong.model`: same rename
+- `scripts/run_regression_via_gracekelly.ps1`
+  - default `$Candidate`: `claude-sonnet-4-6-api` → `claude-sonnet-4-6`
+  - dropped Anthropic-configured fail-fast guard (queried non-existent `/api/admin/providers` → 404)
+  - replaced with one-line note that the candidate routes through `browser.perplexity` and is lazy-launched on first request
+  - docstring synced with new candidate alias
 
-## Live Attempt
+### Verification
+```text
+ministral-3b-latest    -> provider=mistral    model=ministral-3b-latest
+claude-sonnet-4-6      -> provider=gracekelly model=claude-sonnet-4-6
+claude-sonnet-4-6-api  -> provider=gracekelly model=claude-sonnet-4-6   (compat alias)
+gk-strong              -> provider=gracekelly model=claude-sonnet-4-6
+```
 
-Debug run:
+Manual smoke against running GK (profile=hybrid):
+```text
+POST /api/v1/smart {"prompt":"Reply with exactly the single word: pong",
+                    "model":"claude-sonnet-4-6","reliability_level":"quick","dry_run":false}
+→ {"answer":"pong","model_id":"claude-sonnet-4-6","total_llm_calls":3,...}
+```
 
-- command: `scripts/run_regression_via_gracekelly.ps1 -MaxCases 1`
-- report JSON: `reports/regression/20260425T040428Z-ministral-3b-latest-vs-claude-sonnet-4-6-api.json`
-- report MD: `reports/regression/20260425T040428Z-ministral-3b-latest-vs-claude-sonnet-4-6-api.md`
+No more `[provider_unavailable] Anthropic API key is not configured.` — routing fix is verified end-to-end.
 
-Aggregate:
+## Fix 2 — GraceKelly thread fix (Option A from rev 1 fork)
 
-- total cases: 1
-- baseline pass rate: 100%
-- candidate pass rate: 0%
-- baseline total cost: `$0.000014`
-- candidate total cost: `$0.000000`
-- candidate refusal rate: 0%
+### File (UNSTAGED, in `D:\GraceKelly\`)
+- `src/gracekelly/adapters/browser/perplexity.py` (+40 −1 lines, ruff clean, py_compile clean)
 
-Failure example:
+### Root cause
+`ExecutionAdapter.execute_async()` (the abstract base) defaults to
+`asyncio.to_thread(self.execute, request)` — which uses asyncio's default
+threadpool (default size = `min(32, os.cpu_count() + 4)`). Each call may land
+on a different worker thread. Playwright's sync API binds session state to
+the thread that created it; on a different-thread call the driver discards
+and reopens the session, and on Windows the previous Chromium child has not
+yet released the user-data-dir lock → `BrowserProfileBusyError`. After 3
+consecutive `provider_unavailable` results the circuit breaker trips, and
+every further call short-circuits.
 
-- case: `warranty-receipt-storage`
-- baseline answer: says the receipt must be kept for the 12-month warranty period.
-- candidate answer: `[provider_unavailable] Anthropic API key is not configured.`
-- candidate failures: missing `чек`, missing `12`
+### Patch shape
+```python
+class PerplexityBrowserAdapter(ExecutionAdapter):
+    _DEDICATED_THREAD_PREFIX = "browser-perplexity"
 
-## Blockers
+    def __init__(self, ...):
+        ...
+        self._dedicated_executor = ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix=self._DEDICATED_THREAD_PREFIX,
+        )
 
-Full 20-case live run was not executed because the 1-case live run proves the acceptance preconditions are not currently met:
+    def execute(self, request):
+        if self._on_dedicated_thread():
+            return self._execute_inner(request)          # re-entry guard
+        return self._dedicated_executor.submit(self._execute_inner, request).result()
 
-1. `claude-sonnet-4-6-api` resolves in GraceKelly to the Anthropic API adapter, and `/api/v1/readiness` reports `api.anthropic.configured=false`.
-2. Direct GraceKelly smoke for `claude-sonnet-4-6-api` returns `[provider_unavailable] Anthropic API key is not configured.`
-3. The asyncpg race from task-176 still reproduces: `trace_evaluations`/online evaluator logging warns with `InterfaceError`, and final `INSERT INTO eval_results` fails with `InterfaceError: another operation is in progress`.
+    async def execute_async(self, request):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            self._dedicated_executor, self._execute_inner, request
+        )
 
-Because of those blockers, a 20-case run would produce a known-invalid candidate signal and fail persistence after report generation.
+    def refresh_model_catalog(self):                      # same wrapper pattern
+        ...
 
-## Verification Commands
+    async def close(self):
+        # delegate inner sync close to dedicated thread, then shutdown
+        ...
+        self._dedicated_executor.shutdown(wait=False)
 
-- `ruff check scripts/ evaluation/` — passed.
-- `pytest tests/ --ignore=tests/integration --ignore=tests/test_a11y.py -p no:schemathesis -q --tb=no` — did not collect tests because existing `tests/pytest-cache-files-*` directories return `PermissionError`.
-- Retry with `--ignore-glob=tests/pytest-cache-files-*` reached tests but still failed with environment-level `PermissionError` across many tests: `267 passed / 3 skipped / 247 errors`.
+    def _execute_inner(self, request):                    # body of old execute()
+        ...
+    def _refresh_model_catalog_inner(self):               # body of old refresh()
+        ...
+```
+
+The wrapper covers both adapter entry points (sync `execute`, async
+`execute_async`) because GK callers use both: `smart.py` has `execute_request`
+(async path → `execute_async`) and `execute_fn` (sync path → `execute`)
+fed to `executor.execute`/`role_exec.execute_and_verify`/`execute_decomposed`
+which are themselves wrapped in `asyncio.to_thread(...)` from the handler.
+Both paths now route through the same single-worker pool.
+
+### Verification
+GK log `gk_uvicorn3.log` (post-fix, 2-case regression run):
+- 0 lines containing `Discarding Playwright browser session created on thread`
+- 0 lines containing `Browser profile directory ... is already in use`
+- 1 `Launching Playwright browser session` at startup, session reused for all subsequent calls
+- All LLM calls report `Browser execution completed ... model_verified=True duration_ms=NNNN`
+
+Compared to rev 1 attempts at the same `MaxCases=2` payload, where
+**both** cases were `infrastructure_failure` due to thread-switch+lock,
+the post-fix run had `infrastructure_failures: 1` (and that 1 was a
+**different** root cause — see "Open blockers" below).
+
+## Open blockers — NEW, GK-side, not threadpool
+
+The 2-case post-fix regression still failed `gate.passed` because of two new
+GK-side flakiness modes that surfaced once the thread-switching mask was
+removed. Neither is related to my fix.
+
+### Blocker A — Perplexity auto-routes to Sonar
+```text
+WARNING ...browser.session: Browser session marked degraded for provider perplexity:
+        Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'.
+```
+Perplexity's UI auto-routes some prompts (probably classified as "simple
+fast" on their side) to Sonar, ignoring the explicit Claude Sonnet 4.6
+selection. GK adapter raises `MODEL_MISMATCH` correctly, but 3 such
+mismatches in a row trip the breaker.
+
+Possible directions:
+- Detect the auto-route and force-reselect Claude after Perplexity overrides
+  it (UI flow has a per-message "Switch model" dropdown).
+- Treat Sonar-on-Claude-request as a soft-warn (not a circuit-breaker
+  failure), since Sonar still produced a valid Russian answer.
+- Pre-warm the picker so Perplexity treats subsequent requests as "deep"
+  and does not route to Sonar.
+
+### Blocker B — Locator.click timeout
+```text
+WARNING ...browser.session: Browser session marked degraded for provider perplexity:
+        Browser execution failed: Locator.click: Timeout 5000ms exceeded.
+```
+Playwright cannot click some element within the configured `submit.click_attempts=3`
+× 5s = 15s window. Likely cause: an animate-in overlay the policy already
+lists in `blocked_overlay_markers`, but the dismissal didn't fire fast
+enough; or a Perplexity UI revision changed the selector.
+
+Possible directions:
+- Bump `click_attempts` and add `wait_for_selector` before each attempt.
+- Re-record the click selector against current Perplexity DOM.
+
+### Cascade — first case visible RAG behavior
+
+Case `warranty-period` outcome was `regression` (not `infrastructure_failure`),
+candidate answered:
+> "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору
+> — мы ответим в ближайшее время."
+
+This is the RAG pipeline's `route=human` fallback. Most likely one of the 4
+intra-case LLM steps (categorizer / classifier / grade_docs / answer) got
+back a Sonar-from-Perplexity output that failed schema parsing or factuality
+check, so the pipeline escalated to human. That is **expected RAG behavior**
+given a degraded LLM signal, not a separate bug.
+
+## Aggregate metrics — for the record
+
+```text
+report: reports/regression/20260425T080239Z-ministral-3b-latest-vs-claude-sonnet-4-6.{md,json}
+total_cases:               2
+effective_cases:           1   (case 1 ran end-to-end through pipeline)
+infrastructure_failures:   1   (case 2 — breaker open from blocker A/B in case 1)
+baseline_pass_rate:        1.0   (Mistral worked on both)
+candidate_pass_rate:       0.0   (case 1 escalated to human, case 2 fell into open breaker)
+```
+
+Earlier failing reports kept as evidence trail:
+- `20260425T055458Z-...` — pre-fix, 2-case, both infra failure (thread switch)
+- `20260425T060638Z-...` — pre-fix, 1-case, infra failure (thread switch)
+- `20260425T080239Z-...` — post-thread-fix, 2-case, partial (blockers A/B)
+
+## Open question for next session
+
+**Commit-now-and-park, or keep debugging GK UI flakiness first?**
+
+### Option A — commit partial closure, park task-177
+Commits in two repos:
+- `D:\GraceKelly\` — single commit:
+  `fix(browser): pin Playwright sync calls to dedicated worker thread`
+  - Standalone valuable: removes a real Windows-only race, no behavior change on Linux.
+  - Can be merged, tested, released independently of task-177.
+- `D:\RAG_Support_Assistant\` — single commit:
+  `task-177 partial: route gracekelly candidate through browser.perplexity adapter`
+  - Includes `providers.yml` + wrapper + this verification report.
+  - Does NOT archive task-177 spec. The spec stays open until 20-case live run is green.
+
+Pro:  two real bugs are off the books and the work is preserved.
+Pro:  next session starts from clean trees and a single open question (UI flakiness).
+Con:  task-177 spec stays in `codex-tasks/` (not in `Archive/`) for another iteration.
+
+### Option B — keep debugging GK UI flakiness first
+Tackle blocker A (Sonar auto-routing) and B (Locator.click timeout) before any
+commit, then 20-case run, then commit everything together.
+
+Pro:  cleaner final commit set ("task-177 acceptance: full 20-case green").
+Con:  blockers A/B are independent of task-177 routing — folding them into
+      this commit conflates two different fixes.
+Con:  the threadpool fix is already provable in isolation; delaying its
+      commit risks losing it in a larger change.
+
+### Recommendation
+**Option A.** The threadpool fix and the alias rename are two real,
+self-contained bug fixes. The two new UI-flakiness blockers are unrelated GK
+adapter polish that deserves its own task with its own spec/verification.
+Bundling them into task-177 expands scope past what the spec actually asks for.
+
+(Decision pending — user to confirm.)
+
+## Verification commands re-runnable next session
+
+```bash
+# RAG side
+cd /d/RAG_Support_Assistant
+PYTHONIOENCODING=utf-8 python -c "from pathlib import Path; from config.provider_schema import load_provider_registry; r=load_provider_registry(Path('config/providers.yml')); [print(t,r.resolve_model(t)) for t in ['ministral-3b-latest','claude-sonnet-4-6','claude-sonnet-4-6-api','gk-strong']]"
+
+# Start GK with hybrid profile (do not edit GK .env — runtime override)
+GRACEKELLY_EXECUTION_PROFILE=hybrid /d/GraceKelly/.venv/Scripts/uvicorn.exe gracekelly.main:create_app --factory --host 127.0.0.1 --port 8011
+
+# Smoke (single Playwright session, 3 LLM calls)
+curl -X POST http://127.0.0.1:8011/api/v1/smart -H "Content-Type: application/json" \
+     -d '{"prompt":"Reply with exactly the single word: pong","model":"claude-sonnet-4-6","reliability_level":"quick","dry_run":false}'
+
+# Full pipeline 2-case (~6-8 minutes, ~8 LLM calls)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_regression_via_gracekelly.ps1 -MaxCases 2
+
+# Full task-177 acceptance (only when blockers A/B addressed)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_regression_via_gracekelly.ps1 -MaxCases 20
+```
+
+## File state at end of session
+
+- `D:\GraceKelly\` working tree:
+  - `M src/gracekelly/adapters/browser/perplexity.py`
+  - `?? CLAUDE.md`, `?? docs/plans/` (untracked, pre-existing, not from this session)
+- `D:\RAG_Support_Assistant\` working tree:
+  - `M codex-tasks/verification-report-regression-gracekelly.md` (this file)
+  - `M config/providers.yml`
+  - `M scripts/run_regression_via_gracekelly.ps1`
+  - `?? reports/regression/20260425T*` (4 files — failing-run evidence)
+- GraceKelly uvicorn process: stopped (no port 8011 listener at end of session)
