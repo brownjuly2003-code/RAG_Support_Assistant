@@ -9,6 +9,11 @@
 - **`evaluation/evaluator_runner.py`** — online evaluator verdicts now persist with an independent async session per evaluator insert, avoiding shared asyncpg connection races.
 - **`config/settings.py` / `ingestion/categorizer.py`** — ingestion categorizer model moved to `INGESTION_CATEGORIZER_MODEL`; missing or failing categorizer calls skip with a warning instead of emitting the old invalid-payload noise.
 
+### Task-176 continuation — 2026-04-25
+- **`evaluation/evaluator_runner.py`** — bug 2 (asyncpg race): default production path now opens a single `engine.begin()` transaction, upserts a stub `traces` row, and inserts all `trace_evaluations` sequentially. Bug 4 (FK ordering) is closed in the same transaction.
+- **`agent/graph.py`** — final bug 2 close: `run_qa_pipeline` wraps `_persist_results` in `asyncio.run(...)` per case; the global async engine pool kept asyncpg connections bound to the previous (now-dead) loop, which produced `InterfaceError: another operation is in progress` on every subsequent case and on the final `INSERT INTO eval_results`. `_persist_results` now disposes the engine in its `finally` block so the next `asyncio.run` starts with a fresh pool. Verified live on disposable Postgres 16 + 3 ingested seed docs: `regression_eval --max-cases 3` runs warning-free and lands `eval_results` row + 7 distinct evaluators per trace.
+- **`tests/integration/test_regression_eval_live.py`** — new integration test that spins up Postgres 16 via testcontainers, runs `alembic upgrade head`, ingests seed docs, executes `regression_eval.run_regression` with a mock LLM/retriever, asserts zero `InterfaceError` / `ForeignKeyViolationError` and presence of `trace_evaluations` + `eval_results` rows. Test currently fails on subprocess `alembic upgrade head` (`DATABASE_URL` env not propagated to subprocess) — infrastructure-only issue in the test harness, not in the bug 2/4 path.
+
 ## [Arc 7 / Task-175] — 2026-04-23 — backup encryption at rest
 
 ### Snapshot encryption

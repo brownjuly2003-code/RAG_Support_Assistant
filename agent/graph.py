@@ -1623,53 +1623,32 @@ def run_qa_pipeline(
                 trace_state["trace_id"] = trace_id
 
                 async def _persist_results() -> None:
-                    # Bug 4 fix: finish_trace persists to SQLite only.
-                    # Postgres traces may not have a matching row yet, causing
-                    # FK violations when evaluators insert into trace_evaluations.
-                    # Upsert a minimal stub here so the FK holds.
+                    # Bug 4 fix: trace_id stub upsert is performed inside
+                    # persist_online_evaluations within the same engine.begin()
+                    # transaction as the trace_evaluations INSERTs, so the FK
+                    # constraint always holds. Doing a second engine.begin()
+                    # here would race with that one on the asyncpg pool
+                    # ("InterfaceError: another operation is in progress").
                     try:
-                        from db.engine import engine as _engine
-                        from sqlalchemy import text
-
-                        async with _engine.begin() as conn:
-                            await conn.execute(
-                                text(
-                                    """
-                                    INSERT INTO traces (
-                                        id, started_at, finished_at,
-                                        final_route, final_quality, final_relevance
-                                    )
-                                    VALUES (
-                                        :trace_id,
-                                        CURRENT_TIMESTAMP,
-                                        CURRENT_TIMESTAMP,
-                                        :final_route,
-                                        :final_quality,
-                                        :final_relevance
-                                    )
-                                    ON CONFLICT (id) DO NOTHING
-                                    """
-                                ),
-                                {
-                                    "trace_id": trace_id,
-                                    "final_route": final_state.get("route"),
-                                    "final_quality": final_state.get("quality_score"),
-                                    "final_relevance": final_state.get("relevance_score"),
-                                },
-                            )
-                    except Exception:
-                        # If the Postgres stub upsert fails (e.g. no DB configured),
-                        # evaluator_runner also has a defensive stub path, so we
-                        # proceed rather than hard-failing the whole pipeline.
-                        pass
-
-                    results = await asyncio.wait_for(
-                        asyncio.to_thread(run_online_evaluators, trace_state),
-                        timeout=1.0,
-                    )
-                    persisted = persist_online_evaluations(trace_id, results)
-                    if inspect.isawaitable(persisted):
-                        await persisted
+                        results = await asyncio.wait_for(
+                            asyncio.to_thread(run_online_evaluators, trace_state),
+                            timeout=1.0,
+                        )
+                        persisted = persist_online_evaluations(trace_id, results)
+                        if inspect.isawaitable(persisted):
+                            await persisted
+                    finally:
+                        # Bug 2 fix: run_qa_pipeline wraps this in asyncio.run(),
+                        # which creates a fresh event loop each call. The async
+                        # engine pool caches asyncpg connections bound to the
+                        # previous loop -> "InterfaceError: another operation in
+                        # progress" on the next case. Dispose the pool here so
+                        # the next asyncio.run() gets fresh connections.
+                        try:
+                            from db.engine import engine as _engine
+                            await _engine.dispose()
+                        except Exception:
+                            pass
 
                 asyncio.run(_persist_results())
             except Exception as exc:
