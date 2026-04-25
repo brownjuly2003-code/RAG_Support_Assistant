@@ -103,21 +103,50 @@ def _resolve_provider_target(target: str, provider_registry_path: Path | None) -
 
     try:
         registry = load_provider_registry(provider_registry_path)
-        resolution = registry.resolve_model(target)
-        provider = registry.get_provider(resolution.provider)
-        model = provider.resolve_model(resolution.model) if provider is not None else None
     except Exception:
         return None
 
-    if provider is None or model is None:
+    try:
+        resolution = registry.resolve_model(target)
+        provider = registry.get_provider(resolution.provider)
+        model = provider.resolve_model(resolution.model) if provider is not None else None
+        if provider is not None and model is not None:
+            return {
+                "kind": "model",
+                "provider_id": provider.id,
+                "provider_kind": provider.kind,
+                "model_name": model.name,
+                "input_price_per_1m_tokens": float(model.input_price_per_1m_tokens),
+                "output_price_per_1m_tokens": float(model.output_price_per_1m_tokens),
+            }
+    except Exception:
+        pass
+
+    profile = registry.routing_profiles.get(target)
+    if profile is None:
+        return None
+
+    try:
+        strong_provider = registry.get_provider(profile.strong.provider)
+        strong_model = (
+            strong_provider.resolve_model(profile.strong.model)
+            if strong_provider is not None
+            else None
+        )
+    except Exception:
+        return None
+
+    if strong_provider is None or strong_model is None:
         return None
 
     return {
-        "provider_id": provider.id,
-        "provider_kind": provider.kind,
-        "model_name": model.name,
-        "input_price_per_1m_tokens": float(model.input_price_per_1m_tokens),
-        "output_price_per_1m_tokens": float(model.output_price_per_1m_tokens),
+        "kind": "profile",
+        "profile_name": target,
+        "provider_id": strong_provider.id,
+        "provider_kind": strong_provider.kind,
+        "model_name": strong_model.name,
+        "input_price_per_1m_tokens": float(strong_model.input_price_per_1m_tokens),
+        "output_price_per_1m_tokens": float(strong_model.output_price_per_1m_tokens),
     }
 
 
@@ -228,12 +257,13 @@ def _evaluate_case_output(result: CaseRunResult, expected: CaseExpectation) -> t
             f"citations {len(result.citations)} below minimum {expected.citations_min_count}"
         )
 
+    answer_lower = (result.answer or "").lower()
     for needle in expected.answer_contains:
-        if needle not in result.answer:
+        if needle.lower() not in answer_lower:
             failures.append(f"answer missing '{needle}'")
 
     for needle in expected.answer_not_contains:
-        if needle in result.answer:
+        if needle.lower() in answer_lower:
             failures.append(f"answer contains forbidden '{needle}'")
 
     return not failures, failures
@@ -673,13 +703,16 @@ def _provider_target_runtime(
         raise FileNotFoundError(f"provider target not found: {target}")
 
     registry = load_provider_registry(registry_path)
-    profile_name = f"benchmark-{_slug(target)}"
     payload = registry.model_dump(mode="python")
-    payload["routing_profiles"][profile_name] = {
-        "description": f"Benchmark runtime profile for {target}",
-        "fast": {"provider": resolution["provider_id"], "model": resolution["model_name"]},
-        "strong": {"provider": resolution["provider_id"], "model": resolution["model_name"]},
-    }
+    if resolution.get("kind") == "profile":
+        profile_name = resolution["profile_name"]
+    else:
+        profile_name = f"benchmark-{_slug(target)}"
+        payload["routing_profiles"][profile_name] = {
+            "description": f"Benchmark runtime profile for {target}",
+            "fast": {"provider": resolution["provider_id"], "model": resolution["model_name"]},
+            "strong": {"provider": resolution["provider_id"], "model": resolution["model_name"]},
+        }
 
     original_env = os.getenv("EXPERIMENT_ID")
     original_settings_path = settings_module.EXPERIMENT_OVERRIDE_PATH
@@ -965,8 +998,21 @@ def run_regression(
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--baseline", required=True)
-    parser.add_argument("--candidate", required=True)
+
+    baseline_group = parser.add_mutually_exclusive_group(required=True)
+    baseline_group.add_argument("--baseline", help="Model name or alias for baseline.")
+    baseline_group.add_argument(
+        "--baseline-profile",
+        help="Routing profile name from config/providers.yml (alternative to --baseline).",
+    )
+
+    candidate_group = parser.add_mutually_exclusive_group(required=True)
+    candidate_group.add_argument("--candidate", help="Model name or alias for candidate.")
+    candidate_group.add_argument(
+        "--candidate-profile",
+        help="Routing profile name from config/providers.yml (alternative to --candidate).",
+    )
+
     parser.add_argument(
         "--dataset",
         default=str(PROJECT_ROOT / "evaluation" / "curated_cases.jsonl"),
@@ -986,11 +1032,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
 
     args = parse_args(argv)
+    baseline_target = args.baseline or args.baseline_profile
+    candidate_target = args.candidate or args.candidate_profile
     started_at = _utc_now()
     try:
         report = run_regression(
-            baseline=args.baseline,
-            candidate=args.candidate,
+            baseline=baseline_target,
+            candidate=candidate_target,
             dataset_path=Path(args.dataset),
             tenant=args.tenant,
             max_cases=args.max_cases,
