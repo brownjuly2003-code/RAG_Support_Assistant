@@ -31,6 +31,7 @@ param(
     [string]$PostgresDb = "rag_regression_test",
     [string]$Baseline = "ministral-3b-latest",
     [string]$Candidate = "claude-sonnet-4-6",
+    [string]$CandidateProfile = "",
     [int]$MaxCases = 20
 )
 
@@ -391,12 +392,21 @@ print(f'Ingested {len(chunks)} chunks from {len(seed_docs)} seed docs')
     # -----------------------------------------------------------------------
     # 8. Run regression
     # -----------------------------------------------------------------------
-    Write-Host "Running regression: baseline=$Baseline candidate=$Candidate max_cases=$MaxCases ..."
-    python scripts/regression_eval.py `
-        --baseline $Baseline `
-        --candidate $Candidate `
-        --allow-paid-apis `
-        --max-cases $MaxCases
+    if ($CandidateProfile) {
+        Write-Host "Running regression: baseline=$Baseline candidate-profile=$CandidateProfile max_cases=$MaxCases ..."
+        python scripts/regression_eval.py `
+            --baseline $Baseline `
+            --candidate-profile $CandidateProfile `
+            --allow-paid-apis `
+            --max-cases $MaxCases
+    } else {
+        Write-Host "Running regression: baseline=$Baseline candidate=$Candidate max_cases=$MaxCases ..."
+        python scripts/regression_eval.py `
+            --baseline $Baseline `
+            --candidate $Candidate `
+            --allow-paid-apis `
+            --max-cases $MaxCases
+    }
 
     $exitCode = $LASTEXITCODE
     if ($exitCode -ne 0) {
