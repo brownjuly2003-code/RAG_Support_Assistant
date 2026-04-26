@@ -107,7 +107,9 @@ User / Email / Widget
 
 ## Quick Start
 
-**Prerequisites:** Python 3.11+, `ollama serve`
+> Полная пошаговая справка с тремя сценариями (Local-only Ollama / Mistral fast tier / GraceKelly mixed routing) — в [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
+
+**Prerequisites:** Python 3.11+, `ollama serve` (для default local-first profile)
 
 ```bash
 # 1. Dependencies
@@ -122,6 +124,8 @@ ollama pull qwen2.5:7b
 # 3. Run
 python main.py
 ```
+
+Альтернативные routing profiles (см. `LLM_PROVIDER_PROFILE` ниже): `external-mistral`, `gracekelly-primary`, `gracekelly-mixed`. Подробнее — в `config/providers.yml` и в `docs/QUICKSTART.md` секция 5.
 
 Open:
 - **http://localhost:8000** - chat UI

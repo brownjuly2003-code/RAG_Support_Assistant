@@ -2,6 +2,44 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Task-177 / Task-178 / Task-179] — 2026-04-25 / 2026-04-26 — first green full 20-case live regression
+
+### Honest closure of the GK-Claude live regression loop
+
+После закрытия двух UI flakiness mode на стороне GraceKelly (`batch-108`: Sonar retry + `submit.click(force=True)`) обнаружился design mismatch: full RAG pipeline через `gracekelly-primary` делает 4-7 LLM calls/case через single-thread browser (30-100s/submit), что не вписывается в любой разумный wall-time benchmark и периодически каскадит в circuit breaker.
+
+Решение архитектурное: extend `regression_eval` чтобы поддержать routing-profile names как target (`--candidate-profile gracekelly-mixed`), сохраняя весь Self-RAG / Corrective RAG / auto-route flow. Mixed profile использует **Mistral API для fast tier** (classify, transform, grade_docs ×N, verify_facts → extract_claims, online evaluators) и **GraceKelly browser для strong tier** (final answer + suggest_questions + evaluate). Browser submits на case падают с 4-7 до ~3, общий wall-time 20-case ≈ 30 минут вместо ожидаемых 2+ часов.
+
+### Commits chain
+
+- **`53c2507`** — task-177 partial close после 4 диагностических 2-case smoke runs. Documented в `codex-tasks/verification-report-regression-gracekelly.md` rev 3.
+- **`7559a28`** — `config/providers.yml`: новый `gracekelly-mixed` routing profile (Mistral fast / GK browser strong). Также pkadan для production single-user deploy.
+- **`1d3d13d`** — `scripts/regression_eval.py`:
+  - `_resolve_provider_target` возвращает `kind` discriminator (`"model"` | `"profile"`) и fallback'ит на `routing_profiles` когда model resolution miss.
+  - `_provider_target_runtime` skip-ит synthetic profile injection когда `kind=profile`, использует существующий profile as-is.
+  - argparse mutex groups: `--baseline / --baseline-profile`, `--candidate / --candidate-profile`.
+  - Параллельно landed task-179: `_evaluate_case_output` теперь case-insensitive substring match (`needle.lower() not in answer_lower`) — раньше lowercase needle `"чек"` ложно фейлил против actual `"Чек"`.
+  - 7 новых unit tests в `tests/test_regression_eval_profile_target.py`. 17/17 pytest pass + 10/10 existing `tests/test_regression_runner.py`.
+- **`59a3057`** — `scripts/run_regression_via_gracekelly.ps1`: новый параметр `-CandidateProfile`. Когда непустой — wrapper передаёт `--candidate-profile $X` в python (взаимоисключающе с `-Candidate`).
+- **`9f96b5b`** — архив task-178 спеки в `codex-tasks/Archive/`.
+- **`c95fbf3`** — first green full 20-case run через `gracekelly-mixed` + `GRACEKELLY_REQUEST_TIMEOUT_SEC=120`. Browser layer стабилен end-to-end: 0 infrastructure_failures, gate=fail только из-за 6 regressions (4 = GK Sonar auto-route mismatch, 2 = real Claude differences). Evidence в `reports/regression/20260426T113855Z-*`.
+- **`9ac782f`** — `_is_infrastructure_failure` extended для `[model_mismatch]` pattern. GK external auto-route ошибки больше не считаются regressions. 8 новых unit tests в `tests/test_infrastructure_failure_detection.py`.
+- **`271bfe5`** — verification report rev 5 documents the closure: re-classified evidence (regressions 6→2, infrastructure_failures 0→4, gate.max_regressions=2 PASS).
+
+### Bottom line
+
+- ✅ task-177 closed end-to-end. RAG pipeline стабильно бежит через GraceKelly browser routing когда верно конфигурирован.
+- ✅ task-178: regression_eval поддерживает routing-profile targets.
+- ✅ task-179: case-insensitive substring matching.
+- 🔍 Real candidate gap (Claude через mixed routing 37.5% effective pass vs Mistral baseline 75%) — отдельная investigation, не блокирующая.
+- ⛔ GraceKelly batch-109 (Sonar auto-route fix) — **на стороне GK**, не в RAG scope.
+
+### Operational notes
+
+- Local `.env`: `GRACEKELLY_REQUEST_TIMEOUT_SEC=120` рекомендуется для GK-routed regression runs (default 30s маловат для browser submit на final answer).
+- `MISTRAL_API_KEY` обязателен для `gracekelly-mixed` profile — fast tier через Mistral direct API.
+- Containers `rag-regression-postgres` + `rag-regression-redis` в idempotent reuse mode у wrapper'а.
+
 ## [Arc 7 / Task-176] — 2026-04-24 — regression eval warning cleanup
 
 ### Regression pipeline fixes
