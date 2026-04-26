@@ -1,0 +1,1496 @@
+{
+  "run_id": "20260426T113855Z-1f7a6479",
+  "created_at": "2026-04-26T11:38:55.577956+00:00",
+  "baseline": "ministral-3b-latest",
+  "candidate": "gracekelly-mixed",
+  "dataset": "D:\\RAG_Support_Assistant\\evaluation\\curated_cases.jsonl",
+  "tenant": "all",
+  "aggregate": {
+    "total_cases": 20,
+    "effective_cases": 20,
+    "infrastructure_failures": 0,
+    "baseline_pass_rate": 0.6,
+    "candidate_pass_rate": 0.3,
+    "regressions": 6,
+    "new_passes": 0,
+    "neutral": 14,
+    "baseline_total_cost_usd": 0.000297,
+    "candidate_total_cost_usd": 0.0,
+    "baseline_avg_latency_ms": 0.0,
+    "candidate_avg_latency_ms": 0.0,
+    "baseline_refusal_rate": 0.35,
+    "candidate_refusal_rate": 0.25
+  },
+  "gate": {
+    "passed": false,
+    "max_regressions": 2,
+    "min_pass_rate": 0.85,
+    "reasons": [
+      "max regressions exceeded: 6 > 2",
+      "candidate pass rate 30.00% below minimum 85.00%",
+      "candidate pass rate 30.00% below baseline 60.00%"
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "warranty-period",
+      "tenant_id": "default",
+      "query": "Какой срок гарантии на продукцию?",
+      "baseline": {
+        "answer": "Срок гарантии на продукцию составляет **12 месяцев с момента покупки** [1].",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.2e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-3000dff0-f957-403d-b827-60d3e2078024"
+      },
+      "candidate": {
+        "answer": "Срок гарантии на продукцию составляет 12 месяцев с момента покупки .",
+        "quality_score": 100.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "auto",
+        "trace_id": "provider-benchmark-640e2e41-cf4a-484c-8b0e-3341c9bd6fd4"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 5.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": -1.2e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "warranty-excluded",
+      "tenant_id": "default",
+      "query": "Что не входит в гарантию: механические повреждения, жидкость или самостоятельный ремонт?",
+      "baseline": {
+        "answer": "По гарантийным условиям из контекста **не входит ни одно из перечисленных случаев**:\n\n- **Механические повреждения** [1]\n- **Следы попадания жидкости** [1]\n- **Самостоятельный ремонт** [1]\n\nВсе эти причины указаны в разделе **\"Гарантия не распространяется на\"** документа **warranty.md**.",
+        "quality_score": 95.0,
+        "factuality_score": 75.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.6e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-dc51e7fe-c773-42b5-80df-0bed1fcbf6fe"
+      },
+      "candidate": {
+        "answer": "В предоставленных документах нет информации о том, что именно не входит в гарантию: механические повреждения, жидкость или самостоятельный ремонт.\nПо имеющимся данным ответить нельзя, пожалуйста, обратитесь к специалисту поддержки для уточнения условий гарантии.",
+        "quality_score": 86.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "auto",
+        "trace_id": "provider-benchmark-3f4f9dae-4ece-4668-8feb-6bbb05b6efc6"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -9.0,
+        "factuality_delta": -75.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": -1.6e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "warranty-how-to-claim",
+      "tenant_id": "default",
+      "query": "Как обратиться по гарантии? Перечисли шаги.",
+      "baseline": {
+        "answer": "Для обращения по гарантии необходимо выполнить следующие шаги:\n\n1. Убедиться, что товар используется по инструкции [1].\n2. Сохранить кассовый или товарный чек [1].\n3. Не вскрывать корпус устройства [1].\n\nДалее обратитесь в службу поддержки с подтверждающими документами и описью неисправности. Конкретные шаги по взаимодействию с компанией не указаны в предоставленном контексте.",
+        "quality_score": 85.0,
+        "factuality_score": 75.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.6e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-1f7219c2-a425-4c3b-9410-0cc16487340d"
+      },
+      "candidate": {
+        "answer": "В предоставленных документах отсутствует информация о конкретных шагах для обращения по гарантии. По имеющимся данным ответить на этот вопрос нельзя, пожалуйста, обратитесь к специалисту службы поддержки.\nadmin24",
+        "quality_score": 100.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "auto",
+        "trace_id": "provider-benchmark-262c5348-7664-4646-a32d-02e6de32f33d"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "answer missing 'сервис'"
+      ],
+      "candidate_failures": [
+        "answer missing 'чек'",
+        "answer missing 'сервис'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 15.0,
+        "factuality_delta": 25.0,
+        "route_changed": false,
+        "citations_delta": -1,
+        "cost_delta": -1.6e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "warranty-receipt-storage",
+      "tenant_id": "default",
+      "query": "На какой срок нужно сохранять чек для гарантии?",
+      "baseline": {
+        "answer": "Для гарантии необходимо сохранить **товарный чек в течение 12 месяцев с момента покупки** [1, 4].",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 4,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 5,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.3e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-79a7a788-6f17-41a8-bae6-78e8340f8d99"
+      },
+      "candidate": {
+        "answer": "В контексте не указано, на какой именно срок нужно сохранять чек.\nОднако сказано, что гарантия действует 12 месяцев и при обращении необходимо наличие чека .\nТо есть чек должен быть сохранён как минимум на весь срок гарантии — 12 месяцев .",
+        "quality_score": 80.0,
+        "factuality_score": 66.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "auto",
+        "trace_id": "provider-benchmark-56d37b18-18c4-4d39-948f-00dd0b815f25"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -15.0,
+        "factuality_delta": -34.0,
+        "route_changed": false,
+        "citations_delta": -2,
+        "cost_delta": -1.3e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "warranty-no-receipt-where",
+      "tenant_id": "default",
+      "query": "Чек утерян. Куда можно обратиться по гарантии?",
+      "baseline": {
+        "answer": "По гарантии при утере чека можно обратиться в **сервисный центр** или **службу поддержки** (см. [2]).\n\nВозврат товара надлежащего качества без чека не предусмотрен [1].",
+        "quality_score": 85.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 2,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.4e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-4c4aa75f-8a88-4dac-9645-7d0e4638a381"
+      },
+      "candidate": {
+        "answer": "В предоставленном документе указано, что для обращения по гарантии необходимо подготовить чек. Информации о том, как действовать в случае его утери, в данных правилах нет.\npravoved\n+1\nПо имеющимся данным ответить на ваш вопрос невозможно. Пожалуйста, обратитесь в службу поддержки для получения дальнейших инструкций.",
+        "quality_score": 85.0,
+        "factuality_score": 25.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "auto",
+        "trace_id": "provider-benchmark-2378a56a-183f-4cb8-858f-d751b31734c7"
+      },
+      "baseline_passed": true,
+      "candidate_passed": false,
+      "baseline_failures": [],
+      "candidate_failures": [
+        "answer missing 'сервис'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 0.0,
+        "factuality_delta": 25.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": -1.4e-05
+      },
+      "outcome": "regression"
+    },
+    {
+      "case_id": "returns-window",
+      "tenant_id": "default",
+      "query": "В течение скольких дней можно вернуть товар надлежащего качества?",
+      "baseline": {
+        "answer": "В течение **14 дней** с момента покупки можно вернуть товар надлежащего качества [1].",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.3e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-a99d6da8-e3e5-4bfd-bebb-f76d9eee8f41"
+      },
+      "candidate": {
+        "answer": "По предоставленному контексту информация о сроках возврата товара надлежащего качества не указана. Ответить нельзя на основании данных документов.\nПожалуйста, обратитесь к специалисту службы поддержки или к условиям продажи/оферте вашего магазина, где указаны сроки возврата товара надлежащего качества.",
+        "quality_score": 100.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "auto",
+        "trace_id": "provider-benchmark-b6374633-54f4-4fa5-8d77-64696043a691"
+      },
+      "baseline_passed": true,
+      "candidate_passed": false,
+      "baseline_failures": [],
+      "candidate_failures": [
+        "answer missing '14'",
+        "answer missing 'дн'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 5.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 1,
+        "cost_delta": -1.3e-05
+      },
+      "outcome": "regression"
+    },
+    {
+      "case_id": "returns-refund-timeline",
+      "tenant_id": "default",
+      "query": "Сколько рабочих дней занимает возврат денег после приёмки товара?",
+      "baseline": {
+        "answer": "По имеющимся данным из предоставленного контекста ответить нельзя.\n\nВ документе **returns_policy.md** не указано конкретное количество рабочих дней на возврат денег после приёмки товара. Для точной информации рекомендую обратиться к специалисту службы поддержки.",
+        "quality_score": 85.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 9e-06,
+        "route": "auto",
+        "trace_id": "provider-benchmark-0b9338e5-dabb-4e2c-bbad-5ef0cfd4b076"
+      },
+      "candidate": {
+        "answer": "По имеющимся данным из предоставленного контекста ответить нельзя, так как информация о сроках возврата денег отсутствует. Рекомендую обратиться к специалисту поддержки для получения точных сведений.",
+        "quality_score": 100.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "auto",
+        "trace_id": "provider-benchmark-55e34ff2-d334-480c-ac76-b19494b5dc30"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "answer missing '10'"
+      ],
+      "candidate_failures": [
+        "answer missing '10'",
+        "answer missing 'дн'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 15.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": -9e-06
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "returns-no-receipt",
+      "tenant_id": "default",
+      "query": "Можно ли вернуть товар без кассового или товарного чека?",
+      "baseline": {
+        "answer": "По имеющимся данным в контексте **не указано** конкретное правило о возможности возврата товара без кассового или товарного чека.\n\nЕсли требуется подтверждение, обратитесь к специалисту поддержки.",
+        "quality_score": 80.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 8e-06,
+        "route": "auto",
+        "trace_id": "provider-benchmark-b82c23a2-58c0-4d09-9e5b-9bb4e3ad757f"
+      },
+      "candidate": {
+        "answer": "По предоставленному контексту нельзя однозначно ответить, можно ли вернуть товар без кассового или товарного чека. В документе errors_e10_e30.md нет информации о процедурах возврата при отсутствии чека.\nРекомендую обратиться к специалисту нашей службы поддержки или предоставить дополнительный контекст (например, правила возврата магазина), чтобы получить точный ответ.",
+        "quality_score": 100.0,
+        "factuality_score": 25.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "auto",
+        "trace_id": "provider-benchmark-1aa70ae6-d8bf-4213-a9a8-bf7e9914d00f"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 20.0,
+        "factuality_delta": -75.0,
+        "route_changed": false,
+        "citations_delta": 0,
+        "cost_delta": -8e-06
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "returns-different-card",
+      "tenant_id": "default",
+      "query": "Можно ли получить возврат денег на другую карту?",
+      "baseline": {
+        "answer": "По имеющимся данным ответить нельзя.\n\nВ документе [1] указано, что возврат денежных средств производится **на ту же карту или счёт**, с которых была оплата. О возможности возврата на другую карту в контексте нет информации.\n\nПредлагаю обратиться в службу поддержки для уточнения.",
+        "quality_score": 80.0,
+        "factuality_score": 33.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 2,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.6e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-e9eabd9b-e80c-4edc-811c-c2ea53ddec21"
+      },
+      "candidate": {
+        "answer": "Согласно политике возвратов, деньги возвращаются только на ту же карту или счёт, с которых была произведена оплата .\nИнформация о возможности возврата на другую карту в предоставленном контексте отсутствует. Поэтому, исходя из текущих данных, такой вариант не предусмотрен.",
+        "quality_score": 95.0,
+        "factuality_score": 33.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "auto",
+        "trace_id": "provider-benchmark-b2829f6f-b103-4a41-b4e1-c928e9bca3cb"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 15.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 1,
+        "cost_delta": -1.6e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "returns-no-packaging",
+      "tenant_id": "default",
+      "query": "Можно ли вернуть товар без упаковки?",
+      "baseline": {
+        "answer": "Нет, вернуть товар без упаковки нельзя [1].",
+        "quality_score": 85.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.2e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-0ae631b4-f57c-4c13-9c01-272e70f3400d"
+      },
+      "candidate": {
+        "answer": "Нет, вернуть товар без упаковки нельзя. Одним из условий возврата является сохранение товарного вида и упаковки .",
+        "quality_score": 95.0,
+        "factuality_score": 50.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 3,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "auto",
+        "trace_id": "provider-benchmark-a07da0e3-1404-4c81-9517-d1f69288461f"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "answer missing 'упаковка'",
+        "answer missing 'товарный вид'"
+      ],
+      "candidate_failures": [
+        "answer missing 'упаковка'",
+        "answer missing 'товарный вид'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 10.0,
+        "factuality_delta": 50.0,
+        "route_changed": false,
+        "citations_delta": 1,
+        "cost_delta": -1.2e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "error-e10",
+      "tenant_id": "default",
+      "query": "Что означает ошибка E10 и что нужно проверить?",
+      "baseline": {
+        "answer": "Ошибка **E10** означает **недостаточный уровень воды** [1].\n\nЧто нужно проверить:\n- давление воды;\n- правильность подключения к водопроводу.",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.4e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-fea1b25c-14ca-4ebb-a216-8380aa30fcd1"
+      },
+      "candidate": {
+        "answer": "Ошибка E10 означает недостаточный уровень воды. Для устранения этой ошибки необходимо проверить давление и подключение к водопроводу.\nbaxi",
+        "quality_score": 100.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 2,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "auto",
+        "trace_id": "provider-benchmark-828692a6-856f-48cb-b3a5-a4bdd6cfe904"
+      },
+      "baseline_passed": true,
+      "candidate_passed": true,
+      "baseline_failures": [],
+      "candidate_failures": [],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 5.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": 1,
+        "cost_delta": -1.4e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "error-e20",
+      "tenant_id": "default",
+      "query": "Устройство показывает E20. Назови три вероятные причины.",
+      "baseline": {
+        "answer": "По имеющимся данным ответить нельзя, так как в предоставленном контексте нет информации о причинах ошибки **E20**.\n\nДля точного объяснения обратитесь к специалисту поддержки.",
+        "quality_score": 20.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 2.2e-05,
+        "route": "human",
+        "trace_id": "provider-benchmark-2cc28c04-4bdb-4ec7-92fb-b95280eec4e7"
+      },
+      "candidate": {
+        "answer": "К сожалению, по имеющимся данным ответить на ваш вопрос нельзя. В предоставленном контексте информация об ошибке E20 отсутствует. Пожалуйста, обратитесь к специалисту поддержки для получения помощи.",
+        "quality_score": 20.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "human",
+        "trace_id": "provider-benchmark-d8a4dda5-76ba-4ab1-8b9e-125501322565"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "answer missing 'слив'"
+      ],
+      "candidate_failures": [
+        "answer missing 'слив'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 0.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": -1,
+        "cost_delta": -2.2e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "error-e25",
+      "tenant_id": "default",
+      "query": "На дисплее появилась ошибка E25. Что сначала попробовать клиенту?",
+      "baseline": {
+        "answer": "Сначала **перезагрузите устройство** [Документ 1, E25].\nЕсли ошибка не исчезнет, выполните **сброс к заводским настройкам** [Документ 1, E25].",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 3,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.6e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-4f21ccfd-830c-458e-a261-a7fb7de344f4"
+      },
+      "candidate": {
+        "answer": "[model_mismatch] Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'.",
+        "quality_score": 4.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "human",
+        "trace_id": "provider-benchmark-463ec916-d527-47b5-a91f-caa8174798bf"
+      },
+      "baseline_passed": true,
+      "candidate_passed": false,
+      "baseline_failures": [],
+      "candidate_failures": [
+        "answer missing 'E25'",
+        "answer missing 'перезагруз'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -91.0,
+        "factuality_delta": -100.0,
+        "route_changed": true,
+        "citations_delta": -1,
+        "cost_delta": -1.6e-05
+      },
+      "outcome": "regression"
+    },
+    {
+      "case_id": "error-e30",
+      "tenant_id": "default",
+      "query": "При ошибке E30 можно продолжать пользоваться устройством или нужно отключить его от сети?",
+      "baseline": {
+        "answer": "По имеющимся данным из предоставленного контекста ответить нельзя.\n\nВ документе **errors_e10_e30.md** нет информации о том, как поступать при ошибке **E30** — можно ли продолжать использовать устройство или отключать его от сети. Для уточнения рекомендую обратиться к специалисту поддержки.",
+        "quality_score": 90.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-bd29e7be-b98a-433d-af27-1fbecc14c2b0"
+      },
+      "candidate": {
+        "answer": "[model_mismatch] Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'.",
+        "quality_score": 4.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "human",
+        "trace_id": "provider-benchmark-d3ebd19b-7264-42ee-be80-ea6509bfff45"
+      },
+      "baseline_passed": true,
+      "candidate_passed": false,
+      "baseline_failures": [],
+      "candidate_failures": [
+        "answer missing 'E30'",
+        "answer missing 'отключ'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -86.0,
+        "factuality_delta": 0.0,
+        "route_changed": true,
+        "citations_delta": 1,
+        "cost_delta": -1e-05
+      },
+      "outcome": "regression"
+    },
+    {
+      "case_id": "error-e20-clog-vs-pump",
+      "tenant_id": "default",
+      "query": "По ошибке E20 как отличить засор фильтра от неисправности насоса?",
+      "baseline": {
+        "answer": "По ошибке **E20** в контексте невозможно точно определить, засорён ли фильтр или неисправен насос, так как в документах не приведены конкретные признаки или тесты для диагностики [1, 2, 3, 4].\n\nДля уточнения причины рекомендуется обратиться в сервисный центр или специалиста поддержки.",
+        "quality_score": 40.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 2,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 3,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 4,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 3.7e-05,
+        "route": "human",
+        "trace_id": "provider-benchmark-e0aa4c8d-3b33-46a1-90c2-c744a3d37deb"
+      },
+      "candidate": {
+        "answer": "[model_mismatch] Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'.",
+        "quality_score": 4.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "human",
+        "trace_id": "provider-benchmark-7f2e1e41-aecc-4ec1-a2b4-5bbac3f039cb"
+      },
+      "baseline_passed": true,
+      "candidate_passed": false,
+      "baseline_failures": [],
+      "candidate_failures": [
+        "answer missing 'E20'",
+        "answer missing 'засор'",
+        "answer missing 'насос'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -36.0,
+        "factuality_delta": 0.0,
+        "route_changed": false,
+        "citations_delta": -1,
+        "cost_delta": -3.7e-05
+      },
+      "outcome": "regression"
+    },
+    {
+      "case_id": "error-e25-reset-steps",
+      "tenant_id": "default",
+      "query": "Как сбросить ошибку E25 пошагово?",
+      "baseline": {
+        "answer": "По имеющимся данным в контексте **errors_e10_e30.md** не содержится информации о том, как сбросить ошибку **E25**.\n\nПожалуйста, обратитесь к специалисту поддержки для получения точных инструкций.",
+        "quality_score": 10.0,
+        "factuality_score": 50.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 2e-05,
+        "route": "human",
+        "trace_id": "provider-benchmark-b89dc052-bb2c-4981-85d3-6b5ffceffc95"
+      },
+      "candidate": {
+        "answer": "[model_mismatch] Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'.",
+        "quality_score": 4.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "human",
+        "trace_id": "provider-benchmark-b9854108-0354-42dd-89f4-d9d7d0288915"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "answer missing 'перезагруз'"
+      ],
+      "candidate_failures": [
+        "answer missing 'E25'",
+        "answer missing 'перезагруз'",
+        "answer missing 'сброс'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -6.0,
+        "factuality_delta": -50.0,
+        "route_changed": false,
+        "citations_delta": 2,
+        "cost_delta": -2e-05
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "error-e30-actions",
+      "tenant_id": "default",
+      "query": "Какие действия нужно предпринять при ошибке E30?",
+      "baseline": {
+        "answer": "По имеющимся данным в контексте **errors_e10_e30.md** о конкретных действиях при ошибке **E30** информации нет.\n\nПожалуйста, обратитесь к специалисту поддержки для получения точных рекомендаций.",
+        "quality_score": 80.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 9e-06,
+        "route": "auto",
+        "trace_id": "provider-benchmark-f4c55e32-45f6-497d-a377-d028fc8edebb"
+      },
+      "candidate": {
+        "answer": "[model_mismatch] Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'.",
+        "quality_score": 4.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "human",
+        "trace_id": "provider-benchmark-4c91d22d-b8b9-41c5-bdc7-0da64097fb8c"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "answer missing 'отключ'",
+        "answer missing 'сервис'"
+      ],
+      "candidate_failures": [
+        "answer missing 'E30'",
+        "answer missing 'отключ'",
+        "answer missing 'сервис'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -76.0,
+        "factuality_delta": -100.0,
+        "route_changed": true,
+        "citations_delta": 2,
+        "cost_delta": -9e-06
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "off-topic-wifi",
+      "tenant_id": "default",
+      "query": "Как настроить Wi-Fi в этом устройстве?",
+      "baseline": {
+        "answer": "По имеющимся данным в предоставленном контексте нет информации о том, как настроить Wi-Fi в устройстве.\n\nПожалуйста, обратитесь к специалисту поддержки или уточните, если есть конкретные инструкции в других источниках.",
+        "quality_score": 90.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 8e-06,
+        "route": "auto",
+        "trace_id": "provider-benchmark-d0aaecc2-ba75-46cc-a63b-cb57cb0374fd"
+      },
+      "candidate": {
+        "answer": "[model_mismatch] Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'.",
+        "quality_score": 4.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "human",
+        "trace_id": "provider-benchmark-9f99acf1-6e95-42b2-bd16-f397c2d14210"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "answer missing 'ответить нельзя'"
+      ],
+      "candidate_failures": [
+        "answer missing 'ответить нельзя'",
+        "answer missing 'обрат'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -86.0,
+        "factuality_delta": -100.0,
+        "route_changed": true,
+        "citations_delta": 0,
+        "cost_delta": -8e-06
+      },
+      "outcome": "neutral"
+    },
+    {
+      "case_id": "off-topic-price",
+      "tenant_id": "default",
+      "query": "Сколько стоит этот товар?",
+      "baseline": {
+        "answer": "По имеющимся данным ответить нельзя.\n\nВ предоставленном контексте нет информации о стоимости товара. Для получения точных данных рекомендую обратиться к специалисту поддержки или на сайт производителя.",
+        "quality_score": 90.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.3e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-d5bb7ee3-e0c7-44b9-b457-8a268a4c8353"
+      },
+      "candidate": {
+        "answer": "[model_mismatch] Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'.",
+        "quality_score": 4.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 3,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "human",
+        "trace_id": "provider-benchmark-5687d6a5-513b-43e5-83a0-3ed22f1a16f3"
+      },
+      "baseline_passed": true,
+      "candidate_passed": false,
+      "baseline_failures": [],
+      "candidate_failures": [
+        "answer missing 'ответить нельзя'",
+        "answer missing 'обрат'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -86.0,
+        "factuality_delta": -100.0,
+        "route_changed": true,
+        "citations_delta": 0,
+        "cost_delta": -1.3e-05
+      },
+      "outcome": "regression"
+    },
+    {
+      "case_id": "off-topic-delivery",
+      "tenant_id": "default",
+      "query": "Как доставляют товары?",
+      "baseline": {
+        "answer": "По имеющимся данным в предоставленном контексте не указано, как именно осуществляется доставка товаров.\n\nЕсли нужны подробности — обратитесь к специалистам службы поддержки.",
+        "quality_score": 1.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.9e-05,
+        "route": "human",
+        "trace_id": "provider-benchmark-dc273ca1-e2a2-4605-b778-d8c634122642"
+      },
+      "candidate": {
+        "answer": "[model_mismatch] Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'.",
+        "quality_score": 10.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 3,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "human",
+        "trace_id": "provider-benchmark-cc634e76-0ec4-4433-9b87-f21a765059e4"
+      },
+      "baseline_passed": false,
+      "candidate_passed": false,
+      "baseline_failures": [
+        "answer missing 'ответить нельзя'"
+      ],
+      "candidate_failures": [
+        "answer missing 'ответить нельзя'",
+        "answer missing 'обрат'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": 9.0,
+        "factuality_delta": -100.0,
+        "route_changed": false,
+        "citations_delta": 2,
+        "cost_delta": -1.9e-05
+      },
+      "outcome": "neutral"
+    }
+  ],
+  "regressions": [
+    {
+      "case_id": "warranty-no-receipt-where",
+      "query": "Чек утерян. Куда можно обратиться по гарантии?",
+      "baseline_answer": "По гарантии при утере чека можно обратиться в **сервисный центр** или **службу поддержки** (см. [2]).\n\nВозврат товара надлежащего качества без чека не предусмотрен [1].",
+      "candidate_answer": "В предоставленном документе указано, что для обращения по гарантии необходимо подготовить чек. Информации о том, как действовать в случае его утери, в данных правилах нет.\npravoved\n+1\nПо имеющимся данным ответить на ваш вопрос невозможно. Пожалуйста, обратитесь в службу поддержки для получения дальнейших инструкций.",
+      "why_failed": [
+        "answer missing 'сервис'"
+      ]
+    },
+    {
+      "case_id": "returns-window",
+      "query": "В течение скольких дней можно вернуть товар надлежащего качества?",
+      "baseline_answer": "В течение **14 дней** с момента покупки можно вернуть товар надлежащего качества [1].",
+      "candidate_answer": "По предоставленному контексту информация о сроках возврата товара надлежащего качества не указана. Ответить нельзя на основании данных документов.\nПожалуйста, обратитесь к специалисту службы поддержки или к условиям продажи/оферте вашего магазина, где указаны сроки возврата товара надлежащего качества.",
+      "why_failed": [
+        "answer missing '14'",
+        "answer missing 'дн'"
+      ]
+    },
+    {
+      "case_id": "error-e25",
+      "query": "На дисплее появилась ошибка E25. Что сначала попробовать клиенту?",
+      "baseline_answer": "Сначала **перезагрузите устройство** [Документ 1, E25].\nЕсли ошибка не исчезнет, выполните **сброс к заводским настройкам** [Документ 1, E25].",
+      "candidate_answer": "[model_mismatch] Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'.",
+      "why_failed": [
+        "answer missing 'E25'",
+        "answer missing 'перезагруз'"
+      ]
+    },
+    {
+      "case_id": "error-e30",
+      "query": "При ошибке E30 можно продолжать пользоваться устройством или нужно отключить его от сети?",
+      "baseline_answer": "По имеющимся данным из предоставленного контекста ответить нельзя.\n\nВ документе **errors_e10_e30.md** нет информации о том, как поступать при ошибке **E30** — можно ли продолжать использовать устройство или отключать его от сети. Для уточнения рекомендую обратиться к специалисту поддержки.",
+      "candidate_answer": "[model_mismatch] Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'.",
+      "why_failed": [
+        "answer missing 'E30'",
+        "answer missing 'отключ'"
+      ]
+    },
+    {
+      "case_id": "error-e20-clog-vs-pump",
+      "query": "По ошибке E20 как отличить засор фильтра от неисправности насоса?",
+      "baseline_answer": "По ошибке **E20** в контексте невозможно точно определить, засорён ли фильтр или неисправен насос, так как в документах не приведены конкретные признаки или тесты для диагностики [1, 2, 3, 4].\n\nДля уточнения причины рекомендуется обратиться в сервисный центр или специалиста поддержки.",
+      "candidate_answer": "[model_mismatch] Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'.",
+      "why_failed": [
+        "answer missing 'E20'",
+        "answer missing 'засор'",
+        "answer missing 'насос'"
+      ]
+    },
+    {
+      "case_id": "off-topic-price",
+      "query": "Сколько стоит этот товар?",
+      "baseline_answer": "По имеющимся данным ответить нельзя.\n\nВ предоставленном контексте нет информации о стоимости товара. Для получения точных данных рекомендую обратиться к специалисту поддержки или на сайт производителя.",
+      "candidate_answer": "[model_mismatch] Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'.",
+      "why_failed": [
+        "answer missing 'ответить нельзя'",
+        "answer missing 'обрат'"
+      ]
+    }
+  ],
+  "new_passes": [],
+  "exit_code": 1,
+  "mode": "live-provider-benchmark"
+}

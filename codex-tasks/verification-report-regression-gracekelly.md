@@ -316,3 +316,60 @@ Close task-177 as partial. Open task-178 as Arc 9 prerequisite (regression_eval 
 - `D:\GraceKelly\` working tree: HEAD `40189f4`, only `?? CLAUDE.md`, `?? docs/plans/` (pre-existing, untracked by design).
 - GraceKelly uvicorn: running on port 8011, profile=hybrid (left running for any post-commit smoke).
 - `rag-regression-postgres` + `rag-regression-redis` containers: still running (idempotent reuse on next regression run).
+
+---
+
+# Rev 4 (2026-04-26 — task-178 inline closure + first green full 20-case)
+
+RAG HEAD: `9f96b5b` (task-178 archived) on top of `59a3057` / `1d3d13d` / `7559a28` / `53c2507`. Worktree clean, only untracked smoke logs in `reports/regression/`.
+
+## task-178 closure
+
+CC inline (Codex unavailable per user request "делай сам"). 4 commits split per `feedback_cx_spec_discipline` commit gates:
+
+| HEAD | Subject |
+| --- | --- |
+| `7559a28` | `gracekelly-mixed` routing profile in `config/providers.yml` |
+| `1d3d13d` | `regression_eval._resolve_provider_target` returns kind discriminator + profile fallback against `routing_profiles`. `_provider_target_runtime` skips synthetic injection on kind=profile. CLI mutex flags `--baseline / --baseline-profile`, `--candidate / --candidate-profile`. New `tests/test_regression_eval_profile_target.py` (7 tests). 17/17 pytest pass, ruff clean. |
+| `59a3057` | wrapper `-CandidateProfile` parameter |
+| `9f96b5b` | archive spec to `codex-tasks/Archive/` |
+
+## Live verification
+
+Smoke 2-case through `--candidate-profile gracekelly-mixed` with `GRACEKELLY_REQUEST_TIMEOUT_SEC=120` in `.env` (untracked): **gate pass**, baseline 100% / candidate 100%, 0 infrastructure_failures, regressions=0. Profile propagation through pipeline confirmed.
+
+Full 20-case via same config (~30 min wall, evidence `reports/regression/20260426T113855Z-*`):
+
+| Metric | Value |
+| --- | --- |
+| total_cases | 20 |
+| effective_cases | 20 |
+| infrastructure_failures | **0** (browser layer stable across all 20 cases) |
+| baseline_pass_rate | 60% |
+| candidate_pass_rate | 30% |
+| regressions | 6 |
+| neutral | 14 |
+| baseline_refusal_rate | 35% |
+| candidate_refusal_rate | 25% |
+| gate | fail (regressions>2) |
+
+## Regression breakdown (6 cases)
+
+- **4/6 = GK Sonar auto-route mismatch** (`error-e25`, `error-e30`, `error-e20-clog-vs-pump`, `off-topic-price`): candidate answer = `[model_mismatch] Requested browser model 'Claude Sonnet 4.6' but UI shows 'Sonar'`. GraceKelly batch-108 added 2-retry guard with 1.5s delay; clearly retries exhaust on a non-trivial fraction of requests. **Candidate task: GK batch-109** — strengthen Sonar retry (more retries / longer delay / force-reselect Claude after override).
+- **2/6 = real Claude refusals** (`warranty-no-receipt-where`: Claude refused with "in rules no info", Mistral found "сервисный центр" in KB; `returns-window`: Claude did not see "14 дней" in retrieved context — retrieval-side issue specific to that query phrasing).
+
+## Dataset case-sensitivity bug confirmed
+
+35% baseline refusal rate while baseline answers visibly contain expected substrings (just with different capitalization, e.g. `"Чек"` vs needle `"чек"`). Trivial fix at `scripts/regression_eval.py:231` (use `.casefold()` both sides). **Candidate task: task-179** when prioritized.
+
+## What closes here
+
+- task-177 design mismatch ✅ resolved through mixed routing (`gracekelly-mixed`).
+- task-178 ✅ landed inline + archived.
+- Regression infrastructure stable end-to-end through GK browser.
+
+## What stays open
+
+- GK batch-109 (Sonar retry strengthening).
+- task-179 (dataset case-sensitivity).
+- Both are independent, neither blocks anything else.

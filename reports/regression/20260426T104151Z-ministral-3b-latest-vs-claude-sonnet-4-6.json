@@ -1,0 +1,216 @@
+{
+  "run_id": "20260426T104151Z-9b06b8d9",
+  "created_at": "2026-04-26T10:41:51.135857+00:00",
+  "baseline": "ministral-3b-latest",
+  "candidate": "claude-sonnet-4-6",
+  "dataset": "D:\\RAG_Support_Assistant\\evaluation\\curated_cases.jsonl",
+  "tenant": "all",
+  "aggregate": {
+    "total_cases": 2,
+    "effective_cases": 2,
+    "infrastructure_failures": 0,
+    "baseline_pass_rate": 1.0,
+    "candidate_pass_rate": 0.0,
+    "regressions": 2,
+    "new_passes": 0,
+    "neutral": 0,
+    "baseline_total_cost_usd": 2.5e-05,
+    "candidate_total_cost_usd": 0.0,
+    "baseline_avg_latency_ms": 0.0,
+    "candidate_avg_latency_ms": 0.0,
+    "baseline_refusal_rate": 0.0,
+    "candidate_refusal_rate": 0.0
+  },
+  "gate": {
+    "passed": false,
+    "max_regressions": 2,
+    "min_pass_rate": 0.85,
+    "reasons": [
+      "candidate pass rate 0.00% below minimum 85.00%",
+      "candidate pass rate 0.00% below baseline 100.00%"
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "warranty-period",
+      "tenant_id": "default",
+      "query": "Какой срок гарантии на продукцию?",
+      "baseline": {
+        "answer": "Срок гарантии на продукцию составляет **12 месяцев с момента покупки** [1].",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.1e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-55a884bd-9660-45bb-ba59-6bf3f588f657"
+      },
+      "candidate": {
+        "answer": "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору — мы ответим в ближайшее время.",
+        "quality_score": 0.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "error_escalation",
+        "trace_id": "provider-benchmark-f05c7e4e-ee28-4e5b-a0e4-c52a38d9a274"
+      },
+      "baseline_passed": true,
+      "candidate_passed": false,
+      "baseline_failures": [],
+      "candidate_failures": [
+        "quality 0 below minimum 0.5",
+        "answer missing '12'",
+        "answer missing 'месяц'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -95.0,
+        "factuality_delta": -100.0,
+        "route_changed": true,
+        "citations_delta": 2,
+        "cost_delta": -1.1e-05
+      },
+      "outcome": "regression"
+    },
+    {
+      "case_id": "warranty-receipt-storage",
+      "tenant_id": "default",
+      "query": "На какой срок нужно сохранять чек для гарантии?",
+      "baseline": {
+        "answer": "Согласно гарантийным условиям, сохранять кассовый или товарный чек необходимо **в течение 12 месяцев с момента покупки** для подтверждения права на гарантию [1].",
+        "quality_score": 95.0,
+        "factuality_score": 100.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n# Коды ошибок E10–E30\n\nE10 — Недостаточный уровень воды. Проверьте давление и подключение к водопроводу. E20 — Проблема со сливом воды. Возможные причины:\n- засорён сливной фильтр;\n- перегиб сливного шланга;\n- неисправность сливного насоса. E25 — Ошибка пам"
+          },
+          {
+            "index": 3,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 1.4e-05,
+        "route": "auto",
+        "trace_id": "provider-benchmark-5425afd4-0dae-4c48-a8b3-cc48a608908c"
+      },
+      "candidate": {
+        "answer": "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору — мы ответим в ближайшее время.",
+        "quality_score": 0.0,
+        "factuality_score": 0.0,
+        "citations": [
+          {
+            "index": 1,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\n# Гарантийные условия\n\nГарантия на продукцию составляет 12 месяцев с момента покупки. Гарантия действует при соблюдении следующих условий:\n- товар используется по инструкции;\n- сохранён кассовый или товарный чек;\n- не вскрывался корпус устройства. Гарантия не рас"
+          },
+          {
+            "index": 2,
+            "doc_id": "returns_policy.md",
+            "title": "returns_policy.md",
+            "excerpt": "[Контекст: Из документа returns_policy.md]\n# Политика возвратов\n\nПокупатель имеет право вернуть товар надлежащего качества\nв течение 14 дней с момента покупки. Условия возврата:\n- сохранён товарный вид и упаковка;\n- есть документы, подтверждающие покупку;\n- товар не имеет следов эксплуатации. Возвра"
+          },
+          {
+            "index": 3,
+            "doc_id": "warranty.md",
+            "title": "warranty.md",
+            "excerpt": "[Контекст: Из документа warranty.md]\nПодготовьте товар и чек. 2. Обратитесь в сервисный центр или службу поддержки. 3. Заполните форму обращения и опишите неисправность. "
+          },
+          {
+            "index": 4,
+            "doc_id": "errors_e10_e30.md",
+            "title": "errors_e10_e30.md",
+            "excerpt": "[Контекст: Из документа errors_e10_e30.md]\n"
+          }
+        ],
+        "duration_ms": null,
+        "cost_usd": 0.0,
+        "route": "error_escalation",
+        "trace_id": "provider-benchmark-3315c776-a242-45c6-81de-6ea44d3e32e6"
+      },
+      "baseline_passed": true,
+      "candidate_passed": false,
+      "baseline_failures": [],
+      "candidate_failures": [
+        "quality 0 below minimum 0.5",
+        "answer missing 'чек'",
+        "answer missing '12'"
+      ],
+      "diff": {
+        "answer_changed": true,
+        "quality_delta": -95.0,
+        "factuality_delta": -100.0,
+        "route_changed": true,
+        "citations_delta": 1,
+        "cost_delta": -1.4e-05
+      },
+      "outcome": "regression"
+    }
+  ],
+  "regressions": [
+    {
+      "case_id": "warranty-period",
+      "query": "Какой срок гарантии на продукцию?",
+      "baseline_answer": "Срок гарантии на продукцию составляет **12 месяцев с момента покупки** [1].",
+      "candidate_answer": "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору — мы ответим в ближайшее время.",
+      "why_failed": [
+        "quality 0 below minimum 0.5",
+        "answer missing '12'",
+        "answer missing 'месяц'"
+      ]
+    },
+    {
+      "case_id": "warranty-receipt-storage",
+      "query": "На какой срок нужно сохранять чек для гарантии?",
+      "baseline_answer": "Согласно гарантийным условиям, сохранять кассовый или товарный чек необходимо **в течение 12 месяцев с момента покупки** для подтверждения права на гарантию [1].",
+      "candidate_answer": "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору — мы ответим в ближайшее время.",
+      "why_failed": [
+        "quality 0 below minimum 0.5",
+        "answer missing 'чек'",
+        "answer missing '12'"
+      ]
+    }
+  ],
+  "new_passes": [],
+  "exit_code": 1,
+  "mode": "live-provider-benchmark"
+}
