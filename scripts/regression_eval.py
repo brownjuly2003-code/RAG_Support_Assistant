@@ -95,7 +95,7 @@ def _is_refusal_answer(answer: str) -> bool:
 
 def _is_infrastructure_failure(answer: str) -> bool:
     normalized = (answer or "").strip().lower()
-    return "[provider_unavailable]" in normalized
+    return "[provider_unavailable]" in normalized or "[model_mismatch]" in normalized
 
 
 def _resolve_provider_target(target: str, provider_registry_path: Path | None) -> dict[str, Any] | None:
