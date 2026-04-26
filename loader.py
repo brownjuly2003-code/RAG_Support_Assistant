@@ -1,6 +1,12 @@
-# ingestion/loader.py
+# loader.py (root-level)
 """
-Загрузчик локальных документов.
+Загрузчик локальных документов (legacy implementation).
+
+NOTE: This is the legacy loader with DocumentChangeTracker. A newer
+implementation lives at `ingestion.loader` (supports .json/.csv, uses
+langchain_core.documents). The api/app.py module imports this loader
+first and falls back to ingestion.loader on ImportError. New code should
+prefer ingestion.loader.
 
 Функции:
 - рекурсивный обход директории;

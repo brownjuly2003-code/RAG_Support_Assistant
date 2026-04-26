@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent
@@ -36,8 +36,8 @@ except ImportError:
 
 
 class AskRequest(BaseModel):
-    question: str
-    entity_id: Optional[str] = None
+    question: str = Field(..., min_length=1, max_length=4000)
+    entity_id: Optional[str] = Field(default=None, max_length=100)
 
 
 class AskResponse(BaseModel):
@@ -105,6 +105,8 @@ def _open_traces_db() -> sqlite3.Connection:
     if not TRACES_DB_PATH.exists():
         raise HTTPException(status_code=500, detail="База трассинга ещё не создана")
     conn = sqlite3.connect(TRACES_DB_PATH)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -361,15 +363,51 @@ async def chat_ui(request: Request):
     return HTMLResponse("<h1>Chat UI not found</h1>", status_code=404)
 
 
+def _run_alembic_upgrade() -> None:
+    """Apply pending alembic migrations. Idempotent and safe to call repeatedly.
+
+    Gated on AUTO_MIGRATE env (default "true"). On failure, logs a warning but
+    does not abort startup — the operator can run `alembic upgrade head` manually.
+    """
+    import logging
+    import os
+
+    if os.getenv("AUTO_MIGRATE", "true").strip().lower() not in ("1", "true", "yes"):
+        return
+
+    logger = logging.getLogger("rag.startup")
+    try:
+        from alembic import command
+        from alembic.config import Config
+
+        cfg_path = BASE_DIR / "alembic.ini"
+        if not cfg_path.exists():
+            logger.warning("alembic.ini not found at %s; skipping auto-migrate", cfg_path)
+            return
+        cfg = Config(str(cfg_path))
+        cfg.set_main_option("script_location", str(BASE_DIR / "alembic"))
+        command.upgrade(cfg, "head")
+        logger.info("alembic upgrade head: OK")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("alembic auto-migrate skipped: %s", exc)
+
+
 @app.on_event("startup")
 async def startup():
+    import asyncio
+
     _ensure_dirs()
+    await asyncio.get_running_loop().run_in_executor(None, _run_alembic_upgrade)
     if initialize_vector_store is not None:
         initialize_vector_store()
 
 
 if __name__ == "__main__":
+    import os
+
     import uvicorn
 
     _ensure_dirs()
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    host = os.getenv("HOST", "127.0.0.1")
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("main:app", host=host, port=port, reload=True)

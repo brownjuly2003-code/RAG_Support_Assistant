@@ -12,14 +12,15 @@ from db.models import User
 try:
     from authlib.integrations.starlette_client import OAuth
 except ImportError:  # pragma: no cover - exercised only when dependency missing
-    OAuth = None  # type: ignore[assignment]
+    OAuth = None
 
 
 def _secret_value(value: Any) -> str | None:
     if value is None:
         return None
     if hasattr(value, "get_secret_value"):
-        return value.get_secret_value()
+        revealed = value.get_secret_value()
+        return str(revealed) if revealed is not None else None
     text = str(value).strip()
     return text or None
 
@@ -61,7 +62,7 @@ def list_sso_providers(settings: Any | None = None) -> list[dict[str, str]]:
     return providers
 
 
-def get_oauth_client(provider: str, settings: Any | None = None):
+def get_oauth_client(provider: str, settings: Any | None = None) -> Any:
     settings = settings or get_settings()
     if OAuth is None:
         raise RuntimeError("authlib is not installed")

@@ -1,5 +1,9 @@
 """
-integrations/bitrix.py
+bitrix.py (root-level)
+
+NOTE: Despite the legacy header, this file lives in the project root —
+the `integrations/` package was never created. Imported as `from bitrix
+import ...` from mock_inbox.py and config/settings.py.
 
 Абстракция SupportSink и интеграция с Bitrix24.
 

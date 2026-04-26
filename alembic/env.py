@@ -21,8 +21,15 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
-def run_migrations_offline() -> None:
+def _migration_url() -> str:
     url = os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url"))
+    if url.startswith("postgresql+asyncpg://"):
+        return url.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
+    return url
+
+
+def run_migrations_offline() -> None:
+    url = _migration_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -35,7 +42,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    url = os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url"))
+    url = _migration_url()
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

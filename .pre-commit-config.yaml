@@ -18,3 +18,20 @@ repos:
         args: [--maxkb=500]
       - id: check-merge-conflict
       - id: detect-private-key
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.4
+    hooks:
+      - id: bandit
+        args: ["-r", "-ll", "-c", "pyproject.toml"]
+        additional_dependencies: ["bandit[toml]"]
+        # Block commits on Medium+ severity findings only (Low triggers at the
+        # CLI level: `bandit -r . -l -c pyproject.toml` for full scan).
+
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.10.0
+    hooks:
+      - id: pip-audit
+        args: ["--strict", "--require-hashes=false", "-r", "requirements.txt"]
+        # Fails on any known vuln in pinned deps. Override per-CVE with
+        # --ignore-vuln if a fix is unavailable.

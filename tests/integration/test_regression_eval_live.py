@@ -81,7 +81,7 @@ def _write_curated_cases(path: Path) -> None:
 
 
 @pytest.mark.integration
-def test_regression_eval_live_no_asyncpg_race_no_fk_violation() -> None:
+def test_regression_eval_live_no_asyncpg_race_no_fk_violation(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("docker")
     if shutil.which("docker") is None:
         pytest.skip("docker not available")
@@ -172,9 +172,21 @@ def test_regression_eval_live_no_asyncpg_race_no_fk_violation() -> None:
 
             try:
                 from scripts import regression_eval
+                import agent.graph as agent_graph
                 from agent.graph import run_qa_pipeline
                 from config.settings import get_settings
 
+                monkeypatch.setattr(
+                    agent_graph,
+                    "run_online_evaluators",
+                    lambda trace_state: {
+                        "citation_coverage": {
+                            "score": 1.0,
+                            "verdict": "ok",
+                            "metadata": {"trace_id": trace_state["trace_id"]},
+                        }
+                    },
+                )
                 settings = get_settings()
                 settings.online_evaluators_enabled = True
                 settings.fact_verification_enabled = False
@@ -220,14 +232,25 @@ def test_regression_eval_live_no_asyncpg_race_no_fk_violation() -> None:
                 # Persist the report to also exercise persist_regression_result
                 import asyncio
 
-                async def _persist() -> None:
+                async def _persist_and_check_db() -> tuple[int, int]:
                     await regression_eval.persist_regression_result(
                         session_factory=_engine_module.async_session,
                         report=report,
                         report_path=Path("reports/regression/test.json"),
                     )
+                    async with _engine_module.async_session() as session:
+                        te_result = await session.execute(
+                            text("SELECT COUNT(*) FROM trace_evaluations")
+                        )
+                        te_count = te_result.scalar() or 0
 
-                asyncio.run(_persist())
+                        er_result = await session.execute(
+                            text("SELECT COUNT(*) FROM eval_results")
+                        )
+                        er_count = er_result.scalar() or 0
+                        return te_count, er_count
+
+                te_count, er_count = asyncio.run(_persist_and_check_db())
             finally:
                 agent_logger.removeHandler(handler)
                 agent_logger.setLevel(original_level)
@@ -239,21 +262,5 @@ def test_regression_eval_live_no_asyncpg_race_no_fk_violation() -> None:
             assert "ForeignKeyViolationError" not in log_text, f"FK violation found in logs: {log_text}"
 
             # Assert trace_evaluations rows exist
-            import asyncio
-
-            async def _check_db() -> tuple[int, int]:
-                async with _engine_module.async_session() as session:
-                    te_result = await session.execute(
-                        text("SELECT COUNT(*) FROM trace_evaluations")
-                    )
-                    te_count = te_result.scalar() or 0
-
-                    er_result = await session.execute(
-                        text("SELECT COUNT(*) FROM eval_results")
-                    )
-                    er_count = er_result.scalar() or 0
-                    return te_count, er_count
-
-            te_count, er_count = asyncio.run(_check_db())
             assert te_count > 0, "No trace_evaluations rows found"
             assert er_count > 0, "No eval_results rows found"

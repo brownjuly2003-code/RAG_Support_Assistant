@@ -1,5 +1,9 @@
 """
-integrations/mock_inbox.py
+mock_inbox.py (root-level)
+
+NOTE: Despite the legacy header, this file lives in the project root —
+the `integrations/` package was never created. Imported as `from
+mock_inbox import ...` from agent/graph.py and tests.
 
 LocalFileSupportSink и выбор реализации SupportSink по ENV.
 

@@ -1,5 +1,10 @@
 """
-ingestion/chunking.py
+chunking.py (root-level evaluation/tuning script)
+
+NOTE: Despite the legacy header, this file lives in the project root and
+is not part of the `ingestion/` package. It is invoked as a standalone
+script (e.g. via scripts/semantic_chunking_ab.py) and referenced by name
+from config/settings.py, ingestion/pipeline.py, manager.py, seed_docs.py.
 
 Подбор оптимальной конфигурации chunk_size / chunk_overlap по метрикам.
 

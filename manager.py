@@ -1,5 +1,10 @@
 """
-vectordb/manager.py
+manager.py (root-level, canonical implementation)
+
+NOTE: This file is the canonical vector-store manager. The package-level
+`vectordb.manager` is a thin wrapper that re-exports these symbols and adds
+tenant-aware caching on top. New imports should target `vectordb.manager`;
+this module is kept for direct legacy imports (ingestion.pipeline, scripts/).
 
 Менеджер векторной БД для RAG-проекта.
 

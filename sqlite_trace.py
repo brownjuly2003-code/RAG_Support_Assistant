@@ -1,5 +1,11 @@
 """
-tracing/sqlite_trace.py
+sqlite_trace.py (root-level, canonical implementation)
+
+NOTE: This file is the canonical SQLite trace store. The package-level
+`tracing.sqlite_trace` is a thin wrapper that re-exports start_trace /
+finish_trace and adds PII-redaction to log_step. New code that needs PII
+safety should import `tracing.sqlite_trace`; this module is kept for
+direct imports from scripts/ and tracing.__init__.
 
 Локальный мини-аналог LangSmith на базе SQLite.
 
@@ -115,11 +121,15 @@ def _get_connection():
     """Контекстный менеджер для подключения к SQLite.
 
     Каждый вызов открывает новое соединение и гарантированно его закрывает.
-    Для PoC-уровня это абсолютно нормально.
+    WAL + busy_timeout позволяют корректно работать в multi-worker сценарии
+    (uvicorn --workers 2): несколько reader'ов и один writer без блокировок.
     """
     db_path = _get_db_path()
     conn = sqlite3.connect(db_path)
     try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=5000")
+        conn.execute("PRAGMA synchronous=NORMAL")
         yield conn
     finally:
         conn.close()

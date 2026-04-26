@@ -16,3 +16,116 @@ markers = [
     "integration: end-to-end integration tests",
 ]
 norecursedirs = [".*", "build", "dist", "CVS", "_darcs", "{arch}", "*.egg", "venv", "pytest-cache-files-*", "archive-legacy", "data"]
+
+[tool.coverage.run]
+branch = true
+source = [
+    "agent",
+    "api",
+    "auth",
+    "channels",
+    "config",
+    "db",
+    "evaluation",
+    "ingestion",
+    "llm",
+    "monitoring",
+    "tasks",
+    "tracing",
+    "utils",
+    "vectordb",
+]
+omit = [
+    "*/__pycache__/*",
+    "*/tests/*",
+    "scripts/*",
+    "archive-legacy/*",
+    "alembic/*",
+    "data/*",
+    "graph_route_example.py",
+]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "\\.\\.\\.",
+]
+
+# ---------------------------------------------------------------------------
+# Mypy — opt-in, not blocking. Run as `mypy auth db/models.py llm/providers`.
+# The base config below is permissive; specific high-value modules below get
+# strict treatment via [[tool.mypy.overrides]].
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+follow_imports = "silent"
+warn_unused_configs = true
+warn_redundant_casts = true
+show_error_codes = true
+pretty = true
+exclude = [
+    "archive-legacy/",
+    "alembic/versions/",
+    "data/",
+    "scripts/",
+    "tests/",
+    "graph_route_example.py",
+    "build/",
+    "dist/",
+]
+
+# Strict treatment for the smallest, highest-trust modules. Expand this list
+# as the codebase converges on full type coverage.
+[[tool.mypy.overrides]]
+module = ["auth.*"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+no_implicit_optional = true
+
+# llm.providers — strict mode disabled until 14 outstanding type errors are
+# resolved (type narrowing in runtime.py, dict[str, object] kwargs in base.py).
+# Tracked in DEPRECATIONS.md.
+[[tool.mypy.overrides]]
+module = ["llm.providers.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = ["db.models"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+# Relaxed treatment for legacy / large modules — leave them untyped for now
+# but still report obvious bugs.
+[[tool.mypy.overrides]]
+module = ["api.app", "agent.graph"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+# ---------------------------------------------------------------------------
+# Bandit — static security analysis. Run as `bandit -r . -c pyproject.toml`.
+# ---------------------------------------------------------------------------
+[tool.bandit]
+exclude_dirs = [
+    "tests",
+    "archive-legacy",
+    "scripts",
+    "data",
+    "alembic/versions",
+]
+# B608: hardcoded SQL expressions — every flagged occurrence in this codebase
+#       uses a parameterized query with `?` placeholders that are built from
+#       a whitelisted column/table list, not from user input. Verified
+#       2026-04-26 audit. Skip globally.
+# B310: urllib.urlopen — used only for an Ollama healthcheck on localhost
+#       with a 3-second timeout. No external attack surface.
+skips = ["B608", "B310"]

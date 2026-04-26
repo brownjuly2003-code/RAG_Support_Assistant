@@ -45,39 +45,21 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from utils.circuit_breaker import CircuitBreaker
 
-# Support both package-style and root-level imports
-try:
-    from agent.state import GraphState, create_initial_state
-    from agent.prompts import (
-        build_classify_complexity_prompt,
-        build_extract_claims_prompt,
-        build_qa_prompt,
-        build_self_eval_prompt,
-        build_suggested_questions_prompt,
-        build_query_transform_prompt,
-        build_doc_grade_prompt,
-        build_query_rewrite_prompt,
-        build_verify_claim_prompt,
-        build_conversational_qa_prompt,
-        build_conversational_query_transform_prompt,
-    )
-    from tracing.sqlite_trace import start_trace, log_step, finish_trace
-except ImportError:
-    from state import GraphState, create_initial_state
-    from prompts import (
-        build_classify_complexity_prompt,
-        build_extract_claims_prompt,
-        build_qa_prompt,
-        build_self_eval_prompt,
-        build_suggested_questions_prompt,
-        build_query_transform_prompt,
-        build_doc_grade_prompt,
-        build_query_rewrite_prompt,
-        build_verify_claim_prompt,
-        build_conversational_qa_prompt,
-        build_conversational_query_transform_prompt,
-    )
-    from sqlite_trace import start_trace, log_step, finish_trace
+from agent.state import GraphState, create_initial_state
+from agent.prompts import (
+    build_classify_complexity_prompt,
+    build_extract_claims_prompt,
+    build_qa_prompt,
+    build_self_eval_prompt,
+    build_suggested_questions_prompt,
+    build_query_transform_prompt,
+    build_doc_grade_prompt,
+    build_query_rewrite_prompt,
+    build_verify_claim_prompt,
+    build_conversational_qa_prompt,
+    build_conversational_query_transform_prompt,
+)
+from tracing.sqlite_trace import start_trace, log_step, finish_trace
 
 try:
     from evaluation.evaluator_runner import persist_online_evaluations, run_online_evaluators

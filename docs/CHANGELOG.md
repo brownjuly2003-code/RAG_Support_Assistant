@@ -2,6 +2,65 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Audit-Hardening] — 2026-04-26 — BCG-уровневый аудит + 4 итерации hardening
+
+### Контекст
+
+После закрытия task-177/178/179 проведён глубокий аудит проекта (Claude Opus 4.7 1M context). Результат — `audit_opus_2026-04-26.md` с прогрессивной самооценкой 7.8/10 для local / 6.9/10 для commercial. По roadmap-у аудита выполнены 4 итерации hardening работы (22 задачи, 18 — production fixes + 4 — docs).
+
+### Что сделано
+
+**Security & operability (Phase 1):**
+- `auth/dependencies.py` — anonymous-admin fallback при пустом `API_KEY` теперь требует явный opt-in `ALLOW_ANONYMOUS_ADMIN=1`, иначе HTTP 503. Foot-gun «случайно бинд на 0.0.0.0 без API_KEY → любой = admin» закрыт.
+- `main.py` — bare `python main.py` дефолтит host на `127.0.0.1` (override через `HOST` env). Docker compose не затронут.
+- `sqlite_trace.py` + `main.py` — SQLite traces получили `journal_mode=WAL`, `busy_timeout=5000`, `synchronous=NORMAL`. Multi-worker race в `data/tracing/traces.db` закрыт.
+- `api/app.py` + `main.py` — `Field(min_length=1, max_length=…)` на `RefreshRequest` (4096) и legacy `AskRequest` (4000/100). DOS-payload защита.
+- `main.py` — `alembic upgrade head` в lifespan startup hook (gated `AUTO_MIGRATE`, default `true`). Ошибки миграции логируются как warning, не валят app.
+
+**Code quality & tooling (Phase 2):**
+- 7 root-level файлов получили актуальные docstrings (`manager.py`, `sqlite_trace.py`, `loader.py`, `chunking.py`, `bitrix.py`, `mock_inbox.py`, `seed_docs.py`) — раньше говорили «vectordb/manager.py», «integrations/bitrix.py» хотя файлы лежали в корне.
+- `DEPRECATIONS.md` создан — карта legacy-расположений + 5-фазный план миграции.
+- `pyproject.toml` — `[tool.coverage.{run,report}]` с `fail_under=70`, branch coverage, source-list по 14 production модулям.
+- `pyproject.toml` — `[tool.mypy]` + per-module overrides. Strict для `auth.*` + `db.models` (5/5 файлов pass).
+- `auth/oidc.py`, `auth/dependencies.py` — фикс 4 type errors под strict.
+- `[tool.bandit]` в pyproject + bandit + pip-audit в `.pre-commit-config.yaml`. Skip B608/B310 false positives задокументирован.
+- `tracing/langfuse_trace.py:55` — фикс HIGH severity MD5 (`usedforsecurity=False`). Bandit clean: 0 High/0 Medium.
+- `pip-audit -r requirements.txt` — 0 known vulnerabilities.
+- Удалены deprecation shim-ы из корня: `graph.py` (12 LOC), `state.py` (11), `prompts.py` (11). Также удалён dead `except ImportError` fallback в `agent/graph.py:48-80` — он re-exportировал через те же удалённые shim-ы (циклический fallback).
+
+**API monolith split start (Phase 3-4):**
+- Создана `api/routers/` директория. 6 sub-router-ов вынесены из `api/app.py`:
+  - `system.py` — `/health/live`, `/metrics`
+  - `agent.py` — `/agent/tickets/{list,get,respond}`, `/agent/similar` (+ `AgentRespondRequest`)
+  - `admin_review.py` — `/admin/review-queue/{list,update,stats}` (+ `ReviewQueueUpdateRequest`)
+  - `admin_kb.py` — `/admin/curated-dataset/*`, `/admin/thresholds/*`, `/admin/improvement-backlog/*`, `/admin/kb-gaps`, `/admin/kb-drafts/*`, `/admin/stale-docs/*`
+  - `admin_experiments.py` — `/admin/experiments/*`, comparison, deploy/rollback, regression trigger, assignments
+  - `auth_sso.py` — `/auth/sso/{providers,login,callback}`
+- Зафиксирован monkeypatch-friendly паттерн (`from db import engine as _db_engine` + `_async_session()` indirection) — необходим для совместимости с тестами, использующими `monkeypatch.setattr("db.engine.async_session", ...)`.
+- 37 endpoints вынесены из 5288-LOC монолита, `api/app.py` теперь 3817 LOC.
+
+**Documentation (Phase 5):**
+- `audit_opus_2026-04-26.md` — секция 12 «Implementation log» с полной таблицей 22 задач, метриками до/после, обновлённой самооценкой (8.7/10 local, 7.7/10 commercial).
+- `docs/SESSION-NOTES-2026-04-26-audit.md` — handover для новой сессии.
+- `DEPRECATIONS.md` — обновлены секции «Done», «Next splits», «Type-checking debt», «Pattern для split sub-router-ов».
+
+### Verification
+
+- Focus-set tests: **68/68 passed** (auth + jwt + tenant + health + metrics + trace + migration + agent + review-queue + body_size).
+- mypy strict: **5/5 files clean** (`auth/*` + `db/models.py`).
+- Bandit: **0 High, 0 Medium** (после фикса MD5 + конфига).
+- pip-audit: **No known vulnerabilities**.
+
+### Bottom line
+
+- ✅ Security gaps закрыты: anonymous fallback, DOS validation, MD5 weakness, dependency CVE scan.
+- ✅ Operability: auto-migrate, SQLite WAL, корректный host default.
+- ✅ Code hygiene: 0 TODO/FIXME, 0 deprecation shims в корне, mypy strict для auth/db core.
+- ✅ Architecture: первые 37 endpoints в sub-router модулях, паттерн доказан.
+- 📋 Карта остатков — в `audit_opus_2026-04-26.md` секции 12.5 + `DEPRECATIONS.md`.
+
+---
+
 ## [Task-177 / Task-178 / Task-179] — 2026-04-25 / 2026-04-26 — first green full 20-case live regression
 
 ### Honest closure of the GK-Claude live regression loop

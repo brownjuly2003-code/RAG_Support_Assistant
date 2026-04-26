@@ -93,7 +93,7 @@ def _install_sqlite_trace_stub() -> None:
         module = types.ModuleType("sqlite_trace")
         sys.modules["sqlite_trace"] = module
 
-    module.start_trace = getattr(module, "start_trace", lambda: "trace-stub")
+    module.start_trace = getattr(module, "start_trace", lambda *args, **kwargs: kwargs.get("trace_id") or "trace-stub")
     module.log_step = getattr(module, "log_step", lambda *args, **kwargs: None)
     module.finish_trace = getattr(module, "finish_trace", lambda *args, **kwargs: None)
     module.get_metrics_snapshot = getattr(module, "get_metrics_snapshot", lambda: {})
@@ -131,8 +131,13 @@ def _build_test_client(
 
     if settings.api_key:
         monkeypatch.setenv("API_KEY", settings.api_key)
+        monkeypatch.delenv("ALLOW_ANONYMOUS_ADMIN", raising=False)
     else:
         monkeypatch.delenv("API_KEY", raising=False)
+        # Tests using the no-key client fixture rely on the anonymous-admin
+        # fallback. In production this fallback is gated by an explicit env;
+        # we opt in here to preserve test semantics.
+        monkeypatch.setenv("ALLOW_ANONYMOUS_ADMIN", "1")
 
     monkeypatch.setattr(api_app, "get_settings", lambda: settings)
     monkeypatch.setattr(api_app, "initialize_vector_store", lambda: None)

@@ -52,6 +52,28 @@ User / Email / Widget
   generation, freshness alerts, and weekly reports keep the knowledge base
   improving over time.
 
+### Module layout (high level)
+
+- `api/app.py` — FastAPI application, middleware, lifespan, master router.
+  Splitting in progress; see `DEPRECATIONS.md` for the migration map.
+- `api/routers/` — extracted sub-routers (`system.py` for health/metrics,
+  `agent.py` for `/agent/*`, `admin_review.py` for `/admin/review-queue/*`,
+  `auth_sso.py` for `/auth/sso/*`). New endpoint groups are added here, not
+  in `api/app.py`.
+- `agent/` — LangGraph pipeline + state + prompts.
+- `auth/` — JWT, X-API-Key, OIDC, RBAC. `mypy --strict` clean.
+- `db/` — SQLAlchemy models, async engine, audit log, pgcrypto field.
+- `llm/providers/` — Ollama / Mistral / GraceKelly providers + cost guard.
+- `vectordb/` — tenant-aware vector store factory (wrapper around root `manager.py`).
+- `evaluation/` — RAGAS metrics, online evaluators, regression framework.
+- `monitoring/` — Prometheus metrics (~50). `tracing/` — Langfuse + OTel + SQLite.
+- `scripts/` — operational CLIs (regression eval, KB builders, nightly tasks).
+
+> For a complete audit and an implementation log of recent hardening work,
+> see `audit_opus_2026-04-26.md` (especially section 12) and
+> `DEPRECATIONS.md`. Quick handover for new sessions:
+> `docs/SESSION-NOTES-2026-04-26-audit.md`.
+
 ## Features
 
 - **Inline citations and source panel:** Answers can embed `[N]` markers that
@@ -246,6 +268,10 @@ Resilience layers apply in this order:
 | `CORS_MAX_AGE_SEC` | `600` | Preflight cache TTL |
 | `MAX_REQUEST_BODY_BYTES` | `1048576` | 1 MiB request-body limit for non-upload endpoints |
 | `MAX_UPLOAD_BYTES` | `52428800` | 50 MiB upload limit for `/api/upload` |
+| `ALLOW_ANONYMOUS_ADMIN` | `-` | Opt-in escape hatch when `API_KEY` is empty: set to `1`/`true` to permit anonymous admin (otherwise endpoints return HTTP 503). Local-dev only. Added 2026-04-26 audit. |
+| `HOST` | `127.0.0.1` (bare run) | Used only when launching via `python main.py`. Docker compose binds 0.0.0.0 explicitly. |
+| `PORT` | `8000` | Same — bare run only. |
+| `AUTO_MIGRATE` | `true` | Run `alembic upgrade head` in startup lifespan. On error logs warning, does not abort. |
 
 ### Database, cache, tracing, and analytics
 

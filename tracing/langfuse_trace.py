@@ -53,7 +53,8 @@ def trace_llm_call(
         return
     try:
         langfuse_trace_id = hashlib.md5(
-            (trace_id or f"{node_name}:{prompt[:256]}").encode("utf-8")
+            (trace_id or f"{node_name}:{prompt[:256]}").encode("utf-8"),
+            usedforsecurity=False,
         ).hexdigest()
         metadata = {
             "duration_ms": duration_ms,
