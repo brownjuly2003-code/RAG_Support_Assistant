@@ -2,7 +2,7 @@
 
 **Дата:** 2026-04-26
 **Сессии:** 1 (audit) + 4 (implementation)
-**Состояние:** 22/22 hardening tasks completed + Phase 2g split completed, 18/18 experiment tests pass.
+**Состояние:** 22/22 hardening tasks completed + Phase 2g/2i splits completed, 5/5 analytics tests pass.
 
 > Этот документ — **карманный handover** для новой сессии. Если нужны детали — смотри указанные файлы.
 
@@ -39,7 +39,7 @@ python -m bandit -r D:/RAG_Support_Assistant -ll -c D:/RAG_Support_Assistant/pyp
 
 ## 3. Структурные изменения, которые надо помнить
 
-### `api/routers/` — новая директория, 6 sub-router-ов
+### `api/routers/` — новая директория, 7 sub-router-ов
 
 ```
 api/routers/
@@ -49,6 +49,7 @@ api/routers/
 ├── admin_review.py  # /admin/review-queue/* (+ ReviewQueueUpdateRequest)
 ├── admin_kb.py      # /admin/curated-dataset/*, /admin/kb-drafts/*, stale docs
 ├── admin_experiments.py # /admin/experiments/*, deploy/rollback, assignments
+├── analytics.py     # /analytics/* dashboard endpoints
 └── auth_sso.py      # /auth/sso/{providers,login,callback}
 ```
 
@@ -117,7 +118,8 @@ async def _log_audit(**kwargs):
 2. ~~**Phase 2g — admin experiments**~~ — DONE 2026-04-27:
    `api/routers/admin_experiments.py`; 18/18 related tests pass; `/api` route count stays 69.
 
-3. **Phase 2i — analytics** (4 endpoints в `api/routers/analytics.py`)
+3. ~~**Phase 2i — analytics**~~ — DONE 2026-04-27:
+   `api/routers/analytics.py`; 5/5 related tests pass; `/api` route count stays 69.
 
 После каждого split-а:
 ```bash
@@ -165,7 +167,7 @@ User-instructions требуют `/cxkm` после нетривиальных i
 ```
 auth/dependencies.py        - anonymous gate + Callable return type
 auth/oidc.py                - 3 mypy fixes
-api/app.py                  - 5 endpoint групп удалены, 6 sub-router include
+api/app.py                  - 6 endpoint групп удалены, 7 sub-router include
 api/routers/                - НОВАЯ ДИРЕКТОРИЯ
 main.py                     - host default + auto-migrate + WAL для traces
 sqlite_trace.py             - WAL pragma + accurate docstring
