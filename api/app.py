@@ -1698,6 +1698,7 @@ router = APIRouter(prefix="/api", tags=["RAG API"])
 # Sub-routers extracted from this monolith. See api/routers/ and DEPRECATIONS.md.
 from api.routers.admin_kb import router as _admin_kb_router  # noqa: E402
 from api.routers.admin_experiments import router as _admin_experiments_router  # noqa: E402
+from api.routers.admin_evaluations import router as _admin_evaluations_router  # noqa: E402
 from api.routers.admin_review import router as _admin_review_router  # noqa: E402
 from api.routers.analytics import router as _analytics_router  # noqa: E402
 from api.routers.agent import router as _agent_router  # noqa: E402
@@ -1708,6 +1709,7 @@ router.include_router(_system_router)
 router.include_router(_agent_router)
 router.include_router(_admin_kb_router)
 router.include_router(_admin_experiments_router)
+router.include_router(_admin_evaluations_router)
 router.include_router(_admin_review_router)
 router.include_router(_analytics_router)
 router.include_router(_auth_sso_router)
@@ -2668,172 +2670,9 @@ async def admin_list_traces(
     return JSONResponse(content={"traces": traces})
 
 
-@router.get("/admin/evaluations/trends")
-async def admin_evaluation_trends(
-    evaluator: str,
-    days: int = 30,
-    _user: dict = Depends(require_role("admin")),
-) -> JSONResponse:
-    _ = _user
-    if days < 1 or days > 365:
-        raise HTTPException(status_code=400, detail="days must be in [1, 365]")
-    if not getattr(get_settings(), "online_evaluators_enabled", True):
-        return JSONResponse(content={"evaluator": evaluator, "days": days, "points": []})
-
-    from datetime import datetime, timedelta, timezone  # noqa: PLC0415
-
-    from sqlalchemy import text  # noqa: PLC0415
-
-    from db.engine import async_session  # noqa: PLC0415
-
-    async with async_session() as db:
-        rows = (
-            await db.execute(
-                text(
-                    """
-                    SELECT
-                        DATE(evaluated_at) AS bucket,
-                        AVG(score) AS mean_score,
-                        COUNT(*) AS runs
-                    FROM trace_evaluations
-                    WHERE evaluator_name = :evaluator_name
-                      AND evaluated_at >= :window_start
-                    GROUP BY DATE(evaluated_at)
-                    ORDER BY bucket ASC
-                    """
-                ),
-                {
-                    "evaluator_name": evaluator,
-                    "window_start": datetime.now(timezone.utc) - timedelta(days=days),
-                },
-            )
-        ).mappings().all()
-
-    return JSONResponse(
-        content={
-            "evaluator": evaluator,
-            "days": days,
-            "points": [
-                {
-                    "date": str(row.get("bucket") or ""),
-                    "mean_score": float(row.get("mean_score") or 0.0),
-                    "runs": int(row.get("runs") or 0),
-                }
-                for row in rows
-            ],
-        }
-    )
-
-
-@router.get("/admin/evaluations/worst")
-async def admin_evaluation_worst(
-    evaluator: str,
-    limit: int = 20,
-    _user: dict = Depends(require_role("admin")),
-) -> JSONResponse:
-    _ = _user
-    if limit < 1 or limit > 100:
-        raise HTTPException(status_code=400, detail="limit must be in [1, 100]")
-    if not getattr(get_settings(), "online_evaluators_enabled", True):
-        return JSONResponse(content={"evaluator": evaluator, "limit": limit, "items": []})
-
-    from sqlalchemy import text  # noqa: PLC0415
-
-    from db.engine import async_session  # noqa: PLC0415
-
-    async with async_session() as db:
-        rows = (
-            await db.execute(
-                text(
-                    """
-                    SELECT
-                        trace_id,
-                        score,
-                        verdict,
-                        metadata,
-                        evaluated_at
-                    FROM trace_evaluations
-                    WHERE evaluator_name = :evaluator_name
-                    ORDER BY score ASC, evaluated_at ASC
-                    LIMIT :limit
-                    """
-                ),
-                {
-                    "evaluator_name": evaluator,
-                    "limit": limit,
-                },
-            )
-        ).mappings().all()
-
-    return JSONResponse(
-        content={
-            "evaluator": evaluator,
-            "limit": limit,
-            "items": [
-                {
-                    "trace_id": str(row.get("trace_id") or ""),
-                    "score": float(row.get("score") or 0.0),
-                    "verdict": str(row.get("verdict") or ""),
-                    "metadata": row.get("metadata") if isinstance(row.get("metadata"), dict) else {},
-                    "evaluated_at": (
-                        row.get("evaluated_at").isoformat()
-                        if hasattr(row.get("evaluated_at"), "isoformat")
-                        else str(row.get("evaluated_at"))
-                        if row.get("evaluated_at") is not None
-                        else None
-                    ),
-                }
-                for row in rows
-            ],
-        }
-    )
-
-
 # /admin/kb-gaps, /admin/categories, and /admin/kb-drafts/* moved to api.routers.admin_kb
 # /admin/experiments/* moved to api.routers.admin_experiments
-
-
-@router.get("/admin/regression-runs")
-async def admin_list_regression_runs(
-    limit: int = 20,
-    _user: dict = Depends(require_role("admin")),
-) -> JSONResponse:
-    normalized_limit = max(1, min(limit, 100))
-    rows = await _list_regression_run_rows(normalized_limit)
-    items = [_serialize_regression_row(row) for row in rows]
-    known_ids = {item["run_id"] for item in items}
-
-    pending_jobs = [
-        _serialize_regression_job(job)
-        for job in _regression_jobs.values()
-        if str(job.get("run_id") or "") not in known_ids
-    ]
-
-    combined = pending_jobs + items
-    combined.sort(key=lambda item: str(item.get("created_at") or ""), reverse=True)
-    return JSONResponse(content={"runs": combined[:normalized_limit]})
-
-
-@router.get("/admin/regression-runs/{run_id}")
-async def admin_get_regression_run(
-    run_id: str,
-    _user: dict = Depends(require_role("admin")),
-) -> JSONResponse:
-    row = await _get_regression_run_row(run_id)
-    if row is not None:
-        report_payload, report_markdown = _read_regression_report_assets(row.get("report_path"))
-        payload = _serialize_regression_row(row)
-        payload["report"] = report_payload
-        payload["report_markdown"] = report_markdown
-        return JSONResponse(content=payload)
-
-    job = _regression_jobs.get(run_id)
-    if job is not None:
-        return JSONResponse(content=_serialize_regression_job(job))
-
-    raise HTTPException(status_code=404, detail="regression run not found")
-
-
+# /admin/evaluations/* and /admin/regression-runs/* moved to api.routers.admin_evaluations
 # /admin/stale-docs/* moved to api.routers.admin_kb
 # /analytics/* moved to api.routers.analytics
 

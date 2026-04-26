@@ -96,12 +96,14 @@ to override these.
 - `api/routers/admin_experiments.py` — `/admin/experiments/*`,
   including comparison, deploy/rollback, regression trigger, and assignments
   (Phase 2g).
+- `api/routers/admin_evaluations.py` — `/admin/evaluations/*` and
+  `/admin/regression-runs/*` (Phase 2h).
 - `api/routers/analytics.py` — `/analytics/top-topics`,
   `/analytics/resolution-rate`, `/analytics/cost-summary`, `/analytics/trends`
   (Phase 2i).
 
-41 endpoints out of 69 API routes are now in dedicated router files. Latest
-sanity: 5/5 analytics tests pass and `/api` route count remains 69
+45 endpoints out of 69 API routes are now in dedicated router files. Latest
+sanity: 28/28 regression/evaluation tests pass and `/api` route count remains 69
 (2026-04-27, using explicit pytest `--basetemp` because the default Windows
 temp directory is not readable in this workspace).
 
@@ -141,7 +143,7 @@ For handlers whose tests monkeypatch helpers on `api.app`, use a lazy
 | ~~2e~~ | ~~`/admin/review-queue/*` (3 endpoints)~~ | ✅ done 2026-04-26 |
 | ~~2f~~ | ~~`/admin/curated-dataset/*`, `/admin/thresholds/*`, `/admin/improvement-backlog/*`, `/admin/recommendations/*`, `/admin/kb-gaps`, `/admin/kb-drafts/*`, `/admin/categories`, `/admin/stale-docs/*`~~ | ✅ done 2026-04-26 |
 | ~~2g~~ | ~~`/admin/experiments/*` (9 endpoints)~~ | ✅ done 2026-04-27 |
-| 2h | `/admin/regression-runs/*` (2) + `/admin/evaluations/*` (2) | Group as `api/routers/admin_evaluations.py`. |
+| ~~2h~~ | ~~`/admin/regression-runs/*` (2) + `/admin/evaluations/*` (2)~~ | ✅ done 2026-04-27 |
 | ~~2i~~ | ~~`/analytics/*` (4)~~ | ✅ done 2026-04-27 |
 | ~~2j~~ | ~~`/auth/sso/*` (3)~~ | ✅ done 2026-04-26 |
 | 2k | `/upload`, `/tasks/{task_id}` | Group as `api/routers/upload.py`. |

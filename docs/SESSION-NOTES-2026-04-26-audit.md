@@ -2,7 +2,7 @@
 
 **Дата:** 2026-04-26
 **Сессии:** 1 (audit) + 4 (implementation)
-**Состояние:** 22/22 hardening tasks completed + Phase 2g/2i splits completed, 5/5 analytics tests pass.
+**Состояние:** 22/22 hardening tasks completed + Phase 2g/2h/2i splits completed, 28/28 regression/evaluation tests pass.
 
 > Этот документ — **карманный handover** для новой сессии. Если нужны детали — смотри указанные файлы.
 
@@ -13,7 +13,7 @@
 | Файл | Что в нём |
 |---|---|
 | `audit_opus_2026-04-26.md` | Полный аудит (секции 0-11) + implementation log по 18 задачам hardening (секция 12). Single source of truth по диагнозу и сводке. |
-| `DEPRECATIONS.md` | Карта legacy-расположений в корне. 5-фазный план миграции. Карта split-ов `api/app.py` (12 фаз 2a-2m, из них 4 закрыты). Type-checking debt list. **Pattern для split sub-router-ов (важно для resume!).** |
+| `DEPRECATIONS.md` | Карта legacy-расположений в корне. 5-фазный план миграции. Карта split-ов `api/app.py` (12 фаз 2a-2m, из них 7 закрыты). Type-checking debt list. **Pattern для split sub-router-ов (важно для resume!).** |
 | `docs/CHANGELOG.md` | Запись о hardening-сессии 2026-04-26. |
 | `docs/SESSION-NOTES-2026-04-26-audit.md` | Этот файл. |
 
@@ -39,7 +39,7 @@ python -m bandit -r D:/RAG_Support_Assistant -ll -c D:/RAG_Support_Assistant/pyp
 
 ## 3. Структурные изменения, которые надо помнить
 
-### `api/routers/` — новая директория, 7 sub-router-ов
+### `api/routers/` — новая директория, 8 sub-router-ов
 
 ```
 api/routers/
@@ -49,6 +49,7 @@ api/routers/
 ├── admin_review.py  # /admin/review-queue/* (+ ReviewQueueUpdateRequest)
 ├── admin_kb.py      # /admin/curated-dataset/*, /admin/kb-drafts/*, stale docs
 ├── admin_experiments.py # /admin/experiments/*, deploy/rollback, assignments
+├── admin_evaluations.py # /admin/evaluations/*, /admin/regression-runs/*
 ├── analytics.py     # /analytics/* dashboard endpoints
 └── auth_sso.py      # /auth/sso/{providers,login,callback}
 ```
@@ -118,7 +119,10 @@ async def _log_audit(**kwargs):
 2. ~~**Phase 2g — admin experiments**~~ — DONE 2026-04-27:
    `api/routers/admin_experiments.py`; 18/18 related tests pass; `/api` route count stays 69.
 
-3. ~~**Phase 2i — analytics**~~ — DONE 2026-04-27:
+3. ~~**Phase 2h — admin evaluations/regression runs**~~ — DONE 2026-04-27:
+   `api/routers/admin_evaluations.py`; 28/28 related tests pass; `/api` route count stays 69.
+
+4. ~~**Phase 2i — analytics**~~ — DONE 2026-04-27:
    `api/routers/analytics.py`; 5/5 related tests pass; `/api` route count stays 69.
 
 После каждого split-а:
@@ -160,14 +164,14 @@ python -m pytest tests/test_<related>.py -p no:schemathesis -q --timeout=60
 
 User-instructions требуют `/cxkm` после нетривиальных impl-задач. Hardening-сессия 2026-04-26 **сознательно** не вызывала cxkm на каждом split-е — split sub-router-ов был механическим переносом (copy-paste без новой бизнес-логики), и аудит уже был proxy для review.
 
-Если новая сессия будет делать **новые** Phase 2f/g/h/i splits — рекомендуется один cxkm в конце пакета, не на каждом router-е.
+Если новая сессия будет делать **новые** router splits — рекомендуется один cxkm в конце пакета, не на каждом router-е.
 
 ## 9. Критические файлы которые трогали
 
 ```
 auth/dependencies.py        - anonymous gate + Callable return type
 auth/oidc.py                - 3 mypy fixes
-api/app.py                  - 6 endpoint групп удалены, 7 sub-router include
+api/app.py                  - 7 endpoint групп удалены, 8 sub-router include
 api/routers/                - НОВАЯ ДИРЕКТОРИЯ
 main.py                     - host default + auto-migrate + WAL для traces
 sqlite_trace.py             - WAL pragma + accurate docstring
