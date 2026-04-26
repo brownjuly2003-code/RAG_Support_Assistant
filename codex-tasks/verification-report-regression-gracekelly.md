@@ -373,3 +373,43 @@ Full 20-case via same config (~30 min wall, evidence `reports/regression/2026042
 - GK batch-109 (Sonar retry strengthening).
 - task-179 (dataset case-sensitivity).
 - Both are independent, neither blocks anything else.
+
+---
+
+# Rev 5 (2026-04-26 — RAG-side closure of remaining issues)
+
+User clarified scope: "GK external orchestrator, RAG только consumer. Не лезть в GK." All remaining fixes RAG-side.
+
+## task-179 (case-sensitivity in `_evaluate_case_output`)
+
+**Already landed** in `1d3d13d` (task-178 commit) — `answer_lower = (result.answer or "").lower()`, `needle.lower() not in answer_lower`. Confirmed via `git blame -L 258,268 scripts/regression_eval.py`. No additional commit needed.
+
+## `[model_mismatch]` as infrastructure_failure (`9ac782f`)
+
+GraceKelly browser adapter returns `"[model_mismatch] Requested ... but UI shows 'Sonar'."` when Perplexity server-side auto-router overrides the selected model. This is an external orchestrator error, not a candidate quality regression — the candidate model never actually ran. `_is_infrastructure_failure` extended to detect this pattern (same bucket as `[provider_unavailable]`).
+
+8 new unit tests in `tests/test_infrastructure_failure_detection.py`. Full pytest scope (`test_regression_runner` + `test_regression_eval_profile_target` + new) → **25 passed**.
+
+## Re-classified picture for HEAD c95fbf3 evidence (no live re-run, code-level proof)
+
+Existing evidence at `reports/regression/20260426T113855Z-*` re-evaluated with fixed `_is_infrastructure_failure`:
+
+| Metric | Before fix | After fix |
+| --- | --- | --- |
+| regressions | 6 | **2** (only real Claude differences) |
+| infrastructure_failures | 0 | **4** (Sonar mismatches) |
+| effective_cases | 20 | **16** |
+| baseline_pass_rate (effective) | 60% (12/20) | 75% (12/16) |
+| candidate_pass_rate (effective) | 30% (6/20) | 37.5% (6/16) |
+| gate.max_regressions=2 | FAIL (6 > 2) | **PASS** (2 ≤ 2) |
+| gate.min_pass_rate=0.85 | FAIL | FAIL (37.5% < 85%) |
+
+Real Claude regressions (2): `warranty-no-receipt-where` (Claude refused, Mistral pulled "сервисный центр" from KB) and `returns-window` (Claude did not see "14 дней" in retrieved context — query phrasing-specific retrieval gap).
+
+## Final state
+
+- task-177 closed end-to-end with honest evidence trail.
+- task-178 landed inline + archived.
+- task-179 landed (in task-178 commit by accident, but valid).
+- `[model_mismatch]` external errors no longer pollute regressions count.
+- Real Sonnet 4.6 vs Mistral signal: candidate 37.5% pass on effective cases, baseline 75%. Candidate underperforms baseline on this curated KB; whether due to retrieval mismatch, prompt phrasing, or genuine model preference for refusal — separate investigation, not blocking task-177.
