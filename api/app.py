@@ -1703,6 +1703,7 @@ from api.routers.admin_review import router as _admin_review_router  # noqa: E40
 from api.routers.analytics import router as _analytics_router  # noqa: E402
 from api.routers.agent import router as _agent_router  # noqa: E402
 from api.routers.auth_sso import router as _auth_sso_router  # noqa: E402
+from api.routers.misc import email_inbound_webhook, router as _misc_router  # noqa: E402
 from api.routers.system import router as _system_router  # noqa: E402
 
 router.include_router(_system_router)
@@ -1713,6 +1714,7 @@ router.include_router(_admin_evaluations_router)
 router.include_router(_admin_review_router)
 router.include_router(_analytics_router)
 router.include_router(_auth_sso_router)
+router.include_router(_misc_router)
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -2675,33 +2677,7 @@ async def admin_list_traces(
 # /admin/evaluations/* and /admin/regression-runs/* moved to api.routers.admin_evaluations
 # /admin/stale-docs/* moved to api.routers.admin_kb
 # /analytics/* moved to api.routers.analytics
-
-
-@router.post("/channels/email/inbound")
-async def email_inbound_webhook(request: Request) -> JSONResponse:
-    from channels.email_webhook import process_webhook_payload, verify_signature  # noqa: PLC0415
-
-    settings = get_settings()
-    body = await request.body()
-    signature = request.headers.get("X-Signature") or request.headers.get("X-Webhook-Signature")
-    webhook_secret = (
-        getattr(settings, "email_webhook_signing_secret", None)
-        or getattr(settings, "email_webhook_secret", None)
-    )
-    if not verify_signature(body, signature, webhook_secret):
-        raise HTTPException(status_code=401, detail="invalid webhook signature")
-
-    payload = _json.loads(body.decode("utf-8") or "{}")
-    await process_webhook_payload(payload)
-    return JSONResponse(content={"ok": True})
-
-
-@router.get("/admin/providers")
-async def admin_list_providers(
-    _user: dict = Depends(require_role("admin")),
-) -> JSONResponse:
-    tenant = _user.get("tenant") or get_current_tenant() or "default"
-    return JSONResponse(content=_load_provider_admin_snapshot(tenant))
+# /channels/email/inbound and /admin/providers moved to api.routers.misc
 
 
 @router.get("/admin/traces/{trace_id}")

@@ -29,7 +29,7 @@
 - Удалены deprecation shim-ы из корня: `graph.py` (12 LOC), `state.py` (11), `prompts.py` (11). Также удалён dead `except ImportError` fallback в `agent/graph.py:48-80` — он re-exportировал через те же удалённые shim-ы (циклический fallback).
 
 **API monolith split start (Phase 3-4):**
-- Создана `api/routers/` директория. 8 sub-router-ов вынесены из `api/app.py`:
+- Создана `api/routers/` директория. 9 sub-router-ов вынесены из `api/app.py`:
   - `system.py` — `/health/live`, `/metrics`
   - `agent.py` — `/agent/tickets/{list,get,respond}`, `/agent/similar` (+ `AgentRespondRequest`)
   - `admin_review.py` — `/admin/review-queue/{list,update,stats}` (+ `ReviewQueueUpdateRequest`)
@@ -38,8 +38,9 @@
   - `admin_evaluations.py` — `/admin/evaluations/*`, `/admin/regression-runs/*`
   - `analytics.py` — `/analytics/top-topics`, `/analytics/resolution-rate`, `/analytics/cost-summary`, `/analytics/trends`
   - `auth_sso.py` — `/auth/sso/{providers,login,callback}`
+  - `misc.py` — `/admin/providers`, `/channels/email/inbound` с сохранённым legacy alias `/webhook/email`
 - Зафиксирован monkeypatch-friendly паттерн (`from db import engine as _db_engine` + `_async_session()` indirection) — необходим для совместимости с тестами, использующими `monkeypatch.setattr("db.engine.async_session", ...)`.
-- 45 endpoints вынесены из 5288-LOC монолита, `api/app.py` теперь 3545 LOC.
+- 47 endpoints вынесены из 5288-LOC монолита, `api/app.py` теперь 3521 LOC.
 
 **Documentation (Phase 5):**
 - `audit_opus_2026-04-26.md` — секция 12 «Implementation log» с полной таблицей 22 задач, метриками до/после, обновлённой самооценкой (8.7/10 local, 7.7/10 commercial).
@@ -58,7 +59,7 @@
 - ✅ Security gaps закрыты: anonymous fallback, DOS validation, MD5 weakness, dependency CVE scan.
 - ✅ Operability: auto-migrate, SQLite WAL, корректный host default.
 - ✅ Code hygiene: 0 TODO/FIXME, 0 deprecation shims в корне, mypy strict для auth/db core.
-- ✅ Architecture: первые 45 endpoints в sub-router модулях, паттерн доказан.
+- ✅ Architecture: первые 47 endpoints в sub-router модулях, паттерн доказан.
 - 📋 Карта остатков — в `audit_opus_2026-04-26.md` секции 12.5 + `DEPRECATIONS.md`.
 
 ---

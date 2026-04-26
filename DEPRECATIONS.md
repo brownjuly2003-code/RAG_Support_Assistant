@@ -101,9 +101,12 @@ to override these.
 - `api/routers/analytics.py` — `/analytics/top-topics`,
   `/analytics/resolution-rate`, `/analytics/cost-summary`, `/analytics/trends`
   (Phase 2i).
+- `api/routers/misc.py` — `/admin/providers` and `/channels/email/inbound`
+  (Phase 2m). The legacy `/webhook/email` alias is still registered from
+  `api.app` against the same handler.
 
-45 endpoints out of 69 API routes are now in dedicated router files. Latest
-sanity: 28/28 regression/evaluation tests pass and `/api` route count remains 69
+47 endpoints out of 69 API routes are now in dedicated router files. Latest
+sanity: 11/11 provider/email tests pass and `/api` route count remains 69
 (2026-04-27, using explicit pytest `--basetemp` because the default Windows
 temp directory is not readable in this workspace).
 
@@ -148,7 +151,7 @@ For handlers whose tests monkeypatch helpers on `api.app`, use a lazy
 | ~~2j~~ | ~~`/auth/sso/*` (3)~~ | ✅ done 2026-04-26 |
 | 2k | `/upload`, `/tasks/{task_id}` | Group as `api/routers/upload.py`. |
 | 2l | `/ask`, `/ask/stream`, `/chat`, `/chat/stream` | The biggest router (~700 LOC of orchestration). Split last. |
-| 2m | `/admin/providers`, `/channels/email/inbound` | Misc. |
+| ~~2m~~ | ~~`/admin/providers`, `/channels/email/inbound`~~ | ✅ done 2026-04-27 |
 
 After all splits, `api/app.py` should contain only: imports, FastAPI app
 construction, middleware, lifespan, sub-router registrations.
