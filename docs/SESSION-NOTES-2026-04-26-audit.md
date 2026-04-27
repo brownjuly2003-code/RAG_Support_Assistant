@@ -13,7 +13,7 @@
 | Файл | Что в нём |
 |---|---|
 | `audit_opus_2026-04-26.md` | Полный аудит (секции 0-11) + implementation log по 18 задачам hardening (секция 12). Single source of truth по диагнозу и сводке. |
-| `DEPRECATIONS.md` | Карта legacy-расположений в корне. 5-фазный план миграции. Карта split-ов `api/app.py` (13 фаз 2a-2m, из них 9 закрыты). Type-checking debt list. **Pattern для split sub-router-ов (важно для resume!).** |
+| `DEPRECATIONS.md` | Карта legacy-расположений в корне. 5-фазный план миграции. Карта split-ов `api/app.py` (13 фаз 2a-2m, из них 10 закрыты). Type-checking debt list. **Pattern для split sub-router-ов (важно для resume!).** |
 | `docs/CHANGELOG.md` | Запись о hardening-сессии 2026-04-26. |
 | `docs/SESSION-NOTES-2026-04-26-audit.md` | Этот файл. |
 
@@ -39,7 +39,7 @@ python -m bandit -r D:/RAG_Support_Assistant -ll -c D:/RAG_Support_Assistant/pyp
 
 ## 3. Структурные изменения, которые надо помнить
 
-### `api/routers/` — новая директория, 10 sub-router-ов
+### `api/routers/` — новая директория, 11 sub-router-ов
 
 ```
 api/routers/
@@ -47,6 +47,7 @@ api/routers/
 ├── system.py        # /health/live, /metrics
 ├── agent.py         # /agent/tickets/*, /agent/similar (+ AgentRespondRequest)
 ├── admin_review.py  # /admin/review-queue/* (+ ReviewQueueUpdateRequest)
+├── admin_ops.py     # /admin/circuit-breaker/reset, audit, traces, audit-log
 ├── admin_kb.py      # /admin/curated-dataset/*, /admin/kb-drafts/*, stale docs
 ├── admin_experiments.py # /admin/experiments/*, deploy/rollback, assignments
 ├── admin_evaluations.py # /admin/evaluations/*, /admin/regression-runs/*
@@ -94,7 +95,7 @@ monkeypatch.setattr(api_app, "get_oidc_client", _fake_client)
 
 Top-level `from db.engine import async_session` или прямой импорт `get_settings`/OIDC helpers в новом router-модуле **обходит этот патч** — name связывается до того, как тест его патчит.
 
-**Рабочий паттерн (применён в `api/routers/agent.py`, `admin_review.py`, `admin_kb.py`, `admin_experiments.py`, `auth_sso.py`, `feedback.py`):**
+**Рабочий паттерн (применён в `api/routers/agent.py`, `admin_review.py`, `admin_ops.py`, `admin_kb.py`, `admin_experiments.py`, `auth_sso.py`, `feedback.py`):**
 
 ```python
 from db import engine as _db_engine  # импортируем МОДУЛЬ
@@ -137,6 +138,9 @@ Postgres tests не смогут подменить disposable session factory.
 
 6. ~~**Phase 2b — feedback/escalate**~~ — DONE 2026-04-27:
    `api/routers/feedback.py`; 21/21 related tests pass; `/api` route count stays 69.
+
+7. ~~**Phase 2d — admin ops/view/retention**~~ — DONE 2026-04-27:
+   `api/routers/admin_ops.py`; 28/28 related tests pass; focus-set 71/71 passes; `/api` route count stays 69.
 
 После каждого split-а:
 ```bash
@@ -184,7 +188,7 @@ User-instructions требуют `/cxkm` после нетривиальных i
 ```
 auth/dependencies.py        - anonymous gate + Callable return type
 auth/oidc.py                - 3 mypy fixes
-api/app.py                  - 9 endpoint групп удалены, 10 sub-router include
+api/app.py                  - 10 endpoint групп удалены, 11 sub-router include
 api/routers/                - НОВАЯ ДИРЕКТОРИЯ
 main.py                     - host default + auto-migrate + WAL для traces
 sqlite_trace.py             - WAL pragma + accurate docstring

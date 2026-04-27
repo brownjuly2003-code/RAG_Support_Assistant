@@ -686,6 +686,8 @@ Dockerfile запускает `uvicorn ... --workers 2`. При этом trace s
 
 ### 12.5 Что ОСТАЁТСЯ сделать (упорядочено по приоритету)
 
+> Update 2026-04-27: split-фазы 2f/2g/2h/2i/2m/2b/2d закрыты после этого audit log. Актуальная карта split-ов: `DEPRECATIONS.md`; актуальный handover: `docs/SESSION-NOTES-2026-04-26-audit.md`.
+
 #### A. Продолжение разбиения `api/app.py` (DEPRECATIONS Phase 2a-2m)
 
 Готовы к работе сразу (зависят только от DB session + патча `db.engine` модуля):

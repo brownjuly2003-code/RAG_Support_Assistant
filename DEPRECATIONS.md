@@ -87,6 +87,8 @@ to override these.
   `/agent/tickets/{id}/respond`, `/agent/similar` (Phase 2c).
 - `api/routers/admin_review.py` — `/admin/review-queue` (list, update, stats)
   (Phase 2e).
+- `api/routers/admin_ops.py` — `/admin/circuit-breaker/reset`,
+  `/admin/audit`, `/admin/traces/*`, and `/admin/audit-log` (Phase 2d).
 - `api/routers/auth_sso.py` — `/auth/sso/providers`, `/auth/sso/{p}/login`,
   `/auth/sso/{p}/callback` (Phase 2j).
 - `api/routers/admin_kb.py` — `/admin/curated-dataset/*`,
@@ -107,10 +109,10 @@ to override these.
   (Phase 2m). The legacy `/webhook/email` alias is still registered from
   `api.app` against the same handler.
 
-50 endpoints out of 69 API routes are now in dedicated router files. Latest
-sanity: 21/21 feedback/escalation tests pass and `/api` route count remains 69
-(2026-04-27, using explicit pytest `--basetemp` because the default Windows
-temp directory is not readable in this workspace).
+56 endpoints out of 69 API routes are now in dedicated router files. Latest
+sanity: 28/28 admin ops/view/retention/tenant tests pass and `/api` route count
+remains 69 (2026-04-27, using explicit pytest `--basetemp` because the default
+Windows temp directory is not readable in this workspace).
 
 ### Lesson learned from the splits — module-import pattern
 
@@ -146,7 +148,7 @@ the same late-bound module pattern in non-router runtime code such as
 | 2a | `/health` + `/health/ready` | Move `_shutting_down`, `_vector_store`, `_sessions`, `_run_qa_pipeline`, `_probe_*` helpers into `api/_shared.py` first. |
 | ~~2b~~ | ~~`/feedback`, `/escalate`~~ | ✅ done 2026-04-27 |
 | ~~2c~~ | ~~`/agent/tickets/*` (4 endpoints)~~ | ✅ done 2026-04-26 |
-| 2d | `/admin/audit`, `/admin/circuit-breaker/reset`, `/admin/traces/*`, `/admin/audit-log` (deletes) | Each depends on different cross-cutting helpers. |
+| ~~2d~~ | ~~`/admin/audit`, `/admin/circuit-breaker/reset`, `/admin/traces/*`, `/admin/audit-log` (deletes)~~ | ✅ done 2026-04-27 |
 | ~~2e~~ | ~~`/admin/review-queue/*` (3 endpoints)~~ | ✅ done 2026-04-26 |
 | ~~2f~~ | ~~`/admin/curated-dataset/*`, `/admin/thresholds/*`, `/admin/improvement-backlog/*`, `/admin/recommendations/*`, `/admin/kb-gaps`, `/admin/kb-drafts/*`, `/admin/categories`, `/admin/stale-docs/*`~~ | ✅ done 2026-04-26 |
 | ~~2g~~ | ~~`/admin/experiments/*` (9 endpoints)~~ | ✅ done 2026-04-27 |
