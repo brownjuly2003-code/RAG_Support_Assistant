@@ -28,13 +28,12 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: nightly-eval
-              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              image: {{ include "rag-support-assistant.image" . | quote }}
               command:
                 - python
                 - scripts/nightly_eval.py
               envFrom:
-                - configMapRef:
-                    name: {{ .Release.Name }}-config
+                {{- include "rag-support-assistant.envFrom" . | nindent 16 }}
               resources:
                 {{- toYaml .Values.resources | nindent 16 }}
 ---
@@ -68,13 +67,12 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: kb-gap-detector
-              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              image: {{ include "rag-support-assistant.image" . | quote }}
               command:
                 - python
                 - scripts/kb_gap_detector.py
               envFrom:
-                - configMapRef:
-                    name: {{ .Release.Name }}-config
+                {{- include "rag-support-assistant.envFrom" . | nindent 16 }}
               resources:
                 {{- toYaml .Values.resources | nindent 16 }}
 ---
@@ -108,12 +106,11 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: kb-builder
-              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              image: {{ include "rag-support-assistant.image" . | quote }}
               command:
                 - python
                 - scripts/kb_builder.py
               envFrom:
-                - configMapRef:
-                    name: {{ .Release.Name }}-config
+                {{- include "rag-support-assistant.envFrom" . | nindent 16 }}
               resources:
                 {{- toYaml .Values.resources | nindent 16 }}

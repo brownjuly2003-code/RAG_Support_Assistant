@@ -27,12 +27,11 @@ spec:
     spec:
       containers:
         - name: app
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ include "rag-support-assistant.image" . | quote }}
           ports:
             - containerPort: 8000
           envFrom:
-            - configMapRef:
-                name: {{ .Release.Name }}-config
+            {{- include "rag-support-assistant.envFrom" . | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           readinessProbe:

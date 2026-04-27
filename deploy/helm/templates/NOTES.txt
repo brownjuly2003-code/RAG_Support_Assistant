@@ -1,0 +1,24 @@
+{{ .Chart.Name }} {{ .Chart.AppVersion }} installed as release {{ .Release.Name }}.
+
+Required values (no chart defaults):
+  - secrets.DATABASE_URL          (or secrets.existingSecret)
+  - secrets.JWT_SECRET            (or secrets.existingSecret)
+  - secrets.SESSION_SECRET_KEY    (or secrets.existingSecret)
+  - secrets.ADMIN_PASSWORD_HASH   (or secrets.existingSecret)
+  - secrets.DB_ENCRYPTION_KEY     (or secrets.existingSecret)
+  - postgresql.auth.password      (when postgresql.enabled=true)
+  - env.CORS_ORIGINS              (when env.RAG_ENV=production)
+
+Upgrade note (breaking change vs. <0.3.0 charts):
+  DATABASE_URL moved from .Values.env into .Values.secrets. If you previously
+  passed --set env.DATABASE_URL=..., switch to --set secrets.DATABASE_URL=...
+  or provide an existing Secret via --set secrets.existingSecret=<name>. The
+  chart will refuse to render until the new secret keys are populated.
+
+Verify the install:
+  kubectl --namespace {{ .Release.Namespace }} get pods -l app={{ .Release.Name }}-app
+  kubectl --namespace {{ .Release.Namespace }} get secret {{ .Values.secrets.existingSecret | default (printf "%s-secrets" .Release.Name) }}
+
+The application listens on service port {{ .Values.service.port }}; expose it via the
+included Ingress or a port-forward:
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-app {{ .Values.service.port }}:{{ .Values.service.port }}

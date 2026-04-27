@@ -28,12 +28,11 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: eval-daily-snapshot
-              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              image: {{ include "rag-support-assistant.image" . | quote }}
               command:
                 - python
                 - scripts/eval_daily_snapshot.py
               envFrom:
-                - configMapRef:
-                    name: {{ .Release.Name }}-config
+                {{- include "rag-support-assistant.envFrom" . | nindent 16 }}
               resources:
                 {{- toYaml .Values.resources | nindent 16 }}

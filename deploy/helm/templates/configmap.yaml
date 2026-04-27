@@ -10,6 +10,11 @@ metadata:
     helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
     app.kubernetes.io/component: config
 data:
+  {{- if eq (default "" .Values.env.RAG_ENV) "production" }}
+  {{- if not .Values.env.CORS_ORIGINS }}
+  {{- fail "Helm: env.CORS_ORIGINS must be set when env.RAG_ENV=production. Provide --set env.CORS_ORIGINS=\"https://app.example.com\" or override RAG_ENV." }}
+  {{- end }}
+  {{- end }}
   {{- range $key, $value := .Values.env }}
   {{ $key }}: {{ $value | quote }}
   {{- end }}

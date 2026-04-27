@@ -28,14 +28,13 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: improvement-backlog
-              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              image: {{ include "rag-support-assistant.image" . | quote }}
               command:
                 - python
                 - scripts/generate_improvement_backlog.py
                 - --tenant
                 - all
               envFrom:
-                - configMapRef:
-                    name: {{ .Release.Name }}-config
+                {{- include "rag-support-assistant.envFrom" . | nindent 16 }}
               resources:
                 {{- toYaml .Values.resources | nindent 16 }}

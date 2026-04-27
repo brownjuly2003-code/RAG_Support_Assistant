@@ -30,7 +30,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: restore-verify
-              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              image: {{ include "rag-support-assistant.image" . | quote }}
               command:
                 - sh
                 - -c
@@ -42,8 +42,7 @@ spec:
                   fi
                   python scripts/restore_verify.py --snapshot "$latest" --report /reports/restore-verify.md
               envFrom:
-                - configMapRef:
-                    name: {{ .Release.Name }}-config
+                {{- include "rag-support-assistant.envFrom" . | nindent 16 }}
               resources:
                 {{- toYaml .Values.resources | nindent 16 }}
               volumeMounts:
