@@ -485,6 +485,35 @@ async def ask_stream(
                 else (question, get_request_id())
             )
 
+            # H1 parity: while we stream tokens for UX, run the full Self-RAG
+            # graph in parallel so the final SSE event ships graph-level
+            # route/quality/citations/trace_id rather than the stream-side
+            # heuristic. The streamed answer text stays as the user saw it
+            # — only the metadata is corrected. Opt-in via
+            # STREAMING_RAG_PARITY=true; off by default so operators don't
+            # silently pay for a second graph pass.
+            settings_pre = _app.get_settings()
+            graph_parity_enabled = bool(
+                getattr(settings_pre, "streaming_rag_parity", False)
+            )
+            graph_parity_timeout = float(
+                getattr(settings_pre, "request_timeout_sec", 60.0)
+            )
+            # When parity runs, session.ask appends turns to session._history
+            # itself; the streaming branch must not re-append or we get
+            # duplicate entries in the conversation log.
+            history_pre_len = (
+                len(getattr(session, "_history", []))
+                if hasattr(session, "_history")
+                else None
+            )
+            graph_task: asyncio.Future | None = None
+            if graph_parity_enabled and hasattr(session, "ask"):
+                loop = asyncio.get_running_loop()
+                graph_task = loop.run_in_executor(
+                    None, lambda: session.ask(*ask_args)
+                )
+
             if hasattr(session, "_retriever") and session._retriever is not None:
                 docs = await asyncio.get_running_loop().run_in_executor(
                     None,
@@ -568,16 +597,6 @@ async def ask_stream(
             if not full_answer:
                 raise RuntimeError("empty streaming answer")
 
-            if hasattr(session, "_history"):
-                session._history.append({"role": "user", "content": question})
-                session._history.append({"role": "assistant", "content": full_answer})
-                max_history = getattr(session, "_max_history", 20)
-                if len(session._history) > max_history * 2:
-                    session._history = session._history[-(max_history * 2):]
-            elif isinstance(session, dict):
-                session["history"].append({"role": "user", "content": question})
-                session["history"].append({"role": "assistant", "content": full_answer})
-
             sources = []
             citations = []
             for idx, doc in enumerate(docs, start=1):
@@ -651,6 +670,81 @@ async def ask_stream(
                         "Failed to generate streaming suggested questions: %s",
                         suggest_exc,
                     )
+            trace_id_value = ""
+            graph_appended_history = False
+            graph_result: Dict[str, Any] | None = None
+            if graph_task is not None:
+                try:
+                    graph_result = await asyncio.wait_for(
+                        graph_task, timeout=graph_parity_timeout
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "Streaming RAG parity task exceeded %.1fs timeout",
+                        graph_parity_timeout,
+                    )
+                    graph_task.cancel()
+                    graph_result = None
+                except Exception as graph_exc:
+                    logger.warning("Streaming RAG parity task failed: %s", graph_exc)
+                    graph_result = None
+                # session.ask appends turns to session._history itself (see
+                # ConversationSession._append_history). If parity ran, skip
+                # the streaming-side append below to avoid duplicates.
+                if (
+                    history_pre_len is not None
+                    and hasattr(session, "_history")
+                    and len(session._history) > history_pre_len
+                ):
+                    graph_appended_history = True
+
+            if not graph_appended_history:
+                if hasattr(session, "_history"):
+                    session._history.append({"role": "user", "content": question})
+                    session._history.append({"role": "assistant", "content": full_answer})
+                    max_history = getattr(session, "_max_history", 20)
+                    if len(session._history) > max_history * 2:
+                        session._history = session._history[-(max_history * 2):]
+                elif isinstance(session, dict):
+                    session["history"].append({"role": "user", "content": question})
+                    session["history"].append({"role": "assistant", "content": full_answer})
+
+            if isinstance(graph_result, dict) and graph_result:
+                if graph_result.get("quality_score") is not None:
+                    quality = int(graph_result["quality_score"])
+                if graph_result.get("route"):
+                    route = str(graph_result["route"])
+                if graph_result.get("trace_id"):
+                    trace_id_value = str(graph_result["trace_id"])
+                if graph_result.get("suggested_questions"):
+                    suggested_questions = list(graph_result["suggested_questions"])
+                graph_citations_raw = graph_result.get("citations") or []
+                if graph_citations_raw:
+                    citations = [
+                        {
+                            "index": int(item.get("index") or 0),
+                            "doc_id": str(item.get("doc_id") or ""),
+                            "title": str(item.get("title") or ""),
+                            "excerpt": str(item.get("excerpt") or ""),
+                        }
+                        for item in graph_citations_raw
+                        if isinstance(item, dict)
+                    ]
+                graph_graded = (
+                    graph_result.get("graded_docs")
+                    or graph_result.get("context_docs")
+                    or []
+                )
+                if graph_graded:
+                    sources = []
+                    for item in graph_graded:
+                        metadata = item.get("metadata", {}) if isinstance(item, dict) else {}
+                        content = item.get("page_content", "") if isinstance(item, dict) else ""
+                        sources.append({
+                            "source": metadata.get("source") or metadata.get("file_name") or "",
+                            "page_content": content,
+                        })
+
             if time.monotonic() >= _app._db_retry_after:
                 try:
                     from db.engine import async_session as db_session_factory
@@ -673,16 +767,26 @@ async def ask_stream(
                 "session_id": session_id,
                 "sources": sources,
                 "citations": citations,
-                "trace_id": "",
+                "trace_id": trace_id_value,
                 "suggested_questions": suggested_questions,
             }) + "\n\n"
         except Exception as exc:
             logger.warning("SSE streaming path failed, fallback to sync pipeline: %s", exc, exc_info=True)
             try:
-                if hasattr(session, "ask"):
+                # If we already kicked off the parity graph in parallel, reuse
+                # its result instead of running session.ask twice.
+                result: Dict[str, Any] | None = None
+                if graph_task is not None:
+                    try:
+                        result = await graph_task
+                    except Exception as parity_exc:
+                        logger.warning("Streaming parity task failed in fallback: %s", parity_exc)
+                        result = None
+                if result is None and hasattr(session, "ask"):
                     result = await asyncio.get_running_loop().run_in_executor(
                         None, session.ask, *ask_args
                     )
+                if result is not None:
                     answer = result.get("answer") or "Не удалось получить ответ."
                     quality = result.get("quality_score") or 50
                     route = result.get("route") or "auto"

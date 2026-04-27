@@ -328,6 +328,13 @@ class Settings:
         default_factory=lambda: os.getenv("STREAMING_ENABLED", "false").strip().lower()
         in ("1", "true", "yes")
     )
+    # Streaming RAG parity is opt-in: enabling it doubles LLM cost per
+    # streamed request (stream tokens + full graph pass), so production
+    # operators must explicitly turn it on with STREAMING_RAG_PARITY=true.
+    streaming_rag_parity: bool = field(
+        default_factory=lambda: os.getenv("STREAMING_RAG_PARITY", "false").strip().lower()
+        in ("1", "true", "yes")
+    )
 
     # --- Parent-Child Chunking ---
     parent_child: bool = field(
