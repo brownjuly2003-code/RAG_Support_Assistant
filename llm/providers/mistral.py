@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 import os
 import time
 from typing import Any
@@ -111,7 +111,11 @@ class MistralProvider:
             payload["stream"] = kwargs["stream"]
         return payload
 
-    def _parse_response(self, data: dict[str, Any], headers: dict[str, str]) -> LLMResponse:
+    def _parse_response(
+        self,
+        data: dict[str, Any],
+        headers: Mapping[str, str],
+    ) -> LLMResponse:
         choice = (data.get("choices") or [{}])[0]
         message = choice.get("message") or {}
         content = message.get("content") or ""

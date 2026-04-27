@@ -52,16 +52,16 @@ def _instantiate_provider(settings: Any, provider_id: str, model_name: str) -> A
         raise KeyError(f"unknown model '{model_name}' for provider '{provider_id}'")
 
     timeout_sec = float(getattr(settings, "ollama_request_timeout_sec", 60.0))
-    common_kwargs = {
-        "model_name": model.name,
-        "input_price_per_1m_tokens": model.input_price_per_1m_tokens,
-        "output_price_per_1m_tokens": model.output_price_per_1m_tokens,
-        "timeout_sec": timeout_sec,
-    }
+    model_pricing_name: str = str(model.name)
+    input_price: float = float(model.input_price_per_1m_tokens)
+    output_price: float = float(model.output_price_per_1m_tokens)
     if provider_id == "ollama":
         ollama_provider = OllamaProvider(
             base_url=str(getattr(settings, "ollama_base_url", "http://localhost:11434")),
-            **common_kwargs,
+            model_name=model_pricing_name,
+            input_price_per_1m_tokens=input_price,
+            output_price_per_1m_tokens=output_price,
+            timeout_sec=timeout_sec,
         )
         ollama_provider.supports_tool_use = provider_config.capabilities.supports_tool_use
         ollama_provider.supports_structured_output = provider_config.capabilities.supports_structured_output
@@ -71,7 +71,10 @@ def _instantiate_provider(settings: Any, provider_id: str, model_name: str) -> A
     if provider_id == "mistral":
         mistral_provider = MistralProvider(
             api_key_env=str(provider_config.api_key_env or ""),
-            **common_kwargs,
+            model_name=model_pricing_name,
+            input_price_per_1m_tokens=input_price,
+            output_price_per_1m_tokens=output_price,
+            timeout_sec=timeout_sec,
         )
         mistral_provider.supports_tool_use = provider_config.capabilities.supports_tool_use
         mistral_provider.supports_structured_output = provider_config.capabilities.supports_structured_output
