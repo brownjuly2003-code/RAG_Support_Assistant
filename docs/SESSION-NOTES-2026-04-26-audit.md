@@ -159,9 +159,12 @@ python -c "from api.app import app; print(len([r for r in app.routes if hasattr(
 python -m pytest tests/test_<related>.py -p no:schemathesis -q --timeout=60
 ```
 
-### Опция B — фикс mypy в llm/providers (точечная типизация)
+### Опция B — фикс mypy в llm/providers/db.engine — DONE 2026-04-27
 
-14 errors. Главные: type narrowing провайдер-юнионов в `runtime.py`, `dict[str, object]` kwargs в `base.py`, lambda inference. См. `DEPRECATIONS.md` секцию "Type-checking debt".
+`llm/providers` теперь проходит `mypy --follow-imports=skip --no-incremental`;
+`db/engine.py` проходит обычный `mypy db/engine.py`. Strict promotion для
+`llm.providers.*` всё ещё отдельная задача, потому что нужно доаннотировать
+provider classes перед `disallow_untyped_defs`.
 
 ### Опция C — DEPRECATIONS Phase 2 (перенос файлов)
 

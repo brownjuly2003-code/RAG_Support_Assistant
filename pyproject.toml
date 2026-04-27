@@ -91,8 +91,8 @@ warn_return_any = true
 warn_unused_ignores = true
 no_implicit_optional = true
 
-# llm.providers — strict mode disabled until 14 outstanding type errors are
-# resolved (type narrowing in runtime.py, dict[str, object] kwargs in base.py).
+# llm.providers — informational mypy scope is clean as of 2026-04-27.
+# Strict mode stays disabled until provider classes are fully annotated.
 # Tracked in DEPRECATIONS.md.
 [[tool.mypy.overrides]]
 module = ["llm.providers.*"]

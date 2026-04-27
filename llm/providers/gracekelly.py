@@ -174,8 +174,10 @@ class GraceKellyProvider:
         return self.model_name
 
     def _parse_response(self, data: dict[str, Any], prompt: str) -> LLMResponse:
-        result = data.get("result") if isinstance(data.get("result"), dict) else {}
-        metadata = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
+        raw_result = data.get("result")
+        result: dict[str, Any] = raw_result if isinstance(raw_result, dict) else {}
+        raw_metadata = data.get("metadata")
+        metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
         text = str(
             result.get("answer")
             or data.get("answer")

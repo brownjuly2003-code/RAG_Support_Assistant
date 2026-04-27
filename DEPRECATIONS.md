@@ -178,11 +178,11 @@ Strict mypy is enforced via `pyproject.toml [[tool.mypy.overrides]]` for:
 
 The following modules are intentionally **not** strict yet:
 
-- `llm.providers.*` — 14 outstanding type errors as of 2026-04-26 (lambda
-  inference, type narrowing of provider unions, dict[str, object] kwargs in
-  base provider). Resolve before promoting to strict.
-- `db.engine` — `Pool.size/checkedout/overflow` attributes flagged as
-  missing by SQLAlchemy stubs; needs cast or stub bump.
+- `llm.providers.*` — informational mypy scope is clean as of 2026-04-27.
+  Keep strict promotion separate because provider classes still need fuller
+  method annotations before `disallow_untyped_defs` can be enabled.
+- `db.engine` — informational mypy scope is clean as of 2026-04-27 after
+  casting `engine.pool` around SQLAlchemy's runtime-only pool methods.
 - `config.settings` — re-defined names + Optional/str narrowing; cleanup is
   scoped to a separate refactor.
 
@@ -190,7 +190,8 @@ To run mypy locally:
 
 ```
 mypy auth db/models.py    # strict, must pass
-mypy llm/providers        # informational, currently 14 errors
+mypy db/engine.py         # informational, must pass
+mypy --follow-imports=skip --no-incremental llm/providers  # informational, must pass
 ```
 
 ## What was done in this session (2026-04-26)

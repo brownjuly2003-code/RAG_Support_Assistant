@@ -697,8 +697,9 @@ app-shell, следующий отдельный cleanup — вынести auth
 
 #### B. Type-checking долг
 
-- 14 mypy errors в `llm/providers/*` (lambda inference + provider union narrowing + dict[str, object] kwargs). Зафиксировано в `DEPRECATIONS.md` секции "Type-checking debt".
-- `db/engine.py` — `Pool.size/checkedout/overflow` отсутствуют в SQLAlchemy stubs. Нужен cast или stub bump.
+Update 2026-04-27: `llm/providers/*` informational mypy scope and
+`db/engine.py` now pass. Strict promotion для `llm.providers.*` остаётся
+отдельной задачей из-за недостающих annotations на provider classes.
 
 #### C. DEPRECATIONS Phase 2-5 — перемещение root-level файлов
 

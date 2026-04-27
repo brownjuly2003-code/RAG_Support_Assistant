@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-from typing import AsyncIterator
+from typing import Any, AsyncIterator, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -22,7 +22,7 @@ async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit
 
 def get_pool_stats() -> dict[str, int]:
     try:
-        pool = engine.pool
+        pool = cast(Any, engine.pool)
         return {
             "size": pool.size(),
             "checked_out": pool.checkedout(),

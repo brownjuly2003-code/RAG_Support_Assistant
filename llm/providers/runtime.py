@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from config.provider_schema import load_provider_registry
 from llm.providers.base import ProviderBackedLLM
@@ -59,27 +59,27 @@ def _instantiate_provider(settings: Any, provider_id: str, model_name: str) -> A
         "timeout_sec": timeout_sec,
     }
     if provider_id == "ollama":
-        provider = OllamaProvider(
+        ollama_provider = OllamaProvider(
             base_url=str(getattr(settings, "ollama_base_url", "http://localhost:11434")),
             **common_kwargs,
         )
-        provider.supports_tool_use = provider_config.capabilities.supports_tool_use
-        provider.supports_structured_output = provider_config.capabilities.supports_structured_output
-        provider.supports_streaming = provider_config.capabilities.supports_streaming
-        provider.supports_batch = provider_config.capabilities.supports_batch
-        return provider
+        ollama_provider.supports_tool_use = provider_config.capabilities.supports_tool_use
+        ollama_provider.supports_structured_output = provider_config.capabilities.supports_structured_output
+        ollama_provider.supports_streaming = provider_config.capabilities.supports_streaming
+        ollama_provider.supports_batch = provider_config.capabilities.supports_batch
+        return ollama_provider
     if provider_id == "mistral":
-        provider = MistralProvider(
+        mistral_provider = MistralProvider(
             api_key_env=str(provider_config.api_key_env or ""),
             **common_kwargs,
         )
-        provider.supports_tool_use = provider_config.capabilities.supports_tool_use
-        provider.supports_structured_output = provider_config.capabilities.supports_structured_output
-        provider.supports_streaming = provider_config.capabilities.supports_streaming
-        provider.supports_batch = provider_config.capabilities.supports_batch
-        return provider
+        mistral_provider.supports_tool_use = provider_config.capabilities.supports_tool_use
+        mistral_provider.supports_structured_output = provider_config.capabilities.supports_structured_output
+        mistral_provider.supports_streaming = provider_config.capabilities.supports_streaming
+        mistral_provider.supports_batch = provider_config.capabilities.supports_batch
+        return mistral_provider
     if provider_id == "gracekelly":
-        provider = GraceKellyProvider(
+        gracekelly_provider = GraceKellyProvider(
             base_url=str(getattr(settings, "gracekelly_base_url", "http://127.0.0.1:8011")),
             api_key_env=str(getattr(settings, "gracekelly_api_key_env", provider_config.api_key_env or "")),
             health_check_timeout_sec=float(
@@ -93,11 +93,11 @@ def _instantiate_provider(settings: Any, provider_id: str, model_name: str) -> A
             input_price_per_1m_tokens=model.input_price_per_1m_tokens,
             output_price_per_1m_tokens=model.output_price_per_1m_tokens,
         )
-        provider.supports_tool_use = provider_config.capabilities.supports_tool_use
-        provider.supports_structured_output = provider_config.capabilities.supports_structured_output
-        provider.supports_streaming = provider_config.capabilities.supports_streaming
-        provider.supports_batch = provider_config.capabilities.supports_batch
-        return provider
+        gracekelly_provider.supports_tool_use = provider_config.capabilities.supports_tool_use
+        gracekelly_provider.supports_structured_output = provider_config.capabilities.supports_structured_output
+        gracekelly_provider.supports_streaming = provider_config.capabilities.supports_streaming
+        gracekelly_provider.supports_batch = provider_config.capabilities.supports_batch
+        return gracekelly_provider
     raise KeyError(f"unsupported provider '{provider_id}'")
 
 
@@ -187,11 +187,18 @@ def _build_provider(
         fallback_provider.provider_id,
         fallback_provider.model_name,
     )
+
+    def fallback_cache_is_active() -> bool:
+        return _is_failover_cache_active(cache_key)
+
+    def fallback_cache_activate(ttl_sec: float) -> None:
+        _activate_failover_cache(cache_key, ttl_sec)
+
     return ProviderBackedLLM(
         provider,
         fallback_provider=fallback_provider,
-        fallback_cache_is_active=lambda key=cache_key: _is_failover_cache_active(key),
-        fallback_cache_activate=lambda ttl_sec, key=cache_key: _activate_failover_cache(key, ttl_sec),
+        fallback_cache_is_active=fallback_cache_is_active,
+        fallback_cache_activate=fallback_cache_activate,
         fallback_cache_ttl_sec=float(getattr(settings, "failover_fallback_cache_seconds", 300) or 300),
         on_fallback=_record_provider_fallback,
     )
