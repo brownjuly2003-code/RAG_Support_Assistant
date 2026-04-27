@@ -72,17 +72,16 @@ and update references in `config/settings.py`, `ingestion/pipeline.py`,
 
 ## api/app.py monolith split — in progress
 
-`api/app.py` is still ~4300 LOC. The audit roadmap proposes splitting it
-into 6-7 router modules under `api/routers/`. The split is gated on first
-factoring out module-globals into `api/_shared.py`, because most endpoint
-handlers reach into `_shutting_down`, `_vector_store`, `_sessions`,
-`_session_last_access`, `_chunks`, `_retriever`, `_llm`, `_db_retry_after`,
-`_pipeline_semaphore` — and tests use `monkeypatch.setattr(api.app, ...)`
-to override these.
+`api/app.py` is still 2842 LOC. Most endpoint groups now live under
+`api/routers/`; the remaining orchestration routes still reach into
+`_sessions`, `_session_last_access`, `_chunks`, `_retriever`, `_llm`,
+`_db_retry_after`, and `_pipeline_semaphore` — and tests use
+`monkeypatch.setattr(api.app, ...)` to override these.
 
 ### Done sub-routers
 
-- `api/routers/system.py` — `/health/live` + `/metrics` (Phase 2 PoC).
+- `api/routers/system.py` — `/health/live`, `/health/ready`, `/health`,
+  and `/metrics` (Phase 2 PoC + Phase 2a).
 - `api/routers/agent.py` — `/agent/tickets`, `/agent/tickets/{id}`,
   `/agent/tickets/{id}/respond`, `/agent/similar` (Phase 2c).
 - `api/routers/admin_review.py` — `/admin/review-queue` (list, update, stats)
@@ -110,8 +109,8 @@ to override these.
   `api.app` against the same handler.
 - `api/routers/upload.py` — `/upload` and `/tasks/{task_id}` (Phase 2k).
 
-58 endpoints out of 69 API routes are now in dedicated router files. Latest
-sanity: 13/13 upload-focused tests pass and `/api` route count remains 69
+60 endpoints out of 69 API routes are now in dedicated router files. Latest
+sanity: 19/19 health-focused tests pass and `/api` route count remains 69
 (2026-04-27, using explicit pytest `--basetemp` because the default Windows temp
 directory is not readable in this workspace).
 
@@ -148,7 +147,7 @@ from `api.app` creates a circular dependency when a router is imported directly.
 
 | Phase | Endpoints | Blockers |
 |---|---|---|
-| 2a | `/health` + `/health/ready` | Move `_shutting_down`, `_vector_store`, `_sessions`, `_run_qa_pipeline`, `_probe_*` helpers into `api/_shared.py` first. |
+| ~~2a~~ | ~~`/health` + `/health/ready`~~ | ✅ done 2026-04-27 |
 | ~~2b~~ | ~~`/feedback`, `/escalate`~~ | ✅ done 2026-04-27 |
 | ~~2c~~ | ~~`/agent/tickets/*` (4 endpoints)~~ | ✅ done 2026-04-26 |
 | ~~2d~~ | ~~`/admin/audit`, `/admin/circuit-breaker/reset`, `/admin/traces/*`, `/admin/audit-log` (deletes)~~ | ✅ done 2026-04-27 |

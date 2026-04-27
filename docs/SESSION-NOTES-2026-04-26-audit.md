@@ -2,7 +2,7 @@
 
 **Дата:** 2026-04-26
 **Сессии:** 1 (audit) + 4 (implementation)
-**Состояние:** 22/22 hardening tasks completed + Phase 2b/2d/2g/2h/2i/2k/2m splits completed, upload-focused 13/13 tests pass.
+**Состояние:** 22/22 hardening tasks completed + Phase 2a/2b/2d/2g/2h/2i/2k/2m splits completed, health-focused 19/19 tests pass.
 
 > Этот документ — **карманный handover** для новой сессии. Если нужны детали — смотри указанные файлы.
 
@@ -13,7 +13,7 @@
 | Файл | Что в нём |
 |---|---|
 | `audit_opus_2026-04-26.md` | Полный аудит (секции 0-11) + implementation log по 18 задачам hardening (секция 12). Single source of truth по диагнозу и сводке. |
-| `DEPRECATIONS.md` | Карта legacy-расположений в корне. 5-фазный план миграции. Карта split-ов `api/app.py` (13 фаз 2a-2m, из них 11 закрыты). Type-checking debt list. **Pattern для split sub-router-ов (важно для resume!).** |
+| `DEPRECATIONS.md` | Карта legacy-расположений в корне. 5-фазный план миграции. Карта split-ов `api/app.py` (13 фаз 2a-2m, из них 12 закрыты). Type-checking debt list. **Pattern для split sub-router-ов (важно для resume!).** |
 | `docs/CHANGELOG.md` | Запись о hardening-сессии 2026-04-26. |
 | `docs/SESSION-NOTES-2026-04-26-audit.md` | Этот файл. |
 
@@ -44,7 +44,7 @@ python -m bandit -r D:/RAG_Support_Assistant -ll -c D:/RAG_Support_Assistant/pyp
 ```
 api/routers/
 ├── __init__.py
-├── system.py        # /health/live, /metrics
+├── system.py        # /health/live, /health/ready, /health, /metrics
 ├── agent.py         # /agent/tickets/*, /agent/similar (+ AgentRespondRequest)
 ├── admin_review.py  # /admin/review-queue/* (+ ReviewQueueUpdateRequest)
 ├── admin_ops.py     # /admin/circuit-breaker/reset, audit, traces, audit-log
@@ -96,7 +96,7 @@ monkeypatch.setattr(api_app, "get_oidc_client", _fake_client)
 
 Top-level `from db.engine import async_session` или прямой импорт `get_settings`/OIDC helpers в новом router-модуле **обходит этот патч** — name связывается до того, как тест его патчит.
 
-**Рабочий паттерн (применён в `api/routers/agent.py`, `admin_review.py`, `admin_ops.py`, `admin_kb.py`, `admin_experiments.py`, `auth_sso.py`, `feedback.py`, `upload.py`):**
+**Рабочий паттерн (применён в `api/routers/system.py`, `agent.py`, `admin_review.py`, `admin_ops.py`, `admin_kb.py`, `admin_experiments.py`, `auth_sso.py`, `feedback.py`, `upload.py`):**
 
 ```python
 from db import engine as _db_engine  # импортируем МОДУЛЬ
@@ -145,6 +145,12 @@ Postgres tests не смогут подменить disposable session factory.
 
 8. ~~**Phase 2k — upload/tasks**~~ — DONE 2026-04-27:
    `api/routers/upload.py`; 13/13 upload-focused tests pass; `/api` route count stays 69.
+
+9. ~~**Phase 2a — dependency-aware health**~~ — DONE 2026-04-27:
+   `api/routers/system.py`; 19/19 health-focused tests pass; `/api` route count stays 69; extracted routes now 60/69.
+
+Оставшийся router split:
+- **Phase 2l — `/ask`, `/ask/stream`, `/chat`, `/chat/stream`** — самый большой orchestration-блок, делить последним.
 
 После каждого split-а:
 ```bash

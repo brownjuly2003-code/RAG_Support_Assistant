@@ -16,6 +16,17 @@ def test_liveness_returns_200_and_alive(client: TestClient) -> None:
     assert body["service"] == "rag-support-assistant"
 
 
+def test_dependency_health_routes_live_in_system_router() -> None:
+    from api.routers import system
+
+    routes = {route.path: route for route in system.router.routes}
+
+    assert "/health" in routes
+    assert "/health/ready" in routes
+    assert routes["/health"].response_model is system.HealthResponse
+    assert routes["/health/ready"].response_model is system.HealthResponse
+
+
 def test_liveness_does_not_call_probes(monkeypatch, client: TestClient) -> None:
     calls: list[str] = []
 

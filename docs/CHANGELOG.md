@@ -30,7 +30,7 @@
 
 **API monolith split start (Phase 3-4):**
 - Создана `api/routers/` директория. 12 sub-router-ов вынесены из `api/app.py`:
-  - `system.py` — `/health/live`, `/metrics`
+  - `system.py` — `/health/live`, `/health/ready`, `/health`, `/metrics`
   - `agent.py` — `/agent/tickets/{list,get,respond}`, `/agent/similar` (+ `AgentRespondRequest`)
   - `admin_review.py` — `/admin/review-queue/{list,update,stats}` (+ `ReviewQueueUpdateRequest`)
   - `admin_kb.py` — `/admin/curated-dataset/*`, `/admin/thresholds/*`, `/admin/improvement-backlog/*`, `/admin/kb-gaps`, `/admin/kb-drafts/*`, `/admin/stale-docs/*`
@@ -45,7 +45,7 @@
 - `api/rate_limit.py` выделен как shared-модуль для `limiter` и rate-limit exception handler-а, чтобы extracted routers не импортировали `api.app` на module-load.
 - Зафиксирован monkeypatch-friendly паттерн (`from db import engine as _db_engine` + `_async_session()` indirection, lazy access через `api.app`) — необходим для совместимости с тестами, использующими `monkeypatch.setattr("db.engine.async_session", ...)` и `monkeypatch.setattr(api_app, ...)`.
 - `evaluation/evaluator_runner.py` перешёл на late-bound `db.engine`, чтобы live regression tests могли подменять disposable Postgres session factory без stale import.
-- 58 endpoints вынесены из 5288-LOC монолита, `api/app.py` теперь 2606 LOC.
+- 60 endpoints вынесены из 5288-LOC монолита, `api/app.py` теперь 2842 LOC.
 
 **Documentation (Phase 5):**
 - `audit_opus_2026-04-26.md` — секция 12 «Implementation log» с полной таблицей 22 задач, метриками до/после, обновлённой самооценкой (8.7/10 local, 7.7/10 commercial).
@@ -64,7 +64,7 @@
 - ✅ Security gaps закрыты: anonymous fallback, DOS validation, MD5 weakness, dependency CVE scan.
 - ✅ Operability: auto-migrate, SQLite WAL, корректный host default.
 - ✅ Code hygiene: 0 TODO/FIXME, 0 deprecation shims в корне, mypy strict для auth/db core.
-- ✅ Architecture: первые 58 endpoints в sub-router модулях, паттерн доказан.
+- ✅ Architecture: первые 60 endpoints в sub-router модулях, паттерн доказан.
 - 📋 Карта остатков — в `audit_opus_2026-04-26.md` секции 12.5 + `DEPRECATIONS.md`.
 
 ---

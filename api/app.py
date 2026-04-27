@@ -276,20 +276,7 @@ class HistoryResponse(BaseModel):
     tenant_id: str = "default"
 
 
-class ComponentStatus(BaseModel):
-    status: str
-    latency_ms: Optional[float] = None
-    detail: Optional[str] = None
-
-
-class HealthResponse(BaseModel):
-    status: str
-    components: Dict[str, ComponentStatus]
-    vector_store_loaded: bool
-    sessions_count: int
-    pipeline_available: bool
-    circuit_breakers: List[Dict[str, Any]] = Field(default_factory=list)
-    features: Dict[str, bool] = Field(default_factory=dict)
+from api.routers.system import ComponentStatus, HealthResponse  # noqa: E402,F401
 
 
 class LoginRequest(BaseModel):
@@ -1648,9 +1635,13 @@ from api.routers.agent import router as _agent_router  # noqa: E402
 from api.routers.auth_sso import router as _auth_sso_router  # noqa: E402
 from api.routers.feedback import router as _feedback_router  # noqa: E402
 from api.routers.misc import email_inbound_webhook, router as _misc_router  # noqa: E402
-from api.routers.system import router as _system_router  # noqa: E402
+from api.routers import system as _system_router_module  # noqa: E402
 from api.routers import upload as _upload_router_module  # noqa: E402
 
+health_check = _system_router_module.health_check
+health_liveness = _system_router_module.health_liveness
+health_readiness = _system_router_module.health_readiness
+_system_router = _system_router_module.router
 TaskStatusResponse = _upload_router_module.TaskStatusResponse
 UploadResponse = _upload_router_module.UploadResponse
 _upload_router = _upload_router_module.router
@@ -2634,88 +2625,7 @@ async def clear_session(
     return {"status": "ok", "message": f"Session {session_id} cleared"}
 
 
-# /health/live moved to api.routers.system
-
-
-@router.get("/health/ready", response_model=HealthResponse)
-async def health_readiness() -> JSONResponse:
-    if _shutting_down:
-        return JSONResponse(
-            status_code=503,
-            content={
-                "status": "shutting_down",
-                "detail": "process is draining - stop sending traffic",
-            },
-        )
-    return await health_check()
-
-
-@router.get("/health", response_model=HealthResponse)
-async def health_check() -> HealthResponse:
-    if _shutting_down:
-        return JSONResponse(
-            status_code=503,
-            content={
-                "status": "shutting_down",
-                "detail": "process is draining - stop sending traffic",
-            },
-        )
-    settings = get_settings()
-
-    ollama_status, chroma_status, sqlite_status, postgres_status, redis_status = await asyncio.gather(
-        _probe_ollama(settings.ollama_base_url),
-        _probe_chromadb(settings.vectordb_chroma_dir),
-        _probe_sqlite(settings.tracing_db_path),
-        _probe_postgres(),
-        _probe_redis(),
-    )
-    try:
-        prometheus_metrics.record_component_health("ollama", ollama_status.status)
-        prometheus_metrics.record_component_health("chromadb", chroma_status.status)
-        prometheus_metrics.record_component_health("sqlite", sqlite_status.status)
-        prometheus_metrics.record_component_health("postgres", postgres_status.status)
-        prometheus_metrics.record_component_health("redis", redis_status.status)
-    except Exception:
-        pass
-
-    critical_down = ollama_status.status == "error" or chroma_status.status == "error"
-    non_critical_error = (
-        sqlite_status.status == "error"
-        or postgres_status.status == "error"
-        or redis_status.status == "error"
-    )
-    overall = "unhealthy" if critical_down else ("degraded" if non_critical_error else "ok")
-    breakers_snap: List[Dict[str, Any]] = []
-    try:
-        from agent.graph import get_default_breaker
-    except ImportError:
-        get_default_breaker = None  # type: ignore[assignment]
-
-    if get_default_breaker is not None:
-        breaker = get_default_breaker()
-        if breaker is not None:
-            breakers_snap.append(breaker.snapshot())
-
-    response = HealthResponse(
-        status=overall,
-        components={
-            "ollama": ollama_status,
-            "chromadb": chroma_status,
-            "sqlite": sqlite_status,
-            "postgres": postgres_status,
-            "redis": redis_status,
-        },
-        vector_store_loaded=_vector_store is not None,
-        sessions_count=len(_sessions),
-        pipeline_available=_run_qa_pipeline is not None,
-        circuit_breakers=breakers_snap,
-        features={
-            "streaming_enabled": bool(getattr(settings, "streaming_enabled", False)),
-        },
-    )
-
-    status_code = 503 if critical_down else 200
-    return JSONResponse(content=response.model_dump(), status_code=status_code)
+# /health/live, /health/ready, and /health moved to api.routers.system
 
 
 # ---------------------------------------------------------------------------

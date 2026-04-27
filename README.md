@@ -56,7 +56,7 @@ User / Email / Widget
 
 - `api/app.py` — FastAPI application, middleware, lifespan, master router.
   Splitting in progress; see `DEPRECATIONS.md` for the migration map.
-- `api/routers/` — extracted sub-routers (`system.py` for health/metrics,
+- `api/routers/` — extracted sub-routers (`system.py` for health/readiness/metrics,
   `agent.py` for `/agent/*`, `admin_review.py` for `/admin/review-queue/*`,
   `auth_sso.py` for `/auth/sso/*`). New endpoint groups are added here, not
   in `api/app.py`.

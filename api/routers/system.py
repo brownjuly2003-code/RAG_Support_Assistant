@@ -1,21 +1,19 @@
-"""System endpoints: liveness probe + Prometheus-style metrics snapshot.
+"""System endpoints: liveness/readiness probes + metrics snapshot.
 
 Extracted from api.app on 2026-04-26 as the first proof-of-concept split.
-These two endpoints are dependency-light (no module-global state from
-api.app), which makes them safe candidates for the initial extraction.
-
-The remaining health endpoints (/health, /health/ready) require module-globals
-(_shutting_down, _vector_store, _sessions, _run_qa_pipeline, the _probe_*
-helpers) and are kept in api.app until those globals are factored out into
-api._shared. See DEPRECATIONS.md for the full plan.
+The dependency-aware health endpoints use late-bound api.app access so tests
+that monkeypatch module globals keep working after the split.
 """
 from __future__ import annotations
 
+import asyncio
 import inspect
 import logging
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
 from api.correlation import get_current_tenant
 from auth.dependencies import require_role
@@ -25,12 +23,114 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+class ComponentStatus(BaseModel):
+    status: str
+    latency_ms: Optional[float] = None
+    detail: Optional[str] = None
+
+
+class HealthResponse(BaseModel):
+    status: str
+    components: dict[str, ComponentStatus]
+    vector_store_loaded: bool
+    sessions_count: int
+    pipeline_available: bool
+    circuit_breakers: list[dict[str, Any]] = Field(default_factory=list)
+    features: dict[str, bool] = Field(default_factory=dict)
+
+
+def _app_module():
+    from api import app as _app  # noqa: PLC0415
+
+    return _app
+
+
+def _shutdown_response() -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={
+            "status": "shutting_down",
+            "detail": "process is draining - stop sending traffic",
+        },
+    )
+
+
 @router.get("/health/live")
 async def health_liveness() -> JSONResponse:
     return JSONResponse(
         status_code=200,
         content={"status": "alive", "service": "rag-support-assistant"},
     )
+
+
+@router.get("/health/ready", response_model=HealthResponse)
+async def health_readiness() -> JSONResponse:
+    if _app_module()._shutting_down:
+        return _shutdown_response()
+    return await health_check()
+
+
+@router.get("/health", response_model=HealthResponse)
+async def health_check() -> JSONResponse:
+    _app = _app_module()
+    if _app._shutting_down:
+        return _shutdown_response()
+    settings = _app.get_settings()
+
+    ollama_status, chroma_status, sqlite_status, postgres_status, redis_status = await asyncio.gather(
+        _app._probe_ollama(settings.ollama_base_url),
+        _app._probe_chromadb(settings.vectordb_chroma_dir),
+        _app._probe_sqlite(settings.tracing_db_path),
+        _app._probe_postgres(),
+        _app._probe_redis(),
+    )
+    try:
+        _app.prometheus_metrics.record_component_health("ollama", ollama_status.status)
+        _app.prometheus_metrics.record_component_health("chromadb", chroma_status.status)
+        _app.prometheus_metrics.record_component_health("sqlite", sqlite_status.status)
+        _app.prometheus_metrics.record_component_health("postgres", postgres_status.status)
+        _app.prometheus_metrics.record_component_health("redis", redis_status.status)
+    except Exception:
+        pass
+
+    critical_down = ollama_status.status == "error" or chroma_status.status == "error"
+    non_critical_error = (
+        sqlite_status.status == "error"
+        or postgres_status.status == "error"
+        or redis_status.status == "error"
+    )
+    overall = "unhealthy" if critical_down else ("degraded" if non_critical_error else "ok")
+    breakers_snap: list[dict[str, Any]] = []
+    try:
+        from agent.graph import get_default_breaker
+    except ImportError:
+        get_default_breaker = None  # type: ignore[assignment]
+
+    if get_default_breaker is not None:
+        breaker = get_default_breaker()
+        if breaker is not None:
+            breakers_snap.append(breaker.snapshot())
+
+    response = HealthResponse(
+        status=overall,
+        components={
+            "ollama": ollama_status,
+            "chromadb": chroma_status,
+            "sqlite": sqlite_status,
+            "postgres": postgres_status,
+            "redis": redis_status,
+        },
+        vector_store_loaded=_app._vector_store is not None,
+        sessions_count=len(_app._sessions),
+        pipeline_available=_app._run_qa_pipeline is not None,
+        circuit_breakers=breakers_snap,
+        features={
+            "streaming_enabled": bool(getattr(settings, "streaming_enabled", False)),
+        },
+    )
+
+    status_code = 503 if critical_down else 200
+    return JSONResponse(content=response.model_dump(), status_code=status_code)
 
 
 @router.get("/metrics")
