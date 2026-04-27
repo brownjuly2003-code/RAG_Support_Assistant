@@ -134,8 +134,10 @@ User / Email / Widget
 **Prerequisites:** Python 3.11+, `ollama serve` (для default local-first profile)
 
 ```bash
-# 1. Dependencies
-pip install -r requirements.txt
+# 1. Dependencies — pinned hashes for reproducibility (Python 3.11+, Linux x86_64)
+pip install --require-hashes -r requirements.lock
+# Or for development (adds pytest/ruff/pre-commit):
+# pip install --require-hashes -r requirements-dev.lock
 
 # 2. Start Ollama and pull models
 ollama serve
@@ -162,6 +164,26 @@ Open:
 > `/traces`, `/escalations-ui`, `/traces-ui*` endpoints из `main.py`
 > удалены (Codex audit P0). Production entrypoint: `uvicorn api.app:app`.
 > `python main.py` делегирует в `api.app:app`.
+
+## Dependency lock
+
+`requirements.lock` and `requirements-dev.lock` are generated with [`uv`](https://github.com/astral-sh/uv) from the corresponding `requirements*.txt` files. They pin every transitive dependency with sha256 hashes for reproducible installs (Python 3.11+, Linux x86_64 — same target as the `python:3.11-slim` Docker image).
+
+Update flow when bumping a dependency:
+
+```bash
+# 1. Edit requirements.txt or requirements-dev.txt with the new constraint.
+# 2. Regenerate the lock(s):
+uv pip compile requirements.txt -o requirements.lock \
+  --generate-hashes --python-version 3.11 --python-platform linux
+uv pip compile requirements-dev.txt -o requirements-dev.lock \
+  --generate-hashes --python-version 3.11 --python-platform linux
+# 3. Verify install in a clean venv:
+python -m venv .venv-lock && .venv-lock/bin/pip install --require-hashes -r requirements.lock
+# 4. Commit requirements.txt + requirements*.lock together.
+```
+
+CI installs from the lock files and Dockerfile uses `--require-hashes`, so any drift between the constraint file and the lock will fail the build.
 
 ## Environment Variables
 

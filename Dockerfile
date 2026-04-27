@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+COPY requirements.lock /tmp/requirements.lock
+RUN pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock
 
 COPY . /app
 WORKDIR /app
