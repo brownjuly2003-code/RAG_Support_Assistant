@@ -166,7 +166,7 @@ api/
 |---|---|---|
 | `graph.py` | `agent/graph.py` | 13 строк (shim) ✅ |
 | `manager.py` | `vectordb/manager.py` | 899 строк (содержательный, не shim) ❌ |
-| `loader.py` | `ingestion/loader.py` | 294 строк ❌ |
+| `loader.py` | `ingestion/loader.py` | shim, fork merged 2026-04-27 |
 | `sqlite_trace.py` | `tracing/sqlite_trace.py` | 957 строк ❌ |
 | `bitrix.py` | (нет) | 126 строк — оставить |
 | `cache.py` | (нет) | 266 строк — оставить, но логика дублируется с `cache/redis_cache.py` |
@@ -706,7 +706,7 @@ Update 2026-04-27: `llm/providers/*` informational mypy scope and
 В порядке возрастающего риска:
 - **Phase 2** — `bitrix.py` → `integrations/bitrix.py`, `mock_inbox.py` → `integrations/mock_inbox.py`, `seed_docs.py` → `demo/seed_docs.py` (~2 часа, требует grep+rewrite импортов)
 - **Phase 3** — закрыт 2026-04-27 по Option B: `manager.py` → `vectordb/_base_manager.py` + root shim, `sqlite_trace.py` → `tracing/_base_trace.py` + root shim
-- **Phase 4** — resolve `loader` fork (root vs ingestion) — это product decision, не refactor
+- **Phase 4** — закрыт 2026-04-27: `DocumentChangeTracker` + HTML support merged into `ingestion.loader`, root `loader.py` shim
 - **Phase 5** — закрыт 2026-04-27: `chunking.py` → `scripts/chunking_eval.py`
 
 #### D. Coverage до 70%

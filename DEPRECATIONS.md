@@ -19,7 +19,7 @@ the project tree. Created 2026-04-26 as part of the Opus audit follow-up.
 | ~~`prompts.py`~~ | — | ✅ removed 2026-04-26 | `agent.prompts` | Phase 1 closed. |
 | `manager.py` | 15 | 🟡 shim | `vectordb.manager` | Phase 3 manager side complete: base implementation moved to `vectordb/_base_manager.py`; root import remains for compatibility. |
 | `sqlite_trace.py` | 15 | 🟡 shim | `tracing.sqlite_trace` | Phase 3 trace side complete: base implementation moved to `tracing/_base_trace.py`; root import remains for compatibility. |
-| `loader.py` | 296 | 🔴 active legacy | `ingestion.loader` (different impl, +csv/json) | `api/app.py:185-194` prefers root, falls back to `ingestion.loader`. Behavior is **not equivalent** — root has `DocumentChangeTracker`, package has csv/json. |
+| `loader.py` | 15 | 🟡 shim | `ingestion.loader` | Phase 4 complete: `DocumentChangeTracker` and HTML support merged into `ingestion.loader`; root import remains for compatibility. |
 | ~~`chunking.py`~~ | — | ✅ moved 2026-04-27 | `scripts.chunking_eval` | Phase 5 complete. Standalone tuning script moved out of project root. |
 | ~~`bitrix.py`~~ | — | ✅ moved 2026-04-27 | `integrations.bitrix` | Phase 2 complete. |
 | ~~`mock_inbox.py`~~ | — | ✅ moved 2026-04-27 | `integrations.mock_inbox` | Phase 2 complete. |
@@ -60,13 +60,12 @@ everywhere. Same idea for `sqlite_trace.py` → `tracing/_base_trace.py`.
 implementations now live in `vectordb/_base_manager.py` and
 `tracing/_base_trace.py`; both root files are compatibility shims.
 
-### Phase 4 — resolve the `loader` fork (high risk, ~half day)
+### Phase 4 — resolve the `loader` fork ✅ DONE 2026-04-27
 
-Decide: keep `DocumentChangeTracker` (root) or `csv/json` support
-(`ingestion.loader`). The two implementations have diverged by 511 LOC, so
-this is a product decision, not a refactor. Likely answer: merge both
-features into `ingestion.loader`, mark root `loader.py` as a shim, then
-remove the fallback chain in `api/app.py:185-194`.
+Merged the fork into `ingestion.loader`: it now keeps package features
+(`.json`/`.csv`, single-file loading, per-page PDF docs) and root-only features
+(`DocumentChangeTracker`, `.html`/`.htm` support). Root `loader.py` is now a
+compatibility shim, and production imports use `ingestion.loader` directly.
 
 ### Phase 5 — find a home for `chunking.py` ✅ DONE 2026-04-27
 

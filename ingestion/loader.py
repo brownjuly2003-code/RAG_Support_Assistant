@@ -4,7 +4,7 @@ ingestion/loader.py
 DocumentLoader: loads documents from a directory or a single file.
 
 Supported formats:
-    .txt, .md, .pdf (pypdf), .docx (python-docx), .json, .csv
+    .txt, .md, .pdf (pypdf), .docx (python-docx), .json, .csv, .html, .htm
 
 Each document gets metadata:
     - source: filename
@@ -52,7 +52,7 @@ except ImportError:
     DocxDocument = None  # type: ignore[assignment]
 
 
-SUPPORTED_EXTENSIONS = {".txt", ".md", ".pdf", ".docx", ".json", ".csv"}
+SUPPORTED_EXTENSIONS = {".txt", ".md", ".pdf", ".docx", ".json", ".csv", ".html", ".htm"}
 
 
 class DocumentLoader:
@@ -173,6 +173,9 @@ class DocumentLoader:
         if ext == ".csv":
             return self._read_csv(path)
 
+        if ext in {".html", ".htm"}:
+            return self._read_html(path)
+
         raise ValueError(f"Unsupported format: {ext}")
 
     # ------------------------------------------------------------------
@@ -265,6 +268,30 @@ class DocumentLoader:
 
         return docs if docs else [self._make_doc(raw, path, file_type="csv")]
 
+    def _read_html(self, path: Path) -> List[Document]:
+        from html.parser import HTMLParser
+
+        class TextExtractor(HTMLParser):
+            def __init__(self) -> None:
+                super().__init__()
+                self._parts: List[str] = []
+
+            def handle_data(self, data: str) -> None:
+                data = data.strip()
+                if data:
+                    self._parts.append(data)
+
+            def get_text(self) -> str:
+                return " ".join(self._parts)
+
+        content = path.read_text(encoding="utf-8", errors="ignore")
+        parser = TextExtractor()
+        parser.feed(content)
+        text = parser.get_text()
+        if not text.strip():
+            return []
+        return [self._make_doc(text, path, file_type=path.suffix.lstrip(".").lower())]
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
@@ -282,6 +309,7 @@ class DocumentLoader:
             "source": path.name,
             "file_path": str(path.resolve()),
             "file_type": file_type,
+            "format": file_type,
             "mtime": datetime.fromtimestamp(stat.st_mtime).isoformat(),
             "size_bytes": stat.st_size,
             "content_hash": self._hash(text),
@@ -293,3 +321,59 @@ class DocumentLoader:
     @staticmethod
     def _hash(text: str) -> str:
         return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()
+
+
+class DocumentChangeTracker:
+    """Save and compare document hashes between ingestion runs."""
+
+    @staticmethod
+    def save_state(docs: List[Document], path: str | Path) -> None:
+        state: Dict[str, Any] = {}
+        for doc in docs:
+            meta = doc.metadata
+            key = meta.get("file_path") or meta.get("source")
+            if not key:
+                continue
+            state[key] = {
+                "mtime": meta.get("mtime"),
+                "size_bytes": meta.get("size_bytes"),
+                "content_hash": meta.get("content_hash"),
+            }
+
+        out = Path(path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    @staticmethod
+    def load_state(path: str | Path) -> Dict[str, Any]:
+        p = Path(path)
+        if not p.exists():
+            return {}
+        return json.loads(p.read_text(encoding="utf-8"))
+
+    @staticmethod
+    def diff(
+        docs: List[Document],
+        previous_state: Dict[str, Any],
+    ) -> Dict[str, List[str]]:
+        current: Dict[str, str] = {}
+        for doc in docs:
+            meta = doc.metadata
+            key = meta.get("file_path") or meta.get("source")
+            if key:
+                current[key] = meta.get("content_hash", "")
+
+        changes = {"new": [], "modified": [], "deleted": []}
+
+        for key, content_hash in current.items():
+            previous = previous_state.get(key)
+            if previous is None:
+                changes["new"].append(key)
+            elif previous.get("content_hash") != content_hash:
+                changes["modified"].append(key)
+
+        for key in previous_state.keys():
+            if key not in current:
+                changes["deleted"].append(key)
+
+        return changes

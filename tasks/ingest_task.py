@@ -19,10 +19,7 @@ def ingest_document(self, file_path: str) -> dict:
         return {"status": "error", "message": f"File not found: {file_path}"}
 
     try:
-        try:
-            from loader import DocumentLoader
-        except ImportError:
-            from ingestion.loader import DocumentLoader
+        from ingestion.loader import DocumentLoader
 
         loader = DocumentLoader(recursive=False)
         docs = loader.load_documents(str(path.parent))

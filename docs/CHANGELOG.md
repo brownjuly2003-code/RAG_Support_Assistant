@@ -23,6 +23,7 @@
 - `DEPRECATIONS.md` Phase 2 закрыта 2026-04-27: `bitrix.py` и `mock_inbox.py` переехали в `integrations/`, `seed_docs.py` переехал в `demo/seed_docs.py`; canonical imports покрыты regression-тестами.
 - `DEPRECATIONS.md` Phase 3 закрыта 2026-04-27 по Option B: базовые реализации `manager.py` и `sqlite_trace.py` переехали в `vectordb/_base_manager.py` и `tracing/_base_trace.py`; root-файлы оставлены shim-ами совместимости.
 - Phase 3 layout покрыт regression-тестами и полным pytest-прогоном: 563 passed, 4 skipped.
+- `DEPRECATIONS.md` Phase 4 закрыта 2026-04-27: `DocumentChangeTracker` и HTML support перенесены в `ingestion.loader`, root `loader.py` оставлен shim-ом, production imports переведены на пакетный loader.
 - `DEPRECATIONS.md` Phase 5 закрыта 2026-04-27: standalone `chunking.py` переехал в `scripts/chunking_eval.py`, root import удалён и покрыт layout regression-тестом.
 - `README.md` и `codex-tasks/cleanup-report.md` синхронизированы с фактической module layout; `requests>=2.32.0` добавлен в `requirements.txt` как прямой runtime dependency для Bitrix-интеграции.
 - `pyproject.toml` — `[tool.coverage.{run,report}]` с `fail_under=70`, branch coverage, source-list по 14 production модулям.

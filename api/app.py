@@ -152,14 +152,10 @@ except ImportError:
 # Document loader
 _DocumentLoader = None
 try:
-    from loader import DocumentLoader
+    from ingestion.loader import DocumentLoader
     _DocumentLoader = DocumentLoader
 except ImportError:
-    try:
-        from ingestion.loader import DocumentLoader
-        _DocumentLoader = DocumentLoader
-    except ImportError:
-        pass
+    pass
 
 # Chroma for loading existing store
 _Chroma = None

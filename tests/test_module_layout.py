@@ -63,3 +63,12 @@ def test_chunking_eval_script_is_canonical_home() -> None:
         raise AssertionError("chunking root script should be moved to scripts.chunking_eval")
 
     assert chunking_eval.ChunkingEvaluator.__module__ == "scripts.chunking_eval"
+
+
+def test_ingestion_loader_is_canonical_home() -> None:
+    ingestion_loader = importlib.import_module("ingestion.loader")
+    root_loader = _reload_root_module("loader")
+
+    assert root_loader.DocumentLoader is ingestion_loader.DocumentLoader
+    assert root_loader.DocumentChangeTracker is ingestion_loader.DocumentChangeTracker
+    assert root_loader.DocumentChangeTracker.__module__ == "ingestion.loader"

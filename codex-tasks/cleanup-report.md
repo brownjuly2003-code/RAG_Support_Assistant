@@ -16,7 +16,7 @@
 | ~~`state.py`~~ | удалён 2026-04-26 | `agent/state.py` ✅ | consumers переведены на `agent.state` | `done` |
 | ~~`graph.py`~~ | удалён 2026-04-26 | `agent/graph.py` ✅ | consumers переведены на `agent.graph` | `done` |
 | ~~`bitrix.py`~~ | перенесён 2026-04-27 | `integrations/bitrix.py` ✅ | `integrations/mock_inbox.py` | `done` |
-| `loader.py` | дубль полной реализации; root docstring уже говорит `ingestion/loader.py` (`loader.py:1`) | `ingestion/loader.py` ✅ | `api/app.py:187`, `tasks/ingest_task.py:23` | `reconcile` различия, оставить только пакетный путь, root сделать `shim` или `delete` |
+| `loader.py` | compatibility shim, fork merged 2026-04-27 | `ingestion/loader.py` ✅ | package loader has `.json`/`.csv`, single-file, `DocumentChangeTracker`, `.html`/`.htm` | `done` |
 | `manager.py` | compatibility shim, base implementation moved 2026-04-27 | `vectordb/_base_manager.py` ✅ + `vectordb/manager.py` tenant wrapper ✅ | root import kept for tests/legacy monkeypatch compatibility | `done` |
 | ~~`chunking.py`~~ | moved 2026-04-27 | `scripts/chunking_eval.py` ✅ | active production consumers не найдены | `done` |
 | ~~`seed_docs.py`~~ | перенесён 2026-04-27 | `demo/seed_docs.py` ✅ | active consumers не найдены; `archive/legacy-tests/test_retrieval.py:30` ожидает `demo.seed_docs` | `done` |

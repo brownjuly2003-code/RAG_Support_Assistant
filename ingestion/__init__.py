@@ -4,15 +4,16 @@
 Document ingestion package.
 
 Modules:
-    loader   -- DocumentLoader: load files (.txt, .md, .pdf, .docx, .json, .csv)
+    loader   -- DocumentLoader / DocumentChangeTracker
     pipeline -- IngestPipeline: load + build vector store + log metadata
 """
 
-from ingestion.loader import DocumentLoader, SUPPORTED_EXTENSIONS
+from ingestion.loader import DocumentChangeTracker, DocumentLoader, SUPPORTED_EXTENSIONS
 from ingestion.pipeline import IngestPipeline
 
 __all__ = [
     "DocumentLoader",
+    "DocumentChangeTracker",
     "IngestPipeline",
     "SUPPORTED_EXTENSIONS",
 ]
