@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import httpx
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -48,44 +48,10 @@ from auth.oidc import (  # noqa: F401
     resolve_oidc_user,
 )
 from auth.dependencies import get_current_user, require_role
-from cache.redis_cache import cache_delete_pattern, cache_json_get, cache_json_set
+from cache.redis_cache import cache_delete_pattern as _cache_delete_pattern, cache_json_get, cache_json_set
+from api.rate_limit import RateLimitExceeded, _rate_limit_rejected, limiter
 from db.audit import log_audit
 from monitoring import prometheus as prometheus_metrics
-try:
-    from slowapi import Limiter, _rate_limit_exceeded_handler
-    from slowapi.errors import RateLimitExceeded
-    from slowapi.util import get_remote_address
-except ImportError:
-    class RateLimitExceeded(Exception):
-        pass
-
-    class Limiter:  # type: ignore[no-redef]
-        def __init__(self, key_func):
-            self.key_func = key_func
-
-        def limit(self, value: str):
-            _ = value
-
-            def decorator(func):
-                return func
-
-            return decorator
-
-    def _rate_limit_exceeded_handler(request: Request, exc: Exception) -> JSONResponse:
-        return JSONResponse(status_code=429, content={"detail": str(exc)})
-
-    def get_remote_address(request: Request | None) -> str:
-        if request is None or request.client is None:
-            return "unknown"
-        return request.client.host
-
-
-def _rate_limit_rejected(request: Request, exc: RateLimitExceeded) -> JSONResponse:
-    try:
-        prometheus_metrics.record_rate_limit_rejection(request.url.path)
-    except Exception:
-        pass
-    return _rate_limit_exceeded_handler(request, exc)
 
 # ---------------------------------------------------------------------------
 # Ensure project root is on sys.path
@@ -104,6 +70,7 @@ except ImportError:
     logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
+cache_delete_pattern = _cache_delete_pattern
 
 
 async def _stream_ollama(
@@ -129,11 +96,6 @@ async def _stream_ollama(
                     yield token
                 if chunk.get("done"):
                     break
-
-# ---------------------------------------------------------------------------
-# Rate limiter
-# ---------------------------------------------------------------------------
-limiter = Limiter(key_func=get_remote_address)
 
 # ---------------------------------------------------------------------------
 # Safe imports with fallbacks
@@ -328,21 +290,6 @@ class HealthResponse(BaseModel):
     pipeline_available: bool
     circuit_breakers: List[Dict[str, Any]] = Field(default_factory=list)
     features: Dict[str, bool] = Field(default_factory=dict)
-
-
-class UploadResponse(BaseModel):
-    status: str
-    filename: str
-    message: str
-    tenant_id: str = "default"
-    assigned_categories: List[str] = Field(default_factory=list)
-
-
-class TaskStatusResponse(BaseModel):
-    task_id: str
-    status: str
-    result: Optional[dict] = None
-    meta: Optional[dict] = None
 
 
 class LoginRequest(BaseModel):
@@ -1702,6 +1649,11 @@ from api.routers.auth_sso import router as _auth_sso_router  # noqa: E402
 from api.routers.feedback import router as _feedback_router  # noqa: E402
 from api.routers.misc import email_inbound_webhook, router as _misc_router  # noqa: E402
 from api.routers.system import router as _system_router  # noqa: E402
+from api.routers import upload as _upload_router_module  # noqa: E402
+
+TaskStatusResponse = _upload_router_module.TaskStatusResponse
+UploadResponse = _upload_router_module.UploadResponse
+_upload_router = _upload_router_module.router
 
 router.include_router(_system_router)
 router.include_router(_agent_router)
@@ -1714,6 +1666,7 @@ router.include_router(_analytics_router)
 router.include_router(_auth_sso_router)
 router.include_router(_feedback_router)
 router.include_router(_misc_router)
+router.include_router(_upload_router)
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -2432,187 +2385,7 @@ async def chat_stream(
 # /admin/stale-docs/* moved to api.routers.admin_kb
 # /analytics/* moved to api.routers.analytics
 # /channels/email/inbound and /admin/providers moved to api.routers.misc
-
-
-@router.post("/upload", response_model=UploadResponse)
-@limiter.limit("10/minute")
-async def upload_document(
-    request: Request,
-    file: UploadFile = File(...),
-    _user: dict = Depends(require_role("agent", "admin")),
-) -> UploadResponse:
-    """Upload a document (PDF/DOCX/TXT/MD) and ingest it into the vector store."""
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No filename provided")
-
-    ext = Path(file.filename).suffix.lower()
-    allowed = {".pdf", ".docx", ".txt", ".md", ".html"}
-    if ext not in allowed:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type: {ext}. Allowed: {', '.join(sorted(allowed))}",
-        )
-
-    import re as _re
-
-    tenant = _user.get("tenant") or get_current_tenant() or "default"
-    safe_name = Path(file.filename.replace("\\", "/")).name
-    safe_name = _re.sub(r"[^\w\-.]", "_", safe_name)
-    if not safe_name or safe_name.startswith("."):
-        raise HTTPException(status_code=400, detail="Invalid filename")
-
-    upload_root = PROJECT_ROOT / "data" / "uploads"
-    if tenant == "default":
-        upload_dir = upload_root
-    else:
-        upload_dir = upload_root / _re.sub(r"[^A-Za-z0-9_\-]", "_", tenant)
-    upload_dir.mkdir(parents=True, exist_ok=True)
-
-    file_path = upload_dir / safe_name
-    settings = get_settings()
-    upload_limit = getattr(settings, "max_upload_bytes", 50 * 1024 * 1024)
-    docs = None
-    assigned_categories: list[str] = []
-    try:
-        content = bytearray()
-        while True:
-            chunk = await file.read(8192)
-            if not chunk:
-                break
-            content.extend(chunk)
-            if len(content) > upload_limit:
-                try:
-                    prometheus_metrics.record_body_size_rejection("upload_too_large")
-                except Exception:
-                    pass
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"Upload exceeds limit of {upload_limit} bytes",
-                )
-        file_path.write_bytes(bytes(content))
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {exc}")
-
-    await log_audit(
-        actor=_user.get("sub", "anonymous"),
-        action="upload",
-        resource=f"document:{safe_name}",
-        detail={"tenant": tenant},
-        ip_address=request.client.host if request.client else None,
-    )
-
-    if _DocumentLoader is not None:
-        try:
-            from ingestion.categorizer import annotate_documents_with_categories
-
-            loader = _DocumentLoader(recursive=False)
-            docs = loader.load_documents(str(upload_dir))
-            if docs:
-                assigned_by_source = annotate_documents_with_categories(docs, tenant_id=tenant)
-                assigned_categories = list(assigned_by_source.get(safe_name) or [])
-        except Exception as exc:
-            logger.warning("Category pre-processing failed for %s: %s", safe_name, exc)
-
-    if tenant == "default":
-        try:
-            from tasks.ingest_task import ingest_document
-
-            task = ingest_document.delay(str(file_path))
-            if getattr(settings, "llm_cache_enabled", False):
-                deleted = cache_delete_pattern(f"llm_resp:{tenant}:*")
-                logger.info("Invalidated %d cached LLM responses for tenant %s", deleted, tenant)
-            return UploadResponse(
-                status="accepted",
-                filename=safe_name,
-                message=f"File uploaded. Processing in background. task_id={task.id}",
-                assigned_categories=assigned_categories,
-            )
-        except Exception as exc:
-            logger.info("Celery async upload unavailable, falling back to sync: %s", exc)
-
-    if _DocumentLoader is not None and _build_vector_store is not None:
-        try:
-            if docs is None:
-                loader = _DocumentLoader(recursive=False)
-                docs = loader.load_documents(str(upload_dir))
-            if docs:
-                success = _rebuild_vector_store_from_docs(docs, tenant_id=tenant)
-                if success:
-                    if getattr(settings, "llm_cache_enabled", False):
-                        deleted = cache_delete_pattern(f"llm_resp:{tenant}:*")
-                        logger.info("Invalidated %d cached LLM responses for tenant %s", deleted, tenant)
-                    return UploadResponse(
-                        status="ok",
-                        filename=safe_name,
-                        message=f"File uploaded and indexed. {len(docs)} document(s) processed.",
-                        assigned_categories=assigned_categories,
-                    )
-                else:
-                    return UploadResponse(
-                        status="partial",
-                        filename=safe_name,
-                        message="File saved but indexing failed. Check server logs.",
-                        assigned_categories=assigned_categories,
-                    )
-            else:
-                return UploadResponse(
-                    status="partial",
-                    filename=safe_name,
-                    message="File saved but no text content could be extracted.",
-                    assigned_categories=assigned_categories,
-                )
-        except Exception as exc:
-            logger.error("Ingestion error for %s: %s", file.filename, exc, exc_info=True)
-            return UploadResponse(
-                status="partial",
-                filename=safe_name,
-                message=f"File saved but ingestion failed: {exc}",
-                assigned_categories=assigned_categories,
-            )
-    else:
-        return UploadResponse(
-            status="partial",
-            filename=safe_name,
-            message="File saved. Document loader or vector store builder not available for indexing.",
-            assigned_categories=assigned_categories,
-        )
-
-
-@router.get("/tasks/{task_id}", response_model=TaskStatusResponse)
-async def get_task_status(
-    task_id: str,
-    _user: dict = Depends(require_role("agent", "admin")),
-) -> TaskStatusResponse:
-    """Check background task status."""
-    try:
-        from tasks.celery_app import celery_app
-
-        result = celery_app.AsyncResult(task_id)
-        result_payload: Optional[dict] = None
-        meta_payload: Optional[dict] = None
-
-        if result.ready():
-            if isinstance(result.result, dict):
-                result_payload = result.result
-            elif result.result is not None:
-                result_payload = {"detail": str(result.result)}
-            if result.status == "SUCCESS" and result_payload and result_payload.get("status") == "ok":
-                initialize_vector_store()
-        elif isinstance(result.info, dict):
-            meta_payload = result.info
-        elif result.info is not None:
-            meta_payload = {"detail": str(result.info)}
-
-        return TaskStatusResponse(
-            task_id=task_id,
-            status=result.status,
-            result=result_payload,
-            meta=meta_payload,
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Task backend error: {exc}")
+# /upload and /tasks/{task_id} moved to api.routers.upload
 
 
 # /auth/sso/* moved to api.routers.auth_sso

@@ -2,7 +2,7 @@
 
 **Дата:** 2026-04-26
 **Сессии:** 1 (audit) + 4 (implementation)
-**Состояние:** 22/22 hardening tasks completed + Phase 2b/2g/2h/2i/2m splits completed, 21/21 feedback/escalation tests pass.
+**Состояние:** 22/22 hardening tasks completed + Phase 2b/2d/2g/2h/2i/2k/2m splits completed, upload-focused 13/13 tests pass.
 
 > Этот документ — **карманный handover** для новой сессии. Если нужны детали — смотри указанные файлы.
 
@@ -13,7 +13,7 @@
 | Файл | Что в нём |
 |---|---|
 | `audit_opus_2026-04-26.md` | Полный аудит (секции 0-11) + implementation log по 18 задачам hardening (секция 12). Single source of truth по диагнозу и сводке. |
-| `DEPRECATIONS.md` | Карта legacy-расположений в корне. 5-фазный план миграции. Карта split-ов `api/app.py` (13 фаз 2a-2m, из них 10 закрыты). Type-checking debt list. **Pattern для split sub-router-ов (важно для resume!).** |
+| `DEPRECATIONS.md` | Карта legacy-расположений в корне. 5-фазный план миграции. Карта split-ов `api/app.py` (13 фаз 2a-2m, из них 11 закрыты). Type-checking debt list. **Pattern для split sub-router-ов (важно для resume!).** |
 | `docs/CHANGELOG.md` | Запись о hardening-сессии 2026-04-26. |
 | `docs/SESSION-NOTES-2026-04-26-audit.md` | Этот файл. |
 
@@ -39,7 +39,7 @@ python -m bandit -r D:/RAG_Support_Assistant -ll -c D:/RAG_Support_Assistant/pyp
 
 ## 3. Структурные изменения, которые надо помнить
 
-### `api/routers/` — новая директория, 11 sub-router-ов
+### `api/routers/` — новая директория, 12 sub-router-ов
 
 ```
 api/routers/
@@ -54,7 +54,8 @@ api/routers/
 ├── analytics.py     # /analytics/* dashboard endpoints
 ├── feedback.py      # /feedback, /feedback/stats, /escalate
 ├── misc.py          # /admin/providers, /channels/email/inbound
-└── auth_sso.py      # /auth/sso/{providers,login,callback}
+├── auth_sso.py      # /auth/sso/{providers,login,callback}
+└── upload.py        # /upload, /tasks/{task_id}
 ```
 
 Регистрируются в `api/app.py` сразу после `router = APIRouter(prefix="/api", tags=["RAG API"])` через `router.include_router(...)`.
@@ -95,7 +96,7 @@ monkeypatch.setattr(api_app, "get_oidc_client", _fake_client)
 
 Top-level `from db.engine import async_session` или прямой импорт `get_settings`/OIDC helpers в новом router-модуле **обходит этот патч** — name связывается до того, как тест его патчит.
 
-**Рабочий паттерн (применён в `api/routers/agent.py`, `admin_review.py`, `admin_ops.py`, `admin_kb.py`, `admin_experiments.py`, `auth_sso.py`, `feedback.py`):**
+**Рабочий паттерн (применён в `api/routers/agent.py`, `admin_review.py`, `admin_ops.py`, `admin_kb.py`, `admin_experiments.py`, `auth_sso.py`, `feedback.py`, `upload.py`):**
 
 ```python
 from db import engine as _db_engine  # импортируем МОДУЛЬ
@@ -142,6 +143,9 @@ Postgres tests не смогут подменить disposable session factory.
 7. ~~**Phase 2d — admin ops/view/retention**~~ — DONE 2026-04-27:
    `api/routers/admin_ops.py`; 28/28 related tests pass; focus-set 71/71 passes; `/api` route count stays 69.
 
+8. ~~**Phase 2k — upload/tasks**~~ — DONE 2026-04-27:
+   `api/routers/upload.py`; 13/13 upload-focused tests pass; `/api` route count stays 69.
+
 После каждого split-а:
 ```bash
 python -c "from api.app import app; print(len([r for r in app.routes if hasattr(r,'path')]))"
@@ -158,7 +162,7 @@ python -m pytest tests/test_<related>.py -p no:schemathesis -q --timeout=60
 
 ### Опция D — coverage до 70%
 
-Текущий focus-set даёт 24%. Полный пакет тестов даёт больше, но `test_upload_path_bypasses_body_middleware` зависает в shared-state прогоне — нужен debug shared async state в `conftest.py`. Это блокер для CI с coverage gate.
+Текущий focus-set даёт 24%. Полный пакет тестов проходит при явном `--basetemp` вне проблемных cache-директорий; следующий шаг — отдельный coverage-прогон и добор до `fail_under=70`.
 
 ## 7. Что НЕ трогать
 
@@ -172,7 +176,7 @@ python -m pytest tests/test_<related>.py -p no:schemathesis -q --timeout=60
 ## 8. Известные проблемы окружения
 
 - **schemathesis pytest plugin** несовместим с pytest 9 (`ModuleNotFoundError: '_pytest.subtests'`). Workaround: всегда `pytest -p no:schemathesis`.
-- **Полный `pytest tests/`** виснет на `test_upload_path_bypasses_body_middleware`. Точечный прогон работает. Корневая причина не выяснена — кажется shared async state между тестами.
+- **Полный `pytest`** проходит с явным `--basetemp` вне репозитория (`557 passed, 4 skipped` на 2026-04-27). Без этого workspace может шуметь permission warnings из старых `tests/pytest-cache-files-*`.
 - **AuthlibDeprecationWarning** про `authlib.jose` — третья сторона, в roadmap зависимостей.
 - **Pre-commit hooks при первом коммите** прогонят bandit + pip-audit. Bandit с конфигом из pyproject.toml даёт 0 High/Medium. pip-audit `--strict` clean на 2026-04-26. Если упадёт — смотри DEPRECATIONS.md «Type-checking debt» и `[tool.bandit]` секцию.
 - **`reports/regression/*.log` и `*.err` в untracked** — это evidence от task-177/178/179 (до аудита). К текущей hardening-работе не относятся. Не коммитить как часть hardening PR (они уже в `.gitignore` если правильный паттерн).
@@ -188,8 +192,9 @@ User-instructions требуют `/cxkm` после нетривиальных i
 ```
 auth/dependencies.py        - anonymous gate + Callable return type
 auth/oidc.py                - 3 mypy fixes
-api/app.py                  - 10 endpoint групп удалены, 11 sub-router include
-api/routers/                - НОВАЯ ДИРЕКТОРИЯ
+api/app.py                  - 11 endpoint групп удалены, 12 sub-router include
+api/rate_limit.py           - shared limiter для app + extracted routers
+api/routers/                - НОВАЯ ДИРЕКТОРИЯ, включая upload.py
 main.py                     - host default + auto-migrate + WAL для traces
 sqlite_trace.py             - WAL pragma + accurate docstring
 tracing/langfuse_trace.py   - usedforsecurity=False для MD5

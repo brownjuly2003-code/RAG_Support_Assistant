@@ -108,11 +108,12 @@ to override these.
 - `api/routers/misc.py` — `/admin/providers` and `/channels/email/inbound`
   (Phase 2m). The legacy `/webhook/email` alias is still registered from
   `api.app` against the same handler.
+- `api/routers/upload.py` — `/upload` and `/tasks/{task_id}` (Phase 2k).
 
-56 endpoints out of 69 API routes are now in dedicated router files. Latest
-sanity: 28/28 admin ops/view/retention/tenant tests pass and `/api` route count
-remains 69 (2026-04-27, using explicit pytest `--basetemp` because the default
-Windows temp directory is not readable in this workspace).
+58 endpoints out of 69 API routes are now in dedicated router files. Latest
+sanity: 13/13 upload-focused tests pass and `/api` route count remains 69
+(2026-04-27, using explicit pytest `--basetemp` because the default Windows temp
+directory is not readable in this workspace).
 
 ### Lesson learned from the splits — module-import pattern
 
@@ -140,6 +141,8 @@ For handlers whose tests monkeypatch helpers on `api.app`, use a lazy
 `from api import app as _app` inside the handler or a local wrapper. Apply
 the same late-bound module pattern in non-router runtime code such as
 `evaluation/evaluator_runner.py` when tests replace `db.engine` globals.
+For shared rate limiting, import `limiter` from `api.rate_limit`; importing it
+from `api.app` creates a circular dependency when a router is imported directly.
 
 ### Next splits (in order of risk)
 
@@ -155,7 +158,7 @@ the same late-bound module pattern in non-router runtime code such as
 | ~~2h~~ | ~~`/admin/regression-runs/*` (2) + `/admin/evaluations/*` (2)~~ | ✅ done 2026-04-27 |
 | ~~2i~~ | ~~`/analytics/*` (4)~~ | ✅ done 2026-04-27 |
 | ~~2j~~ | ~~`/auth/sso/*` (3)~~ | ✅ done 2026-04-26 |
-| 2k | `/upload`, `/tasks/{task_id}` | Group as `api/routers/upload.py`. |
+| ~~2k~~ | ~~`/upload`, `/tasks/{task_id}`~~ | ✅ done 2026-04-27 |
 | 2l | `/ask`, `/ask/stream`, `/chat`, `/chat/stream` | The biggest router (~700 LOC of orchestration). Split last. |
 | ~~2m~~ | ~~`/admin/providers`, `/channels/email/inbound`~~ | ✅ done 2026-04-27 |
 
