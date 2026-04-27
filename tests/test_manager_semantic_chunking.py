@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-import manager
+from vectordb import _base_manager as manager
 from config import settings as settings_module
 
 

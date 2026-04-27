@@ -35,21 +35,29 @@ def test_root_deprecation_shims_are_removed() -> None:
 def test_vectordb_base_manager_is_canonical_home() -> None:
     base_manager = importlib.import_module("vectordb._base_manager")
     tenant_manager = importlib.import_module("vectordb.manager")
-    root_manager = _reload_root_module("manager")
 
     assert tenant_manager._base_manager is base_manager
-    assert root_manager.build_vector_store is base_manager.build_vector_store
-    assert root_manager.build_vector_store.__module__ == "vectordb._base_manager"
+    assert base_manager.build_vector_store.__module__ == "vectordb._base_manager"
+
+    try:
+        _reload_root_module("manager")
+    except ModuleNotFoundError:
+        return
+    raise AssertionError("manager root shim should be removed")
 
 
 def test_tracing_base_trace_is_canonical_home() -> None:
     base_trace = importlib.import_module("tracing._base_trace")
     pii_trace = importlib.import_module("tracing.sqlite_trace")
-    root_trace = _reload_root_module("sqlite_trace")
 
     assert pii_trace._sqlite_trace is base_trace
-    assert root_trace.start_trace is base_trace.start_trace
-    assert root_trace.start_trace.__module__ == "tracing._base_trace"
+    assert base_trace.start_trace.__module__ == "tracing._base_trace"
+
+    try:
+        _reload_root_module("sqlite_trace")
+    except ModuleNotFoundError:
+        return
+    raise AssertionError("sqlite_trace root shim should be removed")
 
 
 def test_chunking_eval_script_is_canonical_home() -> None:
@@ -67,8 +75,11 @@ def test_chunking_eval_script_is_canonical_home() -> None:
 
 def test_ingestion_loader_is_canonical_home() -> None:
     ingestion_loader = importlib.import_module("ingestion.loader")
-    root_loader = _reload_root_module("loader")
 
-    assert root_loader.DocumentLoader is ingestion_loader.DocumentLoader
-    assert root_loader.DocumentChangeTracker is ingestion_loader.DocumentChangeTracker
-    assert root_loader.DocumentChangeTracker.__module__ == "ingestion.loader"
+    assert ingestion_loader.DocumentChangeTracker.__module__ == "ingestion.loader"
+
+    try:
+        _reload_root_module("loader")
+    except ModuleNotFoundError:
+        return
+    raise AssertionError("loader root shim should be removed")

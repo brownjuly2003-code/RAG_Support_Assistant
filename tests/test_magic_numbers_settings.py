@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import agent.graph as agent_graph
-import manager
+from vectordb import _base_manager as manager
 import vectordb.manager as tenant_manager
 from ingestion.pipeline import IngestPipeline
 

@@ -130,7 +130,7 @@ def test_streaming_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_build_retriever_default_returns_hybrid_when_parent_child_false() -> None:
     from langchain_core.documents import Document
-    from manager import HybridRetriever, build_retriever
+    from vectordb._base_manager import HybridRetriever, build_retriever
 
     doc = Document(page_content="test content", metadata={})
     vector_store = MagicMock()

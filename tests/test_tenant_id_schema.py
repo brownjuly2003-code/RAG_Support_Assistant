@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import importlib
 import sqlite3
-import sys
 
 
 def test_graph_state_accepts_tenant_id() -> None:
@@ -44,8 +43,7 @@ def test_ask_request_rejects_malformed_tenant_id(client) -> None:
 
 
 def test_sqlite_trace_accepts_tenant_id(tmp_path) -> None:
-    stub_module = sys.modules.pop("sqlite_trace", None)
-    sqlite_trace = importlib.import_module("sqlite_trace")
+    sqlite_trace = importlib.import_module("tracing._base_trace")
     db_path = tmp_path / "traces.db"
     original_get_db_path = sqlite_trace._get_db_path
     try:
@@ -61,9 +59,6 @@ def test_sqlite_trace_accepts_tenant_id(tmp_path) -> None:
             ).fetchone()
     finally:
         sqlite_trace._get_db_path = original_get_db_path
-        sys.modules.pop("sqlite_trace", None)
-        if stub_module is not None:
-            sys.modules["sqlite_trace"] = stub_module
 
     assert row is not None
     assert row[0] == "megacorp"
