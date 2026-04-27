@@ -72,11 +72,12 @@ and update references in `config/settings.py`, `ingestion/pipeline.py`,
 
 ## api/app.py monolith split — in progress
 
-`api/app.py` is still 2842 LOC. Most endpoint groups now live under
-`api/routers/`; the remaining orchestration routes still reach into
-`_sessions`, `_session_last_access`, `_chunks`, `_retriever`, `_llm`,
-`_db_retry_after`, and `_pipeline_semaphore` — and tests use
-`monkeypatch.setattr(api.app, ...)` to override these.
+`api/app.py` is now 2128 LOC. Most endpoint groups now live under
+`api/routers/`. The large conversation orchestration block now lives in
+`api/routers/conversation.py` and still reaches into `api.app` lazily for
+`_sessions`, `_session_last_access`, `_db_retry_after`, and
+`_pipeline_semaphore` so existing `monkeypatch.setattr(api.app, ...)` tests
+continue to work.
 
 ### Done sub-routers
 
@@ -108,11 +109,14 @@ and update references in `config/settings.py`, `ingestion/pipeline.py`,
   (Phase 2m). The legacy `/webhook/email` alias is still registered from
   `api.app` against the same handler.
 - `api/routers/upload.py` — `/upload` and `/tasks/{task_id}` (Phase 2k).
+- `api/routers/conversation.py` — `/ask`, `/chat`, `/ask/stream`, and
+  `/chat/stream` (Phase 2l).
 
-60 endpoints out of 69 API routes are now in dedicated router files. Latest
-sanity: 19/19 health-focused tests pass and `/api` route count remains 69
-(2026-04-27, using explicit pytest `--basetemp` because the default Windows temp
-directory is not readable in this workspace).
+64 endpoints out of 69 API routes are now in dedicated router files. Latest
+sanity: 69 `/api` routes, 13/13 conversation/auth/tenant-focused tests pass,
+and 56/56 broader `/api/ask` tests pass (2026-04-27, using explicit pytest
+`--basetemp` because the default Windows temp directory is not readable in this
+workspace).
 
 ### Lesson learned from the splits — module-import pattern
 
@@ -158,11 +162,12 @@ from `api.app` creates a circular dependency when a router is imported directly.
 | ~~2i~~ | ~~`/analytics/*` (4)~~ | ✅ done 2026-04-27 |
 | ~~2j~~ | ~~`/auth/sso/*` (3)~~ | ✅ done 2026-04-26 |
 | ~~2k~~ | ~~`/upload`, `/tasks/{task_id}`~~ | ✅ done 2026-04-27 |
-| 2l | `/ask`, `/ask/stream`, `/chat`, `/chat/stream` | The biggest router (~700 LOC of orchestration). Split last. |
+| ~~2l~~ | ~~`/ask`, `/ask/stream`, `/chat`, `/chat/stream`~~ | ✅ done 2026-04-27 |
 | ~~2m~~ | ~~`/admin/providers`, `/channels/email/inbound`~~ | ✅ done 2026-04-27 |
 
-After all splits, `api/app.py` should contain only: imports, FastAPI app
-construction, middleware, lifespan, sub-router registrations.
+The 2a-2m split plan is complete. `api/app.py` still owns the small auth/session
+surface (`/auth/login`, `/auth/refresh`, `/sessions/*`); those can be extracted
+later as a separate cleanup if the goal is a pure app-shell module.
 
 ## Type-checking debt
 

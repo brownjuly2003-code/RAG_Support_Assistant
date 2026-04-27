@@ -2,7 +2,7 @@
 
 **Дата:** 2026-04-26
 **Сессии:** 1 (audit) + 4 (implementation)
-**Состояние:** 22/22 hardening tasks completed + Phase 2a/2b/2d/2g/2h/2i/2k/2m splits completed, health-focused 19/19 tests pass.
+**Состояние:** 22/22 hardening tasks completed + Phase 2a-2m router split completed, conversation-focused 69/69 tests pass.
 
 > Этот документ — **карманный handover** для новой сессии. Если нужны детали — смотри указанные файлы.
 
@@ -39,7 +39,7 @@ python -m bandit -r D:/RAG_Support_Assistant -ll -c D:/RAG_Support_Assistant/pyp
 
 ## 3. Структурные изменения, которые надо помнить
 
-### `api/routers/` — новая директория, 12 sub-router-ов
+### `api/routers/` — новая директория, 13 sub-router-ов
 
 ```
 api/routers/
@@ -54,6 +54,7 @@ api/routers/
 ├── analytics.py     # /analytics/* dashboard endpoints
 ├── feedback.py      # /feedback, /feedback/stats, /escalate
 ├── misc.py          # /admin/providers, /channels/email/inbound
+├── conversation.py  # /ask, /chat, /ask/stream, /chat/stream
 ├── auth_sso.py      # /auth/sso/{providers,login,callback}
 └── upload.py        # /upload, /tasks/{task_id}
 ```
@@ -96,7 +97,7 @@ monkeypatch.setattr(api_app, "get_oidc_client", _fake_client)
 
 Top-level `from db.engine import async_session` или прямой импорт `get_settings`/OIDC helpers в новом router-модуле **обходит этот патч** — name связывается до того, как тест его патчит.
 
-**Рабочий паттерн (применён в `api/routers/system.py`, `agent.py`, `admin_review.py`, `admin_ops.py`, `admin_kb.py`, `admin_experiments.py`, `auth_sso.py`, `feedback.py`, `upload.py`):**
+**Рабочий паттерн (применён в `api/routers/system.py`, `agent.py`, `admin_review.py`, `admin_ops.py`, `admin_kb.py`, `admin_experiments.py`, `auth_sso.py`, `feedback.py`, `upload.py`, `conversation.py`):**
 
 ```python
 from db import engine as _db_engine  # импортируем МОДУЛЬ
@@ -149,8 +150,8 @@ Postgres tests не смогут подменить disposable session factory.
 9. ~~**Phase 2a — dependency-aware health**~~ — DONE 2026-04-27:
    `api/routers/system.py`; 19/19 health-focused tests pass; `/api` route count stays 69; extracted routes now 60/69.
 
-Оставшийся router split:
-- **Phase 2l — `/ask`, `/ask/stream`, `/chat`, `/chat/stream`** — самый большой orchestration-блок, делить последним.
+10. ~~**Phase 2l — conversation ask/chat**~~ — DONE 2026-04-27:
+    `api/routers/conversation.py`; 13/13 conversation/auth/tenant-focused tests pass; 56/56 broader `/api/ask` tests pass; `/api` route count stays 69; extracted routes now 64/69.
 
 После каждого split-а:
 ```bash
@@ -198,9 +199,9 @@ User-instructions требуют `/cxkm` после нетривиальных i
 ```
 auth/dependencies.py        - anonymous gate + Callable return type
 auth/oidc.py                - 3 mypy fixes
-api/app.py                  - 11 endpoint групп удалены, 12 sub-router include
+api/app.py                  - 12 endpoint групп удалены, 13 sub-router include
 api/rate_limit.py           - shared limiter для app + extracted routers
-api/routers/                - НОВАЯ ДИРЕКТОРИЯ, включая upload.py
+api/routers/                - НОВАЯ ДИРЕКТОРИЯ, включая upload.py и conversation.py
 main.py                     - host default + auto-migrate + WAL для traces
 sqlite_trace.py             - WAL pragma + accurate docstring
 tracing/langfuse_trace.py   - usedforsecurity=False для MD5

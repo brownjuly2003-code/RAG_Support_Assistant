@@ -29,7 +29,7 @@
 - Удалены deprecation shim-ы из корня: `graph.py` (12 LOC), `state.py` (11), `prompts.py` (11). Также удалён dead `except ImportError` fallback в `agent/graph.py:48-80` — он re-exportировал через те же удалённые shim-ы (циклический fallback).
 
 **API monolith split start (Phase 3-4):**
-- Создана `api/routers/` директория. 12 sub-router-ов вынесены из `api/app.py`:
+- Создана `api/routers/` директория. 13 sub-router-ов вынесены из `api/app.py`:
   - `system.py` — `/health/live`, `/health/ready`, `/health`, `/metrics`
   - `agent.py` — `/agent/tickets/{list,get,respond}`, `/agent/similar` (+ `AgentRespondRequest`)
   - `admin_review.py` — `/admin/review-queue/{list,update,stats}` (+ `ReviewQueueUpdateRequest`)
@@ -42,10 +42,11 @@
   - `feedback.py` — `/feedback`, `/feedback/stats`, `/escalate`
   - `misc.py` — `/admin/providers`, `/channels/email/inbound` с сохранённым legacy alias `/webhook/email`
   - `upload.py` — `/upload`, `/tasks/{task_id}`
+  - `conversation.py` — `/ask`, `/chat`, `/ask/stream`, `/chat/stream`
 - `api/rate_limit.py` выделен как shared-модуль для `limiter` и rate-limit exception handler-а, чтобы extracted routers не импортировали `api.app` на module-load.
 - Зафиксирован monkeypatch-friendly паттерн (`from db import engine as _db_engine` + `_async_session()` indirection, lazy access через `api.app`) — необходим для совместимости с тестами, использующими `monkeypatch.setattr("db.engine.async_session", ...)` и `monkeypatch.setattr(api_app, ...)`.
 - `evaluation/evaluator_runner.py` перешёл на late-bound `db.engine`, чтобы live regression tests могли подменять disposable Postgres session factory без stale import.
-- 60 endpoints вынесены из 5288-LOC монолита, `api/app.py` теперь 2842 LOC.
+- 64 endpoints вынесены из 5288-LOC монолита, `api/app.py` теперь 2128 LOC.
 
 **Documentation (Phase 5):**
 - `audit_opus_2026-04-26.md` — секция 12 «Implementation log» с полной таблицей 22 задач, метриками до/после, обновлённой самооценкой (8.7/10 local, 7.7/10 commercial).
@@ -64,7 +65,7 @@
 - ✅ Security gaps закрыты: anonymous fallback, DOS validation, MD5 weakness, dependency CVE scan.
 - ✅ Operability: auto-migrate, SQLite WAL, корректный host default.
 - ✅ Code hygiene: 0 TODO/FIXME, 0 deprecation shims в корне, mypy strict для auth/db core.
-- ✅ Architecture: первые 60 endpoints в sub-router модулях, паттерн доказан.
+- ✅ Architecture: 64 endpoints в sub-router модулях, паттерн доказан.
 - 📋 Карта остатков — в `audit_opus_2026-04-26.md` секции 12.5 + `DEPRECATIONS.md`.
 
 ---

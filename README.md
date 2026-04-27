@@ -55,11 +55,11 @@ User / Email / Widget
 ### Module layout (high level)
 
 - `api/app.py` — FastAPI application, middleware, lifespan, master router.
-  Splitting in progress; see `DEPRECATIONS.md` for the migration map.
+  The 2a-2m endpoint split is complete; small auth/session routes remain here.
 - `api/routers/` — extracted sub-routers (`system.py` for health/readiness/metrics,
   `agent.py` for `/agent/*`, `admin_review.py` for `/admin/review-queue/*`,
-  `auth_sso.py` for `/auth/sso/*`). New endpoint groups are added here, not
-  in `api/app.py`.
+  `auth_sso.py` for `/auth/sso/*`, `conversation.py` for `/ask`/`/chat`).
+  New endpoint groups are added here, not in `api/app.py`.
 - `agent/` — LangGraph pipeline + state + prompts.
 - `auth/` — JWT, X-API-Key, OIDC, RBAC. `mypy --strict` clean.
 - `db/` — SQLAlchemy models, async engine, audit log, pgcrypto field.

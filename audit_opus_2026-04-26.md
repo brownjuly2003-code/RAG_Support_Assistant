@@ -686,18 +686,14 @@ Dockerfile запускает `uvicorn ... --workers 2`. При этом trace s
 
 ### 12.5 Что ОСТАЁТСЯ сделать (упорядочено по приоритету)
 
-> Update 2026-04-27: split-фазы 2f/2g/2h/2i/2m/2b/2d/2k/2a закрыты после этого audit log. Актуальная карта split-ов: `DEPRECATIONS.md`; актуальный handover: `docs/SESSION-NOTES-2026-04-26-audit.md`.
+> Update 2026-04-27: split-фазы 2a-2m закрыты после этого audit log, включая conversation-router (`/ask`, `/chat`, `/ask/stream`, `/chat/stream`). Актуальная карта split-ов: `DEPRECATIONS.md`; актуальный handover: `docs/SESSION-NOTES-2026-04-26-audit.md`.
 
 #### A. Продолжение разбиения `api/app.py` (DEPRECATIONS Phase 2a-2m)
 
-Готовы к работе сразу (зависят только от DB session + патча `db.engine` модуля):
-- **Phase 2f** — admin KB cluster: `/admin/curated-dataset/*`, `/admin/thresholds/*`, `/admin/improvement-backlog/*`, `/admin/recommendations/*`, `/admin/kb-gaps`, `/admin/kb-drafts/*`, `/admin/categories`, `/admin/stale-docs/*` → `api/routers/admin_kb.py`
-- **Phase 2g** — `/admin/experiments/*` (8 endpoints) → `api/routers/admin_experiments.py`
-- **Phase 2h** — `/admin/regression-runs/*` + `/admin/evaluations/*` → `api/routers/admin_evaluations.py`
-- **Phase 2i** — `/analytics/*` (4) → `api/routers/analytics.py`
-
-Остаётся последним:
-- **Phase 2l** — `/ask`, `/ask/stream`, `/chat`, `/chat/stream` — биггест роутер (~700 LOC orchestration), последний
+Phase 2a-2m закрыт. `api/app.py` теперь 2128 LOC и держит только небольшой
+app-owned auth/session surface (`/auth/login`, `/auth/refresh`, `/sessions/*`)
+плюс app construction/lifespan/shared helpers. Если нужен полностью тонкий
+app-shell, следующий отдельный cleanup — вынести auth/session endpoints.
 
 #### B. Type-checking долг
 
