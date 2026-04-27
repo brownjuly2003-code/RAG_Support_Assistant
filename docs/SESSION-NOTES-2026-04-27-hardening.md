@@ -1,10 +1,11 @@
 # Session Notes — 2026-04-27 hardening
 
-**HEAD:** `6e64148` (master)
+**HEAD:** `8e4cab2` (master, после docs commit)
+**Pinned snapshot:** числа в этом файле зафиксированы на момент `8e4cab2`. Если в репо новые коммиты после `8e4cab2` — `git log ff7948f..HEAD` покажет реальный список.
 **Стартовый baseline:** `ff7948f`
 **Аудиторы:** Codex CLI (`audit_codex_27_04_26`) + Claude Opus 4.7 (`audit_opus_27_04_26.md`)
 **Реализатор:** Claude Opus 4.7 (1M context)
-**11 коммитов** между `ff7948f..6e64148`.
+**12 коммитов** между `ff7948f..8e4cab2` (11 hardening + 1 docs).
 
 ## TL;DR
 
@@ -33,14 +34,15 @@ Local rating обновлён 8.7/10 → **9.2/10**, commercial 7.7/10 → **8.5
 | 9 | `a12f404` | ci | mypy gate + integration не continue-on-error |
 | 10 | `fa92d4e` | fix(escalation) | pipeline exception persists EscalatedTicket |
 | 11 | `6e64148` | test(infra) | docker daemon availability skip |
+| 12 | `8e4cab2` | docs | session notes + next-steps plan + audit snapshots (этот файл) |
 
-## Числа
+## Числа (pinned at `8e4cab2`)
 
-| Метрика | До (`ff7948f`) | После (`6e64148`) |
+| Метрика | До (`ff7948f`) | После (`8e4cab2`) |
 |---|---:|---:|
-| Коммитов в master | 134 | **145** (+11) |
-| `api/app.py` LOC | 2126 | 2130 (нейтрально — добавлены escalation fallback и tenant filters; сторонняя tenant-логика компенсирована) |
-| `main.py` LOC | 413 | **22** (legacy FastAPI shell удалён) |
+| Коммитов в master | 134 | **146** (+12) |
+| `api/app.py` LOC | 2126 | **2224** (+98 — добавлены tenant filters в 3 endpoint'ах + escalation fallback в conversation router + alembic auto-migrate в lifespan) |
+| `main.py` LOC | 413 | **21** (legacy FastAPI shell удалён, остался alias) |
 | Production middleware count в Docker | 0 (main:app без middleware) | **8** |
 | Tests focus-set | 50/50 | **85/85** (+35: production_entrypoint, settings_production_secrets, tenant_isolation_sessions, pipeline_exception_escalation, +обновленные test_metrics, test_admin_view, test_tenant_enforcement) |
 | mypy strict modules | auth.* + db.models + db.engine | **+ llm.providers.*** |

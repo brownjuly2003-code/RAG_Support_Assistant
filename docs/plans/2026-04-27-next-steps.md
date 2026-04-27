@@ -1,6 +1,7 @@
 # Next Steps — после hardening 2026-04-27
 
-**Baseline:** `6e64148` (master, после 11 коммитов hardening).
+**Baseline:** `8e4cab2` (master, после 12 коммитов: 11 hardening + 1 docs).
+**Pinned snapshot:** числа здесь зафиксированы на момент `8e4cab2`.
 **Текущая оценка:** local 9.2/10, commercial 8.5/10.
 **Цель:** довести до 9.5/10 local + 9.0/10 commercial без архитектурных пересмотров.
 
@@ -135,7 +136,7 @@
 
 **Файлы:** новый `api/routers/session_auth.py`, новый `api/services/`, `api/app.py`.
 
-**Контекст.** `api/app.py` ещё 2130 LOC: 5 endpoints (auth + sessions), 6 middlewares, 1100 LOC private helpers, 200 LOC lifespan, ~70 LOC Pydantic models, ~250 LOC imports/setup. Цель — `api/app.py` ≤ 600 LOC (только construction + lifespan + middlewares).
+**Контекст.** `api/app.py` ещё 2224 LOC: 5 endpoints (auth + sessions), 6 middlewares, 1100 LOC private helpers, 200 LOC lifespan, ~70 LOC Pydantic models, ~250 LOC imports/setup, +tenant filters/escalation fallback (98 LOC из hardening 2026-04-27). Цель — `api/app.py` ≤ 600 LOC (только construction + lifespan + middlewares).
 
 **Шаги:**
 1. `api/routers/session_auth.py` — `/auth/login`, `/auth/refresh`, `/sessions/{id}/history`, `/sessions`, `DELETE /sessions/{id}`.

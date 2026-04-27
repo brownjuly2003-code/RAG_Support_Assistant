@@ -2,11 +2,11 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
-## [Audit-Hardening-2] — 2026-04-27 — Codex+Opus delta-аудит + 11 коммитов hardening
+## [Audit-Hardening-2] — 2026-04-27 — Codex+Opus delta-аудит + 11 коммитов hardening + docs
 
 ### Контекст
 
-После hardening 2026-04-26 проведены два независимых delta-аудита (Codex CLI + Claude Opus 4.7) на baseline `ff7948f`. Codex нашёл три P0 security/deploy bugs, Opus — P1 module-layout debt и mypy regression. По обоим roadmap'ам прогнаны 11 коммитов (HEAD → `6e64148`).
+После hardening 2026-04-26 проведены два независимых delta-аудита (Codex CLI + Claude Opus 4.7) на baseline `ff7948f`. Codex нашёл три P0 security/deploy bugs, Opus — P1 module-layout debt и mypy regression. По обоим roadmap'ам прогнаны 11 коммитов hardening + 1 docs commit, HEAD `ff7948f` → `8e4cab2`.
 
 ### Security & deploy fixes (P0)
 
