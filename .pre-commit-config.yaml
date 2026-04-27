@@ -32,6 +32,8 @@ repos:
     rev: v2.10.0
     hooks:
       - id: pip-audit
-        args: ["--strict", "--require-hashes=false", "-r", "requirements.txt"]
+        args: ["--strict", "-r", "requirements.txt"]
         # Fails on any known vuln in pinned deps. Override per-CVE with
         # --ignore-vuln if a fix is unavailable.
+        # Note: pip-audit 2.10+ rejected the legacy "--require-hashes=false"
+        # argument; the default already does not require hashes.

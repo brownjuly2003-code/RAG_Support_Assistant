@@ -5,6 +5,11 @@ exclude = [
     "Сброс настрок COMET.py",
     "graph_route_example.py",
     "vectordb/__init__.py",
+    ".tmp",
+    "tests/pytest-cache-files-*",
+    "archive-legacy",
+    "reports",
+    "data",
 ]
 
 [tool.ruff.lint]
@@ -121,6 +126,8 @@ exclude_dirs = [
     "scripts",
     "data",
     "alembic/versions",
+    ".tmp",
+    "reports",
 ]
 # B608: hardcoded SQL expressions — every flagged occurrence in this codebase
 #       uses a parameterized query with `?` placeholders that are built from

@@ -6,6 +6,9 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .hypothesis/
+.coverage
+.coverage.*
+htmlcov/
 .env
 *.env.local
 data/
@@ -18,3 +21,11 @@ Thumbs.db
 .claude/
 review_batch_*.jsonl
 .review_local/
+
+# Pytest project-local basetemp (was breaking ruff/bandit scans)
+.tmp/
+tests/pytest-cache-files-*
+
+# Regression eval artefacts (большие машинные логи)
+reports/regression/*.log
+reports/regression/*.err

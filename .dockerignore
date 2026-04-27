@@ -1,0 +1,61 @@
+# Secrets and local credentials
+.env
+.env.*
+!.env.example
+*.env.local
+secrets/
+credentials*.json
+
+# Git history (not needed in image)
+.git
+.gitignore
+.gitattributes
+
+# Python caches and build artifacts
+__pycache__
+*.py[cod]
+*.pyo
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.hypothesis
+.coverage
+.coverage.*
+htmlcov
+*.egg-info
+build
+dist
+
+# Test temp output (was breaking ruff/bandit local scans)
+.tmp
+tests/pytest-cache-files-*
+
+# Local data/state — must come from volume, not image
+data
+reports
+logs
+*.db
+*.db-shm
+*.db-wal
+
+# Editor / OS
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Audit / planning artifacts (keep image lean)
+audit_*
+codex-tasks
+docs/SESSION-NOTES-*
+docs/plans
+archive-legacy
+.claude
+.workflow
+
+# Docker meta (avoid recursive copy)
+Dockerfile
+docker-compose*.yml
+.dockerignore
