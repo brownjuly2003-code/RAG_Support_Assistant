@@ -42,6 +42,11 @@ from api.correlation import (
     set_current_tenant,
     set_request_id,
 )
+from auth.oidc import (  # noqa: F401
+    get_oauth_client as get_oidc_client,
+    list_sso_providers,
+    resolve_oidc_user,
+)
 from auth.dependencies import get_current_user, require_role
 from cache.redis_cache import cache_delete_pattern, cache_json_get, cache_json_set
 from db.audit import log_audit
@@ -281,17 +286,7 @@ class AskResponse(BaseModel):
     action_summary: str = ""
 
 
-class FeedbackRequest(BaseModel):
-    trace_id: str = Field(..., max_length=100)
-    session_id: str = Field(..., max_length=100)
-    rating: str = Field(..., pattern=r"^(up|down)$")
-    reason: Optional[str] = Field(default="", max_length=500)
-
-
-class EscalateRequest(BaseModel):
-    session_id: str = Field(..., max_length=100)
-    question: str = Field(default="", max_length=2000)
-    reason: str = Field(default="user_request", max_length=200)
+# FeedbackRequest and EscalateRequest moved to api.routers.feedback
 
 
 # AgentRespondRequest moved to api.routers.agent
@@ -1703,6 +1698,7 @@ from api.routers.admin_review import router as _admin_review_router  # noqa: E40
 from api.routers.analytics import router as _analytics_router  # noqa: E402
 from api.routers.agent import router as _agent_router  # noqa: E402
 from api.routers.auth_sso import router as _auth_sso_router  # noqa: E402
+from api.routers.feedback import router as _feedback_router  # noqa: E402
 from api.routers.misc import email_inbound_webhook, router as _misc_router  # noqa: E402
 from api.routers.system import router as _system_router  # noqa: E402
 
@@ -1714,6 +1710,7 @@ router.include_router(_admin_evaluations_router)
 router.include_router(_admin_review_router)
 router.include_router(_analytics_router)
 router.include_router(_auth_sso_router)
+router.include_router(_feedback_router)
 router.include_router(_misc_router)
 
 
@@ -2415,133 +2412,8 @@ async def chat_stream(
     return await ask_stream(request, body, _user)
 
 
-@router.post("/feedback", status_code=204)
-async def post_feedback(
-    request: Request,
-    body: FeedbackRequest,
-    _user: dict = Depends(get_current_user),
-) -> None:
-    """Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ Ñ„Ð¸Ð´Ð±ÐµÐº Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ Ð½Ð° Ð¾Ñ‚Ð²ÐµÑ‚."""
-    if body.rating not in ("up", "down"):
-        raise HTTPException(status_code=422, detail="rating must be 'up' or 'down'")
-    prometheus_metrics.FEEDBACK_COUNT.labels(rating=body.rating).inc()
-    try:
-        from sqlite_trace import save_feedback  # noqa: PLC0415
-
-        save_feedback(
-            trace_id=body.trace_id,
-            session_id=body.session_id,
-            rating=body.rating,
-            reason=body.reason or "",
-        )
-    except Exception as exc:
-        logger.warning("Failed to save feedback: %s", exc)
-
-    await log_audit(
-        actor=_user.get("sub", "anonymous"),
-        action="feedback",
-        resource=f"trace:{body.trace_id}",
-        detail={
-            "rating": body.rating,
-            "tenant": _user.get("tenant", "default"),
-        },
-        ip_address=request.client.host if request.client else None,
-    )
-
-
-@router.post("/escalate")
-async def escalate_to_human(
-    request: Request,
-    body: EscalateRequest,
-    _user: dict = Depends(get_current_user),
-) -> dict:
-    """Ручная эскалация: пользователь хочет оператора."""
-    from datetime import datetime, timezone
-
-    record = {
-        "entity_id": body.session_id,
-        "question": body.question,
-        "route": "human_request",
-        "reason": body.reason,
-        "ts": datetime.now(timezone.utc).isoformat(),
-    }
-
-    try:
-        inbox_path = PROJECT_ROOT / "data" / "inbox" / "support_inbox.jsonl"
-        inbox_path.parent.mkdir(parents=True, exist_ok=True)
-        with inbox_path.open("a", encoding="utf-8", newline="\n") as f:
-            f.write(_json.dumps(record, ensure_ascii=False) + "\n")
-    except Exception as exc:
-        logger.error("Failed to write escalation: %s", exc)
-        raise HTTPException(status_code=500, detail="Escalation failed")
-
-    try:
-        from db.engine import async_session  # noqa: PLC0415
-        from db.models import EscalatedTicket  # noqa: PLC0415
-
-        draft = None
-        question_text = (body.question or "").strip()
-        if question_text:
-            draft = (
-                f"Запрос пользователя: {question_text}\n\n"
-                "Черновик ответа: Спасибо за обращение. Мы получили ваш запрос и передали его оператору. "
-                "Проверим детали и вернёмся с решением."
-            )
-
-        async with async_session() as db:
-            db.add(
-                EscalatedTicket(
-                    tenant_id=_user.get("tenant", "default"),
-                    session_id=body.session_id,
-                    user_question=question_text or "(пользователь запросил оператора)",
-                    ai_draft=draft,
-                    status="open",
-                )
-            )
-            await db.commit()
-    except Exception as exc:
-        logger.warning("Failed to persist escalated ticket: %s", exc)
-
-    await log_audit(
-        actor=_user.get("sub", "anonymous"),
-        action="escalate",
-        resource=f"session:{body.session_id}",
-        detail={
-            "reason": body.reason,
-            "tenant": _user.get("tenant", "default"),
-        },
-        ip_address=request.client.host if request.client else None,
-    )
-
-    return {
-        "status": "ok",
-        "message": "Ваш запрос передан оператору. Мы ответим в ближайшее время.",
-    }
-
-
+# /feedback, /feedback/stats, and /escalate moved to api.routers.feedback
 # /agent/tickets/* and /agent/similar moved to api.routers.agent
-
-
-@router.get("/feedback/stats")
-async def feedback_stats(
-    days: int = 30,
-    _user: dict = Depends(require_role("agent", "admin")),
-) -> dict:
-    """Feedback stats for the last N days."""
-    try:
-        from sqlite_trace import get_feedback_stats  # noqa: PLC0415
-
-        return get_feedback_stats(days=days)
-    except Exception as exc:
-        logger.warning("Failed to get feedback stats: %s", exc)
-        return {
-            "total": 0,
-            "up": 0,
-            "down": 0,
-            "up_pct": 0.0,
-            "by_route": {},
-            "period_days": days,
-        }
 
 
 # /metrics moved to api.routers.system

@@ -101,22 +101,24 @@ to override these.
 - `api/routers/analytics.py` — `/analytics/top-topics`,
   `/analytics/resolution-rate`, `/analytics/cost-summary`, `/analytics/trends`
   (Phase 2i).
+- `api/routers/feedback.py` — `/feedback`, `/feedback/stats`, `/escalate`
+  (Phase 2b).
 - `api/routers/misc.py` — `/admin/providers` and `/channels/email/inbound`
   (Phase 2m). The legacy `/webhook/email` alias is still registered from
   `api.app` against the same handler.
 
-47 endpoints out of 69 API routes are now in dedicated router files. Latest
-sanity: 11/11 provider/email tests pass and `/api` route count remains 69
+50 endpoints out of 69 API routes are now in dedicated router files. Latest
+sanity: 21/21 feedback/escalation tests pass and `/api` route count remains 69
 (2026-04-27, using explicit pytest `--basetemp` because the default Windows
 temp directory is not readable in this workspace).
 
 ### Lesson learned from the splits — module-import pattern
 
-Tests use `monkeypatch.setattr("db.engine.async_session", ...)` and
-`monkeypatch.setattr(api_app, "log_audit", ...)` to inject fakes. Direct
-top-level `from db.engine import async_session` in a sub-router **breaks
-these patches** because the imported name is bound at router-module load
-time, before the test patches it.
+Tests use `monkeypatch.setattr("db.engine.async_session", ...)`,
+`monkeypatch.setattr(api_app, "log_audit", ...)`, and similar `api.app`
+helper patches to inject fakes. Direct top-level imports in a sub-router
+**break these patches** because the imported name is bound at router-module
+load time, before the test patches it.
 
 Pattern that works:
 
@@ -133,14 +135,16 @@ async def _log_audit(**kwargs):
 
 Apply this in every new sub-router that touches DB sessions or audit logs.
 For handlers whose tests monkeypatch helpers on `api.app`, use a lazy
-`from api import app as _app` inside the handler or a local wrapper.
+`from api import app as _app` inside the handler or a local wrapper. Apply
+the same late-bound module pattern in non-router runtime code such as
+`evaluation/evaluator_runner.py` when tests replace `db.engine` globals.
 
 ### Next splits (in order of risk)
 
 | Phase | Endpoints | Blockers |
 |---|---|---|
 | 2a | `/health` + `/health/ready` | Move `_shutting_down`, `_vector_store`, `_sessions`, `_run_qa_pipeline`, `_probe_*` helpers into `api/_shared.py` first. |
-| 2b | `/feedback`, `/escalate` | Move feedback/escalation helpers and `record_feedback_metrics` patterns. |
+| ~~2b~~ | ~~`/feedback`, `/escalate`~~ | ✅ done 2026-04-27 |
 | ~~2c~~ | ~~`/agent/tickets/*` (4 endpoints)~~ | ✅ done 2026-04-26 |
 | 2d | `/admin/audit`, `/admin/circuit-breaker/reset`, `/admin/traces/*`, `/admin/audit-log` (deletes) | Each depends on different cross-cutting helpers. |
 | ~~2e~~ | ~~`/admin/review-queue/*` (3 endpoints)~~ | ✅ done 2026-04-26 |

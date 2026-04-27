@@ -122,22 +122,29 @@ def test_regression_eval_live_no_asyncpg_race_no_fk_violation(monkeypatch: pytes
 
         sys.path.insert(0, str(project_root))
 
-        # Override DB URL for the ingestion
-        os.environ["DATABASE_URL"] = db_url
-        os.environ["DB_ENCRYPTION_KEY"] = "regression-test-key"
+        # Override DB URL for the ingestion without leaking into later tests.
+        monkeypatch.setenv("DATABASE_URL", db_url)
+        monkeypatch.setenv("DB_ENCRYPTION_KEY", "regression-test-key")
 
         # Reset any cached settings/engine so they pick up the new DATABASE_URL
         import config.settings as _settings_module
         import db.engine as _engine_module
 
-        _settings_module._settings = None
+        monkeypatch.setattr(_settings_module, "_settings", None)
         # engine is created at import time; we need to recreate it
         from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
         from sqlalchemy.ext.asyncio import AsyncSession
 
-        _engine_module.engine = create_async_engine(db_url, echo=False, pool_size=5, max_overflow=10)
-        _engine_module.async_session = async_sessionmaker(
-            _engine_module.engine, class_=AsyncSession, expire_on_commit=False
+        test_engine = create_async_engine(db_url, echo=False, pool_size=5, max_overflow=10)
+        monkeypatch.setattr(_engine_module, "engine", test_engine)
+        monkeypatch.setattr(
+            _engine_module,
+            "async_session",
+            async_sessionmaker(
+                test_engine,
+                class_=AsyncSession,
+                expire_on_commit=False,
+            ),
         )
 
         from ingestion.pipeline import IngestPipeline

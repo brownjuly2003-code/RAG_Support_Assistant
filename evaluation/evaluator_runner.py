@@ -6,7 +6,7 @@ from typing import Any
 
 from sqlalchemy import JSON, bindparam, text
 
-from db.engine import async_session, engine
+from db import engine as _db_engine
 from evaluation.online_evaluators import (
     evaluate_answer_length_anomaly,
     evaluate_citation_coverage,
@@ -109,7 +109,7 @@ async def persist_online_evaluations(
     results: dict[str, dict[str, Any]],
     session_factory: Any = None,
 ) -> None:
-    _factory = async_session if session_factory is None else session_factory
+    _factory = _db_engine.async_session if session_factory is None else session_factory
 
     # Bug 2 deeper fix: when using the default global async_session we open a
     # single engine connection, upsert a stub trace row, and then issue all
@@ -118,8 +118,8 @@ async def persist_online_evaluations(
     # multiple concurrent checkouts hit the same connection from the pool.
     # Bug 4 fix: the stub is inserted in the same transaction as the
     # trace_evaluations rows, so the FK constraint is guaranteed to hold.
-    if _factory is async_session:
-        async with engine.begin() as conn:
+    if _factory is _db_engine.async_session:
+        async with _db_engine.engine.begin() as conn:
             await conn.execute(_UPSERT_TRACE_STUB, {"trace_id": trace_id})
             for evaluator_name, payload in results.items():
                 metadata = payload.get("metadata")

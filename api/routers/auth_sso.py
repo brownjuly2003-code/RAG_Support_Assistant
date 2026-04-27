@@ -1,34 +1,34 @@
 """SSO/OIDC endpoints — provider list, login redirect, callback.
 
-Extracted from api.app on 2026-04-26 (Phase 2j). All three endpoints depend
-only on external modules (auth.oidc, auth.jwt_handler, config.settings,
-db.audit), no module-globals from api.app.
+Extracted from api.app on 2026-04-26 (Phase 2j). The handlers keep lazy access
+to api.app OIDC helpers/settings so existing monkeypatch-based tests remain
+effective.
 """
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-from auth.oidc import (
-    get_oauth_client as get_oidc_client,
-    list_sso_providers,
-    resolve_oidc_user,
-)
-from config.settings import get_settings
-from db.audit import log_audit
-
 router = APIRouter()
+
+
+def _app_module():
+    from api import app as _app  # noqa: PLC0415
+
+    return _app
 
 
 @router.get("/auth/sso/providers")
 async def sso_providers() -> dict[str, list[dict[str, str]]]:
-    return {"providers": list_sso_providers(get_settings())}
+    _app = _app_module()
+    return {"providers": _app.list_sso_providers(_app.get_settings())}
 
 
 @router.get("/auth/sso/{provider}/login")
 async def sso_login(provider: str, request: Request):
+    _app = _app_module()
     try:
-        client = get_oidc_client(provider)
+        client = _app.get_oidc_client(provider)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     if client is None:
@@ -47,8 +47,9 @@ async def sso_callback(provider: str, request: Request):
         create_refresh_token,
     )
 
+    _app = _app_module()
     try:
-        client = get_oidc_client(provider)
+        client = _app.get_oidc_client(provider)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     if client is None:
@@ -66,13 +67,13 @@ async def sso_callback(provider: str, request: Request):
         raise HTTPException(status_code=400, detail="OIDC userinfo is missing")
 
     try:
-        user = await resolve_oidc_user(provider, userinfo)
+        user = await _app.resolve_oidc_user(provider, userinfo)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
     access_token = create_access_token(str(user.id), user.role, user.tenant_id)
     refresh_token = create_refresh_token(str(user.id), user.role, user.tenant_id)
-    secure_cookie = getattr(get_settings(), "rag_env", "development") == "production"
+    secure_cookie = getattr(_app.get_settings(), "rag_env", "development") == "production"
 
     response = RedirectResponse("/static/chat.html", status_code=307)
     response.set_cookie(
@@ -93,7 +94,7 @@ async def sso_callback(provider: str, request: Request):
         max_age=REFRESH_TOKEN_TTL,
         path="/",
     )
-    await log_audit(
+    await _app.log_audit(
         actor=str(user.id),
         action="sso_login",
         resource=f"auth/{provider}",
