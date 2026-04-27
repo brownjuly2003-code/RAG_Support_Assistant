@@ -44,14 +44,14 @@ def _metric_value(metrics_text: str, name: str, labels: str = "") -> float | Non
 
 
 def test_metrics_returns_200(client: TestClient) -> None:
-    with patch("sqlite_trace.get_metrics_snapshot", return_value=MOCK_SNAPSHOT):
+    with patch("tracing.sqlite_trace.get_metrics_snapshot", return_value=MOCK_SNAPSHOT):
         response = client.get("/api/metrics")
 
     assert response.status_code == 200
 
 
 def test_metrics_has_required_keys(client: TestClient) -> None:
-    with patch("sqlite_trace.get_metrics_snapshot", return_value=MOCK_SNAPSHOT):
+    with patch("tracing.sqlite_trace.get_metrics_snapshot", return_value=MOCK_SNAPSHOT):
         response = client.get("/api/metrics")
 
     data = response.json()
@@ -60,7 +60,7 @@ def test_metrics_has_required_keys(client: TestClient) -> None:
 
 
 def test_metrics_latency_fields(client: TestClient) -> None:
-    with patch("sqlite_trace.get_metrics_snapshot", return_value=MOCK_SNAPSHOT):
+    with patch("tracing.sqlite_trace.get_metrics_snapshot", return_value=MOCK_SNAPSHOT):
         response = client.get("/api/metrics")
 
     latency = response.json()["latency"]
@@ -70,7 +70,7 @@ def test_metrics_latency_fields(client: TestClient) -> None:
 
 
 def test_metrics_empty_snapshot_returns_200(client: TestClient) -> None:
-    with patch("sqlite_trace.get_metrics_snapshot", return_value=EMPTY_SNAPSHOT):
+    with patch("tracing.sqlite_trace.get_metrics_snapshot", return_value=EMPTY_SNAPSHOT):
         response = client.get("/api/metrics")
 
     assert response.status_code == 200
@@ -80,7 +80,7 @@ def test_metrics_empty_snapshot_returns_200(client: TestClient) -> None:
 
 
 def test_metrics_error_fallback(client: TestClient) -> None:
-    with patch("sqlite_trace.get_metrics_snapshot", side_effect=RuntimeError("db locked")):
+    with patch("tracing.sqlite_trace.get_metrics_snapshot", side_effect=RuntimeError("db locked")):
         response = client.get("/api/metrics")
 
     assert response.status_code == 200

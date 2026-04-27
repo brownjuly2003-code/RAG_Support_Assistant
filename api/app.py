@@ -142,7 +142,7 @@ try:
     _get_embeddings = get_embeddings
 except ImportError:
     try:
-        from manager import build_vector_store, get_retriever, get_embeddings
+        from vectordb.manager import build_vector_store, get_retriever, get_embeddings
         _build_vector_store = build_vector_store
         _get_retriever = get_retriever
         _get_embeddings = get_embeddings
@@ -958,7 +958,7 @@ def _load_recent_trace_summaries(tenant_id: str, days: int) -> list[dict[str, An
     import sqlite3  # noqa: PLC0415
     from datetime import datetime, timedelta, timezone  # noqa: PLC0415
 
-    import sqlite_trace  # noqa: PLC0415
+    from tracing import sqlite_trace  # noqa: PLC0415
 
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     settings = get_settings()
@@ -1554,7 +1554,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         while True:
             await asyncio.sleep(interval)
             try:
-                from sqlite_trace import purge_old_traces
+                from tracing.sqlite_trace import purge_old_traces
 
                 result = await asyncio.to_thread(purge_old_traces, retention)
                 for table, count in (

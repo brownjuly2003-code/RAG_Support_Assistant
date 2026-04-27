@@ -33,10 +33,7 @@ def ingest_document(self, file_path: str) -> dict:
     self.update_state(state="PROCESSING", meta={"step": "indexing", "docs_count": len(docs)})
 
     try:
-        try:
-            from vectordb.manager import build_vector_store, get_embeddings
-        except ImportError:
-            from manager import build_vector_store, get_embeddings
+        from vectordb.manager import build_vector_store, get_embeddings
         from config.settings import get_settings
 
         settings = get_settings()

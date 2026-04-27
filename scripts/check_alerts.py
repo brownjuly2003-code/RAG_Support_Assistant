@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from sqlite_trace import get_metrics_snapshot
+from tracing.sqlite_trace import get_metrics_snapshot
 
 
 WEBHOOK_URL: str = os.getenv("ALERT_WEBHOOK_URL", "")

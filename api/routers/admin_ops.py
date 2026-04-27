@@ -132,7 +132,7 @@ async def admin_list_traces(
     limit: int | None = None,
     _user: dict = Depends(require_role("agent", "admin")),
 ) -> JSONResponse:
-    from sqlite_trace import list_recent_traces  # noqa: PLC0415
+    from tracing.sqlite_trace import list_recent_traces  # noqa: PLC0415
 
     limit = getattr(_app_module().get_settings(), "api_default_page_size", 50) if limit is None else limit
     tenant = _user.get("tenant") or get_current_tenant() or "default"
@@ -155,7 +155,7 @@ async def admin_get_trace(
     if not re.fullmatch(r"[A-Za-z0-9\-]{8,64}", trace_id):
         raise HTTPException(status_code=400, detail="invalid trace_id format")
 
-    from sqlite_trace import get_trace_detail  # noqa: PLC0415
+    from tracing.sqlite_trace import get_trace_detail  # noqa: PLC0415
 
     tenant = _user.get("tenant") or get_current_tenant() or "default"
     detail_params = inspect.signature(get_trace_detail).parameters
@@ -183,7 +183,7 @@ async def admin_purge_traces(
             detail="older_than_days must be in [0, 3650]",
         )
 
-    from sqlite_trace import purge_old_traces
+    from tracing.sqlite_trace import purge_old_traces
 
     tenant = _user.get("tenant") or get_current_tenant() or "default"
     purge_params = inspect.signature(purge_old_traces).parameters

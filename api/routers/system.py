@@ -140,7 +140,7 @@ async def get_metrics(
     """Aggregated JSON snapshot of system health metrics."""
     tenant = _user.get("tenant") or get_current_tenant() or "default"
     try:
-        from sqlite_trace import get_metrics_snapshot  # noqa: PLC0415
+        from tracing.sqlite_trace import get_metrics_snapshot  # noqa: PLC0415
 
         metrics_params = inspect.signature(get_metrics_snapshot).parameters
         if "tenant_id" in metrics_params or any(

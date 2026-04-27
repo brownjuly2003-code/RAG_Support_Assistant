@@ -35,10 +35,7 @@ async def _ensure_pipeline() -> None:
 
         from agent.graph import ConversationSession, LocalOllamaLLM
 
-        try:
-            from vectordb.manager import get_embeddings, get_retriever
-        except ImportError:
-            from manager import get_embeddings, get_retriever
+        from vectordb.manager import get_embeddings, get_retriever
 
         try:
             from langchain_chroma import Chroma

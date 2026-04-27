@@ -146,7 +146,7 @@ def test_admin_traces_endpoint_filters_by_jwt_tenant(
             return [{"trace_id": "tenant-trace", "started_at": None, "finished_at": None}]
         return []
 
-    monkeypatch.setattr("sqlite_trace.list_recent_traces", _fake_list_recent_traces, raising=False)
+    monkeypatch.setattr("tracing.sqlite_trace.list_recent_traces", _fake_list_recent_traces, raising=False)
 
     response = client_with_key.get("/api/admin/traces?limit=5", headers=_token("acme", "agent"))
 
@@ -172,7 +172,7 @@ def test_admin_trace_detail_returns_404_for_foreign(
             "feedback": [],
         }
 
-    monkeypatch.setattr("sqlite_trace.get_trace_detail", _fake_get_trace_detail, raising=False)
+    monkeypatch.setattr("tracing.sqlite_trace.get_trace_detail", _fake_get_trace_detail, raising=False)
 
     response = client_with_key.get(
         "/api/admin/traces/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -270,7 +270,7 @@ def test_metrics_snapshot_filtered_by_tenant(
             "generated_at": "2026-04-18T00:00:00+00:00",
         }
 
-    monkeypatch.setattr("sqlite_trace.get_metrics_snapshot", _fake_get_metrics_snapshot, raising=False)
+    monkeypatch.setattr("tracing.sqlite_trace.get_metrics_snapshot", _fake_get_metrics_snapshot, raising=False)
 
     response = client_with_key.get("/api/metrics", headers=_token("x-corp", "admin"))
 

@@ -66,7 +66,7 @@ def test_audit_list_admin_ok(monkeypatch, client_with_key: TestClient) -> None:
 
 def test_traces_list_agent_ok(monkeypatch, client_with_key: TestClient) -> None:
     monkeypatch.setattr(
-        "sqlite_trace.list_recent_traces",
+        "tracing.sqlite_trace.list_recent_traces",
         lambda limit: [
             {
                 "trace_id": "abc123",
@@ -93,7 +93,7 @@ def test_traces_list_agent_ok(monkeypatch, client_with_key: TestClient) -> None:
 
 def test_trace_detail_not_found(monkeypatch, client_with_key: TestClient) -> None:
     monkeypatch.setattr(
-        "sqlite_trace.get_trace_detail",
+        "tracing.sqlite_trace.get_trace_detail",
         lambda trace_id: None,
         raising=False,
     )
@@ -112,7 +112,7 @@ def test_trace_detail_invalid_id_rejected(monkeypatch, client_with_key: TestClie
         raise AssertionError(f"trace lookup must not happen for invalid id: {trace_id}")
 
     monkeypatch.setattr(
-        "sqlite_trace.get_trace_detail",
+        "tracing.sqlite_trace.get_trace_detail",
         _unexpected_call,
         raising=False,
     )
@@ -141,7 +141,7 @@ def test_trace_detail_returns_steps(monkeypatch, client_with_key: TestClient) ->
         "feedback": [],
     }
     monkeypatch.setattr(
-        "sqlite_trace.get_trace_detail",
+        "tracing.sqlite_trace.get_trace_detail",
         lambda trace_id: trace,
         raising=False,
     )
