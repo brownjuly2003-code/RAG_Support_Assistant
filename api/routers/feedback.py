@@ -50,13 +50,14 @@ async def post_feedback(
         raise HTTPException(status_code=422, detail="rating must be 'up' or 'down'")
     prometheus_metrics.FEEDBACK_COUNT.labels(rating=body.rating).inc()
     try:
-        from sqlite_trace import save_feedback  # noqa: PLC0415
+        from tracing.sqlite_trace import save_feedback  # noqa: PLC0415
 
         save_feedback(
             trace_id=body.trace_id,
             session_id=body.session_id,
             rating=body.rating,
             reason=body.reason or "",
+            tenant_id=_user.get("tenant", "default") or "default",
         )
     except Exception as exc:
         logger.warning("Failed to save feedback: %s", exc)
@@ -146,11 +147,18 @@ async def feedback_stats(
     days: int = 30,
     _user: dict = Depends(require_role("agent", "admin")),
 ) -> dict:
-    """Feedback stats for the last N days."""
-    try:
-        from sqlite_trace import get_feedback_stats  # noqa: PLC0415
+    """Feedback stats for the last N days, scoped to caller's tenant.
 
-        return get_feedback_stats(days=days)
+    Admin может посмотреть глобальный snapshot через role=admin
+    (исторический поведение), agent видит только свой tenant.
+    """
+    try:
+        from tracing.sqlite_trace import get_feedback_stats  # noqa: PLC0415
+
+        role = _user.get("role", "viewer")
+        tenant_id = _user.get("tenant", "default") or "default"
+        scope_tenant = None if role == "admin" else tenant_id
+        return get_feedback_stats(days=days, tenant_id=scope_tenant)
     except Exception as exc:
         logger.warning("Failed to get feedback stats: %s", exc)
         return {

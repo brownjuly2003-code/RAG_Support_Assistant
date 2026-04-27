@@ -1165,9 +1165,11 @@ async def _get_or_create_session(
                 )
                 db_session = result.scalar_one_or_none()
                 if db_session is None:
-                    db.add(DBSession(id=session_uuid))
+                    db.add(DBSession(id=session_uuid, tenant_id=tenant_id))
                 else:
                     db_session.last_access = datetime.now(timezone.utc)
+                    if not db_session.tenant_id or db_session.tenant_id == "default":
+                        db_session.tenant_id = tenant_id
                 await asyncio.wait_for(db.commit(), timeout=0.5)
 
                 history_result = await asyncio.wait_for(
@@ -1793,19 +1795,24 @@ async def get_session_history(
     session_id: str,
     _user: dict = Depends(require_role("agent", "admin")),
 ) -> HistoryResponse:
+    user_tenant = (_user.get("tenant") or "default") or "default"
     global _db_retry_after
     if time.monotonic() >= _db_retry_after:
         try:
             from sqlalchemy import select
 
             from db.engine import async_session
-            from db.models import Message
+            from db.models import Message, Session as DBSession
 
             async with async_session() as db:
+                # Tenant isolation: messages must belong to a session
+                # whose tenant matches the caller (Codex audit P0).
                 result = await asyncio.wait_for(
                     db.execute(
                         select(Message)
+                        .join(DBSession, DBSession.id == Message.session_id)
                         .where(Message.session_id == uuid.UUID(session_id))
+                        .where(DBSession.tenant_id == user_tenant)
                         .order_by(Message.created_at)
                     ),
                     timeout=0.5,
@@ -1823,6 +1830,14 @@ async def get_session_history(
 
     if session_id in _sessions:
         session = _sessions[session_id]
+        session_tenant = None
+        if hasattr(session, "_tenant_id"):
+            session_tenant = getattr(session, "_tenant_id")
+        elif isinstance(session, dict):
+            session_tenant = session.get("tenant_id") or session.get("_tenant_id")
+        if session_tenant is not None and session_tenant != user_tenant:
+            raise HTTPException(status_code=404, detail="Session not found")
+
         if hasattr(session, "history"):
             history = session.history
         elif isinstance(session, dict):
@@ -1844,6 +1859,7 @@ async def get_session_history(
 async def list_sessions(
     _user: dict = Depends(require_role("agent", "admin")),
 ) -> list[SessionInfo]:
+    user_tenant = (_user.get("tenant") or "default") or "default"
     result: dict[str, SessionInfo] = {}
 
     global _db_retry_after
@@ -1859,6 +1875,7 @@ async def list_sessions(
                     db.execute(
                         select(DBSession.id, func.count(Message.id))
                         .outerjoin(Message, Message.session_id == DBSession.id)
+                        .where(DBSession.tenant_id == user_tenant)
                         .group_by(DBSession.id)
                         .order_by(DBSession.last_access.desc())
                     ),
@@ -1875,6 +1892,14 @@ async def list_sessions(
             logger.warning("DB sessions fallback: %s", exc)
 
     for sid, session in list(_sessions.items()):
+        session_tenant = None
+        if hasattr(session, "_tenant_id"):
+            session_tenant = getattr(session, "_tenant_id")
+        elif isinstance(session, dict):
+            session_tenant = session.get("tenant_id") or session.get("_tenant_id")
+        if session_tenant is not None and session_tenant != user_tenant:
+            continue
+
         if hasattr(session, "_history"):
             count = len(session._history)
         elif hasattr(session, "history"):
@@ -1894,16 +1919,24 @@ async def clear_session(
     session_id: str,
     _user: dict = Depends(require_role("agent", "admin")),
 ) -> Dict[str, str]:
+    user_tenant = (_user.get("tenant") or "default") or "default"
     global _db_retry_after
     found = False
 
     if session_id in _sessions:
         session = _sessions[session_id]
-        if hasattr(session, "clear"):
-            session.clear()
-        del _sessions[session_id]
-        found = True
-    _session_last_access.pop(session_id, None)
+        session_tenant = None
+        if hasattr(session, "_tenant_id"):
+            session_tenant = getattr(session, "_tenant_id")
+        elif isinstance(session, dict):
+            session_tenant = session.get("tenant_id") or session.get("_tenant_id")
+        # Tenant isolation: in-memory session must belong to caller's tenant.
+        if session_tenant is None or session_tenant == user_tenant:
+            if hasattr(session, "clear"):
+                session.clear()
+            del _sessions[session_id]
+            _session_last_access.pop(session_id, None)
+            found = True
 
     if time.monotonic() >= _db_retry_after:
         try:
@@ -1914,7 +1947,11 @@ async def clear_session(
 
             async with async_session() as db:
                 db_result = await asyncio.wait_for(
-                    db.execute(select(DBSession).where(DBSession.id == uuid.UUID(session_id))),
+                    db.execute(
+                        select(DBSession)
+                        .where(DBSession.id == uuid.UUID(session_id))
+                        .where(DBSession.tenant_id == user_tenant)
+                    ),
                     timeout=0.5,
                 )
                 db_session = db_result.scalar_one_or_none()

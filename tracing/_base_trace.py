@@ -201,8 +201,26 @@ def _init_db() -> None:
                 session_id  TEXT,
                 rating      TEXT CHECK(rating IN ('up','down')),
                 reason      TEXT,
-                ts          TEXT
+                ts          TEXT,
+                tenant_id   TEXT NOT NULL DEFAULT 'default'
             );
+            """
+        )
+
+        cur.execute("PRAGMA table_info(feedback)")
+        feedback_columns = {row[1] for row in cur.fetchall()}
+        if "tenant_id" not in feedback_columns:
+            cur.execute(
+                """
+                ALTER TABLE feedback
+                ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'
+                """
+            )
+
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_feedback_tenant_id
+            ON feedback(tenant_id);
             """
         )
 
@@ -502,15 +520,17 @@ def save_feedback(
     session_id: str,
     rating: str,
     reason: str = "",
+    tenant_id: str = "default",
 ) -> None:
     """Сохраняет пользовательский фидбек на ответ ассистента."""
+    tenant_id = (tenant_id or "default").strip() or "default"
     with _get_connection() as conn:
         conn.execute(
             """
-            INSERT INTO feedback (trace_id, session_id, rating, reason, ts)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO feedback (trace_id, session_id, rating, reason, ts, tenant_id)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (trace_id, session_id, rating, reason, _now_iso()),
+            (trace_id, session_id, rating, reason, _now_iso(), tenant_id),
         )
         conn.commit()
 
@@ -670,33 +690,60 @@ def purge_old_traces(
     }
 
 
-def get_feedback_stats(days: int = 30) -> dict:
-    """Aggregated feedback stats for the last N days."""
+def get_feedback_stats(days: int = 30, tenant_id: str | None = None) -> dict:
+    """Aggregated feedback stats for the last N days.
+
+    Если tenant_id is None — глобальные агрегаты (для admin/reporting).
+    Если задан tenant_id — только этот tenant (Codex audit P0/P1: tenant
+    isolation на feedback).
+    """
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
     with _get_connection() as conn:
         cur = conn.cursor()
 
-        cur.execute(
-            "SELECT rating, COUNT(*) FROM feedback WHERE ts >= ? GROUP BY rating",
-            (cutoff,),
-        )
+        if tenant_id is None:
+            cur.execute(
+                "SELECT rating, COUNT(*) FROM feedback WHERE ts >= ? GROUP BY rating",
+                (cutoff,),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT rating, COUNT(*) FROM feedback
+                WHERE ts >= ? AND tenant_id = ?
+                GROUP BY rating
+                """,
+                (cutoff, tenant_id),
+            )
         counts = dict(cur.fetchall())
         up = counts.get("up", 0)
         down = counts.get("down", 0)
         total = up + down
         up_pct = round(up / total * 100, 1) if total else 0.0
 
-        cur.execute(
-            """
-            SELECT t.final_route, f.rating, COUNT(*)
-            FROM feedback f
-            LEFT JOIN traces t ON f.trace_id = t.trace_id
-            WHERE f.ts >= ?
-            GROUP BY t.final_route, f.rating
-            """,
-            (cutoff,),
-        )
+        if tenant_id is None:
+            cur.execute(
+                """
+                SELECT t.final_route, f.rating, COUNT(*)
+                FROM feedback f
+                LEFT JOIN traces t ON f.trace_id = t.trace_id
+                WHERE f.ts >= ?
+                GROUP BY t.final_route, f.rating
+                """,
+                (cutoff,),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT t.final_route, f.rating, COUNT(*)
+                FROM feedback f
+                LEFT JOIN traces t ON f.trace_id = t.trace_id
+                WHERE f.ts >= ? AND f.tenant_id = ?
+                GROUP BY t.final_route, f.rating
+                """,
+                (cutoff, tenant_id),
+            )
         by_route: Dict[str, Dict[str, int]] = {}
         for route, rating, count in cur.fetchall():
             route_key = route or "unknown"
