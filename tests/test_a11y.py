@@ -175,6 +175,27 @@ def test_a11y_templates_render_for_snapshot(template_name: str) -> None:
     assert "<html" in rendered
 
 
+def _axe_cli_available() -> bool:
+    npx = shutil.which("npx.cmd") or shutil.which("npx")
+    if not npx:
+        return False
+    try:
+        probe = subprocess.run(
+            [npx, "--no-install", "@axe-core/cli", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+    return probe.returncode == 0
+
+
+@pytest.mark.skipif(
+    not _axe_cli_available(),
+    reason="@axe-core/cli not installed (npm i -g @axe-core/cli) — running headless axe scan unavailable",
+)
 @pytest.mark.parametrize("page_path", ALL_A11Y_PATHS)
 def test_axe_has_no_serious_or_critical_findings(
     a11y_base_url: str,
@@ -199,14 +220,18 @@ def test_axe_has_no_serious_or_critical_findings(
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
 
-    completed = subprocess.run(
-        command,
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-        env=env,
-    )
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
+            timeout=180,
+        )
+    except subprocess.TimeoutExpired as exc:
+        pytest.fail(f"axe-cli timed out after 180s for {page_path}: {exc}")
 
     assert completed.returncode == 0, completed.stderr or completed.stdout
 
