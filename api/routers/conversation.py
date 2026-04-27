@@ -308,6 +308,35 @@ async def ask(
                 except Exception as exc:
                     logger.error("Pipeline error in /ask: %s", exc, exc_info=True)
                     answer = "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору."
+                    # Codex audit 2026-04-27 H2: до этого фикса при exception
+                    # пользователю обещали handoff, но реального escalated
+                    # ticket в БД не создавалось — оператор мог не увидеть.
+                    try:
+                        from db.engine import async_session
+                        from db.models import EscalatedTicket
+
+                        draft = (
+                            f"Запрос пользователя: {question}\n\n"
+                            "Черновик ответа: Произошла техническая ошибка "
+                            "при обработке запроса. Пожалуйста, ответьте "
+                            "пользователю вручную."
+                        )
+                        async with async_session() as _esc_db:
+                            _esc_db.add(
+                                EscalatedTicket(
+                                    tenant_id=tenant or "default",
+                                    session_id=session_id,
+                                    user_question=question,
+                                    ai_draft=draft,
+                                    status="open",
+                                )
+                            )
+                            await _esc_db.commit()
+                    except Exception as ticket_exc:
+                        logger.warning(
+                            "Failed to persist pipeline-failure ticket: %s",
+                            ticket_exc,
+                        )
                     if hasattr(session, "_history"):
                         session._history.append({"role": "user", "content": question})
                         session._history.append({"role": "assistant", "content": answer})
