@@ -705,7 +705,7 @@ Update 2026-04-27: `llm/providers/*` informational mypy scope and
 
 В порядке возрастающего риска:
 - **Phase 2** — `bitrix.py` → `integrations/bitrix.py`, `mock_inbox.py` → `integrations/mock_inbox.py`, `seed_docs.py` → `demo/seed_docs.py` (~2 часа, требует grep+rewrite импортов)
-- **Phase 3** — collapse `manager.py` ↔ `vectordb/manager.py`, `sqlite_trace.py` ↔ `tracing/sqlite_trace.py` (~half day каждый)
+- **Phase 3** — закрыт 2026-04-27 по Option B: `manager.py` → `vectordb/_base_manager.py` + root shim, `sqlite_trace.py` → `tracing/_base_trace.py` + root shim
 - **Phase 4** — resolve `loader` fork (root vs ingestion) — это product decision, не refactor
 - **Phase 5** — найти дом для `chunking.py` (вероятно `scripts/chunking_eval.py`)
 

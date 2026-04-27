@@ -8,7 +8,7 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, List, Sequence
 
-import manager as _base_manager
+from vectordb import _base_manager
 
 from config.settings import get_settings
 

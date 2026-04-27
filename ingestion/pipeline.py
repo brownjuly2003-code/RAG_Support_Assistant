@@ -33,7 +33,7 @@ except ImportError:
 
 from ingestion.loader import DocumentLoader
 from ingestion.categorizer import annotate_documents_with_categories
-import manager as legacy_manager
+from vectordb import _base_manager as legacy_manager
 import vectordb.manager as tenant_manager
 
 logger = logging.getLogger(__name__)

@@ -2,7 +2,7 @@
 
 **Дата:** 2026-04-26
 **Сессии:** 1 (audit) + 4 (implementation)
-**Состояние:** 22/22 hardening tasks completed + Phase 2a-2m router split completed, conversation-focused 69/69 tests pass.
+**Состояние:** 22/22 hardening tasks completed + Phase 2a-2m router split completed + DEPRECATIONS Phase 3 shim split completed for `manager.py`/`sqlite_trace.py`, conversation-focused 69/69 tests pass.
 
 > Этот документ — **карманный handover** для новой сессии. Если нужны детали — смотри указанные файлы.
 
@@ -169,6 +169,14 @@ provider classes перед `disallow_untyped_defs`.
 ### Опция C — DEPRECATIONS Phase 2 (перенос файлов)
 
 `bitrix.py` + `mock_inbox.py` перенесены в `integrations/` 2026-04-27. `seed_docs.py` перенесён в `demo/seed_docs.py`; DEPRECATIONS Phase 2 закрыта.
+
+### Опция C2 — DEPRECATIONS Phase 3 (`manager`/`sqlite_trace`)
+
+Phase 3 закрыт 2026-04-27 по Option B: базовые реализации теперь в
+`vectordb/_base_manager.py` и `tracing/_base_trace.py`, root `manager.py` и
+`sqlite_trace.py` остались compatibility shim-ами. Verification:
+`python -m pytest -p pytest_asyncio.plugin -p no:cacheprovider -q --basetemp=.tmp\pytest-full-phase3-final`
+→ 563 passed, 4 skipped.
 
 ### Опция D — coverage до 70%
 

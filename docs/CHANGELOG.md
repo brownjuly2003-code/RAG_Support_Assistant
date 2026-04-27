@@ -21,6 +21,8 @@
 - 7 root-level файлов получили актуальные docstrings (`manager.py`, `sqlite_trace.py`, `loader.py`, `chunking.py`, `bitrix.py`, `mock_inbox.py`, `seed_docs.py`) — раньше говорили «vectordb/manager.py», «integrations/bitrix.py» хотя файлы лежали в корне.
 - `DEPRECATIONS.md` создан — карта legacy-расположений + 5-фазный план миграции.
 - `DEPRECATIONS.md` Phase 2 закрыта 2026-04-27: `bitrix.py` и `mock_inbox.py` переехали в `integrations/`, `seed_docs.py` переехал в `demo/seed_docs.py`; canonical imports покрыты regression-тестами.
+- `DEPRECATIONS.md` Phase 3 закрыта 2026-04-27 по Option B: базовые реализации `manager.py` и `sqlite_trace.py` переехали в `vectordb/_base_manager.py` и `tracing/_base_trace.py`; root-файлы оставлены shim-ами совместимости.
+- Phase 3 layout покрыт regression-тестами и полным pytest-прогоном: 563 passed, 4 skipped.
 - `README.md` и `codex-tasks/cleanup-report.md` синхронизированы с фактической module layout; `requests>=2.32.0` добавлен в `requirements.txt` как прямой runtime dependency для Bitrix-интеграции.
 - `pyproject.toml` — `[tool.coverage.{run,report}]` с `fail_under=70`, branch coverage, source-list по 14 production модулям.
 - `pyproject.toml` — `[tool.mypy]` + per-module overrides. Strict для `auth.*` + `db.models` (5/5 файлов pass).

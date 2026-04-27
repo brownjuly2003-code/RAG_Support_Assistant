@@ -2,5 +2,6 @@
 
 """
 Пакет vectordb:
-- manager.py — создание Chroma/Qdrant vector store и retriever.
+- _base_manager.py — базовая реализация Chroma/Qdrant vector store и retriever.
+- manager.py — tenant-aware wrapper.
 """

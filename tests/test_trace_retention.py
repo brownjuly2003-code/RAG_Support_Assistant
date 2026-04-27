@@ -19,7 +19,7 @@ def trace_module(
 ):
     import config.settings as settings_module
 
-    source_path = Path(__file__).resolve().parent.parent / "sqlite_trace.py"
+    source_path = Path(__file__).resolve().parent.parent / "tracing" / "_base_trace.py"
     module_path = tmp_path / "sqlite_trace.py"
     module_path.write_text(source_path.read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
 

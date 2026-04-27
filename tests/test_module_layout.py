@@ -30,3 +30,23 @@ def test_root_deprecation_shims_are_removed() -> None:
         except ModuleNotFoundError:
             continue
         raise AssertionError(f"{module_name} root shim should be removed")
+
+
+def test_vectordb_base_manager_is_canonical_home() -> None:
+    base_manager = importlib.import_module("vectordb._base_manager")
+    tenant_manager = importlib.import_module("vectordb.manager")
+    root_manager = _reload_root_module("manager")
+
+    assert tenant_manager._base_manager is base_manager
+    assert root_manager.build_vector_store is base_manager.build_vector_store
+    assert root_manager.build_vector_store.__module__ == "vectordb._base_manager"
+
+
+def test_tracing_base_trace_is_canonical_home() -> None:
+    base_trace = importlib.import_module("tracing._base_trace")
+    pii_trace = importlib.import_module("tracing.sqlite_trace")
+    root_trace = _reload_root_module("sqlite_trace")
+
+    assert pii_trace._sqlite_trace is base_trace
+    assert root_trace.start_trace is base_trace.start_trace
+    assert root_trace.start_trace.__module__ == "tracing._base_trace"

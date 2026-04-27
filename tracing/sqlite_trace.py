@@ -4,7 +4,7 @@ from __future__ import annotations
 import json as _json
 from typing import Any
 
-import sqlite_trace as _sqlite_trace
+from tracing import _base_trace as _sqlite_trace
 
 from utils.pii import redact_pii
 

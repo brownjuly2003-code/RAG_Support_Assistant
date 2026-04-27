@@ -17,10 +17,10 @@ the project tree. Created 2026-04-26 as part of the Opus audit follow-up.
 | ~~`graph.py`~~ | — | ✅ removed 2026-04-26 | `agent.graph` | Phase 1 closed. |
 | ~~`state.py`~~ | — | ✅ removed 2026-04-26 | `agent.state` | Phase 1 closed. |
 | ~~`prompts.py`~~ | — | ✅ removed 2026-04-26 | `agent.prompts` | Phase 1 closed. |
-| `manager.py` | 905 | 🔴 active legacy | (this is canonical) | `vectordb/manager.py` is a tenant-aware wrapper. Imported from `ingestion/pipeline.py:36` and `vectordb/manager.py:11`. |
-| `sqlite_trace.py` | 968 | 🔴 active legacy | (this is canonical) | `tracing/sqlite_trace.py` is a thin PII-redacting wrapper. Imported from 3 scripts + `tracing/__init__.py`. |
+| `manager.py` | 15 | 🟡 shim | `vectordb.manager` | Phase 3 manager side complete: base implementation moved to `vectordb/_base_manager.py`; root import remains for compatibility. |
+| `sqlite_trace.py` | 15 | 🟡 shim | `tracing.sqlite_trace` | Phase 3 trace side complete: base implementation moved to `tracing/_base_trace.py`; root import remains for compatibility. |
 | `loader.py` | 296 | 🔴 active legacy | `ingestion.loader` (different impl, +csv/json) | `api/app.py:185-194` prefers root, falls back to `ingestion.loader`. Behavior is **not equivalent** — root has `DocumentChangeTracker`, package has csv/json. |
-| `chunking.py` | 397 | 🔴 active legacy | (no canonical yet) | Standalone evaluation/tuning script. Header says "ingestion/chunking.py" but no such file exists. Referenced by name from `config/settings.py`, `ingestion/pipeline.py`, `manager.py`, `demo/seed_docs.py`. |
+| `chunking.py` | 397 | 🔴 active legacy | (no canonical yet) | Standalone evaluation/tuning script. Header says "ingestion/chunking.py" but no such file exists. Referenced by name from `config/settings.py`, `ingestion/pipeline.py`, `vectordb/_base_manager.py`, `demo/seed_docs.py`. |
 | ~~`bitrix.py`~~ | — | ✅ moved 2026-04-27 | `integrations.bitrix` | Phase 2 complete. |
 | ~~`mock_inbox.py`~~ | — | ✅ moved 2026-04-27 | `integrations.mock_inbox` | Phase 2 complete. |
 | ~~`seed_docs.py`~~ | — | ✅ moved 2026-04-27 | `demo.seed_docs` | Phase 2 complete. |
@@ -56,6 +56,10 @@ wrapper, fold tenant-aware caching / PII redaction into the canonical module.
 `vectordb/_base_manager.py` so the canonical import is `vectordb.manager`
 everywhere. Same idea for `sqlite_trace.py` → `tracing/_base_trace.py`.
 
+2026-04-27 update: `manager.py` and `sqlite_trace.py` use Option B. The base
+implementations now live in `vectordb/_base_manager.py` and
+`tracing/_base_trace.py`; both root files are compatibility shims.
+
 ### Phase 4 — resolve the `loader` fork (high risk, ~half day)
 
 Decide: keep `DocumentChangeTracker` (root) or `csv/json` support
@@ -68,7 +72,7 @@ remove the fallback chain in `api/app.py:185-194`.
 
 It is a tuning script, not a production module. Move to `scripts/chunking_eval.py`
 and update references in `config/settings.py`, `ingestion/pipeline.py`,
-`manager.py`, `demo/seed_docs.py`.
+`vectordb/_base_manager.py`, `demo/seed_docs.py`.
 
 ## api/app.py monolith split — in progress
 

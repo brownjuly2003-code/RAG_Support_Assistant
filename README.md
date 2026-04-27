@@ -64,9 +64,9 @@ User / Email / Widget
 - `auth/` — JWT, X-API-Key, OIDC, RBAC. `mypy --strict` clean.
 - `db/` — SQLAlchemy models, async engine, audit log, pgcrypto field.
 - `llm/providers/` — Ollama / Mistral / GraceKelly providers + cost guard.
-- `vectordb/` — tenant-aware vector store factory (wrapper around root `manager.py`).
+- `vectordb/` — tenant-aware vector store factory (`vectordb.manager`) plus base implementation (`vectordb._base_manager`).
 - `evaluation/` — RAGAS metrics, online evaluators, regression framework.
-- `monitoring/` — Prometheus metrics (~50). `tracing/` — Langfuse + OTel + SQLite.
+- `monitoring/` — Prometheus metrics (~50). `tracing/` — Langfuse + OTel + SQLite trace store.
 - `scripts/` — operational CLIs (regression eval, KB builders, nightly tasks).
 
 > For a complete audit and an implementation log of recent hardening work,
@@ -936,7 +936,7 @@ scripts/                Ops jobs: eval, review queue, reindex, KB builder/gap de
 static/                 chat, admin, agent, analytics, login, metrics, widget UIs
 tests/                  Unit and integration test suites
 tests/integration/      End-to-end coverage for critical user flows
-tracing/                SQLite tracing and OpenTelemetry setup
+tracing/                SQLite tracing base/wrapper and OpenTelemetry setup
 vectordb/               ChromaDB manager, BM25 fusion, reranking
 alembic/                Migrations `001` through `012`
 demo/                   Demo docs and seed helpers
