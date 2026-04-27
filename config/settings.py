@@ -706,6 +706,47 @@ class Settings:
                 "Set it in .env for local dev — see .env.example."
             )
 
+        # Production secrets fail-fast (Codex audit 2026-04-27 P0).
+        # Без этих проверок production принимает admin/admin и подписывает
+        # токены известным repo default'ом.
+        if self.rag_env == "production":
+            _DEV_SECRET = "dev-secret-change-in-production!"
+            jwt_secret = (os.getenv("JWT_SECRET", "") or "").strip()
+            if not jwt_secret or jwt_secret == _DEV_SECRET:
+                raise RuntimeError(
+                    "\nERROR: JWT_SECRET is required in production and must not be the dev default.\n"
+                    "       Set JWT_SECRET to a strong random value (>= 32 chars) outside git.\n"
+                    "       Generate with: python -c \"import secrets; print(secrets.token_urlsafe(48))\""
+                )
+            if len(jwt_secret) < 32:
+                raise RuntimeError(
+                    "\nERROR: JWT_SECRET is too short for production (got %d chars, need >= 32).\n"
+                    "       Use python -c \"import secrets; print(secrets.token_urlsafe(48))\"."
+                    % len(jwt_secret)
+                )
+
+            session_secret = (
+                os.getenv("SESSION_SECRET_KEY", "") or os.getenv("JWT_SECRET", "") or ""
+            ).strip()
+            if not session_secret or session_secret == _DEV_SECRET:
+                raise RuntimeError(
+                    "\nERROR: SESSION_SECRET_KEY is required in production and must not be the dev default.\n"
+                    "       Set SESSION_SECRET_KEY to a strong random value (>= 32 chars)."
+                )
+
+            admin_hash = (os.getenv("ADMIN_PASSWORD_HASH", "") or "").strip()
+            allow_dev_admin = (
+                os.getenv("ALLOW_DEV_ADMIN_LOGIN", "").strip().lower()
+                in ("1", "true", "yes")
+            )
+            if not admin_hash and not allow_dev_admin:
+                raise RuntimeError(
+                    "\nERROR: ADMIN_PASSWORD_HASH is required in production.\n"
+                    "       Without it, /api/auth/login accepts admin/admin as a valid credential.\n"
+                    "       Generate a bcrypt hash and set ADMIN_PASSWORD_HASH, or set\n"
+                    "       ALLOW_DEV_ADMIN_LOGIN=1 to acknowledge the risk explicitly."
+                )
+
         try:
             from config.provider_schema import load_provider_registry
 
