@@ -1466,6 +1466,35 @@ async def _probe_redis() -> ComponentStatus:
 # Lifespan
 # ---------------------------------------------------------------------------
 
+def _run_alembic_upgrade() -> None:
+    """Apply pending alembic migrations. Idempotent.
+
+    Gated on AUTO_MIGRATE env (default "true"). On failure, logs warning
+    but does not abort startup so that the operator can run
+    `alembic upgrade head` manually.
+    """
+    import os
+
+    if os.getenv("AUTO_MIGRATE", "true").strip().lower() not in ("1", "true", "yes"):
+        return
+
+    project_root = Path(__file__).resolve().parent.parent
+    cfg_path = project_root / "alembic.ini"
+    if not cfg_path.exists():
+        logger.warning("alembic.ini not found at %s; skipping auto-migrate", cfg_path)
+        return
+    try:
+        from alembic import command
+        from alembic.config import Config
+
+        cfg = Config(str(cfg_path))
+        cfg.set_main_option("script_location", str(project_root / "alembic"))
+        command.upgrade(cfg, "head")
+        logger.info("alembic upgrade head: OK")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("alembic auto-migrate skipped: %s", exc)
+
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
@@ -1479,6 +1508,8 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except RuntimeError as exc:
         logger.error("Startup validation failed: %s", exc)
         raise SystemExit(1) from exc
+
+    await asyncio.get_running_loop().run_in_executor(None, _run_alembic_upgrade)
 
     try:
         from db.engine import engine as db_engine  # noqa: PLC0415
