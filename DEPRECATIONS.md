@@ -180,17 +180,20 @@ Strict mypy is enforced via `pyproject.toml [[tool.mypy.overrides]]` for:
 - `db.engine` — passes clean
 - `llm.providers.*` — passes clean (promoted к strict 2026-04-27 после фикса
   Mapping для headers и явных kwargs вместо `**dict[str, object]`)
+- `config.settings` — passes clean 2026-04-27 (Step 6: removed duplicate
+  `tenant_admin_email` field, renamed shadowed `result` local in
+  `_load_llm_model_prices`, narrowed `os.getenv("SESSION_SECRET_KEY")` with
+  empty default, marked `import yaml` as `type: ignore[import-untyped]`).
 
 The following modules are intentionally **not** strict yet:
 
-- `config.settings` — re-defined names + Optional/str narrowing; cleanup is
-  scoped to a separate refactor.
 - `agent.graph` (LangGraph nodes) — самый сложный модуль для типизации;
   отдельный квартальный roadmap.
 
 CI gate (как gate, не informational): `python -m mypy auth db/models.py
-db/engine.py llm/providers/ --no-incremental --show-error-codes`. Любой регресс
-блокирует PR (`.github/workflows/ci.yml type-check job`).
+db/engine.py llm/providers/ config/settings.py --no-incremental
+--show-error-codes`. Любой регресс блокирует PR
+(`.github/workflows/ci.yml type-check job`).
 
 ## What was done in this session (2026-04-26)
 

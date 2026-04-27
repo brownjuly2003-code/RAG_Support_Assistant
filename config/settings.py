@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 from pydantic import SecretStr
 
 
@@ -121,7 +121,7 @@ def _load_llm_model_prices() -> dict[str, dict[str, float]]:
             return result
 
     legacy = (os.getenv("LLM_COST_PER_1M_TOKENS", "") or "").strip()
-    result: dict[str, dict[str, float]] = {}
+    legacy_result: dict[str, dict[str, float]] = {}
     for chunk in legacy.split(","):
         model_name, _, price = chunk.partition(":")
         model_name = model_name.strip()
@@ -132,8 +132,8 @@ def _load_llm_model_prices() -> dict[str, dict[str, float]]:
             amount = float(price)
         except ValueError:
             continue
-        result[model_name] = {"input": amount, "output": amount}
-    return result
+        legacy_result[model_name] = {"input": amount, "output": amount}
+    return legacy_result
 
 
 def _load_experiment_override_payload() -> dict[str, Any]:
@@ -449,9 +449,6 @@ class Settings:
             "BACKLOG_EMAIL_ENABLED", "false"
         ).strip().lower() in ("1", "true", "yes")
     )
-    tenant_admin_email: str = field(
-        default_factory=lambda: os.getenv("TENANT_ADMIN_EMAIL", "")
-    )
     vector_backend: str = os.getenv("RAG_VECTOR_BACKEND", "chroma").strip().lower()
 
     # --- Куда слать эскалации (SupportSink) ---
@@ -562,7 +559,7 @@ class Settings:
         )
     )
     session_secret_key: str = field(
-        default_factory=lambda: os.getenv("SESSION_SECRET_KEY")
+        default_factory=lambda: os.getenv("SESSION_SECRET_KEY", "")
         or os.getenv("JWT_SECRET", "dev-secret-change-in-production!")
     )
     otel_enabled: bool = field(
