@@ -2180,7 +2180,37 @@ async def admin_trace_detail_redirect(trace_id: str) -> RedirectResponse:
 
 
 @app.get("/metrics")
-async def prometheus_metrics_endpoint() -> Response:
+async def prometheus_metrics_endpoint(request: Request) -> Response:
+    """Prometheus pull endpoint.
+
+    The /metrics path is intentionally unauthenticated by Prometheus
+    convention — most scrape configs do not support per-target auth.
+    Production deployments MUST restrict access at network level (Service
+    network policy, ingress whitelist, sidecar). The authenticated
+    alternative is `/api/metrics`, which returns the same JSON snapshot.
+
+    Optional opt-in: set PROMETHEUS_METRICS_REQUIRE_AUTH=1 to require an
+    `Authorization: Bearer <admin-token>` header even on /metrics. This is
+    useful when the cluster does not provide a private scrape network.
+
+    Refs: Codex audit 2026-04-27 P1 §4.
+    """
+    import os
+
+    if os.getenv("PROMETHEUS_METRICS_REQUIRE_AUTH", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    ):
+        from auth.dependencies import require_role
+
+        try:
+            require_role("admin")(request)
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
     if not getattr(prometheus_metrics, "PROMETHEUS_AVAILABLE", False):
         return JSONResponse(
             status_code=501,
