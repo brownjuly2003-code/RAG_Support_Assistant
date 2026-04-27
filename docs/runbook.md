@@ -29,13 +29,14 @@ Get-Content data/alerts.log -Tail 40
 Открой в браузере:
 
 - `http://localhost:8000/static/metrics.html` для общего статуса.
-- `http://localhost:8000/traces-ui` для просмотра последних трасс.
+- `GET /api/admin/traces` (admin auth) для просмотра последних трасс.
 
 ## Порядок разбора
 
 1. Сначала проверь `/api/health`. Если `ollama` или `chromadb` в статусе `error`, сначала чини инфраструктуру.
 2. Потом открой `/api/metrics` и сравни, какая метрика красная.
-3. Затем смотри конкретные trace_id через SQL и страницу `/traces-ui/{trace_id}`.
+3. Затем смотри конкретные trace_id через SQL и `/api/admin/traces/{trace_id}`
+   (admin auth). Legacy unauthenticated `/traces-ui` удалён 2026-04-27 (Codex P0).
 
 ## Алерты и действия
 
@@ -59,7 +60,7 @@ LIMIT 20;
 После этого открой подозрительные трассы:
 
 ```powershell
-Invoke-RestMethod http://localhost:8000/traces/<trace_id> | ConvertTo-Json -Depth 8
+Invoke-RestMethod -Uri http://localhost:8000/api/admin/traces/<trace_id> -Headers @{Authorization="Bearer $env:ADMIN_TOKEN"} | ConvertTo-Json -Depth 8
 ```
 
 Что делать:

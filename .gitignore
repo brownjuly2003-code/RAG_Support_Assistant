@@ -26,6 +26,8 @@ review_batch_*.jsonl
 .tmp/
 tests/pytest-cache-files-*
 
-# Regression eval artefacts (большие машинные логи)
+# Regression eval artefacts (runtime output, не должны попадать в repo)
 reports/regression/*.log
 reports/regression/*.err
+reports/regression/*.json
+reports/regression/*.md

@@ -1,0 +1,394 @@
+# Глубокий аудит RAG_Support_Assistant
+
+Дата: 2026-04-27
+Аудитор: Codex
+Проект: `D:\RAG_Support_Assistant`
+
+## 1. Baseline перед аудитом
+
+Фактический baseline был снят до записи отчета:
+
+- `HEAD`: `ff7948f`
+- tracked-файлов: 607 (`git ls-files`)
+- файлов по `rg --files`: 614, но есть закрытые временные директории `tests/pytest-cache-files-*` с `Access is denied`
+- Python source без `tests/`, `archive-legacy/`, `data/`: 142 файла, 26392 LOC
+- frontend/build bundle: `dist/` и `build/` не найдены; статические ассеты `static/` = 204785 байт, `templates/` = 12112 байт, всего 216897 байт
+- i18n/locales: не найдены, key count = 0
+- рабочее дерево уже было грязным до аудита: изменены `DEPRECATIONS.md`, `api/app.py`, `ingestion/*`, `loader.py`, `tasks/ingest_task.py`, `tests/test_module_layout.py` и др.; есть untracked `.coverage`, `.tmp/`, regression reports, `tests/test_loader.py`
+
+Крупнейшие Python-файлы:
+
+| LOC | Файл |
+|---:|---|
+| 1822 | `api/app.py` |
+| 1765 | `agent/graph.py` |
+| 942 | `scripts/regression_eval.py` |
+| 852 | `tracing/_base_trace.py` |
+| 797 | `scripts/generate_improvement_backlog.py` |
+| 748 | `config/settings.py` |
+| 727 | `vectordb/_base_manager.py` |
+| 704 | `api/routers/conversation.py` |
+
+## 2. Executive summary
+
+Проект уже сильно продвинут: FastAPI API вынесен в sub-router-ы, есть tenant-aware векторное хранилище, JWT/OIDC/RBAC, pgcrypto для чувствительных колонок, Redis/Postgres/OTel/Prometheus, regression/evaluation контур и 571 тест.
+
+Главный вывод: кодовая база близка к хорошему engineering-quality уровню, но текущая production/deploy поверхность небезопасна. Самые важные проблемы не в RAG-алгоритмах, а на границе запуска, auth defaults, tenant isolation и CI gates.
+
+Приоритет на ближайший фикс:
+
+1. Исправить Docker/production entrypoint: сейчас запускается `main:app`, а не `api.app:app`.
+2. Запретить `admin/admin` и default JWT/session secret вне явного dev-mode.
+3. Дотянуть tenant isolation для sessions/feedback.
+4. Закрыть/ограничить unauthenticated legacy endpoints и root `/metrics`.
+5. Починить CI/pre-commit/typecheck, чтобы регрессии блокировались.
+
+## 3. Проверки
+
+Команды и фактический результат:
+
+| Проверка | Результат |
+|---|---|
+| `python -m ruff check agent api auth cache channels config db evaluation ingestion integrations llm monitoring tasks tracing utils vectordb main.py manager.py loader.py sqlite_trace.py reports scripts` | PASS, `All checks passed!` |
+| `python -m pytest -p no:schemathesis --basetemp .tmp\pytest-codex-audit-270426` | 566 passed, 1 failed, 4 skipped, 21 warnings |
+| `python -m mypy auth db\models.py llm\providers --no-incremental --show-error-codes` | FAIL: 5 errors in `llm/providers/mistral.py` and `llm/providers/runtime.py` |
+| `python -m bandit -r ... -c pyproject.toml` на source scope | FAIL only because Low severity: 39 Low, 0 Medium, 0 High |
+| `python -m pip_audit -r requirements.txt --progress-spinner off` | PASS: no known vulnerabilities |
+
+Отдельно:
+
+- Первый полный `pytest` без `--basetemp` упал массово из-за `PermissionError` на `C:\Users\uedom\AppData\Local\Temp\pytest-of-uedom`. Повтор с project-local basetemp показал реальное состояние.
+- `ruff check .` падает на старых `.tmp/pytest-*` артефактах: 133 `W292`, плюс access denied warnings.
+- `python -m pip_audit --strict --require-hashes=false -r requirements.txt` падает с parser error: текущий `pip-audit 2.10.0` не принимает `--require-hashes=false`.
+- `pre-commit run ...` локально не стартует из-за `PermissionError` в `C:\Users\uedom\.cache\pre-commit\...`, но сама конфигурация pip-audit тоже содержит невалидный аргумент.
+
+Единственный pytest failure:
+
+- `tests/integration/test_regression_eval_live.py::test_regression_eval_live_no_asyncpg_race_no_fk_violation`
+- Причина: Docker CLI найден, но Docker daemon pipe `//./pipe/docker_engine` недоступен. Тест проверяет `shutil.which("docker")`, но не проверяет доступность daemon перед запуском `PostgresContainer`.
+
+## 4. Критические находки
+
+### P0. Docker запускает не тот FastAPI app
+
+Доказательства:
+
+- `Dockerfile:15`: `uvicorn main:app`
+- `main.py:77`: создается отдельный `FastAPI(title="RAG Support Assistant PoC", version="0.1.0")`
+- `main.py:83-85`: из `api.app` подключается только `router`, а не сам `api.app.app`
+- `api/app.py:1470-1499`: production lifespan вызывает `settings.validate()`, OTel init и `initialize_vector_store()`
+- `api/app.py:1566-1568`: lifespan поднимает cleanup/purge background tasks
+- интроспекция показала: `api.app.app.user_middleware` содержит 8 middleware, `main.app.user_middleware` пустой
+- интроспекция также показала `main.DATA_DIR = D:\data`, потому что `main.py:15-16` делает `PROJECT_ROOT = BASE_DIR.parent`
+
+Impact:
+
+- Docker/prod не получает middleware из `api.app`: request id, HTTP metrics, body size limit, tenant context, cookie auth bridge, CORS/session middleware.
+- Docker/prod не получает `api.app` lifespan validation, OTel init и retention purge tasks.
+- На production entrypoint остаются legacy root endpoints из `main.py`, включая unauthenticated `/ask`, `/traces`, `/traces/{trace_id}`, `/escalations`, UI variants.
+- `main.py` читает legacy traces/inbox из родительского `D:\data` локально и `/data` в контейнере, а не из project `/app/data`.
+- Основной тестовый suite использует `api.app` напрямую (`tests/conftest.py:176`), поэтому deploy entrypoint не покрыт.
+
+Fix:
+
+- Заменить Docker CMD на `uvicorn api.app:app ...`.
+- Либо удалить/заморозить `main.py` как legacy, либо явно сделать его тонким alias к `api.app.app` без собственных endpoints.
+- Добавить smoke-test именно production command/entrypoint: route list, middleware count, `/api/health/ready`, auth-required endpoints.
+
+### P0. Production может работать с `admin/admin` и default JWT secret
+
+Доказательства:
+
+- `api/app.py:1677-1680`: `ADMIN_USERNAME` default `admin`, `ADMIN_PASSWORD_HASH` default empty.
+- `api/app.py:1696-1700`: если hash пустой, `admin/admin` выдает admin access/refresh tokens.
+- `auth/jwt_handler.py:10`: `JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-in-production!")`.
+- `api/app.py:1923-1928`: session cookie secret тоже падает на `dev-secret-change-in-production!`.
+- Проверено командой: при `RAG_ENV=production`, explicit CORS и `DB_ENCRYPTION_KEY`, но без `ADMIN_PASSWORD_HASH` и `JWT_SECRET`, `settings.validate()` проходит, а `POST /api/auth/login` с `admin/admin` возвращает `200`.
+
+Impact:
+
+- Если production env забывает `ADMIN_PASSWORD_HASH`, сервис поднимает известную admin-пару.
+- Если production env забывает `JWT_SECRET`, любой токен подписывается известным repo default.
+- Текущий тест `tests/test_jwt_auth.py` проверяет только длину default secret, а не запрет default secret.
+
+Fix:
+
+- В `Settings.validate()` fail-fast для `RAG_ENV=production`, если `ADMIN_PASSWORD_HASH` пустой.
+- Fail-fast, если `JWT_SECRET`/`SESSION_SECRET_KEY` отсутствует, равен default или слишком слабый.
+- Разрешать `admin/admin` только при явном `RAG_ENV=development` и, лучше, отдельном `ALLOW_DEV_ADMIN_LOGIN=1`.
+
+### P0/P1. Tenant isolation неполный в sessions и feedback
+
+Доказательства по sessions:
+
+- `api/app.py:1760-1788`: `GET /api/sessions/{session_id}/history` выбирает `Message` по `session_id`, без join/filter по tenant.
+- `api/app.py:1793-1807`: fallback в `_sessions` тоже не проверяет tenant.
+- `api/app.py:1812-1857`: `GET /api/sessions` перечисляет все DB/in-memory sessions без tenant filter.
+- `api/app.py:1860-1893`: `DELETE /api/sessions/{session_id}` удаляет DB/in-memory session без tenant filter.
+
+Доказательства по feedback:
+
+- `tracing/_base_trace.py:198-205`: SQLite `feedback` table не имеет `tenant_id`.
+- `tracing/_base_trace.py:500-514`: `save_feedback()` пишет feedback без tenant.
+- `tracing/_base_trace.py:673-715`: `get_feedback_stats()` агрегирует весь feedback глобально.
+- `api/routers/feedback.py:144-154`: `/api/feedback/stats` вызывает `get_feedback_stats(days=days)` без tenant.
+
+Impact:
+
+- Agent/admin одного tenant может прочитать или удалить чужую session, если знает/угадает UUID.
+- Feedback можно записывать на произвольный `trace_id`; статистика feedback глобальная и может протекать/портиться между tenants.
+- Trace endpoints уже tenant-aware, поэтому sessions/feedback стали слабым звеном.
+
+Fix:
+
+- Добавить `tenant_id` в feedback schema и миграцию SQLite trace DB.
+- Для session endpoints фильтровать DB через `Session.tenant_id == user.tenant`; in-memory sessions хранить/проверять `_tenant_id`.
+- Добавить regression tests: list/history/delete session foreign tenant -> 404/empty; feedback/stats foreign tenant не виден.
+
+### P1. Unauthenticated observability and legacy data exposure
+
+Доказательства:
+
+- `api/app.py:2114-2126`: root `/metrics` отдает Prometheus registry без auth; проверено `GET /metrics -> 200`.
+- `api/routers/system.py:136-150`: `/api/metrics` защищен `require_role("admin")`, значит в проекте уже есть защищенная альтернатива.
+- `main.py:160-203`: legacy `/escalations`, `/traces`, `/traces/{trace_id}` без auth.
+- Docker запускает `main:app`, значит legacy endpoints реально оказываются на production entrypoint.
+
+Impact:
+
+- `/metrics` может раскрывать route names, tenant/model labels, cost counters, errors, operational volume.
+- Legacy `/traces` и `/escalations` могут раскрывать поддержку, вопросы пользователей, route/quality и операционные данные.
+
+Fix:
+
+- Если `/metrics` должен быть public для Prometheus, документировать network-level restriction и не публиковать его через ingress.
+- Иначе защитить `/metrics` или оставить только `/api/metrics`.
+- Убрать legacy root endpoints из production entrypoint.
+
+### P1. Docker build context может включить secrets и мусор
+
+Доказательства:
+
+- `.dockerignore` отсутствует.
+- `Dockerfile:6`: `COPY . /app`.
+- В рабочем каталоге есть `.env`, `.coverage`, `.tmp/`, `.git/`, reports и локальные cache/temp artifacts.
+
+Impact:
+
+- Docker build context и image могут получить `.env` и `.git` history.
+- Образ раздувается и становится нерепродьюсибельным.
+- `.tmp/` уже ломает локальные `ruff check .`/`bandit -r .` сканы.
+
+Fix:
+
+- Добавить `.dockerignore`: `.env`, `.git`, `.tmp`, `.coverage`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`, `data`, reports/logs, `tests/pytest-cache-files-*`.
+- Собирать image из минимального набора runtime файлов.
+
+### P1. Helm кладет секреты в ConfigMap и поставляет `changeme`
+
+Доказательства:
+
+- `deploy/helm/values.yaml:35-43`: `env` содержит `DATABASE_URL`.
+- `deploy/helm/values.yaml:37`: `DATABASE_URL` с `changeme`.
+- `deploy/helm/values.yaml:45-50`: postgres password тоже `changeme`.
+- `deploy/helm/templates/configmap.yaml:12-15`: все `.Values.env` попадает в ConfigMap.
+- `deploy/helm/templates/deployment.yaml:33-35`: app получает env через `configMapRef`.
+- `DB_ENCRYPTION_KEY`, `JWT_SECRET`, `ADMIN_PASSWORD_HASH`, `RAG_ENV=production` в values не заданы.
+
+Impact:
+
+- DB credentials оказываются в ConfigMap, а не Secret.
+- Helm default не включает production fail-fast режим и не задает обязательные secrets.
+- `latest` image tag (`values.yaml:5`) ухудшает reproducibility/rollback.
+
+Fix:
+
+- Разделить config и secrets: `DATABASE_URL`, `DB_ENCRYPTION_KEY`, `JWT_SECRET`, provider keys, SMTP/IMAP credentials в Secret.
+- Сделать `RAG_ENV=production` default для Helm deployment.
+- Убрать `changeme` как рабочий value: требовать existingSecret или `helm install --set`.
+- Не использовать `latest` для production chart.
+
+## 5. High/Medium findings
+
+### H1. Streaming endpoint обходит основной RAG graph и quality gates
+
+Доказательства:
+
+- `api/routers/conversation.py:459-490`: `/ask/stream` вручную берет docs из retriever и строит prompt.
+- `api/routers/conversation.py:514-533`: напрямую стримит provider/Ollama tokens.
+- `api/routers/conversation.py:588-589`: выставляет `quality = 70`, если ответ длиннее 20 символов или есть sources; `route = auto` при `quality >= 70`.
+
+Impact:
+
+- Streaming path не эквивалентен `/api/ask`: может обходить fact verification, online evaluators, self-RAG, tool confirmation и часть graph-level routing.
+- Пользователь может получить `auto` ответ там, где sync graph отправил бы `human/retry/error`.
+
+Fix:
+
+- Либо стримить из самого graph/provider runtime с теми же gates, либо явно маркировать stream как draft до финальной graph verification.
+- Добавить parity tests: один и тот же case на `/api/ask` и `/api/ask/stream` должен давать совместимый route/quality/citations.
+
+### H2. Pipeline exception сообщает "передан оператору", но не создает escalation
+
+Доказательства:
+
+- `api/routers/conversation.py:308-325`: при generic pipeline exception возвращается `route="human"` и текст "передан оператору".
+- В этом fallback нет записи в `EscalatedTicket`, inbox или support sink; дальше сохраняются только messages/audit.
+
+Impact:
+
+- Пользователь получает обещание handoff, но оператор может не увидеть ticket.
+
+Fix:
+
+- В exception fallback создавать escalation record или менять текст на честный failure/retry.
+- Добавить тест: forced pipeline exception -> ticket/inbox entry exists.
+
+### H3. Type-checking debt снова регрессировал
+
+Доказательства:
+
+- `pyproject.toml:94-96`: комментарий утверждает, что `llm.providers` mypy scope clean as of 2026-04-27.
+- Фактический `python -m mypy auth db\models.py llm\providers --no-incremental --show-error-codes` дал 5 errors:
+  - `llm/providers/mistral.py:166`: `response.headers` имеет тип `Headers`, ожидается `dict[str, str]`
+  - `llm/providers/runtime.py:64`, `:74`: `**dict[str, object]` несовместим с typed constructor args provider classes
+
+Impact:
+
+- Provider runtime - критичный слой для paid/local failover и cost accounting; type drift здесь быстро превращается в runtime ошибки.
+
+Fix:
+
+- Типизировать `common_kwargs` через `TypedDict` или явные kwargs.
+- Принимать `Mapping[str, str]`/`Headers` в `_parse_response`.
+- Добавить mypy в CI как non-optional gate хотя бы для текущего scope.
+
+### H4. CI не блокирует integration/regression failures
+
+Доказательства:
+
+- `.github/workflows/ci.yml:110-158`: `test-integration` имеет `continue-on-error: true`.
+- `.github/workflows/ci.yml:179-182`: `regression-eval` тоже `continue-on-error: true`.
+- В CI нет отдельного mypy job, хотя pyproject уже содержит scoped mypy config.
+
+Impact:
+
+- Ошибки на Redis/Postgres/integration/streaming/eval могут быть видны, но PR останется green.
+- Type regressions не ловятся до ручного аудита.
+
+Fix:
+
+- Сделать integration gate обязательным хотя бы для PR в protected branches.
+- Оставить regression-eval informational только если это явно product decision; иначе gate по threshold.
+- Добавить `mypy auth db/models.py llm/providers`.
+
+### H5. Pre-commit pip-audit hook сконфигурирован невалидным аргументом
+
+Доказательства:
+
+- `.pre-commit-config.yaml:31-35`: `args: ["--strict", "--require-hashes=false", "-r", "requirements.txt"]`
+- Фактический `python -m pip_audit --strict --require-hashes=false -r requirements.txt` на `pip-audit 2.10.0` падает: `argument --require-hashes: ignored explicit argument 'false'`.
+
+Impact:
+
+- `pre-commit run --all-files` в CI может падать не из-за vulnerability, а из-за CLI syntax.
+
+Fix:
+
+- Убрать `--require-hashes=false`; default уже не требует hashes.
+- Либо использовать поддерживаемую форму CLI для конкретной версии.
+
+### H6. Local lint/security scans не изолированы от generated artifacts
+
+Доказательства:
+
+- `.tmp/` не в `.gitignore`, не в `pyproject.toml` ruff/bandit excludes.
+- `ruff check .` нашел 133 fixable W292 в `.tmp/pytest-*`.
+- `bandit -r .` тоже сканирует `.tmp/pytest-*` копии.
+
+Impact:
+
+- Локальная проверка дает false red и заставляет разработчика чинить generated artifacts.
+
+Fix:
+
+- Добавить `.tmp/`, `.coverage`, reports/logs и pytest temp patterns в `.gitignore`, `.dockerignore`, ruff/bandit excludes.
+
+### H7. Live Docker test не умеет корректно skip при недоступном daemon
+
+Доказательства:
+
+- `pytest` с project-local basetemp: 566 passed, 1 failed, 4 skipped.
+- Единственный failure: `test_regression_eval_live_no_asyncpg_race_no_fk_violation`.
+- Тест проверил наличие `docker` CLI, но упал при подключении к `//./pipe/docker_engine`.
+
+Impact:
+
+- Локальный full test suite краснеет в окружении без запущенного Docker Desktop.
+
+Fix:
+
+- До `PostgresContainer(...)` выполнить `docker.from_env().ping()` или `docker info`; при недоступности daemon делать `pytest.skip`.
+
+### H8. Runtime dependencies не закреплены lock/constraints файлом
+
+Доказательства:
+
+- `requirements.txt` почти полностью использует `>=` (`langchain`, `fastapi`, `pydantic`, `sqlalchemy`, `authlib`, `opentelemetry`, etc.).
+- Тестовый запуск шел на Python 3.13, Dockerfile использует Python 3.11 (`Dockerfile:1`), README просит 3.11+.
+
+Impact:
+
+- Поведение RAG/LLM integrations и FastAPI stack может дрейфовать от установки к установке.
+- Deprecation warnings уже видны: `LangChainDeprecationWarning` для `Ollama`/`ChatOllama`, `AuthlibDeprecationWarning`.
+
+Fix:
+
+- Ввести `requirements.lock`/constraints через `pip-tools` или uv.
+- Разделить "library lower bounds" и "deploy locked versions".
+
+## 6. Что в хорошем состоянии
+
+- Source-scope `ruff` чистый.
+- Большая тестовая база: 571 collected, из них 566 прошли в текущем окружении; единственный failure связан с Docker daemon.
+- Bandit source-scope не нашел Medium/High.
+- `pip-audit -r requirements.txt` не нашел известных CVE.
+- `api/routers/` split уже существенно снизил размер `api/app.py`: текущий `api/app.py` 1822 LOC, а не прежние 5k+.
+- Trace endpoints и vector store уже имеют tenant-aware paths; проблема изоляции локализована, а не повсеместна.
+- TODO/FIXME/HACK по source scope фактически нет; найденный `XXXXXX` - пример webhook URL в docstring.
+
+## 7. Рекомендованный порядок работ
+
+### 0-1 день
+
+1. Переключить Docker/production entrypoint на `api.app:app`; добавить smoke-test production app.
+2. Закрыть production `admin/admin` и default JWT/session secret через `Settings.validate()`.
+3. Добавить `.dockerignore` и исключить `.tmp/` из local scans.
+4. Починить `.pre-commit-config.yaml` pip-audit args.
+
+### 2-4 дня
+
+1. Tenant-scope для `/api/sessions*` и feedback schema.
+2. Закрыть root `/metrics` и legacy root endpoints.
+3. Mypy fixes в `llm/providers`.
+4. Docker daemon availability skip в live integration test.
+
+### 1-2 недели
+
+1. Stream/sync RAG parity: единые quality gates для `/ask` и `/ask/stream`.
+2. CI gates: mandatory integration, mypy, stable pre-commit.
+3. Helm secrets split и production defaults.
+4. Dependency lock/constraints.
+
+## 8. Итоговая оценка
+
+| Область | Оценка | Комментарий |
+|---|---:|---|
+| Архитектура приложения | 7.5/10 | Хороший modular split и богатый enterprise contour, но legacy `main.py` ломает deploy boundary |
+| Тесты | 8/10 | Большое покрытие сценариев, но full suite зависит от Docker daemon и CI integration не блокирует |
+| Security | 5/10 | Внутри API много hardening, но auth defaults/deploy/tenant gaps критичны |
+| Operability | 6/10 | Есть health, metrics, OTel, retention, backup scripts; production entrypoint и Helm нуждаются в фиксе |
+| RAG quality controls | 7/10 | Сильный graph/eval набор, но stream path обходит часть gates |
+| Release readiness | 5.5/10 | Для local/demo хорошо; для commercial/prod сначала закрыть P0/P1 |
+
+Финальный вердикт: проект не выглядит "сырым PoC", но production-ready статус сейчас блокируют конкретные boundary bugs. Самое опасное - не качество RAG, а то, что Docker запускает legacy wrapper и auth может остаться с известными admin/JWT defaults.

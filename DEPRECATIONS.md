@@ -17,9 +17,9 @@ the project tree. Created 2026-04-26 as part of the Opus audit follow-up.
 | ~~`graph.py`~~ | — | ✅ removed 2026-04-26 | `agent.graph` | Phase 1 closed. |
 | ~~`state.py`~~ | — | ✅ removed 2026-04-26 | `agent.state` | Phase 1 closed. |
 | ~~`prompts.py`~~ | — | ✅ removed 2026-04-26 | `agent.prompts` | Phase 1 closed. |
-| `manager.py` | 15 | 🟡 shim | `vectordb.manager` | Phase 3 manager side complete: base implementation moved to `vectordb/_base_manager.py`; root import remains for compatibility. |
-| `sqlite_trace.py` | 15 | 🟡 shim | `tracing.sqlite_trace` | Phase 3 trace side complete: base implementation moved to `tracing/_base_trace.py`; root import remains for compatibility. |
-| `loader.py` | 15 | 🟡 shim | `ingestion.loader` | Phase 4 complete: `DocumentChangeTracker` and HTML support merged into `ingestion.loader`; root import remains for compatibility. |
+| `manager.py` | 15 | 🟡 shim | `vectordb.manager` | 2026-04-27: production no longer imports through this shim — все 13 production-сайтов переключены на `vectordb.manager`. Shim сохранён только для внешних консумеров. Можно удалять. |
+| `sqlite_trace.py` | 15 | 🟡 shim | `tracing.sqlite_trace` | 2026-04-27: production no longer imports through this shim. `tracing.sqlite_trace` re-exports полный API (list_recent_traces, get_trace_detail, save_feedback, etc.). Можно удалять. |
+| `loader.py` | 15 | 🟡 shim | `ingestion.loader` | Phase 4 complete: `DocumentChangeTracker` and HTML support merged into `ingestion.loader`; production переключён 2026-04-27. Можно удалять. |
 | ~~`chunking.py`~~ | — | ✅ moved 2026-04-27 | `scripts.chunking_eval` | Phase 5 complete. Standalone tuning script moved out of project root. |
 | ~~`bitrix.py`~~ | — | ✅ moved 2026-04-27 | `integrations.bitrix` | Phase 2 complete. |
 | ~~`mock_inbox.py`~~ | — | ✅ moved 2026-04-27 | `integrations.mock_inbox` | Phase 2 complete. |
@@ -177,24 +177,20 @@ Strict mypy is enforced via `pyproject.toml [[tool.mypy.overrides]]` for:
 
 - `auth.*` — passes clean (4/4 files)
 - `db.models` — passes clean
+- `db.engine` — passes clean
+- `llm.providers.*` — passes clean (promoted к strict 2026-04-27 после фикса
+  Mapping для headers и явных kwargs вместо `**dict[str, object]`)
 
 The following modules are intentionally **not** strict yet:
 
-- `llm.providers.*` — informational mypy scope is clean as of 2026-04-27.
-  Keep strict promotion separate because provider classes still need fuller
-  method annotations before `disallow_untyped_defs` can be enabled.
-- `db.engine` — informational mypy scope is clean as of 2026-04-27 after
-  casting `engine.pool` around SQLAlchemy's runtime-only pool methods.
 - `config.settings` — re-defined names + Optional/str narrowing; cleanup is
   scoped to a separate refactor.
+- `agent.graph` (LangGraph nodes) — самый сложный модуль для типизации;
+  отдельный квартальный roadmap.
 
-To run mypy locally:
-
-```
-mypy auth db/models.py    # strict, must pass
-mypy db/engine.py         # informational, must pass
-mypy --follow-imports=skip --no-incremental llm/providers  # informational, must pass
-```
+CI gate (как gate, не informational): `python -m mypy auth db/models.py
+db/engine.py llm/providers/ --no-incremental --show-error-codes`. Любой регресс
+блокирует PR (`.github/workflows/ci.yml type-check job`).
 
 ## What was done in this session (2026-04-26)
 

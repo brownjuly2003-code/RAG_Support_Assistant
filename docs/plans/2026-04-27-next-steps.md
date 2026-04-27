@@ -1,0 +1,183 @@
+# Next Steps — после hardening 2026-04-27
+
+**Baseline:** `6e64148` (master, после 11 коммитов hardening).
+**Текущая оценка:** local 9.2/10, commercial 8.5/10.
+**Цель:** довести до 9.5/10 local + 9.0/10 commercial без архитектурных пересмотров.
+
+Каждая задача — самодостаточный chunk на 30-180 минут с TDD-разрезом, точкой коммита и acceptance criterion.
+
+---
+
+## Эта неделя (~3-4 часа суммарно)
+
+### Шаг 1. Удалить root-level shim-ы (~20 мин)
+
+**Файлы:** `manager.py`, `sqlite_trace.py`, `loader.py` (по 15 LOC each).
+
+**Контекст.** После `c0cacae` все 13 production-сайтов переключены на canonical (`vectordb.manager` / `tracing.sqlite_trace` / `ingestion.loader`). Shim-ы корня нужны были только backward-compat для внешних консумеров — но это локальный проект, внешних консумеров нет. Тесты `test_module_layout.py` явно проверяют что shim-ы выдают `DeprecationWarning` — придётся переписать как negative-tests.
+
+**Шаги:**
+1. `git rm manager.py sqlite_trace.py loader.py`.
+2. `tests/test_module_layout.py` — переписать `test_*_is_canonical_home` тесты: вместо проверки `DeprecationWarning` через shim, проверить что `import manager` / `import sqlite_trace` / `import loader` **поднимает ImportError** (negative test).
+3. `python -m pytest tests/test_module_layout.py -q` — проверить.
+4. `python -m pytest tests/ -q --ignore=tests/integration -p no:schemathesis` — full unit run.
+5. Commit: `refactor: remove root-level shim modules (Phase 3+4 final)`.
+
+**Acceptance.** `import manager` / `sqlite_trace` / `loader` raises ImportError. Production не падает. Focus suite зелёный.
+
+---
+
+### Шаг 2. Coverage gate 70% — debug + полный run (~3 часа)
+
+**Файлы:** `tests/test_upload_path_bypasses_body_middleware.py` (зависает), `pyproject.toml`.
+
+**Контекст.** `[tool.coverage.report] fail_under = 70`, но real coverage не верифицирован. Один тест зависает в shared-state run (вероятно — лежащая в `tmp/` БД или semaphore из предыдущего теста).
+
+**Шаги:**
+1. Прогнать тест изолированно: `python -m pytest tests/test_upload_path_bypasses_body_middleware.py -v --timeout=10 --basetemp=.tmp/upload-debug` — воспроизвести зависание.
+2. Найти shared-state источник через `pytest --setup-show` или `--trace`.
+3. Починить (вероятно — auto-clear в `_reset_api_state` или `_db_retry_after`).
+4. Прогнать полный pytest: `python -m pytest tests/ --ignore=tests/integration --cov=. --cov-report=term-missing --cov-report=html -q --basetemp=.tmp/full`.
+5. Если coverage <70% — точечно добивать тестами critical path: auth, db.models, llm.providers.
+6. Commit: `test: unblock upload-path test + verify coverage 70%+ baseline`.
+
+**Acceptance.** `pytest` с `--cov` проходит без зависания, реальное coverage число known.
+
+---
+
+### Шаг 3. Helm secrets split — secrets out of ConfigMap (~1.5 часа)
+
+**Файлы:** `deploy/helm/values.yaml`, `deploy/helm/templates/configmap.yaml`, `deploy/helm/templates/deployment.yaml`, новый `deploy/helm/templates/secret.yaml`.
+
+**Контекст.** Codex P1: `DATABASE_URL`, `JWT_SECRET`, `ADMIN_PASSWORD_HASH`, `DB_ENCRYPTION_KEY`, provider keys, SMTP/IMAP credentials в ConfigMap (видны через `kubectl get configmap`). Также `changeme` placeholder и tag `latest`.
+
+**Шаги:**
+1. Создать `deploy/helm/templates/secret.yaml`: Secret с `DATABASE_URL`, `JWT_SECRET`, `SESSION_SECRET_KEY`, `ADMIN_PASSWORD_HASH`, `DB_ENCRYPTION_KEY`, `MISTRAL_API_KEY`, `SMTP_PASSWORD`, `EMAIL_WEBHOOK_SIGNING_SECRET`. Поля или из `.Values.secrets` или из existingSecret.
+2. `deployment.yaml` — split env: `configMapRef` для public config + `secretRef` для secrets.
+3. `values.yaml` — убрать `changeme` defaults (требовать или existingSecret или explicit `helm install --set`). Добавить `RAG_ENV=production` default.
+4. `Chart.yaml` — убрать `latest` image tag (использовать `appVersion`).
+5. `helm lint deploy/helm/ --strict` + `helm template ...` smoke.
+6. Commit: `chore(helm): split secrets out of ConfigMap (Codex P1)`.
+
+**Acceptance.** `kubectl get configmap` не содержит DB credentials/JWT. `helm template --values prod-values.yaml` рендерится с RAG_ENV=production.
+
+---
+
+## Ближайший месяц (~1-2 дня)
+
+### Шаг 4. Streaming RAG parity (~1 день)
+
+**Файлы:** `api/routers/conversation.py:459-590`, `agent/graph.py`, новые тесты.
+
+**Контекст.** Codex H1: `/ask/stream` ручную берёт docs из retriever, строит prompt, стримит provider tokens. Обходит fact verification, online evaluators, self-RAG, tool confirmation, graph-level routing. Пользователь может получить `route=auto` там, где sync graph вернул бы `human/retry/error`.
+
+**Шаги:**
+1. Изучить `agent/graph.py` — как graph возвращает state.
+2. Решить parity-стратегию: либо стримить из graph через async iterator, либо явно маркировать stream как draft до post-stream graph verification.
+3. Добавить parity тесты: один и тот же case на `/api/ask` и `/api/ask/stream` — route/quality/citations совпадают (или есть документированный delta).
+4. Реализация.
+5. Commit: `feat(streaming): RAG parity между /api/ask и /api/ask/stream (Codex H1)`.
+
+**Acceptance.** Parity тест зелёный.
+
+---
+
+### Шаг 5. Dependency lock через uv/pip-tools (~3 часа)
+
+**Файлы:** новый `requirements.lock` или `uv.lock`, `Dockerfile`, CI workflows.
+
+**Контекст.** Codex H8: `requirements.txt` использует `>=` для langchain/fastapi/pydantic/sqlalchemy/authlib/opentelemetry. Тесты на Python 3.13, Dockerfile на Python 3.11. Поведение RAG/LLM integrations может drift'овать от установки к установке. Уже видны `LangChainDeprecationWarning` для Ollama/ChatOllama, `AuthlibDeprecationWarning`.
+
+**Шаги:**
+1. Выбрать tool: `uv` (быстрее) или `pip-tools` (стандарт).
+2. Сгенерировать lock из текущего `requirements.txt`.
+3. Dockerfile — установка из lock.
+4. CI workflows — кэш по lock.
+5. README — инструкция пересборки lock.
+6. Commit: `chore(deps): добавлен requirements.lock через {uv|pip-tools}`.
+
+**Acceptance.** `pip install -r requirements.lock --require-hashes` работает в Docker. CI кэш hits на lock.
+
+---
+
+### Шаг 6. mypy strict для config.settings (~2 часа)
+
+**Файлы:** `config/settings.py`, `pyproject.toml`.
+
+**Контекст.** В `DEPRECATIONS.md` указано «`config.settings` — re-defined names + Optional/str narrowing; cleanup is scoped to a separate refactor». После hardening 2026-04-27 мы добавили блок production-secrets validation — самое время причесать types в этом модуле.
+
+**Шаги:**
+1. `python -m mypy config/settings.py --no-incremental --show-error-codes` — посмотреть текущие errors.
+2. Зафиксить redefinitions + Optional narrowing.
+3. Поднять scope в pyproject.
+4. Добавить `config/settings.py` в CI mypy gate.
+5. Commit: `fix(types): config.settings — clean strict mypy`.
+
+---
+
+### Шаг 7. CI security pipeline (~2 часа)
+
+**Файлы:** новый job в `.github/workflows/ci.yml` (либо новый `security.yml`).
+
+**Контекст.** Сейчас bandit + pip-audit только в `.pre-commit-config.yaml` (локально). На GitHub Actions нет gate. Codex рекомендует добавить semgrep + bandit + pip-audit как блокирующие.
+
+**Шаги:**
+1. Новый job `security` в `ci.yml`: `bandit -r . -ll -c pyproject.toml -x ./tests,./.venv,./reports,./data` + `pip-audit -r requirements.txt --strict`.
+2. (опц) `semgrep --config=p/python --error`.
+3. Job обязателен для PR.
+4. Commit: `ci(security): bandit + pip-audit gates на PR`.
+
+---
+
+## Квартал (если идёт commercial scenario)
+
+### Шаг 8. Финальный thin app-shell (~1 день)
+
+**Файлы:** новый `api/routers/session_auth.py`, новый `api/services/`, `api/app.py`.
+
+**Контекст.** `api/app.py` ещё 2130 LOC: 5 endpoints (auth + sessions), 6 middlewares, 1100 LOC private helpers, 200 LOC lifespan, ~70 LOC Pydantic models, ~250 LOC imports/setup. Цель — `api/app.py` ≤ 600 LOC (только construction + lifespan + middlewares).
+
+**Шаги:**
+1. `api/routers/session_auth.py` — `/auth/login`, `/auth/refresh`, `/sessions/{id}/history`, `/sessions`, `DELETE /sessions/{id}`.
+2. `api/services/regression_service.py`, `curated_dataset_service.py`, `review_queue_service.py` — вынести 30+ private helpers `_load_*`, `_serialize_*`, `_run_*`, `_probe_*`, `_record_*`.
+3. Routers → handlers thin shells.
+4. Smoke test routes count + middleware preserved.
+5. Commit: `refactor(app-shell): тонкий api/app.py — auth+sessions в session_auth router (Opus task #5)`.
+
+---
+
+### Шаг 9. mypy strict для agent.* (LangGraph nodes) (~2 дня)
+
+Сложный модуль для типизации, но добавит уверенности в pipeline-mutation коде. Цель — поднять `agent.*` до strict в pyproject.
+
+---
+
+## Что НЕ делать (зафиксировано в прежних аудитах + остаётся актуально)
+
+- ❌ Переписывать LangGraph-граф — он хорош.
+- ❌ Менять стек БД / vector store / embedder.
+- ❌ Внедрять Kubernetes для local-продукта.
+- ❌ Тащить ещё одну observability-систему.
+- ❌ Трогать `cache.py` vs `cache/redis_cache.py` — разные concerns, переименование сейчас ROI < risk.
+- ❌ Удалять `audit_*.md` файлы — они исторический snapshot.
+
+---
+
+## Quick verify в новой сессии
+
+```bash
+git log --oneline ff7948f..HEAD | head -20
+python -c "from api.app import app; print(len([r for r in app.routes if hasattr(r,'path') and r.path.startswith('/api')]))"
+# Ожидаем: ≥69
+
+python -m pytest tests/test_jwt_auth.py tests/test_module_layout.py \
+  tests/test_production_entrypoint.py tests/test_settings_production_secrets.py \
+  tests/test_tenant_isolation_sessions.py tests/test_pipeline_exception_escalation.py \
+  -p no:schemathesis -q --timeout=60 --basetemp=.tmp/quick
+
+python -m mypy auth db/models.py db/engine.py llm/providers/ --no-incremental
+# Ожидаем: Success: no issues found
+
+python -m bandit -r . -ll -c pyproject.toml -x ./tests,./.venv,./reports,./data 2>&1 | tail -3
+python -m pip_audit -r requirements.txt 2>&1 | tail -3
+```

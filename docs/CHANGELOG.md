@@ -2,6 +2,50 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Audit-Hardening-2] — 2026-04-27 — Codex+Opus delta-аудит + 11 коммитов hardening
+
+### Контекст
+
+После hardening 2026-04-26 проведены два независимых delta-аудита (Codex CLI + Claude Opus 4.7) на baseline `ff7948f`. Codex нашёл три P0 security/deploy bugs, Opus — P1 module-layout debt и mypy regression. По обоим roadmap'ам прогнаны 11 коммитов (HEAD → `6e64148`).
+
+### Security & deploy fixes (P0)
+
+- `Dockerfile` CMD `main:app` → `api.app:app`; `main.py` переписан как тонкий alias `from api.app import app`. Раньше production запускал legacy FastAPI без middleware (request-id, body-size, tenant, http-metrics, cors, sessions, logger) и без lifespan validation/OTel/vector-store init. Legacy unauthenticated `/ask`, `/escalations`, `/traces*` удалены. (commit `ecdd494`)
+- `config/settings.py` — `Settings.validate()` fail-fast в production: пустые/default `JWT_SECRET`/`SESSION_SECRET_KEY`/`ADMIN_PASSWORD_HASH` блокируют startup. `JWT_SECRET` ≥32 символов. `ALLOW_DEV_ADMIN_LOGIN=1` — explicit opt-in для dev login на staging. (commit `c48585c`)
+- `api/app.py` `/api/sessions/{id}/history`, `/api/sessions`, `DELETE /api/sessions/{id}` — JOIN/WHERE на `tenant_id` против `_user.tenant`; in-memory check `_tenant_id`. До этого agent tenant-A мог читать/удалять чужие сессии по UUID guess. (commit `aa683f3`)
+- `tracing/_base_trace.py` `feedback` table — добавлен `tenant_id NOT NULL DEFAULT 'default'` (idempotent ALTER TABLE) + `idx_feedback_tenant_id`. `save_feedback`/`get_feedback_stats` теперь принимают tenant_id. `/api/feedback/stats` для agent — scope per tenant, для admin — global. (commit `aa683f3`)
+- `alembic upgrade head` перенесён из `main.py` в `api/app.py` lifespan (gated `AUTO_MIGRATE=true`).
+
+### Module layout & types (P1-P2)
+
+- 13 production-сайтов `import sqlite_trace` / `from manager import …` переключены на canonical `tracing.sqlite_trace` / `vectordb.manager`. `tracing/sqlite_trace.py` расширен: re-exports list_recent_traces, get_trace_detail, purge_old_traces, get_metrics_snapshot, save_feedback, get_feedback_stats. Root shim-ы `manager.py`, `sqlite_trace.py`, `loader.py` теперь не используются production кодом — можно удалять. (commit `c0cacae`)
+- `llm/providers/mistral.py:166` — `_parse_response` принимает `Mapping[str, str]` вместо `dict[str, str]` (httpx.Headers). `llm/providers/runtime.py:64,74` — явные kwargs вместо `**dict[str, object]`. mypy scope `llm.providers.*` поднят с informational до strict. (commit `d718356`)
+
+### Infrastructure & CI
+
+- `.dockerignore` (новый) — исключает `.env`/`.git`/`.tmp`/`.coverage`/`data`/`reports`/audit-артефакты. Docker COPY больше не тянет secrets и не раздувает image. (commit `f56e51b`)
+- `.gitignore` — `.tmp/`, `.coverage*`, `htmlcov/`, `reports/regression/*.log` чтобы pytest basetemp не плодил untracked.
+- `pyproject.toml` ruff/bandit `exclude` — `.tmp`, `reports`, `archive-legacy`. Раньше ruff падал на 133 W292 в pytest temp-копиях.
+- `.pre-commit-config.yaml` pip-audit args — убран `--require-hashes=false`, который pip-audit 2.10+ не парсит.
+- `.github/workflows/ci.yml` — добавлен `type-check` job (mypy на strict scope обязателен), `test-integration` больше не `continue-on-error: true`. (commit `a12f404`)
+
+### Behaviour fixes
+
+- `api/routers/conversation.py` — pipeline exception в `/api/ask` теперь создаёт `EscalatedTicket(tenant_id, session_id, user_question, ai_draft, status='open')`. Раньше пользователю обещали handoff, но реальной записи в БД не было — оператор мог не увидеть. (commit `fa92d4e`)
+- `api/app.py` `/metrics` — env-gated optional auth через `PROMETHEUS_METRICS_REQUIRE_AUTH=1`. По умолчанию открыт (Prometheus convention) — production должен ограничить network-level. Authenticated alternative `/api/metrics` уже существует. (commit `0a42369`)
+- `tests/integration/test_regression_eval_live.py` — добавлен subprocess `docker info` с timeout=5s; pytest.skip при недоступном daemon (раньше тест висел на pipe ConnectionError). (commit `6e64148`)
+
+### Tests added
+
+- `tests/test_production_entrypoint.py` (4 cases) — `main:app === api.app:app`, middleware count ≥6, нет legacy `/ask|/escalations|/traces`, ≥60 `/api` routes.
+- `tests/test_settings_production_secrets.py` (6 cases) — production fail-fast guards.
+- `tests/test_tenant_isolation_sessions.py` (8 cases) — cross-tenant 404, owning-tenant ok, list filter, delete blocked, save_feedback tenant propagation, /feedback/stats agent vs admin scope.
+- `tests/test_pipeline_exception_escalation.py` (1 case) — forced RuntimeError → EscalatedTicket persisted.
+
+Focus suite (17 файлов, 85 тестов) — pass. cxkm review CLEAR (CX 2× P2 на untracked artefacts; KM normalization_error на 2618-line diff — degraded).
+
+---
+
 ## [Audit-Hardening] — 2026-04-26 — BCG-уровневый аудит + 4 итерации hardening
 
 ### Контекст

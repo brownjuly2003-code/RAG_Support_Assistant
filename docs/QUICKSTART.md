@@ -69,7 +69,10 @@ ollama pull qwen2.5:7b
 python main.py
 ```
 
-Открыть `http://localhost:8000` — chat UI.
+Открыть `http://localhost:8000/static/login.html` (password+SSO) или
+`http://localhost:8000/static/chat.html` (chat UI). После логина —
+`/agent` для agent copilot dashboard. (legacy `/` index UI удалён
+2026-04-27 — был unauthenticated, см. SESSION-NOTES-2026-04-27.)
 
 ## 5. Сценарий B — GraceKelly mixed routing
 

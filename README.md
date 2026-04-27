@@ -150,13 +150,18 @@ python main.py
 Альтернативные routing profiles (см. `LLM_PROVIDER_PROFILE` ниже): `external-mistral`, `gracekelly-primary`, `gracekelly-mixed`. Подробнее — в `config/providers.yml` и в `docs/QUICKSTART.md` секция 5.
 
 Open:
-- **http://localhost:8000** - chat UI
 - **http://localhost:8000/static/login.html** - password + SSO login page
+- **http://localhost:8000/static/chat.html** - chat UI
 - **http://localhost:8000/static/admin.html** - admin UI for traces, audit,
   review queue, providers, KB gaps, KB drafts, stale docs, and breaker controls
 - **http://localhost:8000/agent** - agent copilot dashboard
 - **http://localhost:8000/static/analytics.html** - analytics dashboard
 - **http://localhost:8000/static/metrics.html** - system metrics dashboard
+
+> 2026-04-27: legacy unauthenticated `/` index page и `/ask`, `/escalations`,
+> `/traces`, `/escalations-ui`, `/traces-ui*` endpoints из `main.py`
+> удалены (Codex audit P0). Production entrypoint: `uvicorn api.app:app`.
+> `python main.py` делегирует в `api.app:app`.
 
 ## Environment Variables
 
