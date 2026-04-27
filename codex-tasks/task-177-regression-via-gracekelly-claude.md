@@ -31,7 +31,7 @@
   2. Stop-guard: если `curl /api/admin/providers` показывает `GRACEKELLY_EXECUTION_PROFILE=dry-run`, печатает warning + exit 1.
   3. Стартует disposable `postgres:16-alpine` + `redis:7-alpine` (port-less или известные порты), waits ready.
   4. Применяет миграции (`alembic upgrade head`).
-  5. Прогоняет ingestion: `python -c "from ingestion.pipeline import IngestPipeline; ..."` поверх `docs/` (или seed через `seed_docs.py` + ingest).
+  5. Прогоняет ingestion: `python -c "from ingestion.pipeline import IngestPipeline; ..."` поверх `docs/` (или seed через `python -m demo.seed_docs` + ingest).
   6. Запускает `python scripts/regression_eval.py --baseline ministral-3b-latest --candidate claude-sonnet-4-6-api --allow-paid-apis --max-cases 20` с правильным env (`LLM_PROVIDER_PROFILE=gracekelly-primary` + `MISTRAL_API_KEY` + `GRACEKELLY_BASE_URL`).
   7. Stop disposable containers в trap.
 - Скрипт должен быть idempotent: повторный запуск не ломается на already-running containers (use `docker ps -q -f name=...` check).

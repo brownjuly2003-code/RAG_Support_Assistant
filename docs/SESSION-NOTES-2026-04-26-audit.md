@@ -13,7 +13,7 @@
 | Файл | Что в нём |
 |---|---|
 | `audit_opus_2026-04-26.md` | Полный аудит (секции 0-11) + implementation log по 18 задачам hardening (секция 12). Single source of truth по диагнозу и сводке. |
-| `DEPRECATIONS.md` | Карта legacy-расположений в корне. 5-фазный план миграции. Карта split-ов `api/app.py` (13 фаз 2a-2m, из них 12 закрыты). Type-checking debt list. **Pattern для split sub-router-ов (важно для resume!).** |
+| `DEPRECATIONS.md` | Карта legacy-расположений в корне. 5-фазный план миграции. Карта split-ов `api/app.py` (13 фаз 2a-2m, все закрыты). Type-checking debt list. **Pattern для split sub-router-ов (важно для resume!).** |
 | `docs/CHANGELOG.md` | Запись о hardening-сессии 2026-04-26. |
 | `docs/SESSION-NOTES-2026-04-26-audit.md` | Этот файл. |
 
@@ -168,7 +168,7 @@ provider classes перед `disallow_untyped_defs`.
 
 ### Опция C — DEPRECATIONS Phase 2 (перенос файлов)
 
-Создать `integrations/__init__.py`, перенести `bitrix.py` + `mock_inbox.py`. Обновить импорты в `agent/graph.py:134`, `tests/test_mock_inbox_import.py`, `config/settings.py`. ~1 час, средний риск (надо grep+rewrite импортов).
+`bitrix.py` + `mock_inbox.py` перенесены в `integrations/` 2026-04-27. `seed_docs.py` перенесён в `demo/seed_docs.py`; DEPRECATIONS Phase 2 закрыта.
 
 ### Опция D — coverage до 70%
 

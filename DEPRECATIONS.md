@@ -20,10 +20,10 @@ the project tree. Created 2026-04-26 as part of the Opus audit follow-up.
 | `manager.py` | 905 | 🔴 active legacy | (this is canonical) | `vectordb/manager.py` is a tenant-aware wrapper. Imported from `ingestion/pipeline.py:36` and `vectordb/manager.py:11`. |
 | `sqlite_trace.py` | 968 | 🔴 active legacy | (this is canonical) | `tracing/sqlite_trace.py` is a thin PII-redacting wrapper. Imported from 3 scripts + `tracing/__init__.py`. |
 | `loader.py` | 296 | 🔴 active legacy | `ingestion.loader` (different impl, +csv/json) | `api/app.py:185-194` prefers root, falls back to `ingestion.loader`. Behavior is **not equivalent** — root has `DocumentChangeTracker`, package has csv/json. |
-| `chunking.py` | 397 | 🔴 active legacy | (no canonical yet) | Standalone evaluation/tuning script. Header says "ingestion/chunking.py" but no such file exists. Referenced by name from `config/settings.py`, `ingestion/pipeline.py`, `manager.py`, `seed_docs.py`. |
-| `bitrix.py` | 130 | 🔴 active legacy | (no canonical yet) | Header says "integrations/bitrix.py" but `integrations/` package was never created. Imported from `mock_inbox.py:54`. |
-| `mock_inbox.py` | 156 | 🔴 active legacy | (no canonical yet) | Header says "integrations/mock_inbox.py" but `integrations/` package was never created. Imported from `agent/graph.py:134`. |
-| `seed_docs.py` | 156 | 🔴 active legacy | (no canonical yet) | Header says "demo/seed_docs.py" but lives in root. Standalone demo script. |
+| `chunking.py` | 397 | 🔴 active legacy | (no canonical yet) | Standalone evaluation/tuning script. Header says "ingestion/chunking.py" but no such file exists. Referenced by name from `config/settings.py`, `ingestion/pipeline.py`, `manager.py`, `demo/seed_docs.py`. |
+| ~~`bitrix.py`~~ | — | ✅ moved 2026-04-27 | `integrations.bitrix` | Phase 2 complete. |
+| ~~`mock_inbox.py`~~ | — | ✅ moved 2026-04-27 | `integrations.mock_inbox` | Phase 2 complete. |
+| ~~`seed_docs.py`~~ | — | ✅ moved 2026-04-27 | `demo.seed_docs` | Phase 2 complete. |
 | `cache.py` | 266 | 🟢 canonical | `cache.py` (root) | Different concern from `cache/redis_cache.py` (in-memory LRU vs Redis). Not a duplicate. |
 
 ## Migration plan — do these in order, in dedicated PRs
@@ -34,16 +34,16 @@ Removed `graph.py`, `state.py`, `prompts.py` shims from project root. Also
 removed the dead `except ImportError:` fallback in `agent/graph.py:48-80`
 which had been re-exporting through the same shims (circular fallback).
 
-### Phase 2 — rename misleading legacy files (medium risk, ~2 hours)
+### Phase 2 — rename misleading legacy files ✅ DONE 2026-04-27
 
 Move/rename to align with their actual roles. Each move requires updating
 import sites:
 
 1. `bitrix.py` → `integrations/bitrix.py`. Create `integrations/__init__.py`.
-   Update `mock_inbox.py:54`, `config/settings.py`.
+   Update `mock_inbox.py:54`, `config/settings.py`. ✅ done 2026-04-27.
 2. `mock_inbox.py` → `integrations/mock_inbox.py`. Update `agent/graph.py:134`,
-   `tests/test_mock_inbox_import.py`, `config/settings.py`.
-3. `seed_docs.py` → `demo/seed_docs.py`. No production imports — only doc updates.
+   `tests/test_mock_inbox_import.py`, `config/settings.py`. ✅ done 2026-04-27.
+3. `seed_docs.py` → `demo/seed_docs.py`. No production imports — only doc updates. ✅ done 2026-04-27.
 
 ### Phase 3 — collapse `manager` and `sqlite_trace` (high risk, ~half day each)
 
@@ -68,7 +68,7 @@ remove the fallback chain in `api/app.py:185-194`.
 
 It is a tuning script, not a production module. Move to `scripts/chunking_eval.py`
 and update references in `config/settings.py`, `ingestion/pipeline.py`,
-`manager.py`, `seed_docs.py`.
+`manager.py`, `demo/seed_docs.py`.
 
 ## api/app.py monolith split — in progress
 

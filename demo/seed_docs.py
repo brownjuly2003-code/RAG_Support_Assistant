@@ -1,8 +1,5 @@
-# seed_docs.py (root-level demo script)
+# demo/seed_docs.py
 """
-NOTE: Located in project root, not under demo/. The demo/ package only
-contains test_questions.json and __init__.py. Run as `python seed_docs.py`.
-
 Заполняет папку demo/docs демо-документами и создаёт файл с тестовыми вопросами.
 
 Документы:

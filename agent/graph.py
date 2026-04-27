@@ -45,8 +45,8 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from utils.circuit_breaker import CircuitBreaker
 
-from agent.state import GraphState, create_initial_state
-from agent.prompts import (
+from agent.state import GraphState, create_initial_state  # noqa: E402
+from agent.prompts import (  # noqa: E402
     build_classify_complexity_prompt,
     build_extract_claims_prompt,
     build_qa_prompt,
@@ -59,7 +59,7 @@ from agent.prompts import (
     build_conversational_qa_prompt,
     build_conversational_query_transform_prompt,
 )
-from tracing.sqlite_trace import start_trace, log_step, finish_trace
+from tracing.sqlite_trace import start_trace, log_step, finish_trace  # noqa: E402
 
 try:
     from evaluation.evaluator_runner import persist_online_evaluations, run_online_evaluators
@@ -113,7 +113,7 @@ def _escalate_to_inbox(state: GraphState) -> None:
     }
 
     try:
-        from mock_inbox import get_support_sink  # type: ignore[import-not-found]
+        from integrations.mock_inbox import get_support_sink
         get_support_sink().send(trace_id, _json.dumps(record, ensure_ascii=False))
         return
     except ImportError:

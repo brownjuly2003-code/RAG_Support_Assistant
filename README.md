@@ -120,8 +120,8 @@ User / Email / Widget
   into a prioritized improvement backlog.
 - **Email channel:** Incoming support mail can be processed through IMAP
   polling or an inbound webhook, then routed through the same RAG flow.
-- **Canonical module layout:** Core agent modules now live under `agent/*`,
-  while root-level imports remain as compatibility shims.
+- **Canonical module layout:** Core agent modules live under `agent/*`; the
+  old root-level `graph.py`, `prompts.py`, and `state.py` shims were removed.
 - **Centralized tuning:** Retrieval thresholds and operational constants are
   concentrated in `config/settings.py` instead of scattered literals.
 - **Integration test suite:** `tests/integration/` covers ingestion,
@@ -929,6 +929,7 @@ db/                     SQLAlchemy models, engine, audit helpers, pgcrypto helpe
 deploy/                 docker-compose and Helm chart artifacts
 evaluation/             RAG evaluation, drift detection, benchmarks
 ingestion/              Loaders, pipeline, categorizer, contextual headers
+integrations/           Bitrix and local support inbox integrations
 monitoring/             Prometheus collectors and alert rules
 reports/                Weekly-report renderer
 scripts/                Ops jobs: eval, review queue, reindex, KB builder/gap detection, email poller
@@ -938,9 +939,7 @@ tests/integration/      End-to-end coverage for critical user flows
 tracing/                SQLite tracing and OpenTelemetry setup
 vectordb/               ChromaDB manager, BM25 fusion, reranking
 alembic/                Migrations `001` through `012`
-graph.py                Root compatibility shim; new graph code lives in `agent/graph.py`
-prompts.py              Root compatibility shim; new prompts live in `agent/prompts.py`
-state.py                Root compatibility shim; new state lives in `agent/state.py`
+demo/                   Demo docs and seed helpers
 codex-tasks/            Task backlog and archived implementation specs
 docs/research/          Research archive
 ```

@@ -1,9 +1,5 @@
 """
-mock_inbox.py (root-level)
-
-NOTE: Despite the legacy header, this file lives in the project root —
-the `integrations/` package was never created. Imported as `from
-mock_inbox import ...` from agent/graph.py and tests.
+integrations/mock_inbox.py
 
 LocalFileSupportSink и выбор реализации SupportSink по ENV.
 
@@ -54,17 +50,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
-try:
-    from bitrix import SupportSink, BitrixSupportSink
-except ImportError:
-    from .bitrix import SupportSink, BitrixSupportSink
+from .bitrix import BitrixSupportSink, SupportSink
 
 logger = logging.getLogger(__name__)
 
 
 def _project_root() -> Path:
     """Корень проекта относительно текущего файла."""
-    return Path(__file__).resolve().parent
+    return Path(__file__).resolve().parent.parent
 
 
 def _inbox_path() -> Path:
