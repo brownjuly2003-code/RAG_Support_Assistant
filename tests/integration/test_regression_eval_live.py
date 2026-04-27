@@ -88,6 +88,24 @@ def test_regression_eval_live_no_asyncpg_race_no_fk_violation(monkeypatch: pytes
     if shutil.which("alembic") is None:
         pytest.skip("alembic not available")
 
+    # Codex audit 2026-04-27 H7: docker CLI присутствует, но daemon
+    # может быть не запущен (типично на Windows без Docker Desktop).
+    # Используем subprocess с явным timeout, потому что docker SDK на
+    # некоторых платформах висит на socket read без honor-а timeout.
+    import subprocess  # noqa: PLC0415
+
+    try:
+        _result = subprocess.run(
+            ["docker", "info", "--format", "{{.ServerVersion}}"],
+            capture_output=True,
+            timeout=5,
+            text=True,
+        )
+        if _result.returncode != 0:
+            pytest.skip(f"docker daemon unavailable: {_result.stderr.strip()}")
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
+        pytest.skip(f"docker daemon unavailable: {exc}")
+
     from testcontainers.postgres import PostgresContainer
 
     project_root = Path(__file__).resolve().parent.parent.parent
