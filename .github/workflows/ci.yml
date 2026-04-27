@@ -198,6 +198,35 @@ jobs:
       - name: Run pre-commit
         run: pre-commit run --all-files
 
+  security:
+    # Codex audit 2026-04-27 next-steps Step 7: bandit + pip-audit run as
+    # blocking PR gates (also live in pre-commit, but a dedicated job
+    # surfaces them clearly in GitHub Checks and audits the locked deps,
+    # not the loose constraint file).
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install audit tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit[toml]==1.9.4 pip-audit==2.10.0
+
+      - name: Bandit static analysis
+        # -ll: Medium+ severity blocks. Low findings are advisory only.
+        run: bandit -r . -ll -c pyproject.toml -x ./tests,./.venv,./reports,./data,./archive-legacy,./.tmp
+
+      - name: pip-audit (locked dependencies)
+        # --disable-pip: skip pip resolution; the lock is already complete.
+        # --require-hashes: enforce that every line carries a sha256.
+        run: pip-audit --strict --disable-pip --require-hashes -r requirements.lock
+
   regression-eval:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
