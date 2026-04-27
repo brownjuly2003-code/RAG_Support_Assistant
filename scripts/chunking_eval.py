@@ -1,10 +1,8 @@
 """
-chunking.py (root-level evaluation/tuning script)
+scripts/chunking_eval.py (evaluation/tuning script)
 
-NOTE: Despite the legacy header, this file lives in the project root and
-is not part of the `ingestion/` package. It is invoked as a standalone
-script (e.g. via scripts/semantic_chunking_ab.py) and referenced by name
-from config/settings.py, ingestion/pipeline.py, manager.py, demo/seed_docs.py.
+NOTE: This standalone script is not part of the `ingestion/` runtime package.
+It can be run directly to evaluate chunk_size/chunk_overlap configurations.
 
 Подбор оптимальной конфигурации chunk_size / chunk_overlap по метрикам.
 
@@ -106,7 +104,7 @@ class ChunkingEvaluator:
         self.precision_weight = precision_weight
 
         if embeddings is None:
-            from manager import get_embeddings
+            from vectordb.manager import get_embeddings
             embeddings = get_embeddings()
         self._embeddings = embeddings
 
@@ -374,10 +372,11 @@ def _load_test_questions(path: str | Path) -> List[TestQuestion]:
 
 
 if __name__ == "__main__":
-    from manager import get_embeddings
+    from vectordb.manager import get_embeddings
 
-    docs_dir = Path(__file__).parent / "demo" / "docs"
-    q_file = Path(__file__).parent / "demo" / "test_questions.json"
+    project_root = Path(__file__).resolve().parent.parent
+    docs_dir = project_root / "demo" / "docs"
+    q_file = project_root / "demo" / "test_questions.json"
 
     from ingestion.loader import DocumentLoader
     loader = DocumentLoader()
@@ -391,6 +390,6 @@ if __name__ == "__main__":
         test_questions=questions,
         embeddings=embeddings,
         k=5,
-        best_config_path=Path(__file__).parent / "data" / "chunking" / "best_chunk_config.json",
+        best_config_path=project_root / "data" / "chunking" / "best_chunk_config.json",
     )
     evaluator.optimize()

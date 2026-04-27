@@ -20,7 +20,7 @@ the project tree. Created 2026-04-26 as part of the Opus audit follow-up.
 | `manager.py` | 15 | 🟡 shim | `vectordb.manager` | Phase 3 manager side complete: base implementation moved to `vectordb/_base_manager.py`; root import remains for compatibility. |
 | `sqlite_trace.py` | 15 | 🟡 shim | `tracing.sqlite_trace` | Phase 3 trace side complete: base implementation moved to `tracing/_base_trace.py`; root import remains for compatibility. |
 | `loader.py` | 296 | 🔴 active legacy | `ingestion.loader` (different impl, +csv/json) | `api/app.py:185-194` prefers root, falls back to `ingestion.loader`. Behavior is **not equivalent** — root has `DocumentChangeTracker`, package has csv/json. |
-| `chunking.py` | 397 | 🔴 active legacy | (no canonical yet) | Standalone evaluation/tuning script. Header says "ingestion/chunking.py" but no such file exists. Referenced by name from `config/settings.py`, `ingestion/pipeline.py`, `vectordb/_base_manager.py`, `demo/seed_docs.py`. |
+| ~~`chunking.py`~~ | — | ✅ moved 2026-04-27 | `scripts.chunking_eval` | Phase 5 complete. Standalone tuning script moved out of project root. |
 | ~~`bitrix.py`~~ | — | ✅ moved 2026-04-27 | `integrations.bitrix` | Phase 2 complete. |
 | ~~`mock_inbox.py`~~ | — | ✅ moved 2026-04-27 | `integrations.mock_inbox` | Phase 2 complete. |
 | ~~`seed_docs.py`~~ | — | ✅ moved 2026-04-27 | `demo.seed_docs` | Phase 2 complete. |
@@ -68,11 +68,10 @@ this is a product decision, not a refactor. Likely answer: merge both
 features into `ingestion.loader`, mark root `loader.py` as a shim, then
 remove the fallback chain in `api/app.py:185-194`.
 
-### Phase 5 — find a home for `chunking.py`
+### Phase 5 — find a home for `chunking.py` ✅ DONE 2026-04-27
 
-It is a tuning script, not a production module. Move to `scripts/chunking_eval.py`
-and update references in `config/settings.py`, `ingestion/pipeline.py`,
-`vectordb/_base_manager.py`, `demo/seed_docs.py`.
+It is a tuning script, not a production module. Moved to
+`scripts/chunking_eval.py`; runtime imports now use `vectordb.manager` directly.
 
 ## api/app.py monolith split — in progress
 

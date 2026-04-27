@@ -2,7 +2,7 @@
 
 **Дата:** 2026-04-26
 **Сессии:** 1 (audit) + 4 (implementation)
-**Состояние:** 22/22 hardening tasks completed + Phase 2a-2m router split completed + DEPRECATIONS Phase 3 shim split completed for `manager.py`/`sqlite_trace.py`, conversation-focused 69/69 tests pass.
+**Состояние:** 22/22 hardening tasks completed + Phase 2a-2m router split completed + DEPRECATIONS Phase 3/5 completed, conversation-focused 69/69 tests pass.
 
 > Этот документ — **карманный handover** для новой сессии. Если нужны детали — смотри указанные файлы.
 
@@ -177,6 +177,12 @@ Phase 3 закрыт 2026-04-27 по Option B: базовые реализаци
 `sqlite_trace.py` остались compatibility shim-ами. Verification:
 `python -m pytest -p pytest_asyncio.plugin -p no:cacheprovider -q --basetemp=.tmp\pytest-full-phase3-final`
 → 563 passed, 4 skipped.
+
+### Опция C3 — DEPRECATIONS Phase 5 (`chunking.py`)
+
+Phase 5 закрыт 2026-04-27: standalone tuning script переехал в
+`scripts/chunking_eval.py`, root `chunking.py` удалён. Следующий structural
+candidate остаётся Phase 4 (`loader.py`), но это product decision.
 
 ### Опция D — coverage до 70%
 

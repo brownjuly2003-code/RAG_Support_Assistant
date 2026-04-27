@@ -67,7 +67,7 @@ User / Email / Widget
 - `vectordb/` — tenant-aware vector store factory (`vectordb.manager`) plus base implementation (`vectordb._base_manager`).
 - `evaluation/` — RAGAS metrics, online evaluators, regression framework.
 - `monitoring/` — Prometheus metrics (~50). `tracing/` — Langfuse + OTel + SQLite trace store.
-- `scripts/` — operational CLIs (regression eval, KB builders, nightly tasks).
+- `scripts/` — operational CLIs (regression eval, KB builders, chunking eval, nightly tasks).
 
 > For a complete audit and an implementation log of recent hardening work,
 > see `audit_opus_2026-04-26.md` (especially section 12) and
@@ -932,7 +932,7 @@ ingestion/              Loaders, pipeline, categorizer, contextual headers
 integrations/           Bitrix and local support inbox integrations
 monitoring/             Prometheus collectors and alert rules
 reports/                Weekly-report renderer
-scripts/                Ops jobs: eval, review queue, reindex, KB builder/gap detection, email poller
+scripts/                Ops jobs: eval, review queue, reindex, KB builder/gap detection, chunking eval, email poller
 static/                 chat, admin, agent, analytics, login, metrics, widget UIs
 tests/                  Unit and integration test suites
 tests/integration/      End-to-end coverage for critical user flows

@@ -233,7 +233,7 @@ except Exception:
 
 **print() вместо logger:**
 - ingestion/loader.py:107-109 — 2 print()
-- chunking.py:268-344 — 20+ print()
+- scripts/chunking_eval.py:268-344 — 20+ print()
 - Не попадают в structured logging pipeline
 
 ### 5.4 Performance — MODERATE concerns
@@ -374,7 +374,7 @@ raise HTTPException(status_code=400, detail="Question too long")
 ```
 
 #### CODE-3: Заменить print() на logger
-Все `print()` в ingestion/loader.py, chunking.py → `logger.warning()`/`logger.info()`
+Все `print()` в ingestion/loader.py, scripts/chunking_eval.py → `logger.warning()`/`logger.info()`
 
 #### CODE-4: SQLite connection pooling
 ```python

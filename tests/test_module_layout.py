@@ -50,3 +50,16 @@ def test_tracing_base_trace_is_canonical_home() -> None:
     assert pii_trace._sqlite_trace is base_trace
     assert root_trace.start_trace is base_trace.start_trace
     assert root_trace.start_trace.__module__ == "tracing._base_trace"
+
+
+def test_chunking_eval_script_is_canonical_home() -> None:
+    chunking_eval = importlib.import_module("scripts.chunking_eval")
+
+    try:
+        _reload_root_module("chunking")
+    except ModuleNotFoundError:
+        pass
+    else:
+        raise AssertionError("chunking root script should be moved to scripts.chunking_eval")
+
+    assert chunking_eval.ChunkingEvaluator.__module__ == "scripts.chunking_eval"

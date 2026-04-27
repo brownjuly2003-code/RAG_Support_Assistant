@@ -170,7 +170,7 @@ api/
 | `sqlite_trace.py` | `tracing/sqlite_trace.py` | 957 строк ❌ |
 | `bitrix.py` | (нет) | 126 строк — оставить |
 | `cache.py` | (нет) | 266 строк — оставить, но логика дублируется с `cache/redis_cache.py` |
-| `chunking.py` | `ingestion/` (?) | 391 строк — проверить |
+| `chunking.py` | `scripts/chunking_eval.py` | moved 2026-04-27 |
 | `state.py` | `agent/state.py` | shim? проверить |
 | `prompts.py` | `agent/prompts.py` | shim? проверить |
 
@@ -476,7 +476,7 @@ Dockerfile запускает `uvicorn ... --workers 2`. При этом trace s
 
 - **Hybrid search:** BM25 (rank-bm25) + vector (Chroma/Qdrant) + Reciprocal Rank Fusion (`RRF_K=60`). Современная конфигурация.
 - **Reranker:** cross-encoder — стоит CPU, но повышает precision@k. Для local — okay; для high-throughput SaaS — потребует GPU или async batching.
-- **Chunking:** `chunk_size=800` / `chunk_overlap=200` дефолты. Опции `RAG_SEMANTIC_CHUNKING`, `RAG_CONTEXTUAL_HEADERS`, `RAG_PARENT_CHILD`. Чанкинг-качество измеряется в `chunking.py` — это плюс.
+- **Chunking:** `chunk_size=800` / `chunk_overlap=200` дефолты. Опции `RAG_SEMANTIC_CHUNKING`, `RAG_CONTEXTUAL_HEADERS`, `RAG_PARENT_CHILD`. Чанкинг-качество измеряется в `scripts/chunking_eval.py` — это плюс.
 - **Embedder:** `BAAI/bge-m3` — multilingual, актуальный SoTA для RU/EN.
 
 ### 7.4 GraceKelly bottleneck
@@ -707,7 +707,7 @@ Update 2026-04-27: `llm/providers/*` informational mypy scope and
 - **Phase 2** — `bitrix.py` → `integrations/bitrix.py`, `mock_inbox.py` → `integrations/mock_inbox.py`, `seed_docs.py` → `demo/seed_docs.py` (~2 часа, требует grep+rewrite импортов)
 - **Phase 3** — закрыт 2026-04-27 по Option B: `manager.py` → `vectordb/_base_manager.py` + root shim, `sqlite_trace.py` → `tracing/_base_trace.py` + root shim
 - **Phase 4** — resolve `loader` fork (root vs ingestion) — это product decision, не refactor
-- **Phase 5** — найти дом для `chunking.py` (вероятно `scripts/chunking_eval.py`)
+- **Phase 5** — закрыт 2026-04-27: `chunking.py` → `scripts/chunking_eval.py`
 
 #### D. Coverage до 70%
 
