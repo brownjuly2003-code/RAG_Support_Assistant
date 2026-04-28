@@ -152,6 +152,21 @@ async def refresh_token(body: RefreshRequest) -> TokenResponse:
     )
 
 
+def _try_parse_uuid(session_id: str) -> uuid.UUID | None:
+    """Return UUID if parseable, else None.
+
+    Skipping the DB query for non-UUID ids keeps invalid input from poisoning
+    the 60s `_db_retry_after` cooldown (a ValueError inside the SQLAlchemy
+    expression would otherwise be swallowed by the outer except and disable
+    DB lookups for everyone). In-memory sessions still resolve via string
+    keys, so we fall through and let the caller answer 404.
+    """
+    try:
+        return uuid.UUID(session_id)
+    except ValueError:
+        return None
+
+
 @router.get("/sessions/{session_id}/history", response_model=HistoryResponse)
 async def get_session_history(
     session_id: str,
@@ -159,7 +174,8 @@ async def get_session_history(
 ) -> HistoryResponse:
     _app = _app_module()
     user_tenant = (_user.get("tenant") or "default") or "default"
-    if time.monotonic() >= _app._db_retry_after:
+    session_uuid = _try_parse_uuid(session_id)
+    if session_uuid is not None and time.monotonic() >= _app._db_retry_after:
         try:
             from sqlalchemy import select  # noqa: PLC0415
 
@@ -173,7 +189,7 @@ async def get_session_history(
                     db.execute(
                         select(Message)
                         .join(DBSession, DBSession.id == Message.session_id)
-                        .where(Message.session_id == uuid.UUID(session_id))
+                        .where(Message.session_id == session_uuid)
                         .where(DBSession.tenant_id == user_tenant)
                         .order_by(Message.created_at)
                     ),
@@ -283,6 +299,7 @@ async def clear_session(
 ) -> Dict[str, str]:
     _app = _app_module()
     user_tenant = (_user.get("tenant") or "default") or "default"
+    session_uuid = _try_parse_uuid(session_id)
     found = False
 
     if session_id in _app._sessions:
@@ -300,7 +317,7 @@ async def clear_session(
             _app._session_last_access.pop(session_id, None)
             found = True
 
-    if time.monotonic() >= _app._db_retry_after:
+    if session_uuid is not None and time.monotonic() >= _app._db_retry_after:
         try:
             from sqlalchemy import select  # noqa: PLC0415
 
@@ -311,7 +328,7 @@ async def clear_session(
                 db_result = await asyncio.wait_for(
                     db.execute(
                         select(DBSession)
-                        .where(DBSession.id == uuid.UUID(session_id))
+                        .where(DBSession.id == session_uuid)
                         .where(DBSession.tenant_id == user_tenant)
                     ),
                     timeout=0.5,

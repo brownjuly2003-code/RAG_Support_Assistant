@@ -83,6 +83,29 @@ def test_delete_session_succeeds_for_owning_tenant(client: TestClient) -> None:
     assert "sess-a" not in api_app._sessions
 
 
+def test_invalid_session_id_does_not_poison_db_cooldown(client: TestClient) -> None:
+    """Non-uuid session_id must not blow up to 500 nor trip _db_retry_after.
+
+    Regression: previously `uuid.UUID(session_id)` raised inside the SQLAlchemy
+    expression, was caught by the outer except, set `_db_retry_after = +60s`
+    and returned 404 from the in-memory fallback — but disabled DB lookups for
+    everyone for a minute. Now we parse early and skip DB on invalid input.
+    """
+    api_app._db_retry_after = 0.0
+
+    response = client.get(
+        "/api/sessions/not-a-uuid/history", headers=_auth("tenant-a")
+    )
+    assert response.status_code == 404, response.text
+    assert api_app._db_retry_after == 0.0, "DB cooldown must not be poisoned"
+
+    response = client.delete(
+        "/api/sessions/also-bad", headers=_auth("tenant-a")
+    )
+    assert response.status_code == 404, response.text
+    assert api_app._db_retry_after == 0.0, "DB cooldown must not be poisoned"
+
+
 def test_feedback_save_propagates_tenant(monkeypatch, client: TestClient) -> None:
     saved: dict[str, Any] = {}
 
