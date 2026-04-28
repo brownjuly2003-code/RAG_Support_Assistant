@@ -113,6 +113,14 @@ module = ["db.models"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
+# agent.state + agent.prompts — strict scope (Step 9). agent.graph remains
+# informational pending dedicated typing pass (~65 baseline errors at the
+# default level, not yet ready for strict).
+[[tool.mypy.overrides]]
+module = ["agent.state", "agent.prompts"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
 # Relaxed treatment for legacy / large modules — leave them untyped for now
 # but still report obvious bugs.
 [[tool.mypy.overrides]]

@@ -104,9 +104,9 @@ jobs:
 
       - name: Run mypy on strict scope
         # Strict modules (auth, db.models, db.engine, llm.providers,
-        # config/settings.py) must remain green. Codex audit 2026-04-27
-        # H3 + next-steps Step 6.
-        run: python -m mypy auth db/models.py db/engine.py llm/providers/ config/settings.py --no-incremental --show-error-codes
+        # config/settings.py, agent/state.py, agent/prompts.py) must
+        # remain green. Codex audit 2026-04-27 H3 + next-steps Steps 6, 9.
+        run: python -m mypy auth db/models.py db/engine.py llm/providers/ config/settings.py agent/state.py agent/prompts.py --no-incremental --show-error-codes
 
   test-unit:
     runs-on: ubuntu-latest

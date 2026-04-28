@@ -101,6 +101,12 @@ class GraphState(TypedDict, total=False):
     cost_usd: Optional[float]
     usage_metadata: dict
     usage_node: Optional[str]
+    # Tool-use / agentic flow (Batch K). Optional because most node paths
+    # never set them; nodes that do (e.g. agentic generate) update via
+    # state["..."] = ... rather than the constructor.
+    tool_calls: List[dict]
+    requires_confirmation: bool
+    action_summary: str
 
 
 def create_initial_state(

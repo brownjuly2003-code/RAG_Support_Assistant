@@ -184,14 +184,22 @@ Strict mypy is enforced via `pyproject.toml [[tool.mypy.overrides]]` for:
   `tenant_admin_email` field, renamed shadowed `result` local in
   `_load_llm_model_prices`, narrowed `os.getenv("SESSION_SECRET_KEY")` with
   empty default, marked `import yaml` as `type: ignore[import-untyped]`).
+- `agent.state` + `agent.prompts` — passes clean 2026-04-28 (Step 9 partial).
+  Added `tool_calls`/`requires_confirmation`/`action_summary` keys to the
+  `GraphState` TypedDict so agentic-flow nodes can populate them without
+  TypedDict extra-key errors.
 
 The following modules are intentionally **not** strict yet:
 
-- `agent.graph` (LangGraph nodes) — самый сложный модуль для типизации;
-  отдельный квартальный roadmap.
+- `agent.graph` (LangGraph nodes) — самый сложный модуль для типизации,
+  ~65 baseline mypy errors at default level. Step 9 follow-up needs its
+  own dedicated typing pass: TypedDict update kwargs, StateGraph add_node
+  Generic State binding, multiple narrow-Optional assignments. Override
+  in pyproject keeps the file informational.
 
 CI gate (как gate, не informational): `python -m mypy auth db/models.py
-db/engine.py llm/providers/ config/settings.py --no-incremental
+db/engine.py llm/providers/ config/settings.py agent/state.py
+agent/prompts.py --no-incremental
 --show-error-codes`. Любой регресс блокирует PR
 (`.github/workflows/ci.yml type-check job`).
 
