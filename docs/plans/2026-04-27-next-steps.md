@@ -28,21 +28,21 @@
 
 ---
 
-### Шаг 2. Coverage gate 70% — debug + полный run (~3 часа)
+### Шаг 2. Coverage gate 70% — добор с known baseline (~2-4 часа)
 
-**Файлы:** `tests/test_upload_path_bypasses_body_middleware.py` (зависает), `pyproject.toml`.
+**Файлы:** focused тесты для `cache.py`, `cache/redis_cache.py`, `evaluation/ragas_eval.py`, `vectordb/_base_manager.py`, app-shell helper branches; `pyproject.toml`.
 
-**Контекст.** `[tool.coverage.report] fail_under = 70`, но real coverage не верифицирован. Один тест зависает в shared-state run (вероятно — лежащая в `tmp/` БД или semaphore из предыдущего теста).
+**Контекст.** Update 2026-04-29: старый blocker больше не актуален. `tests/test_body_size_limits.py` проходит изолированно (`5 passed`), full pytest+coverage проходит без зависания: **603 passed, 4 skipped, 64.05% coverage**. `fail_under` пока оставлен на 50; 70% остаётся aspirational target.
 
 **Шаги:**
-1. Прогнать тест изолированно: `python -m pytest tests/test_upload_path_bypasses_body_middleware.py -v --timeout=10 --basetemp=.tmp/upload-debug` — воспроизвести зависание.
-2. Найти shared-state источник через `pytest --setup-show` или `--trace`.
-3. Починить (вероятно — auto-clear в `_reset_api_state` или `_db_retry_after`).
-4. Прогнать полный pytest: `python -m pytest tests/ --ignore=tests/integration --cov=. --cov-report=term-missing --cov-report=html -q --basetemp=.tmp/full`.
-5. Если coverage <70% — точечно добивать тестами critical path: auth, db.models, llm.providers.
-6. Commit: `test: unblock upload-path test + verify coverage 70%+ baseline`.
+1. Брать самый дешёвый uncovered module из coverage report: `cache.py` (0%), `cache/redis_cache.py` (16%), `evaluation/ragas_eval.py` (10%), `vectordb/_base_manager.py` (40%).
+2. Добавлять focused tests без runtime-рефакторинга; каждый batch должен быть маленьким и проверяемым.
+3. После каждого batch: `python -m pytest <new-or-related-tests> -p no:schemathesis -p no:cacheprovider -q --timeout=60 --basetemp=.tmp/<name>`.
+4. Перед commit: `python -m pytest -p no:schemathesis -p no:cacheprovider --cov=. --cov-report=term-missing --cov-report=html -q --timeout=60 --basetemp=.tmp/full-coverage`.
+5. Если total coverage ≥70%, поднять `fail_under` до 70. Если ниже — обновить honest baseline-комментарий и оставить gate на текущем проверенном уровне.
+6. Commit: `test: expand coverage baseline toward 70 percent`.
 
-**Acceptance.** `pytest` с `--cov` проходит без зависания, реальное coverage число known.
+**Acceptance.** Full pytest+coverage проходит без зависания, coverage число обновлено в `pyproject.toml`, а `fail_under` не завышен выше проверенного результата.
 
 ---
 

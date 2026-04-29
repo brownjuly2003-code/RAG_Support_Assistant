@@ -47,15 +47,15 @@ omit = [
     "archive-legacy/*",
     "alembic/*",
     "data/*",
+    ".tmp/*",
     "graph_route_example.py",
 ]
 
 [tool.coverage.report]
-# Honest baseline: 52.97% verified 2026-04-27 against full unit suite
-# (572 passed, 4 skipped, 9 deselected pre-existing flakes). The 70%
-# aspirational target requires dedicated tests for vectordb/_base_manager
-# (37%), tracing/langfuse_trace (32%), reports/renderer (46%),
-# llm/providers/gracekelly (63%). Raise gate as those land.
+# Honest baseline: 64.05% verified 2026-04-29 against full pytest+coverage suite
+# (603 passed, 4 skipped). The 70% aspirational target still needs dedicated tests
+# for cache.py (0%), cache/redis_cache (16%), evaluation/ragas_eval (10%),
+# vectordb/_base_manager (40%), and remaining app-shell helper branches.
 fail_under = 50
 show_missing = true
 skip_covered = false
