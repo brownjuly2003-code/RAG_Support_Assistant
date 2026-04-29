@@ -17,7 +17,7 @@
 - **1 baseline**: Phase 4 loader merge (был uncommitted 2 сессии).
 
 Local rating обновлён 8.7/10 → **9.2/10**, commercial 7.7/10 → **8.5/10**.
-Самые опасные deploy/security gaps закрыты. Остаются P1 quality (coverage, deps lock, Helm secrets split) и P2 architectural (streaming RAG parity, thin app-shell).
+Самые опасные deploy/security gaps закрыты. На момент snapshot оставались P1 quality (coverage, deps lock, Helm secrets split) и P2 architectural (streaming RAG parity, thin app-shell); update 2026-04-29: coverage gate закрыт.
 
 ## Что закоммичено (от старого к новому)
 
@@ -91,10 +91,10 @@ python -c "from api.app import app as a; import main as m; print(a is m.app, len
 # 4. cxkm — CX clean (P2 на untracked artefacts), KM degraded
 ```
 
-## Known issues / что НЕ закрыто
+## Known issues / later updates
 
 - **KM (Kimi) review** падает `normalization_error` на 2618-строчном diff. Для tri-blocking review в будущем рассмотреть chunking diff'а перед KM.
-- **Coverage gate 70%** — update 2026-04-29: реальное число теперь известно, **66.16%** на full pytest+coverage (`614 passed, 4 skipped`). Старый upload/body-size hang не воспроизведён; `cache.py` и `cache/redis_cache.py` закрыты focused tests. Следующий шаг — добор тестов для `evaluation/ragas_eval.py`, `vectordb/_base_manager.py` и app-shell helper branches.
+- **Coverage gate 70%** — closed 2026-04-29: full pytest+coverage прошёл без зависания, **70.02%** (`630 passed, 4 skipped`), `fail_under=70`. Добавлены focused tests для `evaluation/ragas_eval.py`, `vectordb/_base_manager.py`, `evaluation/benchmark_runner.py`; live regression eval стабилизирован без реальных embeddings/categorizer в coverage path.
 - **Helm chart secrets** — `deploy/helm/values.yaml` всё ещё имеет `DATABASE_URL=changeme` в ConfigMap (Codex P1, для commercial deploy).
 - **Streaming RAG parity** — `/ask/stream` обходит часть quality gates (Codex H1).
 

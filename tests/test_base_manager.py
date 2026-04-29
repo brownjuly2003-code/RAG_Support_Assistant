@@ -1,0 +1,278 @@
+from __future__ import annotations
+
+import sys
+import types
+from types import SimpleNamespace
+
+import pytest
+
+from config import settings as settings_module
+from vectordb import _base_manager as manager
+
+
+class _Array:
+    def __init__(self, values: list[float] | list[list[float]]) -> None:
+        self._values = values
+
+    def __getitem__(self, index: int) -> "_Array":
+        return _Array(self._values[index])  # type: ignore[arg-type]
+
+    def tolist(self) -> list[float] | list[list[float]]:
+        return self._values
+
+
+class _Embeddings:
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self._vector(text) for text in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._vector(text)
+
+    def _vector(self, text: str) -> list[float]:
+        if "alpha" in text:
+            return [1.0, 0.0]
+        if "beta" in text:
+            return [0.0, 1.0]
+        return [0.5, 0.5]
+
+
+def test_get_embeddings_wraps_and_caches_sentence_transformer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    created: list[str] = []
+
+    class _SentenceTransformer:
+        def __init__(self, model_name: str, device: str) -> None:
+            created.append(f"{model_name}:{device}")
+
+        def encode(self, texts: list[str], normalize_embeddings: bool) -> _Array:
+            assert normalize_embeddings is True
+            return _Array([[float(len(text)), 1.0] for text in texts])
+
+    module = types.ModuleType("sentence_transformers")
+    module.SentenceTransformer = _SentenceTransformer
+
+    monkeypatch.setitem(sys.modules, "sentence_transformers", module)
+    monkeypatch.setattr(manager, "_cached_embeddings", None)
+
+    embeddings = manager.get_embeddings("fake-model")
+
+    assert created == ["fake-model:cpu"]
+    assert embeddings.embed_documents(["abc"]) == [[3.0, 1.0]]
+    assert embeddings.embed_query("abcd") == [4.0, 1.0]
+    assert manager.get_embeddings("other-model") is embeddings
+
+
+def test_get_reranker_handles_disabled_dependency_and_caches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    created: list[str] = []
+
+    class _CrossEncoder:
+        def __init__(self, model_name: str, device: str) -> None:
+            created.append(f"{model_name}:{device}")
+
+    monkeypatch.setattr(manager, "_cached_reranker", None)
+    monkeypatch.setattr(manager, "HAS_CROSS_ENCODER", False)
+    assert manager.get_reranker("reranker-a") is None
+
+    monkeypatch.setattr(manager, "HAS_CROSS_ENCODER", True)
+    monkeypatch.setattr(manager, "CrossEncoder", _CrossEncoder)
+
+    reranker = manager.get_reranker("reranker-b")
+
+    assert created == ["reranker-b:cpu"]
+    assert manager.get_reranker("reranker-c") is reranker
+
+
+def test_add_contextual_headers_uses_llm_truncates_and_falls_back() -> None:
+    class _LLM:
+        def __init__(self, response: str | Exception) -> None:
+            self.response = response
+
+        def invoke(self, prompt: str) -> str:
+            assert "Source A" in prompt
+            if isinstance(self.response, Exception):
+                raise self.response
+            return self.response
+
+    chunk = manager.Document(page_content="alpha detail", metadata={"source": "Source A"})
+    full_doc = manager.Document(page_content="full source preview", metadata={"source": "Source A"})
+
+    enriched = manager.add_contextual_headers([chunk], _LLM("x" * 250), [full_doc])
+    assert enriched[0].metadata["contextual_header"] == "x" * 200
+    assert enriched[0].page_content.startswith("[Context:") is False
+    assert enriched[0].page_content.startswith("[")
+
+    fallback = manager.add_contextual_headers(
+        [manager.Document(page_content="beta detail", metadata={"source": "Source B"})],
+        _LLM(RuntimeError("boom")),
+    )
+    assert fallback[0].metadata["contextual_header"].endswith("Source B")
+
+    no_llm = manager.add_contextual_headers(
+        [manager.Document(page_content="gamma detail", metadata={"source": "Source C", "page": 4})],
+        None,
+    )
+    assert "4" in no_llm[0].metadata["contextual_header"]
+
+
+def test_hybrid_retriever_vector_paths_and_reranker_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    alpha = manager.Document(page_content="alpha doc", metadata={})
+    beta = manager.Document(page_content="beta doc", metadata={})
+
+    class _VectorStore:
+        def similarity_search(self, query: str, k: int) -> list[manager.Document]:
+            assert query == "question"
+            assert k == 20
+            return [alpha, beta]
+
+    class _Reranker:
+        def predict(self, pairs: list[tuple[str, str]]) -> list[float]:
+            assert len(pairs) == 2
+            return [0.1, 0.9]
+
+    monkeypatch.setattr(manager, "HAS_BM25", False)
+
+    retriever = manager.HybridRetriever(
+        _VectorStore(),
+        chunks=[alpha, beta],
+        reranker=_Reranker(),
+        use_bm25=False,
+        rerank_k=1,
+    )
+    assert retriever.invoke("question") == [beta]
+
+    class _BrokenReranker:
+        def predict(self, pairs: list[tuple[str, str]]) -> list[float]:
+            _ = pairs
+            raise RuntimeError("rerank failed")
+
+    fallback = manager.HybridRetriever(
+        _VectorStore(),
+        chunks=[alpha, beta],
+        reranker=_BrokenReranker(),
+        use_bm25=False,
+        rerank_k=1,
+    )
+    assert fallback.get_relevant_documents("question") == [alpha]
+
+    class _Retriever:
+        def get_relevant_documents(self, query: str) -> list[manager.Document]:
+            assert query == "question"
+            return [beta]
+
+    class _StoreWithRetriever:
+        def as_retriever(self, search_kwargs: dict[str, int]) -> _Retriever:
+            assert search_kwargs == {"k": 20}
+            return _Retriever()
+
+    no_similarity = manager.HybridRetriever(
+        _StoreWithRetriever(),
+        chunks=[alpha, beta],
+        use_bm25=False,
+    )
+    assert no_similarity.get_relevant_documents("question") == [beta]
+
+
+def test_qdrant_stub_store_search_and_retriever() -> None:
+    docs = [
+        manager.Document(page_content="alpha content", metadata={}),
+        manager.Document(page_content="beta content", metadata={}),
+    ]
+    store = manager.QdrantStubStore(docs, _Embeddings())
+
+    assert store.similarity_search("alpha", k=1) == [docs[0]]
+    assert store.as_retriever({"k": 1}).invoke("beta") == [docs[1]]
+    assert manager.QdrantStubStore._cosine([0.0], [1.0]) == 0.0
+
+
+def test_multi_query_retriever_generates_filters_and_merges(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _BaseRetriever:
+        def __init__(self) -> None:
+            self.queries: list[str] = []
+
+        def get_relevant_documents(self, query: str) -> list[manager.Document]:
+            self.queries.append(query)
+            if "skip" in query:
+                raise RuntimeError("skip query")
+            return [manager.Document(page_content=f"{query} result", metadata={})]
+
+    class _LLM:
+        def invoke(self, prompt: str) -> str:
+            assert "original question" in prompt
+            return "1. alpha query\n2. no\n3. skip query\n4. beta query"
+
+    monkeypatch.setattr(
+        settings_module,
+        "get_settings",
+        lambda: SimpleNamespace(rrf_doc_key_chars=200, rrf_k=60),
+    )
+
+    base = _BaseRetriever()
+    retriever = manager.MultiQueryRetriever(base, _LLM(), max_queries=3)
+    docs = retriever.get_relevant_documents("original question")
+
+    assert base.queries == ["alpha query", "skip query", "beta query"]
+    assert [doc.page_content for doc in docs] == ["alpha query result", "beta query result"]
+    assert manager.MultiQueryRetriever(base, None).invoke("plain query")
+
+
+def test_build_helpers_handle_backends_and_simple_retriever(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    docs = [manager.Document(page_content="alpha beta gamma", metadata={})]
+    chunks = [manager.Document(page_content="alpha", metadata={})]
+
+    class _Splitter:
+        def split_documents(self, source_docs: list[manager.Document]) -> list[manager.Document]:
+            assert source_docs == docs
+            return chunks
+
+    class _Store:
+        def __init__(self) -> None:
+            self._source_docs = docs
+            self._source_embeddings = _Embeddings()
+
+        def similarity_search(self, query: str, k: int) -> list[manager.Document]:
+            _ = query, k
+            return chunks
+
+    monkeypatch.setattr(
+        settings_module,
+        "get_settings",
+        lambda: SimpleNamespace(
+            semantic_chunking=False,
+            parent_child=False,
+            hybrid_search=False,
+            retrieval_top_k=5,
+            rerank_top_k=1,
+            reranker_model="",
+            chunk_size=20,
+            chunk_overlap=0,
+        ),
+    )
+    monkeypatch.setattr(manager, "_build_text_splitter", lambda **kwargs: _Splitter())
+    monkeypatch.setattr(manager, "_get_backend", lambda: "qdrant")
+    monkeypatch.setattr(manager, "_build_qdrant", lambda built_chunks, embeddings: _Store())
+
+    with pytest.raises(ValueError):
+        manager.build_vector_store([], {"chunk_size": 20, "chunk_overlap": 0}, _Embeddings())
+
+    store, built_chunks = manager.build_vector_store(
+        docs,
+        {"chunk_size": 20, "chunk_overlap": 0},
+        _Embeddings(),
+    )
+    assert built_chunks == chunks
+    assert getattr(store, "_source_docs") == docs
+
+    simple = manager.build_retriever(docs, _Embeddings(), vector_store=_Store(), chunks=chunks)
+    assert simple.get_relevant_documents("alpha") == chunks
+
+    source_routed = manager.get_retriever(_Store(), chunks=chunks)
+    assert source_routed.get_relevant_documents("alpha") == chunks

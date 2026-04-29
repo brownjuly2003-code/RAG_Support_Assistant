@@ -2,12 +2,16 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
-## [Coverage-Baseline] — 2026-04-29 — known coverage baseline + focused test expansion
+## [Coverage-Gate-70] — 2026-04-29 — verified 70% coverage gate + focused test expansion
 
 - `tests/test_weekly_report.py` расширен проверками для `reports.renderer`: week-over-week helpers, empty states, top-5 limits, weekly aggregation, empty analytics and document lookup failures.
 - `tests/test_langfuse_trace.py` добавлен для `tracing.langfuse_trace`: unconfigured Langfuse, new `start_observation` path, legacy `trace().generation()` path, backend warning path, `flush()`/`shutdown()` behavior.
 - `tests/test_rag_cache.py` и `tests/test_redis_cache.py` добавлены для cache layers: root `cache.py` поднят до 99%, `cache/redis_cache.py` до 100%.
-- `pyproject.toml` coverage note обновлён по реальному full pytest+coverage прогону: **614 passed, 4 skipped, total coverage 66.16%**. `fail_under` оставлен на 50; 70% остаётся aspirational target.
+- `tests/test_ragas_eval.py` добавлен для `evaluation/ragas_eval.py`: metric helpers, evaluator single/batch paths, benchmark save/error/invoke paths, embedding fallback.
+- `tests/test_base_manager.py` добавлен для `vectordb/_base_manager.py`: embeddings/reranker factories, contextual headers, hybrid/multi-query retrieval, vector store/retriever builders.
+- `tests/test_benchmark_runner.py` добавлен для `evaluation/benchmark_runner.py`: loading benchmark cases and CLI `main()` paths.
+- `tests/integration/test_regression_eval_live.py` стабилизирован: coverage path больше не загружает реальные embeddings/categorizer, но сохраняет live asyncpg/FK regression signal.
+- `pyproject.toml` coverage note обновлён по реальному full pytest+coverage прогону: **630 passed, 4 skipped, total coverage 70.02%**. `fail_under` поднят до 70.
 - Старый blocker по upload/body-size hang не воспроизведён: `tests/test_body_size_limits.py` проходит изолированно.
 
 ## [Audit-Hardening-2] — 2026-04-27 — Codex+Opus delta-аудит + 11 коммитов hardening + docs

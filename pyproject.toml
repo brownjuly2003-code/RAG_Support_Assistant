@@ -52,11 +52,10 @@ omit = [
 ]
 
 [tool.coverage.report]
-# Honest baseline: 66.16% verified 2026-04-29 against full pytest+coverage suite
-# (614 passed, 4 skipped). The 70% aspirational target still needs dedicated tests
-# for evaluation/ragas_eval (10%), vectordb/_base_manager (40%), and remaining
-# app-shell/helper branches.
-fail_under = 50
+# Honest baseline: 70.02% verified 2026-04-29 against full pytest+coverage suite
+# (630 passed, 4 skipped). Gate raised after focused tests for
+# evaluation/ragas_eval, vectordb/_base_manager, and benchmark_runner.
+fail_under = 70
 show_missing = true
 skip_covered = false
 exclude_lines = [

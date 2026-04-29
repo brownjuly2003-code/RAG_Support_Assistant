@@ -38,6 +38,18 @@ class _MockLLM:
         return "85"
 
 
+class _FastEmbeddings:
+    def _vector(self, text: str) -> list[float]:
+        checksum = sum(ord(char) for char in text)
+        return [float(checksum % 101), float(len(text) % 97), 1.0]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self._vector(text) for text in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._vector(text)
+
+
 def _load_seed_docs(project_root: Path) -> list[dict[str, Any]]:
     docs: list[dict[str, Any]] = []
     for name in ("warranty.md", "returns_policy.md", "errors_e10_e30.md"):
@@ -165,7 +177,13 @@ def test_regression_eval_live_no_asyncpg_race_no_fk_violation(monkeypatch: pytes
             ),
         )
 
-        from ingestion.pipeline import IngestPipeline
+        import ingestion.pipeline as ingestion_pipeline
+
+        monkeypatch.setattr(
+            ingestion_pipeline,
+            "annotate_documents_with_categories",
+            lambda docs, tenant_id="default": {},
+        )
 
         seed_docs = _load_seed_docs(project_root)
         # IngestPipeline ingests files from disk; write temp files
@@ -175,7 +193,11 @@ def test_regression_eval_live_no_asyncpg_race_no_fk_violation(monkeypatch: pytes
                 (tmp_docs_path / doc["metadata"]["source"]).write_text(
                     doc["page_content"], encoding="utf-8"
                 )
-            IngestPipeline().ingest(tmp_docs_path, tenant_id="default")
+            ingestion_pipeline.IngestPipeline().ingest(
+                tmp_docs_path,
+                embeddings=_FastEmbeddings(),
+                tenant_id="default",
+            )
 
         # Write curated cases
         with tempfile.TemporaryDirectory() as tmp_cases:

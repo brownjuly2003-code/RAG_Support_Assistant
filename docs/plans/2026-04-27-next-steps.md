@@ -28,21 +28,17 @@
 
 ---
 
-### Шаг 2. Coverage gate 70% — добор с known baseline (~2-4 часа)
+### Шаг 2. Coverage gate 70% — выполнено 2026-04-29
 
-**Файлы:** focused тесты для `evaluation/ragas_eval.py`, `vectordb/_base_manager.py`, app-shell helper branches; `pyproject.toml`.
+**Файлы:** `tests/test_ragas_eval.py`, `tests/test_base_manager.py`, `tests/test_benchmark_runner.py`, `tests/integration/test_regression_eval_live.py`, `pyproject.toml`.
 
-**Контекст.** Update 2026-04-29: старый blocker больше не актуален. `tests/test_body_size_limits.py` проходит изолированно (`5 passed`), full pytest+coverage проходит без зависания: **614 passed, 4 skipped, 66.16% coverage**. `cache.py` поднят до 99%, `cache/redis_cache.py` до 100%. `fail_under` пока оставлен на 50; 70% остаётся aspirational target.
+**Контекст.** Update 2026-04-29: coverage gate закрыт. Full pytest+coverage проходит без зависания: **630 passed, 4 skipped, 70.02% coverage**. `evaluation/ragas_eval.py`, `vectordb/_base_manager.py` и `evaluation/benchmark_runner.py` закрыты focused tests; live regression eval больше не тянет реальные embeddings/categorizer в coverage path. `fail_under` поднят до 70.
 
-**Шаги:**
-1. Брать следующий самый дешёвый uncovered module из coverage report: `evaluation/ragas_eval.py` (10%), `vectordb/_base_manager.py` (40%) или app-shell helper branches.
-2. Добавлять focused tests без runtime-рефакторинга; каждый batch должен быть маленьким и проверяемым.
-3. После каждого batch: `python -m pytest <new-or-related-tests> -p no:schemathesis -p no:cacheprovider -q --timeout=60 --basetemp=.tmp/<name>`.
-4. Перед commit: `python -m pytest -p no:schemathesis -p no:cacheprovider --cov=. --cov-report=term-missing --cov-report=html -q --timeout=60 --basetemp=.tmp/full-coverage`.
-5. Если total coverage ≥70%, поднять `fail_under` до 70. Если ниже — обновить honest baseline-комментарий и оставить gate на текущем проверенном уровне.
-6. Commit: `test: expand coverage baseline toward 70 percent`.
+**Проверено:**
+1. `python -m pytest tests\integration\test_regression_eval_live.py tests\test_ragas_eval.py tests\test_base_manager.py tests\test_benchmark_runner.py -p no:schemathesis -p no:cacheprovider -q --timeout=60 --basetemp=.tmp\coverage-batch-focused-final`
+2. `python -m pytest -p no:schemathesis -p no:cacheprovider --cov=. --cov-report=term --cov-report=html -q --timeout=60 --basetemp=.tmp\full-coverage-final`
 
-**Acceptance.** Full pytest+coverage проходит без зависания, coverage число обновлено в `pyproject.toml`, а `fail_under` не завышен выше проверенного результата.
+**Acceptance.** Full pytest+coverage проходит без зависания, coverage число обновлено в `pyproject.toml`, `fail_under=70` не завышен выше проверенного результата.
 
 ---
 
