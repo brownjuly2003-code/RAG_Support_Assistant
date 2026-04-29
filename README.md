@@ -56,8 +56,9 @@ User / Email / Widget
 
 - `api/app.py` — FastAPI application, middleware, lifespan, master router.
   The 2a-2m endpoint split is complete; small auth/session routes remain here.
-- `api/routers/` — extracted sub-routers (`system.py` for health/readiness/metrics,
-  `agent.py` for `/agent/*`, `admin_review.py` for `/admin/review-queue/*`,
+- `api/routers/` — extracted sub-routers (`system.py` for health/readiness/API metrics,
+  `root_pages.py` for `/agent` + root Prometheus routes, `agent.py` for `/agent/*`,
+  `admin_review.py` for `/admin/review-queue/*`,
   `auth_sso.py` for `/auth/sso/*`, `conversation.py` for `/ask`/`/chat`).
   New endpoint groups are added here, not in `api/app.py`.
 - `agent/` — LangGraph pipeline + state + prompts.

@@ -18,7 +18,6 @@ import hashlib
 import inspect
 import json as _json
 import logging
-import re
 import sys
 import threading
 import time
@@ -28,9 +27,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, List, Optional, cast
 
 import httpx
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.types import ExceptionHandler
@@ -47,7 +46,6 @@ from auth.oidc import (  # noqa: F401
     list_sso_providers,
     resolve_oidc_user,
 )
-from auth.dependencies import require_role
 from cache.redis_cache import (
     cache_delete_pattern as _cache_delete_pattern,
     cache_json_get as _cache_json_get,
@@ -1617,6 +1615,7 @@ from api.routers.auth_sso import router as _auth_sso_router  # noqa: E402
 from api.routers import conversation as _conversation_router_module  # noqa: E402
 from api.routers.feedback import router as _feedback_router  # noqa: E402
 from api.routers.misc import email_inbound_webhook, router as _misc_router  # noqa: E402
+from api.routers import root_pages as _root_pages_router_module  # noqa: E402
 from api.routers import session_auth as _session_auth_router_module  # noqa: E402
 from api.routers import system as _system_router_module  # noqa: E402
 from api.routers import upload as _upload_router_module  # noqa: E402
@@ -1649,6 +1648,10 @@ get_session_history = _session_auth_router_module.get_session_history
 list_sessions = _session_auth_router_module.list_sessions
 clear_session = _session_auth_router_module.clear_session
 _session_auth_router = _session_auth_router_module.router
+agent_dashboard = _root_pages_router_module.agent_dashboard
+admin_trace_detail_redirect = _root_pages_router_module.admin_trace_detail_redirect
+prometheus_metrics_endpoint = _root_pages_router_module.prometheus_metrics_endpoint
+_root_pages_router = _root_pages_router_module.router
 
 router.include_router(_system_router)
 router.include_router(_agent_router)
@@ -1672,7 +1675,8 @@ router.include_router(_upload_router)
 # /agent/tickets/* and /agent/similar moved to api.routers.agent
 
 
-# /metrics moved to api.routers.system
+# /api/metrics moved to api.routers.system
+# /agent, /admin/traces/{trace_id}, and /metrics moved to api.routers.root_pages
 
 
 # /admin/circuit-breaker/reset, /admin/audit, /admin/traces/*,
@@ -1877,65 +1881,4 @@ app.add_api_route("/webhook/email", email_inbound_webhook, methods=["POST"])
 _static_dir = PROJECT_ROOT / "static"
 if _static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
-
-
-@app.get("/agent", response_class=HTMLResponse)
-async def agent_dashboard(
-    _user: dict = Depends(require_role("agent", "admin")),
-) -> HTMLResponse:
-    agent_path = PROJECT_ROOT / "static" / "agent.html"
-    if not agent_path.exists():
-        raise HTTPException(status_code=404, detail="agent dashboard not found")
-    return HTMLResponse(agent_path.read_text(encoding="utf-8"))
-
-
-@app.get("/admin/traces/{trace_id}")
-async def admin_trace_detail_redirect(trace_id: str) -> RedirectResponse:
-    if not re.fullmatch(r"[A-Za-z0-9\-]{8,64}", trace_id):
-        raise HTTPException(status_code=400, detail="invalid trace_id format")
-    return RedirectResponse(url=f"/traces-ui/{trace_id}", status_code=307)
-
-
-@app.get("/metrics")
-async def prometheus_metrics_endpoint(request: Request) -> Response:
-    """Prometheus pull endpoint.
-
-    The /metrics path is intentionally unauthenticated by Prometheus
-    convention — most scrape configs do not support per-target auth.
-    Production deployments MUST restrict access at network level (Service
-    network policy, ingress whitelist, sidecar). The authenticated
-    alternative is `/api/metrics`, which returns the same JSON snapshot.
-
-    Optional opt-in: set PROMETHEUS_METRICS_REQUIRE_AUTH=1 to require an
-    `Authorization: Bearer <admin-token>` header even on /metrics. This is
-    useful when the cluster does not provide a private scrape network.
-
-    Refs: Codex audit 2026-04-27 P1 §4.
-    """
-    import os
-
-    if os.getenv("PROMETHEUS_METRICS_REQUIRE_AUTH", "").strip().lower() in (
-        "1",
-        "true",
-        "yes",
-    ):
-        from auth.dependencies import require_role
-
-        try:
-            require_role("admin")(request)
-        except HTTPException:
-            raise
-        except Exception:
-            raise HTTPException(status_code=401, detail="Unauthorized")
-
-    if not getattr(prometheus_metrics, "PROMETHEUS_AVAILABLE", False):
-        return JSONResponse(
-            status_code=501,
-            content={"detail": "prometheus-client is not installed"},
-        )
-
-    prometheus_metrics.ACTIVE_SESSIONS.set(len(_sessions))
-    return Response(
-        content=prometheus_metrics.generate_latest(prometheus_metrics.REGISTRY),
-        media_type=prometheus_metrics.CONTENT_TYPE_LATEST,
-    )
+app.include_router(_root_pages_router)

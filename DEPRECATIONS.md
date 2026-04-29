@@ -74,7 +74,7 @@ It is a tuning script, not a production module. Moved to
 
 ## api/app.py monolith split — in progress
 
-`api/app.py` is now 2128 LOC. Most endpoint groups now live under
+`api/app.py` is now about 1.6k LOC. Most endpoint groups now live under
 `api/routers/`. The large conversation orchestration block now lives in
 `api/routers/conversation.py` and still reaches into `api.app` lazily for
 `_sessions`, `_session_last_access`, `_db_retry_after`, and
@@ -84,7 +84,9 @@ continue to work.
 ### Done sub-routers
 
 - `api/routers/system.py` — `/health/live`, `/health/ready`, `/health`,
-  and `/metrics` (Phase 2 PoC + Phase 2a).
+  and `/metrics` under the `/api` prefix (Phase 2 PoC + Phase 2a).
+- `api/routers/root_pages.py` — root-level `/agent`,
+  `/admin/traces/{trace_id}`, and `/metrics`.
 - `api/routers/agent.py` — `/agent/tickets`, `/agent/tickets/{id}`,
   `/agent/tickets/{id}/respond`, `/agent/similar` (Phase 2c).
 - `api/routers/admin_review.py` — `/admin/review-queue` (list, update, stats)
@@ -114,7 +116,8 @@ continue to work.
 - `api/routers/conversation.py` — `/ask`, `/chat`, `/ask/stream`, and
   `/chat/stream` (Phase 2l).
 
-64 endpoints out of 69 API routes are now in dedicated router files. Latest
+64 endpoints out of 69 API routes, plus 3 root-level routes, are now in
+dedicated router files. Latest
 sanity: 69 `/api` routes, 13/13 conversation/auth/tenant-focused tests pass,
 and 56/56 broader `/api/ask` tests pass (2026-04-27, using explicit pytest
 `--basetemp` because the default Windows temp directory is not readable in this
