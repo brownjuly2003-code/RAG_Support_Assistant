@@ -6,7 +6,8 @@
 
 - `tests/test_weekly_report.py` расширен проверками для `reports.renderer`: week-over-week helpers, empty states, top-5 limits, weekly aggregation, empty analytics and document lookup failures.
 - `tests/test_langfuse_trace.py` добавлен для `tracing.langfuse_trace`: unconfigured Langfuse, new `start_observation` path, legacy `trace().generation()` path, backend warning path, `flush()`/`shutdown()` behavior.
-- `pyproject.toml` coverage note обновлён по реальному full pytest+coverage прогону: **603 passed, 4 skipped, total coverage 64.05%**. `fail_under` оставлен на 50; 70% остаётся aspirational target.
+- `tests/test_rag_cache.py` и `tests/test_redis_cache.py` добавлены для cache layers: root `cache.py` поднят до 99%, `cache/redis_cache.py` до 100%.
+- `pyproject.toml` coverage note обновлён по реальному full pytest+coverage прогону: **614 passed, 4 skipped, total coverage 66.16%**. `fail_under` оставлен на 50; 70% остаётся aspirational target.
 - Старый blocker по upload/body-size hang не воспроизведён: `tests/test_body_size_limits.py` проходит изолированно.
 
 ## [Audit-Hardening-2] — 2026-04-27 — Codex+Opus delta-аудит + 11 коммитов hardening + docs

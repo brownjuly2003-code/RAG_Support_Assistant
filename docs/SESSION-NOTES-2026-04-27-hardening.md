@@ -94,7 +94,7 @@ python -c "from api.app import app as a; import main as m; print(a is m.app, len
 ## Known issues / что НЕ закрыто
 
 - **KM (Kimi) review** падает `normalization_error` на 2618-строчном diff. Для tri-blocking review в будущем рассмотреть chunking diff'а перед KM.
-- **Coverage gate 70%** — update 2026-04-29: реальное число теперь известно, **64.05%** на full pytest+coverage (`603 passed, 4 skipped`). Старый upload/body-size hang не воспроизведён; следующий шаг — добор тестов для `cache.py`, `cache/redis_cache.py`, `evaluation/ragas_eval.py`, `vectordb/_base_manager.py` и app-shell helper branches.
+- **Coverage gate 70%** — update 2026-04-29: реальное число теперь известно, **66.16%** на full pytest+coverage (`614 passed, 4 skipped`). Старый upload/body-size hang не воспроизведён; `cache.py` и `cache/redis_cache.py` закрыты focused tests. Следующий шаг — добор тестов для `evaluation/ragas_eval.py`, `vectordb/_base_manager.py` и app-shell helper branches.
 - **Helm chart secrets** — `deploy/helm/values.yaml` всё ещё имеет `DATABASE_URL=changeme` в ConfigMap (Codex P1, для commercial deploy).
 - **Streaming RAG parity** — `/ask/stream` обходит часть quality gates (Codex H1).
 

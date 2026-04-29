@@ -30,12 +30,12 @@
 
 ### Шаг 2. Coverage gate 70% — добор с known baseline (~2-4 часа)
 
-**Файлы:** focused тесты для `cache.py`, `cache/redis_cache.py`, `evaluation/ragas_eval.py`, `vectordb/_base_manager.py`, app-shell helper branches; `pyproject.toml`.
+**Файлы:** focused тесты для `evaluation/ragas_eval.py`, `vectordb/_base_manager.py`, app-shell helper branches; `pyproject.toml`.
 
-**Контекст.** Update 2026-04-29: старый blocker больше не актуален. `tests/test_body_size_limits.py` проходит изолированно (`5 passed`), full pytest+coverage проходит без зависания: **603 passed, 4 skipped, 64.05% coverage**. `fail_under` пока оставлен на 50; 70% остаётся aspirational target.
+**Контекст.** Update 2026-04-29: старый blocker больше не актуален. `tests/test_body_size_limits.py` проходит изолированно (`5 passed`), full pytest+coverage проходит без зависания: **614 passed, 4 skipped, 66.16% coverage**. `cache.py` поднят до 99%, `cache/redis_cache.py` до 100%. `fail_under` пока оставлен на 50; 70% остаётся aspirational target.
 
 **Шаги:**
-1. Брать самый дешёвый uncovered module из coverage report: `cache.py` (0%), `cache/redis_cache.py` (16%), `evaluation/ragas_eval.py` (10%), `vectordb/_base_manager.py` (40%).
+1. Брать следующий самый дешёвый uncovered module из coverage report: `evaluation/ragas_eval.py` (10%), `vectordb/_base_manager.py` (40%) или app-shell helper branches.
 2. Добавлять focused tests без runtime-рефакторинга; каждый batch должен быть маленьким и проверяемым.
 3. После каждого batch: `python -m pytest <new-or-related-tests> -p no:schemathesis -p no:cacheprovider -q --timeout=60 --basetemp=.tmp/<name>`.
 4. Перед commit: `python -m pytest -p no:schemathesis -p no:cacheprovider --cov=. --cov-report=term-missing --cov-report=html -q --timeout=60 --basetemp=.tmp/full-coverage`.
