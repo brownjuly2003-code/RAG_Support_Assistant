@@ -25,7 +25,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, List, Optional, cast
 
 import httpx
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
@@ -33,6 +33,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.types import ExceptionHandler
 from api.correlation import (
     generate_request_id,
     get_current_tenant as _get_current_tenant,
@@ -77,6 +78,9 @@ cache_delete_pattern = _cache_delete_pattern
 cache_json_get = _cache_json_get
 get_current_tenant = _get_current_tenant
 
+if TYPE_CHECKING:
+    from api.routers.conversation import Citation as CitationModel
+
 
 async def _stream_ollama(
     prompt: str,
@@ -108,10 +112,10 @@ async def _stream_ollama(
 
 # LangChain Document
 try:
-    from langchain_core.documents import Document  # type: ignore
+    from langchain_core.documents import Document
 except ImportError:
     try:
-        from langchain.schema import Document  # type: ignore
+        from langchain.schema import Document
     except ImportError:
         from dataclasses import dataclass as _dc
 
@@ -159,7 +163,7 @@ except ImportError:
 # Chroma for loading existing store
 _Chroma = None
 try:
-    from langchain_chroma import Chroma  # type: ignore
+    from langchain_chroma import Chroma
     _Chroma = Chroma
 except ImportError:
     pass
@@ -168,7 +172,7 @@ except ImportError:
 try:
     from config.settings import get_settings
 except ImportError:
-    def get_settings():  # type: ignore[misc]
+    def get_settings() -> Any:
         class _S:
             project_root = PROJECT_ROOT
             data_dir = PROJECT_ROOT / "data"
@@ -1062,7 +1066,7 @@ def _load_recent_trace_summaries(tenant_id: str, days: int) -> list[dict[str, An
     return summaries
 
 
-async def _record_citation_stats(tenant_id: str, citations: list[Citation]) -> None:
+async def _record_citation_stats(tenant_id: str, citations: list[CitationModel]) -> None:
     from datetime import datetime, timezone  # noqa: PLC0415
 
     from sqlalchemy import select  # noqa: PLC0415
@@ -1200,8 +1204,12 @@ async def _get_or_create_session(
             _session_llm_state[session_id] = session
         else:
             _session_llm_state[session_id] = {"history": list(db_history), "tenant_id": tenant_id}
-    elif hasattr(existing_session, "_retriever") and session_retriever is not None:
-        existing_session._retriever = session_retriever
+    elif (
+        existing_session is not None
+        and hasattr(existing_session, "_retriever")
+        and session_retriever is not None
+    ):
+        setattr(existing_session, "_retriever", session_retriever)
         setattr(existing_session, "_tenant_id", tenant_id)
     elif isinstance(existing_session, dict):
         existing_session["tenant_id"] = tenant_id
@@ -1334,7 +1342,7 @@ async def _probe_ollama(base_url: str) -> ComponentStatus:
 async def _probe_chromadb(chroma_dir: Path) -> ComponentStatus:
     t0 = time.monotonic()
     try:
-        import chromadb  # type: ignore
+        import chromadb
         client = chromadb.PersistentClient(path=str(chroma_dir))
         client.list_collections()
         return ComponentStatus(status="ok", latency_ms=round((time.monotonic() - t0) * 1000, 1))
@@ -1745,11 +1753,11 @@ async def _log_requests(request: Request, call_next: Any) -> Any:
 def _extract_route_template(request: Request) -> str:
     route = request.scope.get("route")
     if route is not None:
-        path_format = getattr(route, "path_format", None)
+        path_format: str | None = getattr(route, "path_format", None)
         if path_format:
             return path_format
 
-        path = getattr(route, "path", None)
+        path: str | None = getattr(route, "path", None)
         if path:
             return path
 
@@ -1863,7 +1871,7 @@ async def _cookie_auth_bridge(request: Request, call_next: Any) -> Any:
 
 
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_rejected)
+app.add_exception_handler(RateLimitExceeded, cast(ExceptionHandler, _rate_limit_rejected))
 app.include_router(router)
 app.add_api_route("/webhook/email", email_inbound_webhook, methods=["POST"])
 _static_dir = PROJECT_ROOT / "static"

@@ -29,13 +29,15 @@ def _trace_connection(db_path: Path):
 
 def _install_trace_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     db_path = tmp_path / "traces.db"
-    sqlite_trace = sys.modules["sqlite_trace"]
-    monkeypatch.setattr(
-        sqlite_trace,
-        "_get_connection",
-        lambda: _trace_connection(db_path),
-        raising=False,
-    )
+    import tracing.sqlite_trace as canonical_sqlite_trace
+
+    for sqlite_trace in (sys.modules["sqlite_trace"], canonical_sqlite_trace):
+        monkeypatch.setattr(
+            sqlite_trace,
+            "_get_connection",
+            lambda: _trace_connection(db_path),
+            raising=False,
+        )
     with sqlite3.connect(db_path) as conn:
         conn.executescript(
             """
@@ -155,7 +157,7 @@ def test_load_recent_trace_summaries_calculates_cost_from_tokens(
 
     db_path = _install_trace_db(monkeypatch, tmp_path)
     _install_pricing(monkeypatch)
-    now = datetime(2026, 4, 21, 12, 0, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
     _insert_trace(
         db_path,
         trace_id="trace-paid",
@@ -180,7 +182,7 @@ def test_load_recent_trace_summaries_keeps_ollama_cost_zero(
 
     db_path = _install_trace_db(monkeypatch, tmp_path)
     _install_pricing(monkeypatch)
-    now = datetime(2026, 4, 21, 12, 0, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
     _insert_trace(
         db_path,
         trace_id="trace-free",
@@ -204,7 +206,7 @@ def test_cost_summary_aggregates_trace_costs_over_period(
 ) -> None:
     db_path = _install_trace_db(monkeypatch, tmp_path)
     _install_pricing(monkeypatch)
-    now = datetime(2026, 4, 21, 12, 0, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
     _insert_trace(
         db_path,
         trace_id="trace-paid-1",
@@ -244,7 +246,7 @@ def test_top_topics_endpoint_groups_by_category(
 ) -> None:
     import api.app as api_app
 
-    now = datetime(2026, 4, 21, 12, 0, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
     monkeypatch.setattr(
         api_app,
         "_load_recent_trace_summaries",
@@ -283,7 +285,7 @@ def test_cost_summary_reports_self_hosted_when_cost_is_zero(
 ) -> None:
     import api.app as api_app
 
-    now = datetime(2026, 4, 21, 12, 0, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
     monkeypatch.setattr(
         api_app,
         "_load_recent_trace_summaries",

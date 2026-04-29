@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import sqlite3
 import sys
@@ -146,7 +147,8 @@ def test_admin_traces_endpoint_filters_by_jwt_tenant(
             return [{"trace_id": "tenant-trace", "started_at": None, "finished_at": None}]
         return []
 
-    monkeypatch.setattr("tracing.sqlite_trace.list_recent_traces", _fake_list_recent_traces, raising=False)
+    sqlite_trace = importlib.import_module("tracing.sqlite_trace")
+    monkeypatch.setattr(sqlite_trace, "list_recent_traces", _fake_list_recent_traces)
 
     response = client_with_key.get("/api/admin/traces?limit=5", headers=_token("acme", "agent"))
 
@@ -270,7 +272,8 @@ def test_metrics_snapshot_filtered_by_tenant(
             "generated_at": "2026-04-18T00:00:00+00:00",
         }
 
-    monkeypatch.setattr("tracing.sqlite_trace.get_metrics_snapshot", _fake_get_metrics_snapshot, raising=False)
+    sqlite_trace = importlib.import_module("tracing.sqlite_trace")
+    monkeypatch.setattr(sqlite_trace, "get_metrics_snapshot", _fake_get_metrics_snapshot)
 
     response = client_with_key.get("/api/metrics", headers=_token("x-corp", "admin"))
 

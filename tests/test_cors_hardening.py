@@ -41,6 +41,9 @@ def test_explicit_origins_ok_in_production(monkeypatch: pytest.MonkeyPatch) -> N
         "https://app.example.com,https://admin.example.com",
     )
     monkeypatch.setenv("DB_ENCRYPTION_KEY", "test-key-prod-cors-happy-path")
+    monkeypatch.setenv("JWT_SECRET", "test-jwt-secret-prod-cors-happy-path-32")
+    monkeypatch.setenv("SESSION_SECRET_KEY", "test-session-secret-prod-cors-happy-path-32")
+    monkeypatch.setenv("ADMIN_PASSWORD_HASH", "test-admin-password-hash")
 
     settings = _reload_settings()
 

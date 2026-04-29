@@ -16,6 +16,11 @@ def integration_api_app():
     return api_app
 
 
+@pytest.fixture(autouse=True)
+def _disable_vector_store_startup(monkeypatch: pytest.MonkeyPatch, integration_api_app) -> None:
+    monkeypatch.setattr(integration_api_app, "initialize_vector_store", lambda: None)
+
+
 @pytest.fixture
 def integration_client(client_with_key: TestClient) -> TestClient:
     return client_with_key

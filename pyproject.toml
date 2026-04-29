@@ -121,10 +121,23 @@ module = ["agent.state", "agent.prompts"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
+# api.app — strict scope (2026-04-28). Promoted after a small typing pass:
+# narrowed Optional access, dropped unused type:ignore on now-typed langchain
+# imports, annotated getattr() fallbacks, and added a single arg-type ignore
+# for Starlette's invariant exception-handler signature. Keep this module
+# strict-clean; if you need to relax, fix the type instead.
+[[tool.mypy.overrides]]
+module = ["api.app"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+no_implicit_optional = true
+
 # Relaxed treatment for legacy / large modules — leave them untyped for now
 # but still report obvious bugs.
 [[tool.mypy.overrides]]
-module = ["api.app", "agent.graph"]
+module = ["agent.graph"]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 

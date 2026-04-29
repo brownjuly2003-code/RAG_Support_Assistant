@@ -10,10 +10,9 @@ from __future__ import annotations
 
 import pytest
 
-from api.app import app as api_app
-
 
 def test_main_app_is_canonical_api_app():
+    from api.app import app as api_app
     import main as legacy_entrypoint
 
     assert legacy_entrypoint.app is api_app, (
@@ -23,6 +22,8 @@ def test_main_app_is_canonical_api_app():
 
 
 def test_production_app_has_full_middleware_stack():
+    from api.app import app as api_app
+
     # 8 middleware: request-id, body-size, cors, sessions, http-metrics,
     # logger, tenant, plus the implicit ServerErrorMiddleware. The exact
     # count is locked to catch accidental drops.
@@ -36,6 +37,8 @@ def test_production_app_has_full_middleware_stack():
 
 @pytest.mark.parametrize("legacy_path", ["/ask", "/escalations", "/traces"])
 def test_no_legacy_unauthenticated_endpoints(legacy_path: str):
+    from api.app import app as api_app
+
     paths = {getattr(r, "path", None) for r in api_app.routes}
     assert legacy_path not in paths, (
         f"Legacy unauthenticated endpoint {legacy_path!r} re-appeared on "
@@ -45,6 +48,8 @@ def test_no_legacy_unauthenticated_endpoints(legacy_path: str):
 
 
 def test_api_namespace_is_populated():
+    from api.app import app as api_app
+
     api_routes = [
         r for r in api_app.routes
         if hasattr(r, "path") and r.path.startswith("/api")

@@ -35,8 +35,17 @@ def test_upload_routes_are_owned_by_upload_router(client_with_key: TestClient) -
 
 def test_upload_router_imports_without_api_app_first() -> None:
     project_root = Path(__file__).resolve().parents[1]
+    script = (
+        "import collections, platform; "
+        "U=collections.namedtuple('uname_result','system node release version machine processor'); "
+        "platform.machine=lambda: 'AMD64'; "
+        "platform.uname=lambda: U('Windows','','','','AMD64','AMD64'); "
+        "platform.platform=lambda *args, **kwargs: 'Windows-AMD64'; "
+        "import api.routers.upload as upload; "
+        "print(upload.router)"
+    )
     result = subprocess.run(
-        [sys.executable, "-c", "import api.routers.upload as upload; print(upload.router)"],
+        [sys.executable, "-c", script],
         cwd=project_root,
         capture_output=True,
         text=True,

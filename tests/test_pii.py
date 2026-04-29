@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib
 import logging
 import sqlite3
-import sys
 
 from config.logging_config import PIIRedactionFilter
 from utils.pii import contains_pii, redact_pii
@@ -55,35 +54,25 @@ def test_logging_filter_redacts_message_args() -> None:
 
 
 def test_trace_log_step_redacts_state_json(monkeypatch, tmp_path) -> None:
-    trace_module_module = sys.modules.pop("tracing.sqlite_trace", None)
-    sqlite_trace_module = sys.modules.pop("sqlite_trace", None)
     trace_module = importlib.import_module("tracing.sqlite_trace")
     db_path = tmp_path / "traces.db"
-    try:
-        monkeypatch.setattr(trace_module._sqlite_trace, "_get_db_path", lambda: db_path)
-        trace_module._sqlite_trace._init_db()
+    monkeypatch.setattr(trace_module._sqlite_trace, "_get_db_path", lambda: db_path)
+    trace_module._sqlite_trace._init_db()
 
-        trace_id = trace_module.start_trace()
-        trace_module.log_step(
-            trace_id,
-            "node",
-            {"email": "user@example.com", "text": "обычный текст"},
-        )
+    trace_id = trace_module.start_trace()
+    trace_module.log_step(
+        trace_id,
+        "node",
+        {"email": "user@example.com", "text": "обычный текст"},
+    )
 
-        with sqlite3.connect(db_path) as conn:
-            row = conn.execute(
-                "SELECT state_json FROM trace_steps WHERE trace_id = ?",
-                (trace_id,),
-            ).fetchone()
+    with sqlite3.connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT state_json FROM trace_steps WHERE trace_id = ?",
+            (trace_id,),
+        ).fetchone()
 
-        assert row is not None
-        assert "***@***.***" in row[0]
-        assert "user@example.com" not in row[0]
-        assert "обычный текст" in row[0]
-    finally:
-        sys.modules.pop("tracing.sqlite_trace", None)
-        sys.modules.pop("sqlite_trace", None)
-        if trace_module_module is not None:
-            sys.modules["tracing.sqlite_trace"] = trace_module_module
-        if sqlite_trace_module is not None:
-            sys.modules["sqlite_trace"] = sqlite_trace_module
+    assert row is not None
+    assert "***@***.***" in row[0]
+    assert "user@example.com" not in row[0]
+    assert "обычный текст" in row[0]
