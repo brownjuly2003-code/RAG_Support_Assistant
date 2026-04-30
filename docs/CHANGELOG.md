@@ -38,7 +38,7 @@
 
 ### Module layout & types (P1-P2)
 
-- 13 production-сайтов `import sqlite_trace` / `from manager import …` переключены на canonical `tracing.sqlite_trace` / `vectordb.manager`. `tracing/sqlite_trace.py` расширен: re-exports list_recent_traces, get_trace_detail, purge_old_traces, get_metrics_snapshot, save_feedback, get_feedback_stats. Root shim-ы `manager.py`, `sqlite_trace.py`, `loader.py` теперь не используются production кодом — можно удалять. (commit `c0cacae`)
+- 13 production-сайтов `import sqlite_trace` / `from manager import …` переключены на canonical `tracing.sqlite_trace` / `vectordb.manager`. `tracing/sqlite_trace.py` расширен: re-exports list_recent_traces, get_trace_detail, purge_old_traces, get_metrics_snapshot, save_feedback, get_feedback_stats. Root shim-ы `manager.py`, `sqlite_trace.py`, `loader.py` перестали использоваться production кодом и позже удалены в `4c557f3`. (commit `c0cacae`)
 - `llm/providers/mistral.py:166` — `_parse_response` принимает `Mapping[str, str]` вместо `dict[str, str]` (httpx.Headers). `llm/providers/runtime.py:64,74` — явные kwargs вместо `**dict[str, object]`. mypy scope `llm.providers.*` поднят с informational до strict. (commit `d718356`)
 
 ### Infrastructure & CI

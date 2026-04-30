@@ -11,18 +11,17 @@
 
 ## Эта неделя (~3-4 часа суммарно)
 
-### Шаг 1. Удалить root-level shim-ы (~20 мин)
+### Шаг 1. Удалить root-level shim-ы — выполнено 2026-04-27
 
-**Файлы:** `manager.py`, `sqlite_trace.py`, `loader.py` (по 15 LOC each).
+**Файлы:** `manager.py`, `sqlite_trace.py`, `loader.py`, `tests/test_module_layout.py` и зависимые тесты, которые импортировали root shim-ы.
 
-**Контекст.** После `c0cacae` все 13 production-сайтов переключены на canonical (`vectordb.manager` / `tracing.sqlite_trace` / `ingestion.loader`). Shim-ы корня нужны были только backward-compat для внешних консумеров — но это локальный проект, внешних консумеров нет. Тесты `test_module_layout.py` явно проверяют что shim-ы выдают `DeprecationWarning` — придётся переписать как negative-tests.
+**Контекст.** После `c0cacae` все 13 production-сайтов переключены на canonical (`vectordb.manager` / `tracing.sqlite_trace` / `ingestion.loader`). Shim-ы корня нужны были только backward-compat для внешних консумеров — но это локальный проект, внешних консумеров нет. Закрыто коммитом `4c557f3 refactor: remove root-level shim modules (Phase 3+4 final)`.
 
-**Шаги:**
+**Выполнено:**
 1. `git rm manager.py sqlite_trace.py loader.py`.
-2. `tests/test_module_layout.py` — переписать `test_*_is_canonical_home` тесты: вместо проверки `DeprecationWarning` через shim, проверить что `import manager` / `import sqlite_trace` / `import loader` **поднимает ImportError** (negative test).
-3. `python -m pytest tests/test_module_layout.py -q` — проверить.
-4. `python -m pytest tests/ -q --ignore=tests/integration -p no:schemathesis` — full unit run.
-5. Commit: `refactor: remove root-level shim modules (Phase 3+4 final)`.
+2. `tests/test_module_layout.py` переписан на negative-tests: `import manager`, `import sqlite_trace`, `import loader` должны поднимать `ModuleNotFoundError`.
+3. Зависимые тесты обновлены на canonical imports.
+4. Commit: `4c557f3 refactor: remove root-level shim modules (Phase 3+4 final)`.
 
 **Acceptance.** `import manager` / `sqlite_trace` / `loader` raises ImportError. Production не падает. Focus suite зелёный.
 

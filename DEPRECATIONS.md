@@ -17,9 +17,9 @@ the project tree. Created 2026-04-26 as part of the Opus audit follow-up.
 | ~~`graph.py`~~ | — | ✅ removed 2026-04-26 | `agent.graph` | Phase 1 closed. |
 | ~~`state.py`~~ | — | ✅ removed 2026-04-26 | `agent.state` | Phase 1 closed. |
 | ~~`prompts.py`~~ | — | ✅ removed 2026-04-26 | `agent.prompts` | Phase 1 closed. |
-| `manager.py` | 15 | 🟡 shim | `vectordb.manager` | 2026-04-27: production no longer imports through this shim — все 13 production-сайтов переключены на `vectordb.manager`. Shim сохранён только для внешних консумеров. Можно удалять. |
-| `sqlite_trace.py` | 15 | 🟡 shim | `tracing.sqlite_trace` | 2026-04-27: production no longer imports through this shim. `tracing.sqlite_trace` re-exports полный API (list_recent_traces, get_trace_detail, save_feedback, etc.). Можно удалять. |
-| `loader.py` | 15 | 🟡 shim | `ingestion.loader` | Phase 4 complete: `DocumentChangeTracker` and HTML support merged into `ingestion.loader`; production переключён 2026-04-27. Можно удалять. |
+| ~~`manager.py`~~ | — | ✅ removed 2026-04-27 | `vectordb.manager` | Phase 3+4 final cleanup closed by `4c557f3`; root import now raises `ModuleNotFoundError`. |
+| ~~`sqlite_trace.py`~~ | — | ✅ removed 2026-04-27 | `tracing.sqlite_trace` | Phase 3+4 final cleanup closed by `4c557f3`; root import now raises `ModuleNotFoundError`. |
+| ~~`loader.py`~~ | — | ✅ removed 2026-04-27 | `ingestion.loader` | Phase 3+4 final cleanup closed by `4c557f3`; root import now raises `ModuleNotFoundError`. |
 | ~~`chunking.py`~~ | — | ✅ moved 2026-04-27 | `scripts.chunking_eval` | Phase 5 complete. Standalone tuning script moved out of project root. |
 | ~~`bitrix.py`~~ | — | ✅ moved 2026-04-27 | `integrations.bitrix` | Phase 2 complete. |
 | ~~`mock_inbox.py`~~ | — | ✅ moved 2026-04-27 | `integrations.mock_inbox` | Phase 2 complete. |
@@ -45,7 +45,7 @@ import sites:
    `tests/test_mock_inbox_import.py`, `config/settings.py`. ✅ done 2026-04-27.
 3. `seed_docs.py` → `demo/seed_docs.py`. No production imports — only doc updates. ✅ done 2026-04-27.
 
-### Phase 3 — collapse `manager` and `sqlite_trace` (high risk, ~half day each)
+### Phase 3 — collapse `manager` and `sqlite_trace` ✅ DONE 2026-04-27
 
 These have non-trivial wrappers. Two acceptable end-states:
 
@@ -56,16 +56,18 @@ wrapper, fold tenant-aware caching / PII redaction into the canonical module.
 `vectordb/_base_manager.py` so the canonical import is `vectordb.manager`
 everywhere. Same idea for `sqlite_trace.py` → `tracing/_base_trace.py`.
 
-2026-04-27 update: `manager.py` and `sqlite_trace.py` use Option B. The base
+2026-04-27 update: `manager.py` and `sqlite_trace.py` used Option B. The base
 implementations now live in `vectordb/_base_manager.py` and
-`tracing/_base_trace.py`; both root files are compatibility shims.
+`tracing/_base_trace.py`; the temporary root compatibility shims were removed
+in `4c557f3`.
 
 ### Phase 4 — resolve the `loader` fork ✅ DONE 2026-04-27
 
 Merged the fork into `ingestion.loader`: it now keeps package features
 (`.json`/`.csv`, single-file loading, per-page PDF docs) and root-only features
-(`DocumentChangeTracker`, `.html`/`.htm` support). Root `loader.py` is now a
-compatibility shim, and production imports use `ingestion.loader` directly.
+(`DocumentChangeTracker`, `.html`/`.htm` support). Production imports use
+`ingestion.loader` directly; the temporary root `loader.py` shim was removed in
+`4c557f3`.
 
 ### Phase 5 — find a home for `chunking.py` ✅ DONE 2026-04-27
 
