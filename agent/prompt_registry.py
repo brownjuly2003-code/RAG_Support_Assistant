@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from evaluation.experiment_schema import Experiment, load_experiment
 
@@ -43,6 +43,8 @@ def _load_staged_override_payload() -> dict[str, object]:
 def _load_staged_prompt_overrides() -> dict[str, str]:
     payload = _load_staged_override_payload()
     overrides = payload.get("prompt_overrides") or {}
+    if not isinstance(overrides, dict):
+        return {}
     return {str(key): str(value) for key, value in overrides.items()}
 
 
@@ -65,6 +67,8 @@ def load_current_experiment() -> Experiment | None:
             return None
 
     prompt_overrides = payload.get("prompt_overrides") or {}
+    if not isinstance(prompt_overrides, dict):
+        prompt_overrides = {}
     settings_overrides = payload.get("settings_overrides") or {}
     return Experiment(
         id="2026-01-01-staged-runtime",
@@ -109,7 +113,7 @@ def _stable_rollout_bucket(tenant_id: str, user_id: str, session_id: str | None)
     return int.from_bytes(digest, "big") % 100
 
 
-async def refresh_assignment_cache_from_db(session) -> int:
+async def refresh_assignment_cache_from_db(session: Any) -> int:
     """Async refresh of the sticky rollout cache from `experiment_assignments`.
 
     Intended to be called from FastAPI lifespan/startup or a periodic task.

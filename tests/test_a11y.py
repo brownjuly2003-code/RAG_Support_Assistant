@@ -101,6 +101,8 @@ TEMPLATE_A11Y_CONTEXTS = {
 }
 TEMPLATE_A11Y_PATHS = [f"/{name}" for name in TEMPLATE_A11Y_CONTEXTS]
 ALL_A11Y_PATHS = STATIC_A11Y_PATHS + TEMPLATE_A11Y_PATHS
+AXE_SUBPROCESS_TIMEOUT_SEC = 180
+AXE_PYTEST_TIMEOUT_SEC = AXE_SUBPROCESS_TIMEOUT_SEC + 60
 
 
 class _QuietStaticHandler(SimpleHTTPRequestHandler):
@@ -196,6 +198,7 @@ def _axe_cli_available() -> bool:
     not _axe_cli_available(),
     reason="@axe-core/cli not installed (npm i -g @axe-core/cli) — running headless axe scan unavailable",
 )
+@pytest.mark.timeout(AXE_PYTEST_TIMEOUT_SEC)
 @pytest.mark.parametrize("page_path", ALL_A11Y_PATHS)
 def test_axe_has_no_serious_or_critical_findings(
     a11y_base_url: str,
@@ -206,6 +209,7 @@ def test_axe_has_no_serious_or_critical_findings(
     report_path = tmp_path / report_name
     command = [
         shutil.which("npx.cmd") or shutil.which("npx") or "npx",
+        "--no-install",
         "@axe-core/cli",
         f"{a11y_base_url}{page_path}",
         "--save",
@@ -228,10 +232,12 @@ def test_axe_has_no_serious_or_critical_findings(
             text=True,
             check=False,
             env=env,
-            timeout=180,
+            timeout=AXE_SUBPROCESS_TIMEOUT_SEC,
         )
     except subprocess.TimeoutExpired as exc:
-        pytest.fail(f"axe-cli timed out after 180s for {page_path}: {exc}")
+        pytest.fail(
+            f"axe-cli timed out after {AXE_SUBPROCESS_TIMEOUT_SEC}s for {page_path}: {exc}"
+        )
 
     assert completed.returncode == 0, completed.stderr or completed.stdout
 

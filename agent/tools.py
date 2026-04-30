@@ -3,14 +3,17 @@ from __future__ import annotations
 import asyncio
 import re
 import uuid
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 from db.engine import async_session
 from db.models import EscalatedTicket
 from vectordb.manager import get_retriever
 
 
-def tool(func):
+_ToolFunc = TypeVar("_ToolFunc", bound=Callable[..., Any])
+
+
+def tool(func: _ToolFunc) -> _ToolFunc:
     return func
 
 

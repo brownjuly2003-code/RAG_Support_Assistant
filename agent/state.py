@@ -30,12 +30,14 @@ agent/state.py
     Оценка качества ответа по шкале 1–100 (чем выше, тем лучше). Эти
     значения выставляет узел evaluate (self-evaluation LLM).
 
-- route: Literal["auto","human","retry","error"] | None
+- route: Literal["auto","human","retry","error","error_escalation","agentic"] | None
     Решение маршрутизации:
         "auto"  → ответ достаточно хороший, можно отдать пользователю;
         "human" → лучше эскалировать на человека (оператор поддержки);
         "retry" → Self-RAG: переформулировать запрос и повторить;
-        "error" → необработанное исключение в пайплайне, эскалировать.
+        "error" → необработанное исключение в пайплайне, эскалировать;
+        "error_escalation" → fallback-ответ после error handler;
+        "agentic" → ответ собран agentic tool-use flow.
     До узла route — None.
 
 - trace_id: str
@@ -46,7 +48,7 @@ agent/state.py
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional, TypedDict
+from typing import Any, List, Literal, Optional, TypedDict
 import uuid
 
 
@@ -82,12 +84,13 @@ class GraphState(TypedDict, total=False):
     factuality_score: int
     fact_verification_skipped: bool
     complexity: Literal["simple", "complex", "unknown"]
-    route: Optional[Literal["auto", "human", "retry", "error"]]
+    route: Optional[Literal["auto", "human", "retry", "error", "error_escalation", "agentic"]]
     trace_id: str
     tenant_id: str
     error: bool
     error_message: str
     error_node: str
+    knowledge_gap: bool
     iteration: int
     max_iterations: int
     chat_history: List[dict]
@@ -104,7 +107,7 @@ class GraphState(TypedDict, total=False):
     # Tool-use / agentic flow (Batch K). Optional because most node paths
     # never set them; nodes that do (e.g. agentic generate) update via
     # state["..."] = ... rather than the constructor.
-    tool_calls: List[dict]
+    tool_calls: List[str] | List[dict[str, Any]]
     requires_confirmation: bool
     action_summary: str
 

@@ -15,7 +15,7 @@ import logging
 import inspect
 import re
 import time
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Optional, Protocol, cast
 
 from langgraph.graph import END, StateGraph
 from tracing.langfuse_trace import trace_llm_call
@@ -23,20 +23,25 @@ try:
     from tracing.otel import get_tracer as get_otel_tracer
 except ImportError:
     class _NoopSpan:
-        def __enter__(self):
+        def __enter__(self) -> "_NoopSpan":
             return self
 
-        def __exit__(self, exc_type, exc, tb) -> bool:
+        def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc: BaseException | None,
+            tb: Any,
+        ) -> Literal[False]:
             return False
 
         def set_attribute(self, key: str, value: object) -> None:
             return None
 
     class _NoopTracer:
-        def start_as_current_span(self, name: str):
+        def start_as_current_span(self, name: str) -> _NoopSpan:
             return _NoopSpan()
 
-    def get_otel_tracer(name: str = "rag.graph"):
+    def get_otel_tracer(name: str = "rag.graph") -> Any:
         _ = name
         return _NoopTracer()
 
@@ -238,7 +243,7 @@ class LocalOllamaLLM:
         invoke_with_retry = getattr(self, "_invoke_with_retry", self._llm.invoke)
         if self._breaker is None:
             return invoke_with_retry(prompt)
-        return self._breaker.call(invoke_with_retry, prompt)
+        return cast("CircuitBreaker", self._breaker).call(invoke_with_retry, prompt)
 
 
 _default_breaker: CircuitBreaker | None = None
@@ -257,7 +262,7 @@ def get_default_breaker() -> CircuitBreaker | None:
     if not getattr(settings, "circuit_breaker_enabled", True):
         return None
 
-    def _prom_hook(name: str, old_state, new_state) -> None:
+    def _prom_hook(name: str, old_state: Any, new_state: Any) -> None:
         try:
             from monitoring.prometheus import record_circuit_breaker_change
 
@@ -657,6 +662,7 @@ def make_classify_complexity_node(
                 model=model,
                 duration_ms=0.0,
             )
+            complexity: Literal["simple", "complex", "unknown"]
             if raw.startswith("SIMPLE"):
                 complexity = "simple"
             elif raw.startswith("COMPLEX"):
@@ -1201,7 +1207,7 @@ def make_evaluate_node(
                     raw = ""
                 score = _parse_int_score(raw, default=50)
                 span.set_attribute("rag.quality_score", score)
-            new_state = {
+            new_state: GraphState = {
                 **state,
                 "quality_score": score,
                 "relevance_score": round(score / 100.0, 3),
@@ -1274,9 +1280,9 @@ def make_suggest_questions_node(llm: SupportsInvoke) -> Callable[[GraphState], G
                 exc,
                 extra={"trace_id": trace_id},
             )
-            new_state: GraphState = {**state, "suggested_questions": []}
-            log_step(trace_id, "suggest_questions", new_state)
-            return new_state
+            fallback_state: GraphState = {**state, "suggested_questions": []}
+            log_step(trace_id, "suggest_questions", fallback_state)
+            return fallback_state
 
     return node
 
@@ -1308,6 +1314,7 @@ def make_route_or_retry_node(
             iteration = state.get("iteration", 0)
             max_iter = state.get("max_iterations", 2)
 
+            route: Literal["auto", "human", "retry"]
             if q is None or r is None:
                 route = "human"
             elif q >= min_quality and r >= min_relevance:
@@ -1443,7 +1450,7 @@ def build_support_graph(
     llm: SupportsInvoke | None = None,
     min_quality: int | None = None,
     max_iterations: int = 2,
-):
+) -> Any:
     """Собирает и компилирует граф LangGraph Level 2.
 
     Граф:
@@ -1458,6 +1465,8 @@ def build_support_graph(
     if min_quality is None:
         min_quality = getattr(settings, "quality_threshold", 80)
 
+    llm_fast: SupportsInvoke
+    llm_strong: SupportsInvoke
     if llm is None:
         if build_provider_runtime is not None:
             runtime = build_provider_runtime(settings)
@@ -1473,7 +1482,7 @@ def build_support_graph(
         llm_fast = llm
         llm_strong = llm
 
-    workflow = StateGraph(GraphState)
+    workflow: Any = StateGraph(GraphState)
 
     # Регистрируем узлы
     workflow.add_node("classify_complexity", make_classify_complexity_node(llm_fast))
@@ -1823,7 +1832,7 @@ class ConversationSession:
         ]
         if not answer_parts:
             return None
-        final_state = {
+        fallback_state: GraphState = {
             **state,
             "answer": "\n\n".join(answer_parts),
             "route": "agentic",
@@ -1833,9 +1842,9 @@ class ConversationSession:
             "requires_confirmation": False,
             "action_summary": "",
         }
-        final_state = _apply_llm_usage(final_state, usage)
-        log_step(active_trace_id, "agentic_fallback", final_state)
-        return final_state
+        fallback_state = _apply_llm_usage(fallback_state, usage)
+        log_step(active_trace_id, "agentic_fallback", fallback_state)
+        return fallback_state
 
     def _run_agentic_flow(
         self,
@@ -1883,13 +1892,15 @@ class ConversationSession:
                     session_id=session_id or "",
                 )
                 state.update(
-                    answer=ticket_result,
-                    route="auto",
-                    quality_score=90,
-                    relevance_score=0.9,
-                    tool_calls=["create_ticket"],
-                    requires_confirmation=False,
-                    action_summary="",
+                    {
+                        "answer": ticket_result,
+                        "route": "auto",
+                        "quality_score": 90,
+                        "relevance_score": 0.9,
+                        "tool_calls": ["create_ticket"],
+                        "requires_confirmation": False,
+                        "action_summary": "",
+                    }
                 )
                 log_step(active_trace_id, "create_ticket", state)
                 finish_trace(active_trace_id, state)
@@ -1897,26 +1908,30 @@ class ConversationSession:
             if confirm is False:
                 self._pending_action = None
                 state.update(
-                    answer="Действие отменено.",
-                    route="auto",
-                    quality_score=80,
-                    relevance_score=0.8,
-                    tool_calls=[],
-                    requires_confirmation=False,
-                    action_summary="",
+                    {
+                        "answer": "Действие отменено.",
+                        "route": "auto",
+                        "quality_score": 80,
+                        "relevance_score": 0.8,
+                        "tool_calls": [],
+                        "requires_confirmation": False,
+                        "action_summary": "",
+                    }
                 )
                 log_step(active_trace_id, "confirmation_cancelled", state)
                 finish_trace(active_trace_id, state)
                 return state
 
             state.update(
-                answer=f"Подтвердите: {self._pending_action['action_summary']}",
-                route="agentic",
-                quality_score=80,
-                relevance_score=0.8,
-                tool_calls=[],
-                requires_confirmation=True,
-                action_summary=self._pending_action["action_summary"],
+                {
+                    "answer": f"Подтвердите: {self._pending_action['action_summary']}",
+                    "route": "agentic",
+                    "quality_score": 80,
+                    "relevance_score": 0.8,
+                    "tool_calls": [],
+                    "requires_confirmation": True,
+                    "action_summary": self._pending_action["action_summary"],
+                }
             )
             log_step(active_trace_id, "await_confirmation", state)
             finish_trace(active_trace_id, state)
@@ -1943,23 +1958,24 @@ class ConversationSession:
                 "action_summary": action_summary,
             }
             state.update(
-                answer=f"Подтвердите: {action_summary}",
-                route="agentic",
-                quality_score=80,
-                relevance_score=0.8,
-                tool_calls=["create_ticket"],
-                requires_confirmation=True,
-                action_summary=action_summary,
+                {
+                    "answer": f"Подтвердите: {action_summary}",
+                    "route": "agentic",
+                    "quality_score": 80,
+                    "relevance_score": 0.8,
+                    "tool_calls": ["create_ticket"],
+                    "requires_confirmation": True,
+                    "action_summary": action_summary,
+                }
             )
             log_step(active_trace_id, "confirmation_gate", state)
             finish_trace(active_trace_id, state)
             return state
 
         order_id = _extract_order_id(question)
-        needs_order_tool = order_id is not None and any(
+        if order_id is None or not any(
             marker in normalized for marker in ("заказ", "достав", "статус")
-        )
-        if not needs_order_tool:
+        ):
             finish_trace(active_trace_id, state)
             return None
 
@@ -1990,13 +2006,15 @@ class ConversationSession:
         )
 
         state.update(
-            answer="\n\n".join(part for part in answer_parts if part),
-            route="auto",
-            quality_score=85,
-            relevance_score=0.85,
-            tool_calls=tool_calls,
-            requires_confirmation=False,
-            action_summary="",
+            {
+                "answer": "\n\n".join(part for part in answer_parts if part),
+                "route": "auto",
+                "quality_score": 85,
+                "relevance_score": 0.85,
+                "tool_calls": tool_calls,
+                "requires_confirmation": False,
+                "action_summary": "",
+            }
         )
         finish_trace(active_trace_id, state)
         return state

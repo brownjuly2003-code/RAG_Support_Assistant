@@ -112,11 +112,9 @@ module = ["db.models"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
-# agent.state + agent.prompts — strict scope (Step 9). agent.graph remains
-# informational pending dedicated typing pass (~65 baseline errors at the
-# default level, not yet ready for strict).
+# agent modules — strict scope (Step 9).
 [[tool.mypy.overrides]]
-module = ["agent.state", "agent.prompts"]
+module = ["agent.state", "agent.prompts", "agent.prompt_registry", "agent.tools", "agent.graph"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
@@ -132,13 +130,6 @@ disallow_incomplete_defs = true
 warn_return_any = true
 warn_unused_ignores = true
 no_implicit_optional = true
-
-# Relaxed treatment for legacy / large modules — leave them untyped for now
-# but still report obvious bugs.
-[[tool.mypy.overrides]]
-module = ["agent.graph"]
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
 
 # ---------------------------------------------------------------------------
 # Bandit — static security analysis. Run as `bandit -r . -c pyproject.toml`.

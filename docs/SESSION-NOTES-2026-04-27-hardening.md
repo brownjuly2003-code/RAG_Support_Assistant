@@ -17,7 +17,7 @@
 - **1 baseline**: Phase 4 loader merge (был uncommitted 2 сессии).
 
 Local rating обновлён 8.7/10 → **9.2/10**, commercial 7.7/10 → **8.5/10**.
-Самые опасные deploy/security gaps закрыты. На момент snapshot оставались P1 quality (coverage, deps lock, Helm secrets split) и P2 architectural (streaming RAG parity, thin app-shell); update 2026-04-29: coverage gate закрыт.
+Самые опасные deploy/security gaps закрыты. На момент snapshot оставались P1 quality (coverage, deps lock, Helm secrets split) и P2 architectural (streaming RAG parity, thin app-shell); update 2026-04-29: эти follow-up шаги закрыты, `agent.*` strict typing продвинут до `agent.graph`.
 
 ## Что закоммичено (от старого к новому)
 
@@ -95,8 +95,11 @@ python -c "from api.app import app as a; import main as m; print(a is m.app, len
 
 - **KM (Kimi) review** падает `normalization_error` на 2618-строчном diff. Для tri-blocking review в будущем рассмотреть chunking diff'а перед KM.
 - **Coverage gate 70%** — closed 2026-04-29: full pytest+coverage прошёл без зависания, **70.02%** (`630 passed, 4 skipped`), `fail_under=70`. Добавлены focused tests для `evaluation/ragas_eval.py`, `vectordb/_base_manager.py`, `evaluation/benchmark_runner.py`; live regression eval стабилизирован без реальных embeddings/categorizer в coverage path.
-- **Helm chart secrets** — `deploy/helm/values.yaml` всё ещё имеет `DATABASE_URL=changeme` в ConfigMap (Codex P1, для commercial deploy).
-- **Streaming RAG parity** — `/ask/stream` обходит часть quality gates (Codex H1).
+- **Helm chart secrets** — closed 2026-04-29: DB/JWT/provider/SMTP secrets вынесены из ConfigMap в `deploy/helm/templates/secret.yaml`, поддержан `secrets.existingSecret`, insecure defaults и `latest` tag убраны.
+- **Streaming RAG parity** — closed 2026-04-29: `/api/ask/stream` использует graph-level final route/quality/citations; parity покрыта `tests/test_streaming_rag_parity.py`.
+- **Dependency lock / CI security / app-shell** — closed 2026-04-29: uv lock files подключены к Docker/CI, security job добавлен, `api/app.py` разрезан на thin shell + routers/services.
+- **Agent typing** — closed 2026-04-29: `agent.state`, `agent.prompts`, `agent.prompt_registry`, `agent.tools`, `agent.graph` strict-clean и в CI. `agent.graph` full strict baseline закрыт **63 errors → 0**.
+- **Axe/Playwright unit hang** — fixed 2026-04-29: `tests/test_a11y.py` получил per-test timeout budget для axe subprocess и `npx --no-install`; full unit run `623 passed, 4 skipped` проходит вместе с a11y за 14:59 local.
 
 См. `docs/plans/2026-04-27-next-steps.md` для приоритезированного плана.
 

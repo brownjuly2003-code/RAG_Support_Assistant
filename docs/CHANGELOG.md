@@ -2,6 +2,14 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Agent-Strict-A11y] — 2026-04-29 — agent typing scope + stable axe gate
+
+- `agent.prompt_registry`, `agent.tools` и `agent.graph` добавлены в strict mypy scope и CI gate рядом с `agent.state` / `agent.prompts`; YAML override payload теперь сужается до `dict`, no-op `tool` decorator типизирован через `TypeVar`.
+- `agent.graph` full strict clean: GraphState route/tool_calls приведены к реальным runtime-значениям, `knowledge_gap` добавлен в TypedDict, LangGraph registration явно ограничен dynamic boundary через `workflow: Any`.
+- `.github/workflows/ci.yml` обновлён: strict mypy команда теперь проверяет `agent/prompt_registry.py`, `agent/tools.py` и `agent/graph.py`.
+- `tests/test_a11y.py` стабилизирован для full unit suite: axe subprocess timeout вынесен в константу, pytest marker даёт axe-параметрам больший budget, `npx` запускается с `--no-install` как availability probe.
+- Verification: strict mypy scope clean (**18 source files**), `agent.graph` explicit strict clean, focused agent/a11y tests green, full unit suite без integration — **623 passed, 4 skipped** за 14:59 local.
+
 ## [Coverage-Gate-70] — 2026-04-29 — verified 70% coverage gate + focused test expansion
 
 - `tests/test_weekly_report.py` расширен проверками для `reports.renderer`: week-over-week helpers, empty states, top-5 limits, weekly aggregation, empty analytics and document lookup failures.

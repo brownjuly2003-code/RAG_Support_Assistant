@@ -20,7 +20,7 @@
 - `scripts/reindex.py --all` rebuild-ит Chroma из `data/uploads`, а не из Postgres. Потеря и `data/uploads`, и Chroma одновременно означает ручное повторное наполнение знаний.
 - `scripts/rotate_encryption_key.py` существует, но это заглушка: он проверяет env wiring и не переписывает ciphertext. Для реальной ротации используйте SQL-процедуру из раздела `2.3`.
 - Операционные трейсы и feedback сейчас живут в `data/tracing/traces.db`; их нужно бэкапить отдельно от Postgres.
-- Helm chart в `deploy/helm/` не содержит `Secret` для `DB_ENCRYPTION_KEY` и не содержит `PersistentVolumeClaim` для `/app/data`. В production это надо добавить до первого релиза, иначе uploads / Chroma / SQLite traces будут эфемерными.
+- Helm chart в `deploy/helm/` выносит `DATABASE_URL`, `DB_ENCRYPTION_KEY` и остальные runtime credentials в Kubernetes Secret (`secrets.existingSecret` или chart-managed `<release>-secrets`), но всё ещё не создаёт `PersistentVolumeClaim` для `/app/data`. В production PVC/object storage нужно добавить до первого релиза, иначе uploads / Chroma / SQLite traces будут эфемерными.
 - Ollama-модели не резервируем: они derivable и повторно подтягиваются стандартным деплоем.
 
 ### Базовые переменные
@@ -69,12 +69,13 @@ docker compose exec -T postgres sh -lc '
 
 #### Kubernetes
 
-Текущий chart читает `DATABASE_URL` из ConfigMap `RELEASE-config`. Для production лучше переопределить `DATABASE_URL` из Secret или Vault и экспортировать его в оболочку перед запуском команды.
+Текущий chart читает `DATABASE_URL` из Secret: либо внешнего `secrets.existingSecret`, либо chart-managed `RELEASE-secrets`. Перед backup-командой экспортируйте DSN из Vault или Kubernetes Secret.
 
 ```bash
 export NAMESPACE="${NAMESPACE:-rag-support}"
 export RELEASE="${RELEASE:-rag-support-assistant}"
-export DATABASE_URL="${DATABASE_URL:-$(kubectl -n "$NAMESPACE" get configmap "$RELEASE-config" -o jsonpath='{.data.DATABASE_URL}')}"
+export SECRET_NAME="${SECRET_NAME:-$RELEASE-secrets}"
+export DATABASE_URL="${DATABASE_URL:-$(kubectl -n "$NAMESPACE" get secret "$SECRET_NAME" -o jsonpath='{.data.DATABASE_URL}' | base64 -d)}"
 
 kubectl -n "$NAMESPACE" run "pgdump-${timestamp}" \
   --rm -i --restart=Never \
@@ -773,7 +774,7 @@ docker-compose -f docker-compose.test.yml down -v
 - Per-tenant isolation в Chroma существует на уровне collection name (`rag_docs_<tenant>`), но storage layout общий. Поэтому point restore одного tenant должен идти через export/import коллекции, а не через raw copy одного файла.
 - `scripts/reindex.py --all` использует `data/uploads` как вход. Postgres не является источником для rebuild embeddings в текущей версии.
 - `DB_ENCRYPTION_KEY` нельзя хранить рядом с данными. Бэкап ключа и бэкап Postgres должны быть разведены по разным системам контроля доступа.
-- Текущий Helm chart неполон для production backup/restore: нет `Secret` для `DB_ENCRYPTION_KEY` и нет PVC-манифестов для `/app/data`.
+- Текущий Helm chart неполон для production backup/restore: runtime secrets вынесены в Secret, но PVC-манифестов для `/app/data` всё ещё нет.
 - Трейсы и feedback всё ещё пишутся в `data/tracing/traces.db`; потеря этого файла не ломает ответы, но ломает расследование инцидентов и `/api/metrics`.
 - `scripts/rotate_encryption_key.py` сейчас только подтверждает, что env variables переданы; фактическую ротацию выполняем SQL-процедурой.
 - Ollama-модели не включаем в backup scope: при DR их нужно заново подтянуть стандартным деплоем.

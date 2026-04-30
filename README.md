@@ -861,6 +861,9 @@ python scripts/migrate_default_collection.py
 - Latest axe audit: [docs/a11y/axe-audit-2026-04-21.md](docs/a11y/axe-audit-2026-04-21.md)
 - Current blocking status: **PASS** for scanned UI pages and rendered Jinja
   templates (`0` critical, `0` serious)
+- Local unit gate runs `tests/test_a11y.py` through `@axe-core/cli` when the
+  CLI is installed; axe subprocesses use an explicit timeout budget so the
+  full unit suite does not hang under `pytest --timeout=60`.
 - Remaining non-blocking work: moderate landmark/region cleanup and heading
   normalization documented in the audit report
 

@@ -42,11 +42,11 @@
 
 ---
 
-### Шаг 3. Helm secrets split — secrets out of ConfigMap (~1.5 часа)
+### Шаг 3. Helm secrets split — выполнено 2026-04-29
 
 **Файлы:** `deploy/helm/values.yaml`, `deploy/helm/templates/configmap.yaml`, `deploy/helm/templates/deployment.yaml`, новый `deploy/helm/templates/secret.yaml`.
 
-**Контекст.** Codex P1: `DATABASE_URL`, `JWT_SECRET`, `ADMIN_PASSWORD_HASH`, `DB_ENCRYPTION_KEY`, provider keys, SMTP/IMAP credentials в ConfigMap (видны через `kubectl get configmap`). Также `changeme` placeholder и tag `latest`.
+**Исходный контекст.** Codex P1 был в том, что `DATABASE_URL`, `JWT_SECRET`, `ADMIN_PASSWORD_HASH`, `DB_ENCRYPTION_KEY`, provider keys, SMTP/IMAP credentials лежали в ConfigMap (видны через `kubectl get configmap`). Также были `changeme` placeholder и tag `latest`.
 
 **Шаги:**
 1. Создать `deploy/helm/templates/secret.yaml`: Secret с `DATABASE_URL`, `JWT_SECRET`, `SESSION_SECRET_KEY`, `ADMIN_PASSWORD_HASH`, `DB_ENCRYPTION_KEY`, `MISTRAL_API_KEY`, `SMTP_PASSWORD`, `EMAIL_WEBHOOK_SIGNING_SECRET`. Поля или из `.Values.secrets` или из existingSecret.
@@ -58,11 +58,16 @@
 
 **Acceptance.** `kubectl get configmap` не содержит DB credentials/JWT. `helm template --values prod-values.yaml` рендерится с RAG_ENV=production.
 
+**Проверено:**
+1. `helm lint deploy/helm/ --strict --set env.CORS_ORIGINS=... --set secrets.*=... --set postgresql.auth.password=...`
+2. `helm template rag-test deploy/helm/ ...` — ConfigMap содержит только public env, Secret содержит DB/JWT/provider/SMTP secrets, image tag падает на `Chart.appVersion`.
+3. `helm template ... --set secrets.existingSecret=rag-prod-secrets ...` — chart-managed Secret не рендерится, `secretRef` указывает на external Secret.
+
 ---
 
 ## Ближайший месяц (~1-2 дня)
 
-### Шаг 4. Streaming RAG parity (~1 день)
+### Шаг 4. Streaming RAG parity — выполнено 2026-04-29
 
 **Файлы:** `api/routers/conversation.py:459-590`, `agent/graph.py`, новые тесты.
 
@@ -79,7 +84,7 @@
 
 ---
 
-### Шаг 5. Dependency lock через uv/pip-tools (~3 часа)
+### Шаг 5. Dependency lock через uv — выполнено 2026-04-29
 
 **Файлы:** новый `requirements.lock` или `uv.lock`, `Dockerfile`, CI workflows.
 
@@ -97,7 +102,7 @@
 
 ---
 
-### Шаг 6. mypy strict для config.settings (~2 часа)
+### Шаг 6. mypy strict для config.settings — выполнено 2026-04-29
 
 **Файлы:** `config/settings.py`, `pyproject.toml`.
 
@@ -112,7 +117,7 @@
 
 ---
 
-### Шаг 7. CI security pipeline (~2 часа)
+### Шаг 7. CI security pipeline — выполнено 2026-04-29
 
 **Файлы:** новый job в `.github/workflows/ci.yml` (либо новый `security.yml`).
 
@@ -128,7 +133,7 @@
 
 ## Квартал (если идёт commercial scenario)
 
-### Шаг 8. Финальный thin app-shell (~1 день)
+### Шаг 8. Финальный thin app-shell — выполнено 2026-04-29
 
 **Файлы:** новый `api/routers/session_auth.py`, новый `api/services/`, `api/app.py`.
 
@@ -143,9 +148,17 @@
 
 ---
 
-### Шаг 9. mypy strict для agent.* (LangGraph nodes) (~2 дня)
+### Шаг 9. mypy strict для agent.* (LangGraph nodes) — выполнено 2026-04-29
 
-Сложный модуль для типизации, но добавит уверенности в pipeline-mutation коде. Цель — поднять `agent.*` до strict в pyproject.
+`agent.state`, `agent.prompts`, `agent.prompt_registry`, `agent.tools`, `agent.graph` добавлены в strict mypy scope и CI gate.
+
+**Проверено:**
+1. `python -m mypy auth db/models.py db/engine.py llm/providers/ config/settings.py agent/state.py agent/prompts.py agent/prompt_registry.py agent/tools.py agent/graph.py --no-incremental --show-error-codes` — **18 source files, clean**.
+2. `python -m mypy agent/graph.py --no-incremental --disallow-untyped-defs --disallow-incomplete-defs --show-error-codes` — clean.
+3. `python -m pytest tests/test_state.py tests/test_graph_error_handling.py tests/test_agent_tools.py tests/test_kb_gaps.py -q -p no:schemathesis --timeout=60 --basetemp=.tmp\pytest-agent-graph-strict-focused` — **20 passed**.
+4. `python -m pytest tests -q --ignore=tests/integration -p no:schemathesis -p no:cacheprovider --timeout=60 --durations=20 --basetemp=.tmp\pytest-agent-graph-strict-full-final` — **623 passed, 4 skipped** за 14:59 local.
+
+**Что изменилось:** full strict baseline **63 errors → 0**. Основные фиксы: GraphState route/tool_calls/knowledge_gap приведены к runtime shape, локальные Literal-аннотации добавлены для `complexity`/`route`, TypedDict `update(kwargs)` заменён на `update({...})`, LangGraph node registration оставлен как явная dynamic boundary через `workflow: Any`.
 
 ---
 
