@@ -74,14 +74,15 @@ Merged the fork into `ingestion.loader`: it now keeps package features
 It is a tuning script, not a production module. Moved to
 `scripts/chunking_eval.py`; runtime imports now use `vectordb.manager` directly.
 
-## api/app.py monolith split — in progress
+## api/app.py monolith split — router extraction complete
 
-`api/app.py` is now about 1.6k LOC. Most endpoint groups now live under
-`api/routers/`. The large conversation orchestration block now lives in
-`api/routers/conversation.py` and still reaches into `api.app` lazily for
-`_sessions`, `_session_last_access`, `_db_retry_after`, and
-`_pipeline_semaphore` so existing `monkeypatch.setattr(api.app, ...)` tests
-continue to work.
+`api/app.py` is now 1,884 LOC at `9e03bf0`. Public endpoint groups live under
+`api/routers/`, including auth/session management. The app module still owns
+FastAPI construction, middleware, lifespan, shared in-memory session state, and
+compatibility re-exports used by older tests. Some routers still reach into
+`api.app` lazily for `_sessions`, `_session_last_access`, `_db_retry_after`,
+and `_pipeline_semaphore` so existing `monkeypatch.setattr(api.app, ...)`
+tests continue to work.
 
 ### Done sub-routers
 
@@ -117,13 +118,11 @@ continue to work.
 - `api/routers/upload.py` — `/upload` and `/tasks/{task_id}` (Phase 2k).
 - `api/routers/conversation.py` — `/ask`, `/chat`, `/ask/stream`, and
   `/chat/stream` (Phase 2l).
+- `api/routers/session_auth.py` — `/auth/login`, `/auth/refresh`,
+  `/sessions/{id}/history`, `/sessions`, and `DELETE /sessions/{id}` (Step 8
+  app-shell cleanup).
 
-64 endpoints out of 69 API routes, plus 3 root-level routes, are now in
-dedicated router files. Latest
-sanity: 69 `/api` routes, 13/13 conversation/auth/tenant-focused tests pass,
-and 56/56 broader `/api/ask` tests pass (2026-04-27, using explicit pytest
-`--basetemp` because the default Windows temp directory is not readable in this
-workspace).
+Latest sanity: 69 `/api` routes at `9e03bf0`.
 
 ### Lesson learned from the splits — module-import pattern
 
@@ -154,7 +153,7 @@ the same late-bound module pattern in non-router runtime code such as
 For shared rate limiting, import `limiter` from `api.rate_limit`; importing it
 from `api.app` creates a circular dependency when a router is imported directly.
 
-### Next splits (in order of risk)
+### Split checklist
 
 | Phase | Endpoints | Blockers |
 |---|---|---|
@@ -171,10 +170,12 @@ from `api.app` creates a circular dependency when a router is imported directly.
 | ~~2k~~ | ~~`/upload`, `/tasks/{task_id}`~~ | ✅ done 2026-04-27 |
 | ~~2l~~ | ~~`/ask`, `/ask/stream`, `/chat`, `/chat/stream`~~ | ✅ done 2026-04-27 |
 | ~~2m~~ | ~~`/admin/providers`, `/channels/email/inbound`~~ | ✅ done 2026-04-27 |
+| Step 8 | `/auth/login`, `/auth/refresh`, `/sessions/*` | ✅ done 2026-04-28 |
 
-The 2a-2m split plan is complete. `api/app.py` still owns the small auth/session
-surface (`/auth/login`, `/auth/refresh`, `/sessions/*`); those can be extracted
-later as a separate cleanup if the goal is a pure app-shell module.
+The 2a-2m split plan is complete, and the auth/session surface has also been
+extracted. Remaining app-shell work, if desired, is reducing `api/app.py`
+further by moving construction/lifespan/shared-state compatibility helpers
+behind smaller modules. That is a separate cleanup, not a route ownership gap.
 
 ## Type-checking debt
 
@@ -189,24 +190,17 @@ Strict mypy is enforced via `pyproject.toml [[tool.mypy.overrides]]` for:
   `tenant_admin_email` field, renamed shadowed `result` local in
   `_load_llm_model_prices`, narrowed `os.getenv("SESSION_SECRET_KEY")` with
   empty default, marked `import yaml` as `type: ignore[import-untyped]`).
-- `agent.state` + `agent.prompts` — passes clean 2026-04-28 (Step 9 partial).
-  Added `tool_calls`/`requires_confirmation`/`action_summary` keys to the
-  `GraphState` TypedDict so agentic-flow nodes can populate them without
-  TypedDict extra-key errors.
-
-The following modules are intentionally **not** strict yet:
-
-- `agent.graph` (LangGraph nodes) — самый сложный модуль для типизации,
-  ~65 baseline mypy errors at default level. Step 9 follow-up needs its
-  own dedicated typing pass: TypedDict update kwargs, StateGraph add_node
-  Generic State binding, multiple narrow-Optional assignments. Override
-  in pyproject keeps the file informational.
+- `agent.state`, `agent.prompts`, `agent.prompt_registry`, `agent.tools`,
+  `agent.graph` — passes clean 2026-04-30 in focused verification. Step 9 is
+  complete; `agent.graph` is now part of the strict override scope.
+- `api.app` — strict-clean in its own mypy invocation with `follow_imports=skip`.
 
 CI gate (как gate, не informational): `python -m mypy auth db/models.py
 db/engine.py llm/providers/ config/settings.py agent/state.py
-agent/prompts.py --no-incremental
---show-error-codes`. Любой регресс блокирует PR
-(`.github/workflows/ci.yml type-check job`).
+agent/prompts.py agent/prompt_registry.py agent/tools.py agent/graph.py
+--no-incremental --show-error-codes`, plus a separate `api/app.py` mypy
+invocation. Любой регресс блокирует PR (`.github/workflows/ci.yml type-check
+job`).
 
 ## What was done in this session (2026-04-26)
 
