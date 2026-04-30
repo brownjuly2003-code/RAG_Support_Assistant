@@ -10,16 +10,11 @@ import json as _json
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant
 from auth.dependencies import require_role
 
 router = APIRouter()
-
-
-def _app_module():
-    from api import app as _app  # noqa: PLC0415
-
-    return _app
 
 
 @router.post("/channels/email/inbound")

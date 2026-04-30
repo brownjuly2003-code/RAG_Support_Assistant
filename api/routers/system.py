@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant
 from auth.dependencies import require_role
 
@@ -37,12 +38,6 @@ class HealthResponse(BaseModel):
     pipeline_available: bool
     circuit_breakers: list[dict[str, Any]] = Field(default_factory=list)
     features: dict[str, bool] = Field(default_factory=dict)
-
-
-def _app_module():
-    from api import app as _app  # noqa: PLC0415
-
-    return _app
 
 
 def _shutdown_response() -> JSONResponse:

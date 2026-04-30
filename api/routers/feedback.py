@@ -9,6 +9,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from api._shared import app_module as _app_module
 from auth.dependencies import get_current_user, require_role
 from monitoring import prometheus as prometheus_metrics
 
@@ -27,12 +28,6 @@ class EscalateRequest(BaseModel):
     session_id: str = Field(..., max_length=100)
     question: str = Field(default="", max_length=2000)
     reason: str = Field(default="user_request", max_length=200)
-
-
-def _app_module():
-    from api import app as _app  # noqa: PLC0415
-
-    return _app
 
 
 async def _log_audit(**kwargs) -> None:

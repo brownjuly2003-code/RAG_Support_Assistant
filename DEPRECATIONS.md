@@ -76,7 +76,8 @@ It is a tuning script, not a production module. Moved to
 
 ## api/app.py monolith split — router extraction complete
 
-`api/app.py` is now 1,884 LOC at `f1e2be0`. Public endpoint groups live under
+`api/app.py` is now 1,623 LOC at `fc877f0` plus the 2026-04-30 working
+app-shell cleanup. Public endpoint groups live under
 `api/routers/`, including auth/session management. The app module still owns
 FastAPI construction, middleware, lifespan, shared in-memory session state, and
 compatibility re-exports used by older tests. Some routers still reach into
@@ -122,7 +123,8 @@ tests continue to work.
   `/sessions/{id}/history`, `/sessions`, and `DELETE /sessions/{id}` (Step 8
   app-shell cleanup).
 
-Latest sanity: 69 `/api` routes at `f1e2be0` (verified 2026-04-30).
+Latest sanity: 69 `/api` routes at `fc877f0` plus the 2026-04-30 working
+app-shell cleanup (verified 2026-04-30).
 
 ### Lesson learned from the splits — module-import pattern
 
@@ -135,20 +137,21 @@ load time, before the test patches it.
 Pattern that works:
 
 ```python
+from api._shared import app_module as _app_module
 from db import engine as _db_engine
 
 def _async_session():
     return _db_engine.async_session()  # late-bound through the module
 
 async def _log_audit(**kwargs):
-    from api import app as _app  # noqa: PLC0415
+    _app = _app_module()
     return await _app.log_audit(**kwargs)
 ```
 
 Apply this in every new sub-router that touches DB sessions or audit logs.
-For handlers whose tests monkeypatch helpers on `api.app`, use a lazy
-`from api import app as _app` inside the handler or a local wrapper. Apply
-the same late-bound module pattern in non-router runtime code such as
+For handlers whose tests monkeypatch helpers on `api.app`, use
+`api._shared.app_module()` through an `_app_module` alias. Apply the same
+late-bound module pattern in non-router runtime code such as
 `evaluation/evaluator_runner.py` when tests replace `db.engine` globals.
 For shared rate limiting, import `limiter` from `api.rate_limit`; importing it
 from `api.app` creates a circular dependency when a router is imported directly.
@@ -178,9 +181,13 @@ further by moving construction/lifespan/shared-state compatibility helpers
 behind smaller modules. That is a separate cleanup, not a route ownership gap.
 
 2026-04-30 update: `api/_shared.py` now owns the shared lazy `app_module()`
-accessor for extracted routers. `api/routers/upload.py` uses it first; this
-keeps direct `api.app` access centralized while preserving monkeypatch-friendly
-late binding.
+accessor for extracted routers. `upload.py`, `system.py`, `root_pages.py`,
+`auth_sso.py`, `feedback.py`, and `misc.py` use it. This keeps direct
+`api.app` access centralized while preserving monkeypatch-friendly late
+binding. Remaining local `_app_module()` wrappers are intentionally being
+retired in small slices: `admin_kb.py`, `admin_ops.py`,
+`admin_evaluations.py`, `admin_experiments.py`, `conversation.py`, and
+`session_auth.py`.
 
 ## Type-checking debt
 
@@ -207,7 +214,7 @@ agent/prompts.py agent/prompt_registry.py agent/tools.py agent/graph.py
 invocation. Любой регресс блокирует PR (`.github/workflows/ci.yml type-check
 job`).
 
-2026-04-30 sanity verification on `f1e2be0`:
+Historical 2026-04-30 sanity verification on `f1e2be0`:
 
 - `python -m ruff check api\app.py api agent auth db llm config evaluation scripts tests`
   -> clean.

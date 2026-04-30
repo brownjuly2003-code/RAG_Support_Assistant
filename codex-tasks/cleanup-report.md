@@ -1,5 +1,12 @@
 # Cleanup report — post arc 102-122
 
+> Current status note — 2026-04-30: this file is a historical hygiene report.
+> The canonical current state lives in `README.md`, `DEPRECATIONS.md`, and
+> `docs/CHANGELOG.md`. Since this report was written, root shim modules
+> `loader.py`, `manager.py`, and `sqlite_trace.py` were fully removed, Alembic
+> has advanced through migration `017`, and router app-shell cleanup now uses
+> `api._shared.app_module()` for the first six routers.
+
 ## 1. Trash / artifacts
 - `New folder/` — пустая директория в корне; `Get-ChildItem` вернул 0 элементов, `git check-ignore -v "New folder"` не даёт hit. Действие: `delete`.
 - `Сброс настрок COMET.py` — локальный destructive script; `Сброс настрок COMET.py:7-20` делает `Stop-Process`, `netsh winsock reset`, `Remove-Item` по браузерным профилям. Файл скрыт правилом `.gitignore:17`, но физически лежит в корне. Действие: `delete`.
@@ -16,11 +23,11 @@
 | ~~`state.py`~~ | удалён 2026-04-26 | `agent/state.py` ✅ | consumers переведены на `agent.state` | `done` |
 | ~~`graph.py`~~ | удалён 2026-04-26 | `agent/graph.py` ✅ | consumers переведены на `agent.graph` | `done` |
 | ~~`bitrix.py`~~ | перенесён 2026-04-27 | `integrations/bitrix.py` ✅ | `integrations/mock_inbox.py` | `done` |
-| `loader.py` | compatibility shim, fork merged 2026-04-27 | `ingestion/loader.py` ✅ | package loader has `.json`/`.csv`, single-file, `DocumentChangeTracker`, `.html`/`.htm` | `done` |
-| `manager.py` | compatibility shim, base implementation moved 2026-04-27 | `vectordb/_base_manager.py` ✅ + `vectordb/manager.py` tenant wrapper ✅ | root import kept for tests/legacy monkeypatch compatibility | `done` |
+| ~~`loader.py`~~ | removed 2026-04-27 | `ingestion/loader.py` ✅ | package loader has `.json`/`.csv`, single-file, `DocumentChangeTracker`, `.html`/`.htm` | `done` |
+| ~~`manager.py`~~ | removed 2026-04-27 | `vectordb/_base_manager.py` ✅ + `vectordb/manager.py` tenant wrapper ✅ | root import now raises `ModuleNotFoundError` by design | `done` |
 | ~~`chunking.py`~~ | moved 2026-04-27 | `scripts/chunking_eval.py` ✅ | active production consumers не найдены | `done` |
 | ~~`seed_docs.py`~~ | перенесён 2026-04-27 | `demo/seed_docs.py` ✅ | active consumers не найдены; `archive/legacy-tests/test_retrieval.py:30` ожидает `demo.seed_docs` | `done` |
-| `sqlite_trace.py` | compatibility shim, base implementation moved 2026-04-27 | `tracing/_base_trace.py` ✅ + `tracing/sqlite_trace.py` PII wrapper ✅ | root import kept for tests/legacy monkeypatch compatibility | `done` |
+| ~~`sqlite_trace.py`~~ | removed 2026-04-27 | `tracing/_base_trace.py` ✅ + `tracing/sqlite_trace.py` PII wrapper ✅ | root import now raises `ModuleNotFoundError` by design | `done` |
 | ~~`mock_inbox.py`~~ | перенесён 2026-04-27 | `integrations/mock_inbox.py` ✅ | `agent/graph.py`, `tests/test_mock_inbox_import.py` | `done` |
 
 ## 4. .gitignore / untracked
@@ -31,7 +38,8 @@
 - Другие untracked-файлы, которые не стоит автоматически добавлять в arc-commit, перечислены в section 11.
 
 ## 5. Alembic chain
-- Последовательность по `alembic history`: `001 -> 002 -> 003 -> 004 -> 005 -> 006 -> 007 -> 008 -> 009 -> 010 -> 011`.
+- Последовательность по `alembic history` на момент обновления:
+  `001 -> 002 -> 003 -> 004 -> 005 -> 006 -> 007 -> 008 -> 009 -> 010 -> 011 -> 012 -> 013 -> 014 -> 015 -> 016 -> 017`.
 - Проверка `down_revision`: все линейны — `004_escalated_tickets.py:13 -> "003"`, `005_eval_results.py:12 -> "004"`, `006_knowledge_gaps.py:12 -> "005"`, `007_user_sso_fields.py:12 -> "006"`, `008_enable_pgcrypto.py:14 -> "007"`, `009_kb_drafts.py:13 -> "008"`, `010_document_stats.py:12 -> "009"`, `011_trace_costs.py:12 -> "010"`. Статус — ✅ конфликтов `down_revision` не найдено.
 - Migration rollback test: не запускался. Структурно chain откатываемый, но `008_enable_pgcrypto.py:28-32` требует `DB_ENCRYPTION_KEY`, а `008_enable_pgcrypto.py:61-75` реально шифрует/дешифрует данные через `pgcrypto`. Действие: `run rollback smoke-test on disposable PostgreSQL` перед merge.
 

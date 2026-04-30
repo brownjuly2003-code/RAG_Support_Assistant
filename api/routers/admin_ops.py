@@ -8,18 +8,13 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant
 from auth.dependencies import require_role
 from db import engine as _db_engine
 from monitoring import prometheus as prometheus_metrics
 
 router = APIRouter()
-
-
-def _app_module():
-    from api import app as _app  # noqa: PLC0415
-
-    return _app
 
 
 def _async_session():

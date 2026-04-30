@@ -63,6 +63,10 @@ User / Email / Widget
   `auth_sso.py`, `conversation.py`, `feedback.py`, `misc.py`,
   `session_auth.py`, and `upload.py`. New endpoint groups are added here,
   not in `api/app.py`.
+- `api/_shared.py` — lazy `app_module()` accessor for routers that need
+  compatibility access to `api.app` globals patched by tests. Prefer
+  `from api._shared import app_module as _app_module` inside routers instead
+  of adding a new local wrapper or importing `api.app` at module load time.
 - `agent/` — LangGraph pipeline + state + prompts.
 - `auth/` — JWT, X-API-Key, OIDC, RBAC. `mypy --strict` clean.
 - `db/` — SQLAlchemy models, async engine, audit log, pgcrypto field.
@@ -877,6 +881,14 @@ Run the full test suite:
 pytest tests/ -v
 ```
 
+On the current Windows development machine, disable the broken auto-loaded
+Schemathesis plugin and force pytest temp files into the repo when the user
+temp root is not readable:
+
+```bash
+python -m pytest -p no:schemathesis --basetemp=.tmp/pytest
+```
+
 Run only the integration suite added in arc `122`:
 
 ```bash
@@ -948,6 +960,12 @@ Alembic migrations introduced after the original README baseline:
 - `012_review_queue` - creates the `review_queue` table for human quality review.
 - `013_regression_eval_runs` - extends `eval_results` for curated regression runs.
 - `014_trace_evaluations` - stores per-trace online evaluator outputs.
+- `015_experiment_deployments` - stores staged/deployed/rolled-back
+  experiment lifecycle records.
+- `016_experiment_assignments` - stores tenant rollout assignments and
+  rollout percentages.
+- `017_curated_case_status` - stores freshness status for curated regression
+  cases.
 
 ## Project structure
 
@@ -971,7 +989,7 @@ tests/                  Unit and integration test suites
 tests/integration/      End-to-end coverage for critical user flows
 tracing/                SQLite tracing base/wrapper and OpenTelemetry setup
 vectordb/               ChromaDB manager, BM25 fusion, reranking
-alembic/                Migrations `001` through `012`
+alembic/                Migrations `001` through `017`
 demo/                   Demo docs and seed helpers
 codex-tasks/            Task backlog and archived implementation specs
 docs/research/          Research archive

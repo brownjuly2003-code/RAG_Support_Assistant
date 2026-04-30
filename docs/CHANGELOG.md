@@ -2,11 +2,23 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
-## [App-Shell-Cleanup] — 2026-04-30 — shared lazy app accessor for upload router
+## [App-Shell-Cleanup] — 2026-04-30 — shared lazy app accessor for extracted routers
 
 - `api/_shared.py` — добавлен общий lazy `app_module()` для extracted routers.
-- `api/routers/upload.py` — использует shared accessor вместо локального `_app_module`, сохраняя monkeypatch-friendly late binding.
-- `tests/test_upload_security.py` — закрепляет, что upload-router использует shared accessor.
+- `api/routers/upload.py`, `system.py`, `root_pages.py`, `auth_sso.py`,
+  `feedback.py`, `misc.py` — используют shared accessor вместо локального
+  `_app_module`, сохраняя monkeypatch-friendly late binding на `api.app`.
+- `tests/test_upload_security.py` и `tests/test_router_app_shell.py` —
+  закрепляют, что переведённые routers используют shared accessor.
+- Оставшиеся локальные wrappers на 2026-04-30: `admin_kb.py`,
+  `admin_ops.py`, `admin_evaluations.py`, `admin_experiments.py`,
+  `conversation.py`, `session_auth.py`; это механический cleanup debt, не
+  route-ownership gap.
+- Verification: structural red/green test; related router suites green
+  (health/system, OIDC/root, feedback/metrics, email/provider-admin).
+  Full local pytest was not used as the green signal for this slice: without
+  `--basetemp` it hits a Windows temp-dir permission issue, and long full-runs
+  with local `--basetemp` remained environment-noisy.
 
 ## [Regression-Eval-Criteria] — 2026-04-30 — OR-groups for curated answer checks
 

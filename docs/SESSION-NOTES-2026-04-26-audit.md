@@ -86,7 +86,7 @@ ruff-check → standard hooks → bandit (-ll, --config pyproject.toml) → pip-
 | `PORT` | `8000` | bare run only. |
 | `AUTO_MIGRATE` | `true` | Управляет `alembic upgrade head` в startup. На любой ошибке — warning, не крашит app. |
 
-## 5. Pattern для следующих split-ов sub-router-ов (КРИТИЧНО!)
+## 5. Pattern для sub-router-ов и app-shell cleanup (КРИТИЧНО!)
 
 Тесты используют:
 ```python
@@ -97,16 +97,27 @@ monkeypatch.setattr(api_app, "get_oidc_client", _fake_client)
 
 Top-level `from db.engine import async_session` или прямой импорт `get_settings`/OIDC helpers в новом router-модуле **обходит этот патч** — name связывается до того, как тест его патчит.
 
-**Рабочий паттерн (применён в `api/routers/system.py`, `agent.py`, `admin_review.py`, `admin_ops.py`, `admin_kb.py`, `admin_experiments.py`, `auth_sso.py`, `feedback.py`, `upload.py`, `conversation.py`):**
+**Рабочий паттерн сейчас:**
+
+1. Для DB session импортировать модуль, а не конкретную фабрику.
+2. Для доступа к `api.app` из router-ов использовать общий lazy accessor
+   `from api._shared import app_module as _app_module`.
+
+`system.py`, `root_pages.py`, `auth_sso.py`, `feedback.py`, `misc.py` и
+`upload.py` уже используют shared accessor. `admin_ops.py`, `admin_kb.py`,
+`admin_experiments.py`, `admin_evaluations.py`, `conversation.py` и
+`session_auth.py` ещё имеют локальный `_app_module()` wrapper; переводить их
+нужно отдельными маленькими срезами с related tests.
 
 ```python
+from api._shared import app_module as _app_module
 from db import engine as _db_engine  # импортируем МОДУЛЬ
 
 def _async_session():
     return _db_engine.async_session()  # late-binding
 
 async def _log_audit(**kwargs):
-    from api import app as _app  # noqa: PLC0415
+    _app = _app_module()
     return await _app.log_audit(**kwargs)
 ```
 
@@ -120,9 +131,15 @@ Postgres tests не смогут подменить disposable session factory.
 
 ## 6. Что брать первым в новой сессии
 
-### Опция A — продолжить split (низкий риск, чёткие победы)
+### Опция A — продолжить app-shell cleanup (низкий риск, чёткие победы)
 
-Безопасные кандидаты (только DB session + log_audit):
+2026-04-30 update: route split уже закрыт; следующий безопасный cleanup —
+постепенно убирать локальные `_app_module()` wrappers и переводить routers на
+`api._shared.app_module()`. Не делать это одним большим sweep-ом: крупные
+routers (`admin_*`, `conversation.py`, `session_auth.py`) лучше переводить
+отдельно и запускать related tests после каждого среза.
+
+Исторический список split-кандидатов ниже оставлен как audit trail:
 1. ~~**Phase 2f — admin KB cluster**~~ — DONE 2026-04-26 22:22 UTC:
    `api/routers/admin_kb.py`; 46/46 related tests pass; focus-set 71/71 passes.
 
@@ -173,8 +190,9 @@ provider classes перед `disallow_untyped_defs`.
 ### Опция C2 — DEPRECATIONS Phase 3 (`manager`/`sqlite_trace`)
 
 Phase 3 закрыт 2026-04-27 по Option B: базовые реализации теперь в
-`vectordb/_base_manager.py` и `tracing/_base_trace.py`, root `manager.py` и
-`sqlite_trace.py` остались compatibility shim-ами. Verification:
+`vectordb/_base_manager.py` и `tracing/_base_trace.py`. 2026-04-30 update:
+root `manager.py` и `sqlite_trace.py` уже удалены; root import должен давать
+`ModuleNotFoundError`. Historical verification:
 `python -m pytest -p pytest_asyncio.plugin -p no:cacheprovider -q --basetemp=.tmp\pytest-full-phase3-final`
 → 563 passed, 4 skipped.
 
@@ -187,12 +205,14 @@ Phase 5 закрыт 2026-04-27: standalone tuning script переехал в
 
 Phase 4 закрыт 2026-04-27: `ingestion.loader` теперь содержит package features
 (`.json`/`.csv`, single-file loading, per-page PDF docs) и root-only features
-(`DocumentChangeTracker`, `.html`/`.htm`). Root `loader.py` остался
-compatibility shim-ом.
+(`DocumentChangeTracker`, `.html`/`.htm`). 2026-04-30 update: root
+`loader.py` уже удалён; canonical import — `ingestion.loader`.
 
 ### Опция D — coverage до 70%
 
-Текущий focus-set даёт 24%. Полный пакет тестов проходит при явном `--basetemp` вне проблемных cache-директорий; следующий шаг — отдельный coverage-прогон и добор до `fail_under=70`.
+Закрыто 2026-04-29: `fail_under=70`, проверенный baseline 70.02% coverage.
+Для локальных Windows-прогонов использовать `-p no:schemathesis` и явный
+`--basetemp` в `.tmp/`, если пользовательский temp-root недоступен.
 
 ## 7. Что НЕ трогать
 
