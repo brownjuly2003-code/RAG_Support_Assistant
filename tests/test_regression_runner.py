@@ -256,6 +256,74 @@ def test_run_regression_cases_sets_exit_code_zero_when_candidate_passes_gate() -
     assert report["exit_code"] == 0
 
 
+def test_evaluate_case_output_requires_one_answer_contains_any_match() -> None:
+    from scripts import regression_eval
+
+    expected = regression_eval.CaseExpectation(
+        answer_contains=["чек"],
+        answer_contains_any=[["сервис", "поддерж"]],
+    )
+    result = regression_eval.CaseRunResult(
+        answer="Чек нужен, но куда обращаться не указано.",
+        quality_score=90,
+        factuality_score=90,
+        route="auto",
+    )
+
+    passed, failures = regression_eval._evaluate_case_output(result, expected)
+
+    assert passed is False
+    assert failures == ["answer missing one of ['сервис', 'поддерж']"]
+
+
+def test_evaluate_case_output_accepts_answer_contains_any_alternative() -> None:
+    from scripts import regression_eval
+
+    expected = regression_eval.CaseExpectation(
+        answer_contains=["чек"],
+        answer_contains_any=[["сервис", "поддерж"]],
+    )
+    result = regression_eval.CaseRunResult(
+        answer="Если чек утерян, обратитесь в службу поддержки.",
+        quality_score=90,
+        factuality_score=90,
+        route="auto",
+    )
+
+    passed, failures = regression_eval._evaluate_case_output(result, expected)
+
+    assert passed is True
+    assert failures == []
+
+
+def test_mock_provider_result_includes_answer_contains_any_representative() -> None:
+    from scripts import regression_eval
+
+    case = regression_eval.CuratedCase(
+        case_id="case-support-or-service",
+        tenant_id="default",
+        query="Where should I go?",
+        expected=regression_eval.CaseExpectation(
+            answer_contains=["чек"],
+            answer_contains_any=[["сервис", "поддерж"]],
+        ),
+    )
+
+    result = regression_eval._build_mock_provider_result(
+        case,
+        "mistral-small-latest",
+        {
+            "provider_id": "mistral",
+            "model_name": "mistral-small-latest",
+            "input_price_per_1m_tokens": 0.1,
+            "output_price_per_1m_tokens": 0.2,
+        },
+    )
+
+    assert "чек" in result.answer
+    assert "сервис" in result.answer
+
+
 def test_sample_cases_is_deterministic_for_seed() -> None:
     from scripts import regression_eval
 

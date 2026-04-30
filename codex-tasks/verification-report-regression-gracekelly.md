@@ -11,9 +11,10 @@ answer generation through GraceKelly browser routing.
 
 Current next work is not task-177 plumbing. Rev 7 below fixed the confirmed
 RAG-side `returns-window` quality issue where `grade_docs` dropped the
-top-ranked retrieved policy document before answer generation. The remaining
-quality note is `warranty-no-receipt-where`, which needs separate evaluation
-of answer wording versus expected substring criteria.
+top-ranked retrieved policy document before answer generation. Rev 8
+reclassified `warranty-no-receipt-where` as an evaluation-criteria issue:
+the KB says "сервисный центр или службу поддержки", while the candidate
+answered with the support option. No live GraceKelly rerun is included here.
 
 ## Historical rev 2 snapshot
 
@@ -508,3 +509,69 @@ policy context and produced the "not in context" refusal.
   --basetemp=.tmp\pytest-grade-docs-final` -> 604 passed, 4 skipped.
 - `python -m mypy agent\graph.py --no-incremental --show-error-codes`
   -> 1 source file clean.
+
+---
+
+# Rev 8 (2026-04-30 — `warranty-no-receipt-where` eval criterion fix)
+
+RAG HEAD before fix: `b1b4ef2`.
+
+## Root cause
+
+Trace review showed the candidate did retrieve and grade the relevant warranty
+context on retry:
+
+```text
+Подготовьте товар и чек.
+Обратитесь в сервисный центр или службу поддержки.
+```
+
+The old curated expectation required both `сервис` and `чек`. The candidate
+answer included `чек` and told the user to contact `службу поддержки`, which
+is one of the two locations allowed by the KB, but failed the all-of substring
+check because it did not include the literal `сервис`.
+
+## Fix
+
+- `scripts/regression_eval.py` now supports
+  `expected.answer_contains_any`: every inner list is an OR-group, and at
+  least one substring from each group must be present.
+- Mock provider output includes one representative from each OR-group so mock
+  benchmark mode stays compatible with the same curated cases.
+- `scripts/detect_stale_curated_cases.py` now applies the same OR-group check
+  when deciding whether a rerun answer has drifted from the curated criteria.
+- `evaluation/curated_cases.jsonl` now encodes `warranty-no-receipt-where` as:
+  require `чек`, and require one of `сервис` / `поддерж`.
+
+## Verification so far
+
+- Red test before implementation:
+  `python -m pytest tests\test_regression_runner.py -q -p no:schemathesis
+  --timeout=60 --basetemp=.tmp\pytest-answer-any-red` -> 2 failed, 11 passed.
+- Green test after implementation:
+  `python -m pytest tests\test_regression_runner.py -q -p no:schemathesis
+  --timeout=60 --basetemp=.tmp\pytest-answer-any-green` -> 13 passed.
+- Stale-detector TDD extension:
+  red `python -m pytest tests\test_detect_stale_curated_cases.py -q
+  -p no:schemathesis --timeout=60
+  --basetemp=.tmp\pytest-answer-any-stale-red` -> 1 failed, 11 passed;
+  green with the same command and `pytest-answer-any-stale-green` -> 12 passed.
+- Focused suite:
+  `python -m pytest tests\test_regression_runner.py
+  tests\test_regression_eval_profile_target.py
+  tests\test_infrastructure_failure_detection.py
+  tests\test_detect_stale_curated_cases.py -q -p no:schemathesis
+  --timeout=60 --basetemp=.tmp\pytest-answer-any-focused-final` -> 40 passed.
+- `python -m ruff check scripts\regression_eval.py
+  scripts\detect_stale_curated_cases.py tests\test_regression_runner.py
+  tests\test_detect_stale_curated_cases.py`
+  -> clean.
+- Full suite:
+  `python -m pytest -p no:schemathesis -vv --maxfail=1 --timeout=60
+  --basetemp=.tmp\pytest-answer-any-full-postdocs-debug`
+  -> 624 passed, 16 skipped.
+- `load_curated_cases(evaluation/curated_cases.jsonl)` -> 20 cases; updated
+  case parsed as `answer_contains=['чек']`,
+  `answer_contains_any=[['сервис', 'поддерж']]`.
+- Re-evaluating the old report's candidate answer for
+  `warranty-no-receipt-where` with current criteria -> passed, no failures.

@@ -66,6 +66,55 @@ def test_compare_verdicts_detects_missing_phrases() -> None:
     assert decision.diff["missing"] == ["42"]
 
 
+def test_compare_verdicts_detects_missing_any_group() -> None:
+    case = _case(
+        "c-any-missing",
+        expected={
+            "route": "auto",
+            "min_quality": 80,
+            "min_factuality": 80,
+            "answer_contains": ["receipt"],
+            "answer_contains_any": [["service", "support"]],
+        },
+    )
+    rerun = {
+        "route": "auto",
+        "quality_score": 90,
+        "factuality_score": 90,
+        "answer": "Keep the receipt.",
+    }
+
+    decision = detector.compare_verdicts(case, rerun)
+
+    assert decision.is_stale is True
+    assert decision.reason == "answer_contains_any_missing"
+    assert decision.diff["missing_any"] == [["service", "support"]]
+
+
+def test_compare_verdicts_accepts_any_group_alternative() -> None:
+    case = _case(
+        "c-any-match",
+        expected={
+            "route": "auto",
+            "min_quality": 80,
+            "min_factuality": 80,
+            "answer_contains": ["receipt"],
+            "answer_contains_any": [["service", "support"]],
+        },
+    )
+    rerun = {
+        "route": "auto",
+        "quality_score": 90,
+        "factuality_score": 90,
+        "answer": "Keep the receipt and contact support.",
+    }
+
+    decision = detector.compare_verdicts(case, rerun)
+
+    assert decision.is_stale is False
+    assert decision.reason is None
+
+
 def test_compare_verdicts_returns_fresh_when_matching() -> None:
     case = _case("c6")
     rerun = {"route": "auto", "quality_score": 90, "factuality_score": 90, "answer": "the answer is 42"}

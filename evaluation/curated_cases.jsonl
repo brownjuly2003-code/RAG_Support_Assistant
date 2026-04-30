@@ -2,7 +2,7 @@
 {"case_id": "warranty-excluded", "tenant_id": "default", "query": "Что не входит в гарантию: механические повреждения, жидкость или самостоятельный ремонт?", "expected": {"answer_contains": ["механическ", "жидк", "самостоятельн"], "min_quality": 0.5}}
 {"case_id": "warranty-how-to-claim", "tenant_id": "default", "query": "Как обратиться по гарантии? Перечисли шаги.", "expected": {"answer_contains": ["чек", "сервис"], "min_quality": 0.5}}
 {"case_id": "warranty-receipt-storage", "tenant_id": "default", "query": "На какой срок нужно сохранять чек для гарантии?", "expected": {"answer_contains": ["чек", "12"], "min_quality": 0.5}}
-{"case_id": "warranty-no-receipt-where", "tenant_id": "default", "query": "Чек утерян. Куда можно обратиться по гарантии?", "expected": {"answer_contains": ["сервис", "чек"], "min_quality": 0.4}}
+{"case_id": "warranty-no-receipt-where", "tenant_id": "default", "query": "Чек утерян. Куда можно обратиться по гарантии?", "expected": {"answer_contains": ["чек"], "answer_contains_any": [["сервис", "поддерж"]], "min_quality": 0.4}}
 {"case_id": "returns-window", "tenant_id": "default", "query": "В течение скольких дней можно вернуть товар надлежащего качества?", "expected": {"answer_contains": ["14", "дн"], "min_quality": 0.5}}
 {"case_id": "returns-refund-timeline", "tenant_id": "default", "query": "Сколько рабочих дней занимает возврат денег после приёмки товара?", "expected": {"answer_contains": ["10", "дн"], "min_quality": 0.5}}
 {"case_id": "returns-no-receipt", "tenant_id": "default", "query": "Можно ли вернуть товар без кассового или товарного чека?", "expected": {"answer_contains": ["чек"], "min_quality": 0.4}}

@@ -2,6 +2,14 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Regression-Eval-Criteria] — 2026-04-30 — OR-groups for curated answer checks
+
+- `scripts/regression_eval.py` — `CaseExpectation` получил `answer_contains_any`: каждая вложенная группа трактуется как OR-критерий, где достаточно одного substring match.
+- `scripts/detect_stale_curated_cases.py` — stale-detector учитывает те же OR-группы и не пропускает ответы, где отсутствуют все допустимые альтернативы.
+- `evaluation/curated_cases.jsonl` — `warranty-no-receipt-where` теперь требует `чек` и один из вариантов `сервис` / `поддерж`, что соответствует KB-формулировке “сервисный центр или службу поддержки”.
+- `tests/test_regression_runner.py`, `tests/test_detect_stale_curated_cases.py` — покрыты missing-any failure, accepted alternative и mock-provider representative output.
+- Verification: red tests зафиксировали expected failures; green `tests/test_regression_runner.py` — 13 passed; green `tests/test_detect_stale_curated_cases.py` — 12 passed; focused regression-eval/stale suite — 40 passed; full `pytest` — 624 passed, 16 skipped; `ruff check` по изменённым Python-файлам — clean.
+
 ## [RAG-Doc-Grading] — 2026-04-30 — preserve top retrieval hit after LLM grading
 
 - `agent/graph.py` — `grade_docs` теперь сохраняет первый retrieval hit, если LLM grader оставил нижеранговые документы, но отклонил top-ranked документ. Это закрывает `returns-window`-класс отказов, где `returns_policy.md` был найден первым, но терялся перед генерацией ответа.

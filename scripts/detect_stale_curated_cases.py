@@ -122,6 +122,21 @@ def compare_verdicts(
             diff={"missing": missing_phrases},
         )
 
+    answer_must_contain_any = list(expected.get("answer_contains_any") or [])
+    missing_any_groups = [
+        [phrase for phrase in group if phrase]
+        for group in answer_must_contain_any
+        if group and not any(phrase and phrase in answer_actual for phrase in group)
+    ]
+    if missing_any_groups:
+        return StalenessDecision(
+            case_id=case_id,
+            tenant_id=tenant_id,
+            is_stale=True,
+            reason="answer_contains_any_missing",
+            diff={"missing_any": missing_any_groups},
+        )
+
     return StalenessDecision(case_id=case_id, tenant_id=tenant_id, is_stale=False)
 
 

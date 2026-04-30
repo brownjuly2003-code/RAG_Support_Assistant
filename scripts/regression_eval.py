@@ -32,6 +32,7 @@ class CaseExpectation(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     answer_contains: list[str] = Field(default_factory=list)
+    answer_contains_any: list[list[str]] = Field(default_factory=list)
     answer_not_contains: list[str] = Field(default_factory=list)
     route: str | None = None
     min_quality: float | None = None
@@ -171,6 +172,9 @@ def _build_mock_provider_result(case: CuratedCase, target: str, resolution: dict
     }
 
     answer_parts = list(expected.answer_contains or [])
+    for alternatives in expected.answer_contains_any:
+        if alternatives:
+            answer_parts.append(alternatives[0])
     if not answer_parts:
         answer_parts.append(f"Mock provider response for {case.query}")
     answer = " ".join(answer_parts).strip()
@@ -261,6 +265,11 @@ def _evaluate_case_output(result: CaseRunResult, expected: CaseExpectation) -> t
     for needle in expected.answer_contains:
         if needle.lower() not in answer_lower:
             failures.append(f"answer missing '{needle}'")
+
+    for alternatives in expected.answer_contains_any:
+        options = [needle for needle in alternatives if needle]
+        if options and not any(needle.lower() in answer_lower for needle in options):
+            failures.append(f"answer missing one of {options!r}")
 
     for needle in expected.answer_not_contains:
         if needle.lower() in answer_lower:
