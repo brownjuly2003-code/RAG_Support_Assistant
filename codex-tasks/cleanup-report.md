@@ -5,7 +5,8 @@
 > `docs/CHANGELOG.md`. Since this report was written, root shim modules
 > `loader.py`, `manager.py`, and `sqlite_trace.py` were fully removed, Alembic
 > has advanced through migration `017`, and router app-shell cleanup now uses
-> `api._shared.app_module()` for the first six routers.
+> `api._shared.app_module()` for all extracted routers that need `api.app`
+> compatibility access.
 
 ## 1. Trash / artifacts
 - `New folder/` — пустая директория в корне; `Get-ChildItem` вернул 0 элементов, `git check-ignore -v "New folder"` не даёт hit. Действие: `delete`.

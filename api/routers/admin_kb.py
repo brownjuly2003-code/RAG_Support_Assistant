@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy import text as sql_text
 
+from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant
 from auth.dependencies import require_role
 from db import engine as _db_engine
@@ -25,11 +26,6 @@ router = APIRouter()
 def _async_session():
     """Indirection to keep monkeypatch.setattr('db.engine.async_session', ...) effective."""
     return _db_engine.async_session()
-
-
-def _app_module():
-    from api import app as _app  # noqa: PLC0415
-    return _app
 
 
 class KbDraftUpdateRequest(BaseModel):
@@ -140,7 +136,7 @@ async def admin_curated_dataset_stale(
     for row in rows:
         item = dict(row)
         checked = item.get("last_checked_at")
-        if hasattr(checked, "isoformat"):
+        if checked is not None and hasattr(checked, "isoformat"):
             item["last_checked_at"] = checked.isoformat()
         items.append(item)
 

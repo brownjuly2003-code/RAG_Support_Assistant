@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant, get_request_id
 from api.rate_limit import limiter
 from auth.dependencies import get_current_user
@@ -57,12 +58,6 @@ class AskResponse(BaseModel):
     suggested_questions: List[str] = Field(default_factory=list)
     requires_confirmation: bool = False
     action_summary: str = ""
-
-
-def _app_module():
-    from api import app as _app  # noqa: PLC0415
-
-    return _app
 
 
 @router.post("/ask", response_model=AskResponse)

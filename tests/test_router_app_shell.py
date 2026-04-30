@@ -11,6 +11,9 @@ ROUTER_FILES = [
     Path("api/routers/admin_experiments.py"),
     Path("api/routers/admin_evaluations.py"),
     Path("api/routers/admin_ops.py"),
+    Path("api/routers/admin_kb.py"),
+    Path("api/routers/conversation.py"),
+    Path("api/routers/session_auth.py"),
     Path("api/routers/root_pages.py"),
     Path("api/routers/system.py"),
 ]

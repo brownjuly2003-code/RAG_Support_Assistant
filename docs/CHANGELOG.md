@@ -6,19 +6,19 @@
 
 - `api/_shared.py` — добавлен общий lazy `app_module()` для extracted routers.
 - `api/routers/upload.py`, `system.py`, `root_pages.py`, `auth_sso.py`,
-  `feedback.py`, `misc.py` — используют shared accessor вместо локального
+  `feedback.py`, `misc.py`, `admin_kb.py`, `admin_ops.py`,
+  `admin_evaluations.py`, `admin_experiments.py`, `conversation.py`,
+  `session_auth.py` — используют shared accessor вместо локального
   `_app_module`, сохраняя monkeypatch-friendly late binding на `api.app`.
 - `tests/test_upload_security.py` и `tests/test_router_app_shell.py` —
   закрепляют, что переведённые routers используют shared accessor.
-- Оставшиеся локальные wrappers на 2026-04-30: `admin_kb.py`,
-  `admin_ops.py`, `admin_evaluations.py`, `admin_experiments.py`,
-  `conversation.py`, `session_auth.py`; это механический cleanup debt, не
-  route-ownership gap.
-- Verification: structural red/green test; related router suites green
+- Локальных `def _app_module()` wrappers в `api/routers/` больше нет; это
+  закрывает механический cleanup debt, не меняя route ownership.
+- Verification: structural red/green test; `tests/test_router_app_shell.py`
+  green; related router suites green
   (health/system, OIDC/root, feedback/metrics, email/provider-admin).
-  Full local pytest was not used as the green signal for this slice: without
-  `--basetemp` it hits a Windows temp-dir permission issue, and long full-runs
-  with local `--basetemp` remained environment-noisy.
+  Final full local pytest with explicit `--basetemp` is green: 626 passed,
+  16 skipped.
 
 ## [Regression-Eval-Criteria] — 2026-04-30 — OR-groups for curated answer checks
 

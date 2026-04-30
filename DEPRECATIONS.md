@@ -181,13 +181,12 @@ further by moving construction/lifespan/shared-state compatibility helpers
 behind smaller modules. That is a separate cleanup, not a route ownership gap.
 
 2026-04-30 update: `api/_shared.py` now owns the shared lazy `app_module()`
-accessor for extracted routers. `upload.py`, `system.py`, `root_pages.py`,
-`auth_sso.py`, `feedback.py`, and `misc.py` use it. This keeps direct
+accessor for extracted routers. All router modules that need `api.app`
+compatibility access now import it as
+`from api._shared import app_module as _app_module`. This keeps direct
 `api.app` access centralized while preserving monkeypatch-friendly late
-binding. Remaining local `_app_module()` wrappers are intentionally being
-retired in small slices: `admin_kb.py`, `admin_ops.py`,
-`admin_evaluations.py`, `admin_experiments.py`, `conversation.py`, and
-`session_auth.py`.
+binding. `tests/test_router_app_shell.py` guards that no converted router
+reintroduces a local `_app_module()` wrapper.
 
 ## Type-checking debt
 

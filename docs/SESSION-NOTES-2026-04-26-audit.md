@@ -103,11 +103,10 @@ Top-level `from db.engine import async_session` или прямой импорт
 2. Для доступа к `api.app` из router-ов использовать общий lazy accessor
    `from api._shared import app_module as _app_module`.
 
-`system.py`, `root_pages.py`, `auth_sso.py`, `feedback.py`, `misc.py` и
-`upload.py` уже используют shared accessor. `admin_ops.py`, `admin_kb.py`,
-`admin_experiments.py`, `admin_evaluations.py`, `conversation.py` и
-`session_auth.py` ещё имеют локальный `_app_module()` wrapper; переводить их
-нужно отдельными маленькими срезами с related tests.
+2026-04-30 update: все router-модули, которым нужен доступ к `api.app`, уже
+используют shared accessor. Локальных `def _app_module()` wrappers в
+`api/routers/` больше нет; `tests/test_router_app_shell.py` закрепляет это
+структурным guard-ом.
 
 ```python
 from api._shared import app_module as _app_module
@@ -133,11 +132,10 @@ Postgres tests не смогут подменить disposable session factory.
 
 ### Опция A — продолжить app-shell cleanup (низкий риск, чёткие победы)
 
-2026-04-30 update: route split уже закрыт; следующий безопасный cleanup —
-постепенно убирать локальные `_app_module()` wrappers и переводить routers на
-`api._shared.app_module()`. Не делать это одним большим sweep-ом: крупные
-routers (`admin_*`, `conversation.py`, `session_auth.py`) лучше переводить
-отдельно и запускать related tests после каждого среза.
+2026-04-30 update: route split закрыт, и app-shell cleanup по локальным
+`_app_module()` wrappers тоже закрыт. Следующий безопасный cleanup, если нужен,
+— дальше уменьшать `api/app.py`, но только отдельными маленькими срезами с
+related tests после каждого изменения.
 
 Исторический список split-кандидатов ниже оставлен как audit trail:
 1. ~~**Phase 2f — admin KB cluster**~~ — DONE 2026-04-26 22:22 UTC:
