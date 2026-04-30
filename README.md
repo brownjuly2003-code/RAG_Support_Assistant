@@ -54,13 +54,15 @@ User / Email / Widget
 
 ### Module layout (high level)
 
-- `api/app.py` — FastAPI application, middleware, lifespan, master router.
-  The 2a-2m endpoint split is complete; small auth/session routes remain here.
-- `api/routers/` — extracted sub-routers (`system.py` for health/readiness/API metrics,
-  `root_pages.py` for `/agent` + root Prometheus routes, `agent.py` for `/agent/*`,
-  `admin_review.py` for `/admin/review-queue/*`,
-  `auth_sso.py` for `/auth/sso/*`, `conversation.py` for `/ask`/`/chat`).
-  New endpoint groups are added here, not in `api/app.py`.
+- `api/app.py` — FastAPI application construction, middleware, lifespan,
+  master router include, and compatibility re-exports used by older tests.
+  The 2a-2m endpoint split plus auth/session extraction are complete.
+- `api/routers/` — extracted sub-routers: `system.py`, `root_pages.py`,
+  `agent.py`, `admin_review.py`, `admin_ops.py`, `admin_kb.py`,
+  `admin_experiments.py`, `admin_evaluations.py`, `analytics.py`,
+  `auth_sso.py`, `conversation.py`, `feedback.py`, `misc.py`,
+  `session_auth.py`, and `upload.py`. New endpoint groups are added here,
+  not in `api/app.py`.
 - `agent/` — LangGraph pipeline + state + prompts.
 - `auth/` — JWT, X-API-Key, OIDC, RBAC. `mypy --strict` clean.
 - `db/` — SQLAlchemy models, async engine, audit log, pgcrypto field.

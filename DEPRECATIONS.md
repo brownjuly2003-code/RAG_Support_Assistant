@@ -76,7 +76,7 @@ It is a tuning script, not a production module. Moved to
 
 ## api/app.py monolith split — router extraction complete
 
-`api/app.py` is now 1,884 LOC at `9e03bf0`. Public endpoint groups live under
+`api/app.py` is now 1,884 LOC at `f1e2be0`. Public endpoint groups live under
 `api/routers/`, including auth/session management. The app module still owns
 FastAPI construction, middleware, lifespan, shared in-memory session state, and
 compatibility re-exports used by older tests. Some routers still reach into
@@ -122,7 +122,7 @@ tests continue to work.
   `/sessions/{id}/history`, `/sessions`, and `DELETE /sessions/{id}` (Step 8
   app-shell cleanup).
 
-Latest sanity: 69 `/api` routes at `9e03bf0`.
+Latest sanity: 69 `/api` routes at `f1e2be0` (verified 2026-04-30).
 
 ### Lesson learned from the splits — module-import pattern
 
@@ -201,6 +201,20 @@ agent/prompts.py agent/prompt_registry.py agent/tools.py agent/graph.py
 --no-incremental --show-error-codes`, plus a separate `api/app.py` mypy
 invocation. Любой регресс блокирует PR (`.github/workflows/ci.yml type-check
 job`).
+
+2026-04-30 sanity verification on `f1e2be0`:
+
+- `python -m ruff check api\app.py api agent auth db llm config evaluation scripts tests`
+  -> clean.
+- `python -m mypy auth db/models.py db/engine.py llm/providers/ config/settings.py
+  agent/state.py agent/prompts.py agent/prompt_registry.py agent/tools.py agent/graph.py
+  --no-incremental --show-error-codes` -> 18 source files clean.
+- `python -m mypy api\app.py --no-incremental --follow-imports=skip --show-error-codes`
+  -> clean.
+- `python -m pytest tests -q --ignore=tests/integration --ignore=tests/test_a11y.py
+  -p no:schemathesis -p no:cacheprovider --timeout=60
+  --basetemp=.tmp\pytest-nonintegration-continuation`
+  -> 603 passed, 4 skipped.
 
 ## What was done in this session (2026-04-26)
 

@@ -413,3 +413,38 @@ Real Claude regressions (2): `warranty-no-receipt-where` (Claude refused, Mistra
 - task-179 landed (in task-178 commit by accident, but valid).
 - `[model_mismatch]` external errors no longer pollute regressions count.
 - Real Sonnet 4.6 vs Mistral signal: candidate 37.5% pass on effective cases, baseline 75%. Candidate underperforms baseline on this curated KB; whether due to retrieval mismatch, prompt phrasing, or genuine model preference for refusal — separate investigation, not blocking task-177.
+
+---
+
+# Rev 6 (2026-04-30 — documentation sync and sanity verification)
+
+RAG HEAD: `f1e2be0`, branch `master`, worktree clean before docs sync.
+
+## Documentation sync
+
+- `codex-tasks/task-177-regression-via-gracekelly-claude.md` now has an
+  explicit closed-status block. The file stays in `codex-tasks/` as a visible
+  historical note; the original single-model GraceKelly path is superseded by
+  the task-178 `gracekelly-mixed` routing-profile path.
+- `README.md` module layout now reflects that auth/session routes are extracted
+  and `api/app.py` is an app shell plus compatibility surface.
+- `DEPRECATIONS.md` now points its latest app split sanity snapshot at
+  `f1e2be0`.
+
+## Fresh verification
+
+- `/api` route count: 69.
+- `python -m ruff check api\app.py api agent auth db llm config evaluation scripts tests`
+  -> clean.
+- `python -m mypy auth db/models.py db/engine.py llm/providers/ config/settings.py
+  agent/state.py agent/prompts.py agent/prompt_registry.py agent/tools.py agent/graph.py
+  --no-incremental --show-error-codes` -> 18 source files clean.
+- `python -m mypy api\app.py --no-incremental --follow-imports=skip --show-error-codes`
+  -> clean.
+- `python -m pytest tests\test_regression_eval_profile_target.py
+  tests\test_infrastructure_failure_detection.py tests\test_regression_runner.py
+  -q -p no:schemathesis --timeout=60
+  --basetemp=.tmp\quick-regression-continuation` -> 25 passed.
+- `python -m pytest tests -q --ignore=tests/integration --ignore=tests/test_a11y.py
+  -p no:schemathesis -p no:cacheprovider --timeout=60
+  --basetemp=.tmp\pytest-nonintegration-continuation` -> 603 passed, 4 skipped.

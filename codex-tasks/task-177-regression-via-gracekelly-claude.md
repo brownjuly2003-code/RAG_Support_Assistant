@@ -1,5 +1,28 @@
 # Task 177 — Regression benchmark via GraceKelly Claude Sonnet, on expanded KB
 
+## Status
+
+Closed 2026-04-26 on the RAG side. The original single-model
+`gracekelly-primary` acceptance path was superseded by task-178:
+`scripts/regression_eval.py` now accepts routing-profile targets, and the
+live run uses `--candidate-profile gracekelly-mixed` so fast Self-RAG helper
+calls go through Mistral while strong answer generation goes through
+GraceKelly browser routing.
+
+Current evidence:
+
+- `evaluation/curated_cases.jsonl` contains 20 cases.
+- `scripts/run_regression_via_gracekelly.ps1` supports `-CandidateProfile`.
+- Full 20-case evidence landed in `reports/regression/20260426T113855Z-*`.
+- Final closure is documented in
+  `codex-tasks/verification-report-regression-gracekelly.md` rev 5.
+- `task-178` is archived in
+  `codex-tasks/Archive/task-178-regression-eval-profile-target.md`.
+
+This file is kept in `codex-tasks/` as a visible historical task note; do not
+restart the original `claude-sonnet-4-6-api` single-model path unless you
+explicitly want a browser-only stress test rather than the product pipeline.
+
 ## Goal
 Получить честный quality/cost/latency сигнал на Claude Sonnet 4.6, не упираясь в Mistral free-tier 60 rpm. Candidate = `claude-sonnet-4-6-api` через GraceKelly (`gracekelly-primary` profile, browser.perplexity adapter). Baseline = `ministral-3b-latest` direct Mistral (уже в `external-mistral` profile). Расширить curated dataset до 20 cases на текущем KB, чтобы статистика была не из 5 точек.
 
