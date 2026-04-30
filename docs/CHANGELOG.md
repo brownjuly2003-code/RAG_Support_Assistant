@@ -2,6 +2,12 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [RAG-Doc-Grading] — 2026-04-30 — preserve top retrieval hit after LLM grading
+
+- `agent/graph.py` — `grade_docs` теперь сохраняет первый retrieval hit, если LLM grader оставил нижеранговые документы, но отклонил top-ranked документ. Это закрывает `returns-window`-класс отказов, где `returns_policy.md` был найден первым, но терялся перед генерацией ответа.
+- `tests/test_grade_docs.py` — добавлен red/green regression test для false negative на top retrieval hit; существующий all-filtered путь остаётся покрыт.
+- Verification: `tests/test_grade_docs.py` — 2 passed; focused regression/graph suite — 32 passed; non-integration suite — 604 passed, 4 skipped; `ruff check agent\graph.py tests\test_grade_docs.py` — clean; `mypy agent\graph.py` — clean.
+
 ## [Agent-Strict-A11y] — 2026-04-29 — agent typing scope + stable axe gate
 
 - `agent.prompt_registry`, `agent.tools` и `agent.graph` добавлены в strict mypy scope и CI gate рядом с `agent.state` / `agent.prompts`; YAML override payload теперь сужается до `dict`, no-op `tool` decorator типизирован через `TypeVar`.

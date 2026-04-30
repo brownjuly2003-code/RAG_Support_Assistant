@@ -9,9 +9,11 @@ single-model `gracekelly-primary` path was superseded by task-178's
 pipeline intact while routing fast helper calls through Mistral and strong
 answer generation through GraceKelly browser routing.
 
-Current next work, if prioritized, is not task-177 plumbing. It is a separate
-quality investigation: Claude via `gracekelly-mixed` reached 37.5% effective
-pass rate versus 75% for the Mistral baseline on the 20-case KB benchmark.
+Current next work is not task-177 plumbing. Rev 7 below fixed the confirmed
+RAG-side `returns-window` quality issue where `grade_docs` dropped the
+top-ranked retrieved policy document before answer generation. The remaining
+quality note is `warranty-no-receipt-where`, which needs separate evaluation
+of answer wording versus expected substring criteria.
 
 ## Historical rev 2 snapshot
 
@@ -463,3 +465,46 @@ RAG HEAD: `f1e2be0`, branch `master`, worktree clean before docs sync.
 - `python -m pytest tests -q --ignore=tests/integration --ignore=tests/test_a11y.py
   -p no:schemathesis -p no:cacheprovider --timeout=60
   --basetemp=.tmp\pytest-nonintegration-continuation` -> 603 passed, 4 skipped.
+
+---
+
+# Rev 7 (2026-04-30 — RAG-side `returns-window` quality fix)
+
+RAG HEAD before fix: `451682e`.
+
+## Root cause
+
+Trace review for `returns-window` showed retrieval was not the failing layer:
+`returns_policy.md` was the first retrieved document. The failure happened in
+`grade_docs`: the LLM grader rejected that top-ranked hit while keeping
+lower-ranked unrelated docs. Answer generation then ran without the return
+policy context and produced the "not in context" refusal.
+
+## Fix
+
+- `agent/graph.py` now preserves the first retrieved document when the grader
+  keeps at least one lower-ranked document but drops the top-ranked hit.
+- The all-filtered path is unchanged, so a single irrelevant document can still
+  be filtered out.
+- `tests/test_grade_docs.py` now covers the `returns-window`-style false
+  negative with a red/green regression test.
+
+## Verification so far
+
+- Red test before implementation:
+  `python -m pytest tests\test_grade_docs.py -q -p no:schemathesis
+  --timeout=60 --basetemp=.tmp\pytest-grade-docs-red` -> 1 failed, 1 passed.
+- Green test after implementation:
+  `python -m pytest tests\test_grade_docs.py -q -p no:schemathesis
+  --timeout=60 --basetemp=.tmp\pytest-grade-docs-green` -> 2 passed.
+- Focused suite:
+  `python -m pytest tests\test_grade_docs.py tests\test_provider_graph_integration.py
+  tests\test_regression_runner.py tests\test_regression_eval_profile_target.py
+  tests\test_infrastructure_failure_detection.py -q -p no:schemathesis
+  --timeout=60 --basetemp=.tmp\pytest-grade-docs-focused` -> 32 passed.
+- `python -m ruff check agent\graph.py tests\test_grade_docs.py` -> clean.
+- `python -m pytest tests -q --ignore=tests/integration --ignore=tests/test_a11y.py
+  -p no:schemathesis -p no:cacheprovider --timeout=60
+  --basetemp=.tmp\pytest-grade-docs-final` -> 604 passed, 4 skipped.
+- `python -m mypy agent\graph.py --no-incremental --show-error-codes`
+  -> 1 source file clean.

@@ -844,6 +844,7 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
             usage = _new_llm_usage("grade_docs")
             usage_recorded = False
             tracer = get_otel_tracer()
+            preserved_top_doc = False
             with tracer.start_as_current_span("rag.rerank") as span:
                 span.set_attribute("rag.tenant_id", str(state.get("tenant_id", "default")))
                 span.set_attribute("rag.input_docs", len(context_docs))
@@ -894,10 +895,16 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
                         graded.append(doc)
                     else:
                         filtered_count += 1
+                if graded and all(doc is not context_docs[0] for doc in graded):
+                    graded.insert(0, context_docs[0])
+                    filtered_count = max(0, filtered_count - 1)
+                    preserved_top_doc = True
                 span.set_attribute("rag.filtered_docs", filtered_count)
                 span.set_attribute("rag.output_docs", len(graded))
 
             reason = f"Kept {len(graded)}/{len(context_docs)}, filtered {filtered_count}"
+            if preserved_top_doc:
+                reason += ", preserved top-ranked doc"
             new_state = {**state, "graded_docs": graded, "doc_grade_reason": reason}
             if usage_recorded:
                 new_state = _apply_llm_usage(new_state, usage)
