@@ -10,6 +10,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant
 from auth.dependencies import require_role
 
@@ -17,9 +18,7 @@ router = APIRouter()
 
 
 def _load_recent_trace_summaries(tenant: str, days: int) -> list[dict[str, Any]]:
-    from api import app as _app  # noqa: PLC0415
-
-    return _app._load_recent_trace_summaries(tenant, days)
+    return _app_module()._load_recent_trace_summaries(tenant, days)
 
 
 @router.get("/analytics/top-topics")

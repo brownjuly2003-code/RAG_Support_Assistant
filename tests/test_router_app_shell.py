@@ -7,6 +7,9 @@ from pathlib import Path
 ROUTER_FILES = [
     Path("api/routers/auth_sso.py"),
     Path("api/routers/feedback.py"),
+    Path("api/routers/agent.py"),
+    Path("api/routers/analytics.py"),
+    Path("api/routers/admin_review.py"),
     Path("api/routers/misc.py"),
     Path("api/routers/admin_experiments.py"),
     Path("api/routers/admin_evaluations.py"),

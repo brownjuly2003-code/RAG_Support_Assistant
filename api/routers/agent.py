@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
+from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant
 from auth.dependencies import require_role
 from db import engine as _db_engine
@@ -29,7 +30,7 @@ def _async_session():
 
 async def _log_audit(**kwargs):
     """Indirection so test monkeypatch on api.app.log_audit takes effect."""
-    from api import app as _app  # noqa: PLC0415
+    _app = _app_module()
     return await _app.log_audit(**kwargs)
 
 

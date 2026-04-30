@@ -4,7 +4,7 @@ Extracted from api.app on 2026-04-26 (Phase 2e). The three endpoints depend
 on several private helpers in api.app (_review_queue_enabled,
 _load_review_queue_trace_details, _refresh_review_queue_metrics,
 _serialize_timestamp, _reviewed_by_uuid, _REVIEW_QUEUE_*). These are
-imported lazily inside each handler to avoid a circular import with
+accessed lazily inside each handler to avoid a circular import with
 api.app at module load time.
 
 This is intentional: the helpers will move to api._shared in a follow-up
@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
+from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant
 from auth.dependencies import require_role
 from db import engine as _db_engine
@@ -49,7 +50,7 @@ async def admin_list_review_queue(
     offset: int = 0,
     _user: dict = Depends(require_role("admin", "reviewer")),
 ) -> JSONResponse:
-    from api import app as _app  # noqa: PLC0415
+    _app = _app_module()
 
     if not _app._review_queue_enabled():
         raise HTTPException(status_code=404, detail="review queue disabled")
@@ -124,7 +125,7 @@ async def admin_update_review_queue(
     body: ReviewQueueUpdateRequest,
     _user: dict = Depends(require_role("admin", "reviewer")),
 ) -> JSONResponse:
-    from api import app as _app  # noqa: PLC0415
+    _app = _app_module()
 
     if not _app._review_queue_enabled():
         raise HTTPException(status_code=404, detail="review queue disabled")
@@ -167,7 +168,7 @@ async def admin_update_review_queue(
 async def admin_review_queue_stats(
     _user: dict = Depends(require_role("admin", "reviewer")),
 ) -> JSONResponse:
-    from api import app as _app  # noqa: PLC0415
+    _app = _app_module()
 
     if not _app._review_queue_enabled():
         raise HTTPException(status_code=404, detail="review queue disabled")
