@@ -1,10 +1,25 @@
 # Verification Report — Regression via GraceKelly Claude
 
+## Current status (2026-04-30)
+
+task-177 is closed on the RAG side. The early rev 2 status below is kept as
+historical evidence only; the final state is rev 5/rev 6. The original
+single-model `gracekelly-primary` path was superseded by task-178's
+`--candidate-profile gracekelly-mixed` path, which keeps the full Self-RAG
+pipeline intact while routing fast helper calls through Mistral and strong
+answer generation through GraceKelly browser routing.
+
+Current next work, if prioritized, is not task-177 plumbing. It is a separate
+quality investigation: Claude via `gracekelly-mixed` reached 37.5% effective
+pass rate versus 75% for the Mistral baseline on the 20-case KB benchmark.
+
+## Historical rev 2 snapshot
+
 Date: 2026-04-25 (rev 2 — post thread fix)
 RAG HEAD: `f0fc81b` + 3 unstaged files
 GraceKelly HEAD: `fc2ee94` + 1 unstaged file
 
-## TL;DR for next session
+## TL;DR for rev 2
 
 | What                                              | Status |
 | ------------------------------------------------- | ------ |
