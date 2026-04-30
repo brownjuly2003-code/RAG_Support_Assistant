@@ -177,6 +177,11 @@ extracted. Remaining app-shell work, if desired, is reducing `api/app.py`
 further by moving construction/lifespan/shared-state compatibility helpers
 behind smaller modules. That is a separate cleanup, not a route ownership gap.
 
+2026-04-30 update: `api/_shared.py` now owns the shared lazy `app_module()`
+accessor for extracted routers. `api/routers/upload.py` uses it first; this
+keeps direct `api.app` access centralized while preserving monkeypatch-friendly
+late binding.
+
 ## Type-checking debt
 
 Strict mypy is enforced via `pyproject.toml [[tool.mypy.overrides]]` for:

@@ -8,6 +8,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
+from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant
 from api.rate_limit import limiter
 from auth.dependencies import require_role
@@ -30,12 +31,6 @@ class TaskStatusResponse(BaseModel):
     status: str
     result: dict | None = None
     meta: dict | None = None
-
-
-def _app_module():
-    from api import app as _app  # noqa: PLC0415
-
-    return _app
 
 
 @router.post("/upload", response_model=UploadResponse)

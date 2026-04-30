@@ -2,6 +2,12 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [App-Shell-Cleanup] — 2026-04-30 — shared lazy app accessor for upload router
+
+- `api/_shared.py` — добавлен общий lazy `app_module()` для extracted routers.
+- `api/routers/upload.py` — использует shared accessor вместо локального `_app_module`, сохраняя monkeypatch-friendly late binding.
+- `tests/test_upload_security.py` — закрепляет, что upload-router использует shared accessor.
+
 ## [Regression-Eval-Criteria] — 2026-04-30 — OR-groups for curated answer checks
 
 - `scripts/regression_eval.py` — `CaseExpectation` получил `answer_contains_any`: каждая вложенная группа трактуется как OR-критерий, где достаточно одного substring match.

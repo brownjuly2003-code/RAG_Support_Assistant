@@ -33,6 +33,12 @@ def test_upload_routes_are_owned_by_upload_router(client_with_key: TestClient) -
     assert _route_endpoint_module(client_with_key, "/api/tasks/{task_id}", "GET") == "api.routers.upload"
 
 
+def test_upload_router_uses_shared_app_accessor() -> None:
+    import api.routers.upload as upload
+
+    assert upload._app_module.__module__ == "api._shared"
+
+
 def test_upload_router_imports_without_api_app_first() -> None:
     project_root = Path(__file__).resolve().parents[1]
     script = (
