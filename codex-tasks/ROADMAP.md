@@ -90,6 +90,8 @@ Codex-спеку; закрытые пункты сюда **не включены
 - Batch G/H/I/J/K/L/M are closed in current git history.
 - Remaining work is no longer the old arc 102-122 roadmap. The real open items
   are documentation truth sync, Agent Copilot context quality, tool-call
-  observability, and optional Batch N benchmark selection. Regression-eval CI
-  policy is decided as advisory until deterministic mock mode or live CI
-  services exist.
+  observability, regression-eval CI gate wiring, and optional Batch N benchmark
+  selection. Regression-eval deterministic experiment mock mode exists in
+  `scripts/regression_eval.py`; GitHub Actions remains advisory until a
+  dedicated CI/eval-policy task wires `--mock-experiment-runtime --no-persist`
+  and intentionally removes `continue-on-error`.

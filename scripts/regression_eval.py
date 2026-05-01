@@ -151,7 +151,13 @@ def _resolve_provider_target(target: str, provider_registry_path: Path | None) -
     }
 
 
-def _build_mock_provider_result(case: CuratedCase, target: str, resolution: dict[str, Any]) -> CaseRunResult:
+def _build_mock_provider_result(
+    case: CuratedCase,
+    target: str,
+    resolution: dict[str, Any],
+    *,
+    trace_prefix: str = "mock",
+) -> CaseRunResult:
     provider_id = str(resolution["provider_id"])
     model_name = str(resolution["model_name"])
     expected = case.expected
@@ -211,7 +217,7 @@ def _build_mock_provider_result(case: CuratedCase, target: str, resolution: dict
         duration_ms=int(provider_latency_ms.get(provider_id, 500)),
         cost_usd=cost_usd,
         route=str(expected.route or "auto"),
-        trace_id=f"mock-{_slug(target)}-{case.case_id}",
+        trace_id=f"{trace_prefix}-{_slug(target)}-{case.case_id}",
     )
 
 
@@ -931,6 +937,7 @@ def run_regression(
     max_cases: int | None = None,
     seed: int = 42,
     allow_paid_apis: bool | None = None,
+    mock_experiment_runtime: bool = False,
     max_regressions: int | None = None,
     min_pass_rate: float | None = None,
     project_root: Path = PROJECT_ROOT,
@@ -968,6 +975,18 @@ def run_regression(
         def _selected_executor(case: CuratedCase, target: str) -> CaseRunResult:
             provider_target = _resolve_provider_target(target, provider_registry_path)
             if provider_target is None:
+                if mock_experiment_runtime:
+                    return _build_mock_provider_result(
+                        case,
+                        target,
+                        {
+                            "provider_id": "experiment",
+                            "model_name": target,
+                            "input_price_per_1m_tokens": 0.0,
+                            "output_price_per_1m_tokens": 0.0,
+                        },
+                        trace_prefix="mock-experiment",
+                    )
                 return execute_case_with_runtime(
                     case,
                     target,
@@ -1000,6 +1019,8 @@ def run_regression(
         report["mode"] = (
             "live-provider-benchmark" if benchmark_allow_paid_apis else "mock-provider-benchmark"
         )
+    elif mock_experiment_runtime:
+        report["mode"] = "mock-experiment-regression"
     else:
         report["mode"] = "experiment-regression"
     return report
@@ -1030,11 +1051,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-cases", type=int, default=None)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--allow-paid-apis", action="store_true")
+    parser.add_argument("--mock-experiment-runtime", action="store_true")
+    parser.add_argument("--no-persist", action="store_true")
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    from db.engine import async_session
     from monitoring.prometheus import (
         record_regression_run,
         set_regression_last_pass_rate,
@@ -1053,22 +1075,25 @@ def main(argv: Sequence[str] | None = None) -> int:
             max_cases=args.max_cases,
             seed=args.seed,
             allow_paid_apis=True if args.allow_paid_apis else None,
+            mock_experiment_runtime=args.mock_experiment_runtime,
         )
         markdown_path, json_path = write_report_files(report)
 
-        # Dispose async engine pool before creating a new event loop to avoid
-        # asyncpg "another operation is in progress" race when run_qa_pipeline
-        # already used asyncio.run internally.
-        from db.engine import engine
-        engine.dispose(close=True)
+        if not args.no_persist:
+            from db.engine import async_session, engine
 
-        asyncio.run(
-            persist_regression_result(
-                session_factory=async_session,
-                report=report,
-                report_path=json_path.relative_to(PROJECT_ROOT),
+            # Dispose async engine pool before creating a new event loop to avoid
+            # asyncpg "another operation is in progress" race when run_qa_pipeline
+            # already used asyncio.run internally.
+            engine.dispose(close=True)
+
+            asyncio.run(
+                persist_regression_result(
+                    session_factory=async_session,
+                    report=report,
+                    report_path=json_path.relative_to(PROJECT_ROOT),
+                )
             )
-        )
 
         duration_sec = max((_utc_now() - started_at).total_seconds(), 0.0)
         record_regression_run("pass" if report["gate"]["passed"] else "fail", duration_sec)

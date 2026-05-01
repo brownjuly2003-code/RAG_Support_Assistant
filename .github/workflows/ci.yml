@@ -232,17 +232,13 @@ jobs:
         run: pip-audit --strict --disable-pip --require-hashes -r requirements.lock
 
   regression-eval:
-    # Advisory only: this job executes the full RAG pipeline (Ollama LLM +
-    # vector-store retrieval) against curated cases.  The default runner does
-    # not provide Ollama or pre-built vector indices, so the eval fails its
-    # pass-rate gate when the provider is unavailable.  Making it blocking
-    # would require adding Ollama/vector-store services to CI or building a
-    # deterministic mock mode for experiment-regression runs, both of which
-    # are out of scope for this policy fix.
+    # Deterministic PR gate: experiment targets use mock runtime and report-only
+    # mode, so this does not require Ollama, vector-store setup, or database
+    # persistence.  When regression inputs and the curated dataset are present,
+    # the script exit code enforces the regression gate.
     if: github.event_name == 'pull_request'
-    name: regression-eval (advisory)
+    name: regression-eval
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -305,3 +301,5 @@ jobs:
           --tenant all
           --max-cases 100
           --seed 42
+          --mock-experiment-runtime
+          --no-persist
