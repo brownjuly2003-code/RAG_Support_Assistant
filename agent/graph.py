@@ -661,6 +661,7 @@ def make_classify_complexity_node(
                 response=raw,
                 model=model,
                 duration_ms=0.0,
+                tool_calls=state.get("tool_calls") or None,
             )
             complexity: Literal["simple", "complex", "unknown"]
             if raw.startswith("SIMPLE"):
@@ -730,6 +731,7 @@ def make_transform_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Gra
                     response=raw_search_query,
                     model=model,
                     duration_ms=(time.monotonic() - t0) * 1000,
+                    tool_calls=state.get("tool_calls") or None,
                 )
                 search_query = raw_search_query
                 if not search_query or len(search_query) < 3:
@@ -756,6 +758,7 @@ def make_transform_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Gra
                         response=hyde_doc,
                         model=model,
                         duration_ms=(time.monotonic() - t0) * 1000,
+                        tool_calls=state.get("tool_calls") or None,
                     )
                     if hyde_doc and len(hyde_doc) > 10:
                         hyde_query = hyde_doc
@@ -887,6 +890,7 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
                             response=raw_verdict,
                             model=model,
                             duration_ms=(time.monotonic() - t0) * 1000,
+                            tool_calls=state.get("tool_calls") or None,
                         )
                     except Exception as exc:
                         logger.warning("[grade_docs] LLM error: %s", exc, extra={"trace_id": trace_id})
@@ -962,6 +966,7 @@ def make_generate_node(
                         response=answer,
                         model=model,
                         duration_ms=(time.monotonic() - t0) * 1000,
+                        tool_calls=state.get("tool_calls") or None,
                     )
                 except Exception as exc:
                     logger.warning("[generate] LLM error: %s", exc, extra={"trace_id": trace_id})
@@ -1208,6 +1213,7 @@ def make_evaluate_node(
                         response=raw,
                         model=model,
                         duration_ms=(time.monotonic() - t0) * 1000,
+                        tool_calls=state.get("tool_calls") or None,
                     )
                 except Exception as exc:
                     logger.warning("[evaluate] LLM error: %s", exc, extra={"trace_id": trace_id})
@@ -1269,6 +1275,7 @@ def make_suggest_questions_node(llm: SupportsInvoke) -> Callable[[GraphState], G
                 response=raw,
                 model=model,
                 duration_ms=(time.monotonic() - t0) * 1000,
+                tool_calls=state.get("tool_calls") or None,
             )
             questions = [
                 re.sub(r"^\s*(?:[-*]|\d+[.)])\s*", "", line).strip()
@@ -1377,6 +1384,7 @@ def make_rewrite_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Graph
                     response=raw_new_query,
                     model=model,
                     duration_ms=(time.monotonic() - t0) * 1000,
+                    tool_calls=state.get("tool_calls") or None,
                 )
                 new_query = raw_new_query
                 if not new_query or len(new_query) < 3:

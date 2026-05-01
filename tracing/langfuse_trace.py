@@ -1,8 +1,10 @@
 """Langfuse LLM tracing integration."""
 from __future__ import annotations
 
+import copy
 import hashlib
 import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,7 @@ def trace_llm_call(
     response: str,
     model: str = "",
     duration_ms: float = 0,
+    tool_calls: list[str] | list[dict[str, Any]] | None = None,
 ) -> None:
     """Log an LLM call to Langfuse."""
     lf = get_langfuse()
@@ -61,6 +64,8 @@ def trace_llm_call(
             "pipeline": "rag-pipeline",
             "sqlite_trace_id": trace_id,
         }
+        if tool_calls is not None:
+            metadata["tool_calls"] = copy.deepcopy(tool_calls)
         if hasattr(lf, "start_observation"):
             generation = lf.start_observation(
                 trace_context={"trace_id": langfuse_trace_id},

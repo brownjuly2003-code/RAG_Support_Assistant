@@ -85,6 +85,69 @@ def test_trace_llm_call_uses_start_observation(
     }
 
 
+def test_trace_llm_call_start_observation_metadata_includes_tool_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tracing import langfuse_trace
+
+    calls: dict[str, Any] = {}
+
+    class _Generation:
+        def end(self) -> None:
+            return None
+
+    class _Langfuse:
+        def start_observation(self, **kwargs: Any) -> _Generation:
+            calls["observation"] = kwargs
+            return _Generation()
+
+    tool_calls = [{"name": "search_kb", "arguments": {"query": "returns"}}]
+    monkeypatch.setattr(langfuse_trace, "get_langfuse", lambda: _Langfuse())
+
+    langfuse_trace.trace_llm_call(
+        "trace-2",
+        "agentic",
+        "prompt",
+        "response",
+        tool_calls=tool_calls,
+    )
+
+    assert calls["observation"]["metadata"]["tool_calls"] == tool_calls
+
+
+def test_trace_llm_call_tool_calls_metadata_isolated_from_later_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tracing import langfuse_trace
+
+    calls: dict[str, Any] = {}
+
+    class _Generation:
+        def end(self) -> None:
+            return None
+
+    class _Langfuse:
+        def start_observation(self, **kwargs: Any) -> _Generation:
+            calls["metadata"] = kwargs["metadata"]
+            return _Generation()
+
+    tool_calls = [{"name": "search_kb", "arguments": {"query": "returns"}}]
+    monkeypatch.setattr(langfuse_trace, "get_langfuse", lambda: _Langfuse())
+
+    langfuse_trace.trace_llm_call(
+        "trace-2",
+        "agentic",
+        "prompt",
+        "response",
+        tool_calls=tool_calls,
+    )
+    tool_calls[0]["arguments"]["query"] = "mutated"
+
+    assert calls["metadata"]["tool_calls"] == [
+        {"name": "search_kb", "arguments": {"query": "returns"}}
+    ]
+
+
 def test_trace_llm_call_uses_legacy_trace_generation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -112,6 +175,36 @@ def test_trace_llm_call_uses_legacy_trace_generation(
     assert calls["generation"]["input"] == "prompt"
     assert calls["generation"]["output"] == "response"
     assert calls["generation"]["metadata"]["sqlite_trace_id"] == ""
+
+
+def test_trace_llm_call_legacy_metadata_includes_tool_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tracing import langfuse_trace
+
+    calls: dict[str, Any] = {}
+
+    class _Trace:
+        def generation(self, **kwargs: Any) -> None:
+            calls["generation"] = kwargs
+
+    class _Langfuse:
+        def trace(self, *, id: str, name: str) -> _Trace:
+            calls["trace"] = {"id": id, "name": name}
+            return _Trace()
+
+    tool_calls = ["search_kb", "check_order_status"]
+    monkeypatch.setattr(langfuse_trace, "get_langfuse", lambda: _Langfuse())
+
+    langfuse_trace.trace_llm_call(
+        "trace-3",
+        "agentic",
+        "prompt",
+        "response",
+        tool_calls=tool_calls,
+    )
+
+    assert calls["generation"]["metadata"]["tool_calls"] == tool_calls
 
 
 def test_trace_llm_call_logs_warning_on_backend_error(

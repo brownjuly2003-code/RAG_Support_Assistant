@@ -1,5 +1,11 @@
 # Arc-7 proposal
 
+> **Historical note (2026-05-01):** this proposal records Arc 7 planning and
+> closure history. Some lower "Still deferred/open" paragraphs are preserved as
+> historical snapshots from before `da94ed3` and later close-out commits. Use
+> [`docs/plans/2026-05-01-backlog.md`](../docs/plans/2026-05-01-backlog.md)
+> for the active backlog.
+
 ## Current state recap
 После закрытия Arc 6 проект уже умеет собирать curated dataset, гонять
 regression eval, хранить experiment overrides, считать trace-level cost и
@@ -184,7 +190,7 @@ of tasks 153/154/156). The remaining tasks landed on 2026-04-23:
 - task-158 comparison dashboard (`GET /admin/experiments/comparison?...`,
   admin UI tab in `static/admin.html`).
 
-Still deferred (not blocking Batch I closure):
+Historical snapshot before `da94ed3` (superseded; not active backlog):
 - task-154 sticky hash rollout inside `resolve_active_experiment` (admin
   CRUD is live; the resolver currently returns `None`).
 - task-156 staleness detection cronjob that populates
@@ -203,7 +209,7 @@ The admin + migration slices that keep Batch K green on master landed:
 - Migration 017 `curated_case_status` + admin `GET /admin/curated-dataset/stale`
   (task-156 read-side).
 
-Still open for a follow-up Batch I closure:
+Historical snapshot before Batch I/minors close-out (superseded; not active backlog):
 
 - task-155 automatic rollback watcher + `AUTO_ROLLBACK_ENABLED` flag.
 - task-157 weekly recommendation engine (`scripts/generate_recommendations.py`).

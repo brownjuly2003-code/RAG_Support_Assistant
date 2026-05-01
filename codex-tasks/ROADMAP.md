@@ -1,5 +1,10 @@
 # RAG Support Assistant — post-arc roadmap (CLOSED 2026-04-22)
 
+> **Current backlog pointer (2026-05-01):**
+> [`docs/plans/2026-05-01-backlog.md`](../docs/plans/2026-05-01-backlog.md)
+> is the active backlog source. This roadmap is a historical closure record for
+> arc 102-122 and early Arc 7 planning.
+
 Слияние `commercial-upgrade-plan.md` + `rec.md` с учётом фактического
 состояния кода после арка 68-101. Каждый открытый пункт переработан в
 Codex-спеку; закрытые пункты сюда **не включены** (см. `Archive/`).
@@ -79,9 +84,12 @@ Codex-спеку; закрытые пункты сюда **не включены
 - [ ] Lighthouse mobile ≥90 — отдельный performance sweep, не часть закрытия этой roadmap
 - [ ] Resolution rate ≥50% (если появится production трафик) — постпродакшн
 
-## Next arc (Arc 7)
+## Current follow-up pointer
 
-- [arc-7-proposal.md](./arc-7-proposal.md) — proposal обновлён постфактум: Batch G и Batch H закрыты, дальше перечислены новые кандидаты.
-- Batch G — provider abstraction — ✅ закрыт.
-- Batch H — GraceKelly + Mistral providers, failover chain и cleanup dead paid-provider code — ✅ закрыт.
-- Следующие кандидаты: continuous learning phase 2, backup/restore + chaos drills, и GraceKelly tool-use/structured-output integration отдельным batch'ем.
+- Active backlog: [`docs/plans/2026-05-01-backlog.md`](../docs/plans/2026-05-01-backlog.md).
+- Batch G/H/I/J/K/L/M are closed in current git history.
+- Remaining work is no longer the old arc 102-122 roadmap. The real open items
+  are documentation truth sync, Agent Copilot context quality, tool-call
+  observability, and optional Batch N benchmark selection. Regression-eval CI
+  policy is decided as advisory until deterministic mock mode or live CI
+  services exist.
