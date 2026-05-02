@@ -28,15 +28,15 @@
     </style>
   </head>
   <body>
-    <div class="container">
+    <main class="container">
       <p><a href="/">← На главную</a></p>
       <div class="card">
         <h1>Результат запроса</h1>
 
-        <h3>Вопрос</h3>
+        <h2>Вопрос</h2>
         <pre>{{ question }}</pre>
 
-        <h3>Ответ</h3>
+        <h2>Ответ</h2>
         <pre>{{ response.answer }}</pre>
 
         <p>
@@ -46,6 +46,6 @@
           <b>trace_id:</b> <a href="/traces-ui/{{ response.trace_id }}"><code>{{ response.trace_id }}</code></a>
         </p>
       </div>
-    </div>
+    </main>
   </body>
 </html>

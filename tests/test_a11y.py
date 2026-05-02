@@ -22,6 +22,16 @@ TABLE_PAGES = [
     PROJECT_ROOT / "templates" / "escalations.html",
     PROJECT_ROOT / "templates" / "traces.html",
 ]
+MAIN_LANDMARK_PAGES = [
+    PROJECT_ROOT / "static" / "chat.html",
+    PROJECT_ROOT / "static" / "help.html",
+    PROJECT_ROOT / "static" / "metrics.html",
+    PROJECT_ROOT / "templates" / "index.html",
+    PROJECT_ROOT / "templates" / "ask_result.html",
+    PROJECT_ROOT / "templates" / "escalations.html",
+    PROJECT_ROOT / "templates" / "traces.html",
+    PROJECT_ROOT / "templates" / "trace_detail.html",
+]
 STATIC_A11Y_PATHS = [
     "/static/chat.html",
     "/static/help.html",
@@ -168,6 +178,29 @@ def test_components_css_defines_focus_visible_styles() -> None:
     assert "outline" in css
 
 
+@pytest.mark.parametrize("path", MAIN_LANDMARK_PAGES)
+def test_pages_define_one_main_landmark(path: Path) -> None:
+    html = path.read_text(encoding="utf-8")
+
+    assert len(re.findall(r"<main\b", html)) == 1
+    assert len(re.findall(r"</main>", html)) == 1
+
+
+def test_admin_related_link_is_inside_landmark() -> None:
+    html = (PROJECT_ROOT / "static" / "admin.html").read_text(encoding="utf-8")
+
+    assert '<nav style="padding: 0 32px;" aria-label="Admin related pages">' in html
+
+
+def test_chat_main_landmark_wraps_primary_chat_shell() -> None:
+    html = (PROJECT_ROOT / "static" / "chat.html").read_text(encoding="utf-8")
+    main_start = html.index('<main class="main-pane">')
+    main_end = html.index("</main>", main_start)
+
+    assert main_start < html.index('id="chatContainer"') < main_end
+    assert main_start < html.index('id="chatForm"') < main_end
+
+
 @pytest.mark.parametrize("template_name", TEMPLATE_A11Y_CONTEXTS)
 def test_a11y_templates_render_for_snapshot(template_name: str) -> None:
     env = Environment(loader=FileSystemLoader(str(PROJECT_ROOT / "templates")))
@@ -175,6 +208,16 @@ def test_a11y_templates_render_for_snapshot(template_name: str) -> None:
     rendered = env.get_template(template_name).render(**TEMPLATE_A11Y_CONTEXTS[template_name])
 
     assert "<html" in rendered
+
+
+@pytest.mark.parametrize("template_name", TEMPLATE_A11Y_CONTEXTS)
+def test_a11y_template_heading_order_is_sequential(template_name: str) -> None:
+    env = Environment(loader=FileSystemLoader(str(PROJECT_ROOT / "templates")))
+    rendered = env.get_template(template_name).render(**TEMPLATE_A11Y_CONTEXTS[template_name])
+    levels = [int(match.group(1)) for match in re.finditer(r"<h([1-6])\b", rendered)]
+
+    for previous, current in zip(levels, levels[1:]):
+        assert current <= previous + 1, f"{template_name}: h{previous} skips to h{current}"
 
 
 def _axe_cli_available() -> bool:
