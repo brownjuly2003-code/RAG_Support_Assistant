@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,6 +11,7 @@ from fastapi.testclient import TestClient
 from auth.jwt_handler import create_access_token
 
 api_app = importlib.import_module("api.app")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _token(tenant: str = "default", role: str = "agent") -> dict[str, str]:
@@ -27,6 +29,15 @@ def test_agent_page_requires_agent_role(client_with_key: TestClient) -> None:
 
     assert forbidden.status_code == 403
     assert allowed.status_code == 200
+
+
+def test_agent_page_renders_semantic_context_sections() -> None:
+    html = (PROJECT_ROOT / "static" / "agent.html").read_text(encoding="utf-8")
+
+    assert 'id="retrievedDocs"' in html
+    assert 'id="qualityScores"' in html
+    assert "renderRetrievedDocs(data.retrieved_docs || [])" in html
+    assert "renderQualityScores(data.quality_scores || {})" in html
 
 
 def test_agent_tickets_list_filters_by_tenant_and_status(
@@ -438,7 +449,6 @@ def test_agent_similar_orders_by_relevance(
     assert [item["id"] for item in response.json()["tickets"]] == [
         "00000000-0000-0000-0000-000000000401",
         "00000000-0000-0000-0000-000000000402",
-        "00000000-0000-0000-0000-000000000300",
     ]
 
 

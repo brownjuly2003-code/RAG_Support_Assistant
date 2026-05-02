@@ -113,16 +113,24 @@ def _sort_similar_tickets(ticket: EscalatedTicket, rows: list[EscalatedTicket]) 
             ]
         )
     )
-    return sorted(
-        rows,
-        key=lambda row: (
-            _similarity_score(query_terms, row),
-            getattr(row, "resolved_at", None)
-            or getattr(row, "created_at", None)
-            or datetime.min.replace(tzinfo=timezone.utc),
-        ),
-        reverse=True,
-    )[:3]
+    scored_rows = [
+        (score, row)
+        for row in rows
+        if (score := _similarity_score(query_terms, row))[0] > 0
+    ]
+    return [
+        row
+        for _score, row in sorted(
+            scored_rows,
+            key=lambda item: (
+                item[0],
+                getattr(item[1], "resolved_at", None)
+                or getattr(item[1], "created_at", None)
+                or datetime.min.replace(tzinfo=timezone.utc),
+            ),
+            reverse=True,
+        )[:3]
+    ]
 
 
 def _format_retrieved_docs(docs: list[Any]) -> list[dict[str, str]]:

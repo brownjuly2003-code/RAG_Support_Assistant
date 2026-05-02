@@ -81,6 +81,14 @@
             </div>
             <div id="ticketMeta" class="ticket-meta">Выберите тикет слева.</div>
             <div id="ticketMessages" class="ticket-messages"></div>
+            <div class="similar-block">
+                <h3>Качество</h3>
+                <div id="qualityScores" class="similar-list"></div>
+            </div>
+            <div class="similar-block">
+                <h3>Документы RAG</h3>
+                <div id="retrievedDocs" class="similar-list"></div>
+            </div>
         </section>
 
         <section class="agent-column draft-column">
@@ -110,6 +118,8 @@
         const operatorResponse = document.getElementById('operatorResponse');
         const sendResponse = document.getElementById('sendResponse');
         const similarTickets = document.getElementById('similarTickets');
+        const qualityScores = document.getElementById('qualityScores');
+        const retrievedDocs = document.getElementById('retrievedDocs');
 
         let currentTicketId = null;
 
@@ -177,6 +187,54 @@
             });
         }
 
+        function renderQualityScores(scores) {
+            qualityScores.innerHTML = '';
+            const entries = Object.entries(scores || {}).filter(function(entry) {
+                return entry[1] !== null && entry[1] !== undefined && entry[1] !== '';
+            });
+            if (!entries.length) {
+                qualityScores.innerHTML = '<div class="empty-state">Оценки качества недоступны.</div>';
+                return;
+            }
+
+            entries.forEach(function(entry) {
+                const card = document.createElement('article');
+                const label = document.createElement('strong');
+                const value = document.createElement('p');
+                card.className = 'similar-card';
+                label.textContent = entry[0].replace(/_/g, ' ');
+                value.textContent = String(entry[1]);
+                card.appendChild(label);
+                card.appendChild(value);
+                qualityScores.appendChild(card);
+            });
+        }
+
+        function renderRetrievedDocs(items) {
+            retrievedDocs.innerHTML = '';
+            if (!items.length) {
+                retrievedDocs.innerHTML = '<div class="empty-state">Документы не найдены.</div>';
+                return;
+            }
+
+            items.forEach(function(item) {
+                const card = document.createElement('article');
+                const title = document.createElement('strong');
+                const source = document.createElement('p');
+                const excerpt = document.createElement('p');
+                card.className = 'similar-card';
+                title.textContent = item.title || 'Document';
+                source.textContent = item.source || '';
+                excerpt.textContent = item.excerpt || '';
+                card.appendChild(title);
+                if (source.textContent) {
+                    card.appendChild(source);
+                }
+                card.appendChild(excerpt);
+                retrievedDocs.appendChild(card);
+            });
+        }
+
         function renderSimilar(items) {
             similarTickets.innerHTML = '';
             if (!items.length) {
@@ -213,6 +271,8 @@
                 ticketMeta.textContent = 'Session: ' + data.ticket.session_id + ' • Status: ' + data.ticket.status;
                 operatorResponse.value = data.ticket.operator_response || data.ticket.ai_draft || '';
                 renderMessages(data.messages || []);
+                renderRetrievedDocs(data.retrieved_docs || []);
+                renderQualityScores(data.quality_scores || {});
                 renderSimilar(data.similar_tickets || []);
                 loadTickets();
             } catch (error) {
