@@ -1074,7 +1074,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             tenant=args.tenant,
             max_cases=args.max_cases,
             seed=args.seed,
-            allow_paid_apis=True if args.allow_paid_apis else None,
+            allow_paid_apis=args.allow_paid_apis,
             mock_experiment_runtime=args.mock_experiment_runtime,
         )
         markdown_path, json_path = write_report_files(report)

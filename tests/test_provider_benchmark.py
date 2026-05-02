@@ -173,3 +173,45 @@ def test_main_no_persist_skips_database_write(monkeypatch, capsys) -> None:
     assert exit_code == 0
     assert calls["persist"] == 0
     assert json.loads(capsys.readouterr().out)["run_id"] == "mock-run"
+
+
+def test_main_without_allow_paid_apis_forces_safe_mode(monkeypatch, capsys) -> None:
+    from scripts import regression_eval
+
+    report = {
+        "run_id": "mock-run",
+        "exit_code": 0,
+        "baseline": "ollama-small",
+        "candidate": "mistral-small-latest",
+        "aggregate": {"candidate_pass_rate": 1.0},
+        "gate": {"passed": True},
+    }
+    captured = {}
+
+    def _fake_run_regression(**kwargs):
+        captured["allow_paid_apis"] = kwargs["allow_paid_apis"]
+        return report
+
+    monkeypatch.setattr(regression_eval, "run_regression", _fake_run_regression)
+    monkeypatch.setattr(
+        regression_eval,
+        "write_report_files",
+        lambda report: (
+            regression_eval.PROJECT_ROOT / "reports" / "regression" / "mock.md",
+            regression_eval.PROJECT_ROOT / "reports" / "regression" / "mock.json",
+        ),
+    )
+
+    exit_code = regression_eval.main(
+        [
+            "--baseline",
+            "ollama-small",
+            "--candidate",
+            "mistral-small-latest",
+            "--no-persist",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured["allow_paid_apis"] is False
+    assert json.loads(capsys.readouterr().out)["run_id"] == "mock-run"
