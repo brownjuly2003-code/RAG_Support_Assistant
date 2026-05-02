@@ -145,20 +145,25 @@ curl http://localhost:8000/api/admin/providers  # активный routing profi
 Для непрерывной проверки качества против curated 20-кейс датасета:
 
 ```bash
-# Mistral baseline vs Mistral candidate (no GK, no quota burn)
+# Mock provider benchmark (no GK, no quota burn)
 python scripts/regression_eval.py \
-    --baseline ministral-3b-latest \
+    --baseline ollama-small \
     --candidate mistral-small-latest \
     --max-cases 5 \
-    --allow-paid-apis
+    --no-persist
 
-# GK mixed routing (требует GK uvicorn + GRACEKELLY_REQUEST_TIMEOUT_SEC=120 в .env)
+# Live GK mixed routing (requires explicit paid/API opt-in)
 python scripts/regression_eval.py \
     --baseline ministral-3b-latest \
     --candidate-profile gracekelly-mixed \
     --max-cases 20 \
     --allow-paid-apis
 ```
+
+Без `--allow-paid-apis` provider/model targets run in `mock-provider-benchmark` mode:
+answers and cost/latency metrics are simulated from `evaluation/curated_cases.jsonl`,
+so the command does not call GraceKelly or Mistral and does not persist to the DB when
+`--no-persist` is set. Live provider calls require explicit `--allow-paid-apis`.
 
 Результаты в `reports/regression/<timestamp>-*.{json,md}`. PowerShell wrapper `scripts\run_regression_via_gracekelly.ps1` поднимает disposable Postgres + Redis + ингест + регрессию одной командой.
 

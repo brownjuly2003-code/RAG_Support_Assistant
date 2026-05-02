@@ -26,6 +26,7 @@ MAIN_LANDMARK_PAGES = [
     PROJECT_ROOT / "static" / "chat.html",
     PROJECT_ROOT / "static" / "help.html",
     PROJECT_ROOT / "static" / "metrics.html",
+    PROJECT_ROOT / "static" / "widget.html",
     PROJECT_ROOT / "templates" / "index.html",
     PROJECT_ROOT / "templates" / "ask_result.html",
     PROJECT_ROOT / "templates" / "escalations.html",
@@ -40,6 +41,7 @@ STATIC_A11Y_PATHS = [
     "/static/agent.html",
     "/static/analytics.html",
     "/static/login.html",
+    "/static/widget.html",
 ]
 TEMPLATE_A11Y_CONTEXTS = {
     "index.html": {
@@ -190,6 +192,13 @@ def test_admin_related_link_is_inside_landmark() -> None:
     html = (PROJECT_ROOT / "static" / "admin.html").read_text(encoding="utf-8")
 
     assert '<nav style="padding: 0 32px;" aria-label="Admin related pages">' in html
+
+
+def test_widget_page_is_covered_by_a11y_landmark_checks() -> None:
+    widget_path = PROJECT_ROOT / "static" / "widget.html"
+
+    assert widget_path in MAIN_LANDMARK_PAGES
+    assert "/static/widget.html" in STATIC_A11Y_PATHS
 
 
 def test_chat_main_landmark_wraps_primary_chat_shell() -> None:
