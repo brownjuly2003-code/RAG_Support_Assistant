@@ -2,6 +2,18 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Docs-Health-Sync] — 2026-05-02 — active documentation status cleanup
+
+- README, active backlog, and next-session handoff now separate landed
+  a11y source updates from the remaining external `@axe-core/cli`/Lighthouse
+  verification work.
+- Batch N handoff now points at the live benchmark decision only; mock-safe
+  Quickstart docs and default benchmark guardrails remain closed.
+- `docs/a11y/axe-audit-2026-04-21.md` now marks the report as historical and
+  lists the 2026-05-02 post-audit source updates, including widget coverage.
+- Added docs guardrails for active-doc mojibake, a11y verification wording, and
+  the Batch N handoff boundary.
+
 ## [Agentic-Tool-Trace-Metadata] — 2026-05-02 — Langfuse metadata for provider tool loops
 
 - `agent/graph.py` теперь трассирует каждый `generate_with_tools` turn в
@@ -521,8 +533,8 @@ Partial Batch I closure. task-155 auto-rollback, task-157 recommendation engine,
 ### Testing
 - Арка стартовала примерно со **130** тестов и закрылась на **222** тестах.
 - Существенная часть роста пришлась на resilience, observability, health, multi-tenancy, fact verification и routing regressions, которые раньше вообще не были формализованы в test suite.
-## [Arc 7 / Batch H-K close-out] â€” 2026-04-23 â€” GraceKelly runtime smoke harness
+## [Arc 7 / Batch H-K close-out] — 2026-04-23 — GraceKelly runtime smoke harness
 
 ### Task-174 GraceKelly runtime smoke
-- **`scripts/gracekelly_smoke.py`** â€” manual-only standalone smoke CLI for a live GraceKelly-backed RAG deployment. Validates direct GraceKelly readiness, the active provider profile, `/api/ask` trace metadata, direct schema dispatch on `/api/v1/orchestrate`, SSE streaming on `/api/chat/stream`, Prometheus cost/fallback counters, and a dedicated `--simulate-down` failover-only mode. Steps the current runtime cannot prove externally are emitted as explicit `SKIPPED`.
-- **`docs/operations/gracekelly-smoke.md`** â€” operator runbook with prerequisites, auth expectations, healthy-path and failover-only commands, example output, exit-code mapping, and troubleshooting notes for `GRACEKELLY_BASE_URL`, `/api/admin/providers`, zero-cost metrics, and failover preparation.
+- **`scripts/gracekelly_smoke.py`** — manual-only standalone smoke CLI for a live GraceKelly-backed RAG deployment. Validates direct GraceKelly readiness, the active provider profile, `/api/ask` trace metadata, direct schema dispatch on `/api/v1/orchestrate`, SSE streaming on `/api/chat/stream`, Prometheus cost/fallback counters, and a dedicated `--simulate-down` failover-only mode. Steps the current runtime cannot prove externally are emitted as explicit `SKIPPED`.
+- **`docs/operations/gracekelly-smoke.md`** — operator runbook with prerequisites, auth expectations, healthy-path and failover-only commands, example output, exit-code mapping, and troubleshooting notes for `GRACEKELLY_BASE_URL`, `/api/admin/providers`, zero-cost metrics, and failover preparation.

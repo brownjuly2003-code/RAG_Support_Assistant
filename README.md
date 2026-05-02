@@ -544,13 +544,14 @@ Provider routing is configured through `config/providers.yml`, which defines:
 - enabled providers (`ollama`, `gracekelly`, `mistral`)
 - model aliases such as `ollama-small`, `gk-fast`, and `mistral-small-latest`
 - per-model input/output pricing, rate limits, and capability flags
-- routing profiles `local-first`, `gracekelly-primary`, and `external-mistral`
+- routing profiles `local-first`, `gracekelly-primary`, `gracekelly-mixed`, and `external-mistral`
 
 Runtime behavior:
 
 - `gracekelly-primary` is the default profile and routes both tiers through the local GraceKelly orchestrator.
 - `local-first` is the explicit Ollama-only profile and keeps both fast/strong lanes on Ollama.
 - `gracekelly-primary` falls back only to the declared Ollama fallback when GraceKelly is unavailable and failover is enabled.
+- `gracekelly-mixed` keeps browser-backed strong answer generation on GraceKelly while routing fast helper/evaluator calls through direct Mistral; use it only for explicit live benchmark runs.
 - `external-mistral` uses the direct Mistral API and is the intended non-local deployment option when GraceKelly is not present.
 - Startup validation loads the registry, verifies `LLM_PROVIDER_PROFILE`, and treats placeholder credentials such as `changeme` as missing.
 - Each traced LLM step now records `provider_name`, `model_name`, token usage, and cost; Prometheus exports `llm_cost_usd_total{provider,model,tenant}`.
@@ -859,7 +860,7 @@ python scripts/migrate_default_collection.py
 
 ## Web UI
 
-- `/` - main chat UI with inline citations, upload progress, onboarding,
+- `/static/chat.html` - main chat UI with inline citations, upload progress, onboarding,
   responsive layouts, and SSE streaming
 - `/static/login.html` - login page with password, Google, and Microsoft SSO
 - `/static/help.html` - end-user help page
@@ -878,8 +879,12 @@ python scripts/migrate_default_collection.py
 - Local unit gate runs `tests/test_a11y.py` through `@axe-core/cli` when the
   CLI is installed; axe subprocesses use an explicit timeout budget so the
   full unit suite does not hang under `pytest --timeout=60`.
-- Remaining non-blocking work: moderate landmark/region cleanup and heading
-  normalization documented in the audit report
+- Source status: static coverage now includes `/static/widget.html`; source
+  updates have landed for explicit `<main>` landmarks, the admin analytics
+  `<nav>` landmark, and the rendered `ask_result` heading order.
+- Remaining verification work: rerun `@axe-core/cli` and Lighthouse when the
+  local/CI tooling is installed. Treat the historical moderate findings in the
+  2026-04-21 report as pending verification, not current blockers.
 
 ## Tests
 

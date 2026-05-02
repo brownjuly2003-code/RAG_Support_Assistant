@@ -1,5 +1,10 @@
 # Arc 102-122 verification report
 
+> **Historical snapshot.** This report captures the 2026-04 arc 102-122
+> verification sweep and is not the current project status. Use
+> `docs/plans/2026-05-01-backlog.md` and `docs/CHANGELOG.md` for active
+> backlog and current closure evidence.
+
 ## Summary
 - Total tasks verified: 21
 - ✅ Fully meets acceptance: 0
