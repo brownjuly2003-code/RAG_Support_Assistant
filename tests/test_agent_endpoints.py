@@ -270,6 +270,93 @@ def test_agent_ticket_detail_returns_context_when_available(
     }
 
 
+def test_agent_ticket_detail_ignores_context_from_wrong_session(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+) -> None:
+    from tracing import sqlite_trace
+
+    ticket_id = uuid.UUID("00000000-0000-0000-0000-000000000118")
+    session_uuid = uuid.UUID("00000000-0000-0000-0000-000000000218")
+
+    class _Ticket:
+        id = ticket_id
+        tenant_id = "acme"
+        session_id = str(session_uuid)
+        user_question = "Как сбросить пароль?"
+        ai_draft = "Черновик"
+        operator_response = None
+        status = "open"
+        created_at = datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc)
+        resolved_at = None
+
+    class _ScalarResult:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def all(self):
+            return self._rows
+
+    class _Result:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def scalars(self):
+            return _ScalarResult(self._rows)
+
+    class _Session:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def get(self, model, lookup_id):
+            return _Ticket() if lookup_id == ticket_id else None
+
+        async def execute(self, stmt):
+            return _Result([])
+
+    monkeypatch.setattr("db.engine.async_session", lambda: _Session())
+    monkeypatch.setattr(
+        sqlite_trace,
+        "list_recent_traces",
+        lambda limit=50, tenant_id=None: [{"trace_id": "trace-wrong-session"}],
+    )
+    monkeypatch.setattr(
+        sqlite_trace,
+        "get_trace_detail",
+        lambda trace_id, tenant_id=None: {
+            "steps": [
+                {
+                    "state": {
+                        "session_id": "00000000-0000-0000-0000-000000000999",
+                        "question": "Как сбросить пароль?",
+                        "route": "auto",
+                        "quality_score": 99,
+                        "graded_docs": [
+                            {
+                                "page_content": "Неправильный trace для другой сессии.",
+                                "metadata": {"title": "Wrong trace", "source": "kb://wrong"},
+                            }
+                        ],
+                    }
+                }
+            ]
+        },
+    )
+
+    response = client_with_key.get(
+        f"/api/agent/tickets/{ticket_id}",
+        headers=_token("acme", "agent"),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["retrieved_docs"] == []
+    assert payload["quality_scores"] == {}
+
+
 def test_agent_similar_orders_by_relevance(
     monkeypatch: pytest.MonkeyPatch,
     client_with_key: TestClient,

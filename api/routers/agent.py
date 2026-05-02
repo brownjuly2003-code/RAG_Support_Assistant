@@ -177,13 +177,14 @@ def _trace_context_for_ticket(ticket: EscalatedTicket, tenant: str) -> tuple[lis
                 }
                 context = (_format_retrieved_docs(docs if isinstance(docs, list) else []), quality_scores)
                 state_session_id = str(state.get("session_id") or "").strip()
-                if ticket_session_id and ticket_session_id in {
-                    trace_session_id,
-                    detail_session_id,
-                    state_session_id,
-                }:
+                candidate_session_ids = {
+                    session_id
+                    for session_id in (trace_session_id, detail_session_id, state_session_id)
+                    if session_id
+                }
+                if ticket_session_id and ticket_session_id in candidate_session_ids:
                     return context
-                if fallback is None:
+                if fallback is None and (not ticket_session_id or not candidate_session_ids):
                     fallback = context
         if fallback is not None:
             return fallback
