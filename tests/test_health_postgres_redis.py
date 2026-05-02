@@ -14,6 +14,7 @@ def _mock_critical_probes_ok(monkeypatch: pytest.MonkeyPatch) -> None:
         return api_app.ComponentStatus(status="ok", detail=None)
 
     monkeypatch.setattr(api_app, "_probe_ollama", _ok)
+    monkeypatch.setattr(api_app, "_probe_gracekelly", _ok, raising=False)
     monkeypatch.setattr(api_app, "_probe_chromadb", _ok)
     monkeypatch.setattr(api_app, "_probe_sqlite", _ok)
 

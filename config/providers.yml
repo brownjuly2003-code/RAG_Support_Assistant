@@ -1,4 +1,4 @@
-default_profile: local-first
+default_profile: gracekelly-primary
 
 providers:
   - id: ollama
@@ -96,7 +96,7 @@ providers:
 
 routing_profiles:
   local-first:
-    description: Local-only Ollama routing, zero paid spend (default).
+    description: Explicit local-only Ollama routing, zero paid spend.
     fast:
       provider: ollama
       model: qwen2.5:7b
@@ -105,7 +105,7 @@ routing_profiles:
       model: qwen2.5:7b
 
   gracekelly-primary:
-    description: GraceKelly orchestrator for both tiers (Perplexity Pro-backed), with Ollama fallback on failure.
+    description: GraceKelly orchestrator for both tiers (Perplexity Pro-backed default), with explicit Ollama fallback on failure.
     fast:
       provider: gracekelly
       model: mistral-small

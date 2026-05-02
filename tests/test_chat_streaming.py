@@ -119,6 +119,7 @@ def test_health_exposes_streaming_feature_flag(
         return api_app.ComponentStatus(status="ok", latency_ms=1.0)
 
     monkeypatch.setattr(api_app, "_probe_ollama", _ok)
+    monkeypatch.setattr(api_app, "_probe_gracekelly", _ok, raising=False)
     monkeypatch.setattr(api_app, "_probe_chromadb", _ok)
     monkeypatch.setattr(api_app, "_probe_sqlite", _ok)
     monkeypatch.setattr(api_app, "_probe_postgres", _ok, raising=False)

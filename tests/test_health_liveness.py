@@ -34,8 +34,8 @@ def test_liveness_does_not_call_probes(monkeypatch, client: TestClient) -> None:
         calls.append("called")
         return api_app.ComponentStatus(status="ok", detail=None)
 
-    for name in ("ollama", "chromadb", "sqlite", "postgres", "redis"):
-        monkeypatch.setattr(f"api.app._probe_{name}", _spy_probe)
+    for name in ("ollama", "gracekelly", "chromadb", "sqlite", "postgres", "redis"):
+        monkeypatch.setattr(f"api.app._probe_{name}", _spy_probe, raising=False)
 
     response = client.get("/api/health/live")
 
@@ -47,8 +47,8 @@ def test_liveness_stays_200_when_dependencies_are_down(monkeypatch, client: Test
     async def _fail(*args, **kwargs):
         return api_app.ComponentStatus(status="error", detail="down")
 
-    for name in ("ollama", "chromadb", "sqlite", "postgres", "redis"):
-        monkeypatch.setattr(f"api.app._probe_{name}", _fail)
+    for name in ("ollama", "gracekelly", "chromadb", "sqlite", "postgres", "redis"):
+        monkeypatch.setattr(f"api.app._probe_{name}", _fail, raising=False)
 
     live = client.get("/api/health/live")
     ready = client.get("/api/health/ready")

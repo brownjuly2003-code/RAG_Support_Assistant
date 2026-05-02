@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant
 from auth.dependencies import require_role
+from config.provider_schema import load_provider_registry
 
 logger = logging.getLogger(__name__)
 
@@ -72,15 +73,49 @@ async def health_check() -> JSONResponse:
         return _shutdown_response()
     settings = _app.get_settings()
 
-    ollama_status, chroma_status, sqlite_status, postgres_status, redis_status = await asyncio.gather(
-        _app._probe_ollama(settings.ollama_base_url),
+    provider_statuses: dict[str, ComponentStatus] = {}
+    active_provider_ids: set[str] = set()
+    provider_registry_status: ComponentStatus | None = None
+    try:
+        provider_registry = load_provider_registry(getattr(settings, "provider_registry_path", None))
+        profile_name = str(
+            getattr(settings, "llm_provider_profile", provider_registry.default_profile)
+            or provider_registry.default_profile
+        )
+        active_profile = provider_registry.get_profile(profile_name)
+        active_provider_ids = {active_profile.fast.provider, active_profile.strong.provider}
+    except Exception as exc:
+        provider_registry_status = ComponentStatus(status="error", detail=str(exc))
+
+    provider_probe_names: list[str] = []
+    provider_probe_calls: list[Any] = []
+    if "ollama" in active_provider_ids:
+        provider_probe_names.append("ollama")
+        provider_probe_calls.append(_app._probe_ollama(settings.ollama_base_url))
+    if "gracekelly" in active_provider_ids:
+        provider_probe_names.append("gracekelly")
+        provider_probe_calls.append(
+            _app._probe_gracekelly(
+                str(getattr(settings, "gracekelly_base_url", "http://127.0.0.1:8011")),
+                float(getattr(settings, "gracekelly_health_check_timeout_sec", 2.0)),
+            )
+        )
+    if provider_probe_calls:
+        provider_statuses.update(
+            zip(provider_probe_names, await asyncio.gather(*provider_probe_calls))
+        )
+
+    chroma_status, sqlite_status, postgres_status, redis_status = await asyncio.gather(
         _app._probe_chromadb(settings.vectordb_chroma_dir),
         _app._probe_sqlite(settings.tracing_db_path),
         _app._probe_postgres(),
         _app._probe_redis(),
     )
     try:
-        _app.prometheus_metrics.record_component_health("ollama", ollama_status.status)
+        for provider_name, provider_status in provider_statuses.items():
+            _app.prometheus_metrics.record_component_health(provider_name, provider_status.status)
+        if provider_registry_status is not None:
+            _app.prometheus_metrics.record_component_health("provider_registry", provider_registry_status.status)
         _app.prometheus_metrics.record_component_health("chromadb", chroma_status.status)
         _app.prometheus_metrics.record_component_health("sqlite", sqlite_status.status)
         _app.prometheus_metrics.record_component_health("postgres", postgres_status.status)
@@ -88,7 +123,11 @@ async def health_check() -> JSONResponse:
     except Exception:
         pass
 
-    critical_down = ollama_status.status == "error" or chroma_status.status == "error"
+    critical_down = (
+        chroma_status.status == "error"
+        or any(status.status == "error" for status in provider_statuses.values())
+        or (provider_registry_status is not None and provider_registry_status.status == "error")
+    )
     non_critical_error = (
         sqlite_status.status == "error"
         or postgres_status.status == "error"
@@ -106,15 +145,19 @@ async def health_check() -> JSONResponse:
         if breaker is not None:
             breakers_snap.append(breaker.snapshot())
 
+    components = {
+        **provider_statuses,
+        "chromadb": chroma_status,
+        "sqlite": sqlite_status,
+        "postgres": postgres_status,
+        "redis": redis_status,
+    }
+    if provider_registry_status is not None:
+        components["provider_registry"] = provider_registry_status
+
     response = HealthResponse(
         status=overall,
-        components={
-            "ollama": ollama_status,
-            "chromadb": chroma_status,
-            "sqlite": sqlite_status,
-            "postgres": postgres_status,
-            "redis": redis_status,
-        },
+        components=components,
         vector_store_loaded=_app._vector_store is not None,
         sessions_count=len(_app._sessions),
         pipeline_available=_app._run_qa_pipeline is not None,

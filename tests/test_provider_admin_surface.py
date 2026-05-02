@@ -100,7 +100,7 @@ def test_admin_providers_endpoint_returns_registry_and_recent_usage(
     assert response.status_code == 200
     payload = response.json()
     assert payload["active_profile"] == "local-first"
-    assert payload["default_profile"] == "local-first"
+    assert payload["default_profile"] == "gracekelly-primary"
 
     ollama = next(item for item in payload["providers"] if item["id"] == "ollama")
     assert ollama["configured"] is True

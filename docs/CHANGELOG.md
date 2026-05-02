@@ -2,6 +2,24 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [GraceKelly-Default-Health] — 2026-05-02 — GraceKelly primary as default provider profile
+
+- `config/providers.yml`, `config/settings.py` и `.env.example` переведены на
+  `gracekelly-primary` как default routing profile; `local-first` остался явным
+  Ollama-only режимом для offline/local-only запусков.
+- `/api/health` и `/api/health/ready` теперь проверяют только активных LLM
+  providers из routing profile: default GraceKelly path больше не требует
+  Ollama, а explicit `local-first` по-прежнему проверяет Ollama.
+- Добавлен `_probe_gracekelly()` для readiness check `GET /healthz/ready` и
+  Prometheus component gauge для активного GraceKelly provider-а.
+- README, Quickstart и runbook синхронизированы с новой операторской моделью:
+  GraceKelly primary по умолчанию, Ollama как explicit local-first/fallback.
+- Health/provider tests обновлены под provider-aware readiness, включая
+  regression coverage для GraceKelly default без неявного Ollama probe.
+- Verification: full local pytest with explicit basetemp is green:
+  **659 passed, 16 skipped**; `mypy api/app.py` clean; ruff on touched Python
+  files clean; `git diff --check` clean.
+
 ## [App-Shell-Cleanup] — 2026-04-30 — shared lazy app accessor for extracted routers
 
 - `api/_shared.py` — добавлен общий lazy `app_module()` для extracted routers.

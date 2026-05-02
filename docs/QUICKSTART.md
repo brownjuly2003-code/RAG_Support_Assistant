@@ -6,11 +6,11 @@
 
 - Python 3.11+ (тестировано на 3.13)
 - Docker Desktop (для Postgres + Redis в dev и для regression eval)
-- ~12 GB места под модели (Ollama default `qwen2.5:7b` ≈ 4.7 GB, embeddings `BAAI/bge-m3` ≈ 2.3 GB, reranker ~80 MB, плюс кэш HF)
+- ~8 GB места под embeddings/reranker/cache; explicit Ollama mode дополнительно требует место под модели.
 
-Опционально:
-- **Ollama** (`https://ollama.com/download`) — для локального LLM сценария (default).
-- **GraceKelly** на `D:\GraceKelly\` (port 8011) — для сценария с Claude Sonnet 4.6 / GPT-5 / Gemini через Perplexity Pro.
+По выбранному profile:
+- **GraceKelly** на `D:\GraceKelly\` (port 8011) — default local orchestrator для Claude Sonnet 4.6 / GPT-5 / Gemini через Perplexity Pro.
+- **Ollama** (`https://ollama.com/download`) — для explicit `local-first` сценария или fallback.
 - **Mistral API key** (`MISTRAL_API_KEY`) — для прямого Mistral fast-tier.
 
 ## 1. Зависимости
@@ -32,7 +32,8 @@ cp .env.example .env              # Windows: copy .env.example .env
 
 | Сценарий | Обязательные переменные |
 | --- | --- |
-| **Local-only Ollama** (default) | пусто, `LLM_PROVIDER_PROFILE=local-first` подразумевается |
+| **GraceKelly primary** (default) | `GRACEKELLY_BASE_URL=http://127.0.0.1:8011`, `LLM_PROVIDER_PROFILE=gracekelly-primary` подразумевается |
+| **Local-only Ollama** | `LLM_PROVIDER_PROFILE=local-first` |
 | **+ Mistral fast tier** | `MISTRAL_API_KEY=<key>` + `LLM_PROVIDER_PROFILE=external-mistral` |
 | **GraceKelly mixed routing** (Claude Sonnet 4.6 reasoning) | `MISTRAL_API_KEY=<key>` + `LLM_PROVIDER_PROFILE=gracekelly-mixed` + `GRACEKELLY_REQUEST_TIMEOUT_SEC=120` |
 
@@ -56,16 +57,15 @@ docker run -d --name rag-redis -p 6379:6379 redis:7-alpine
 alembic upgrade head
 ```
 
-## 4. Сценарий A — Local-only (Ollama)
+## 4. Сценарий A — GraceKelly primary (default)
 
 ```bash
-# Поднять Ollama и стянуть модели
-ollama serve &
-ollama pull qwen2.5:7b
-# опционально, для быстрых хелпер-флоу:
-# ollama pull llama3.2:3b
+# Поднять GraceKelly в отдельном терминале
+cd D:\GraceKelly
+uvicorn gracekelly.main:create_app --factory --host 127.0.0.1 --port 8011
 
 # Запуск
+cd D:\RAG_Support_Assistant
 python main.py
 ```
 
@@ -74,7 +74,20 @@ python main.py
 `/agent` для agent copilot dashboard. (legacy `/` index UI удалён
 2026-04-27 — был unauthenticated, см. SESSION-NOTES-2026-04-27.)
 
-## 5. Сценарий B — GraceKelly mixed routing
+`gracekelly-primary` profile направляет fast и strong tier через локальный GraceKelly orchestrator. `/api/health/ready` проверяет GraceKelly readiness и не требует Ollama, если активный профиль не использует Ollama.
+
+## 5. Сценарий B — explicit Local-only Ollama
+
+```bash
+# Поднять Ollama и стянуть модели
+ollama serve &
+ollama pull qwen2.5:7b
+
+# Запуск с явным local-first profile
+LLM_PROVIDER_PROFILE=local-first python main.py
+```
+
+## 6. Сценарий C — GraceKelly mixed routing
 
 Полезно когда нужно качество reasoning (Claude Sonnet 4.6) для финальных ответов, но фоновую обработку (классификация, grade_docs, verify_facts) делает быстрый Mistral API.
 
@@ -102,7 +115,7 @@ python main.py
 
 `gracekelly-mixed` profile направляет fast tier через Mistral API (~1-3s/call), strong tier (final answer) через GraceKelly browser → Perplexity Pro (Claude Sonnet 4.6, ~30-60s/call).
 
-## 6. Загрузка документов и первый запрос
+## 7. Загрузка документов и первый запрос
 
 ```bash
 # Документ для ингеста (PDF, MD, TXT)
@@ -118,7 +131,7 @@ curl -X POST http://localhost:8000/api/ask \
 
 Получить admin JWT для dev: `POST /api/auth/login` с `admin/admin` (если `ADMIN_PASSWORD_HASH` не задан в `.env`).
 
-## 7. Health checks
+## 8. Health checks
 
 ```bash
 curl http://localhost:8000/api/health/live      # liveness
@@ -127,7 +140,7 @@ curl http://localhost:8000/api/metrics          # снимок метрик
 curl http://localhost:8000/api/admin/providers  # активный routing profile + recent usage (auth)
 ```
 
-## 8. Regression eval
+## 9. Regression eval
 
 Для непрерывной проверки качества против curated 20-кейс датасета:
 
@@ -149,7 +162,7 @@ python scripts/regression_eval.py \
 
 Результаты в `reports/regression/<timestamp>-*.{json,md}`. PowerShell wrapper `scripts\run_regression_via_gracekelly.ps1` поднимает disposable Postgres + Redis + ингест + регрессию одной командой.
 
-## 9. Частые засады
+## 10. Частые засады
 
 - **`vector store is not initialized`** — нет ингестированных документов. Загрузить через `POST /api/upload` или прогнать ингест-скрипт.
 - **`[provider_unavailable]` в ответах** — циркуит-брейкер открыт у адаптера. Дождаться cooldown (60s) или сбросить вручную: `POST /api/admin/circuit-breaker/reset`.
@@ -157,7 +170,7 @@ python scripts/regression_eval.py \
 - **`HF_HUB_OFFLINE=1`** в env, но `BAAI/bge-m3` не в кэше → embeddings падают. Стянуть один раз с `HF_HUB_OFFLINE` пустым, потом включать обратно.
 - **Postgres `DuplicateObject` на ENUM** — миграция 012 чувствительна к двойному `CREATE TYPE`. Исправлено в `d163942`; если ловится — обновить ветку.
 
-## 10. Где смотреть дальше
+## 11. Где смотреть дальше
 
 - `README.md` — полный спектр env vars + публичные endpoints + Prometheus метрики.
 - `docs/runbook.md` — оперативный runbook для дежурного (алерты, диагностика, действия).

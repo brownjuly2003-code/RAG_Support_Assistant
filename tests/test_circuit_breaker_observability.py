@@ -108,6 +108,7 @@ def test_health_endpoint_includes_circuit_breaker_snapshot(
         return api_app.ComponentStatus(status="ok", latency_ms=1.0)
 
     monkeypatch.setattr(api_app, "_probe_ollama", ok_probe)
+    monkeypatch.setattr(api_app, "_probe_gracekelly", ok_probe, raising=False)
     monkeypatch.setattr(api_app, "_probe_chromadb", ok_probe)
     monkeypatch.setattr(api_app, "_probe_sqlite", ok_probe)
     monkeypatch.setattr(

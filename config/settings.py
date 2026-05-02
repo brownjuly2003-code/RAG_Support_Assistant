@@ -5,6 +5,7 @@
 Идея:
 - одно место, где собраны пути (project_root, data/ и т.п.);
 - чтение переменных окружения для переключателей:
+    - GRACEKELLY_BASE_URL, LLM_PROVIDER_PROFILE
     - OLLAMA_BASE_URL, OLLAMA_MODEL_NAME
     - RAG_VECTOR_BACKEND ("chroma" / "qdrant")
     - SUPPORT_SINK_BACKEND ("local" / "bitrix")
@@ -215,10 +216,10 @@ class Settings:
             )
         )
     )
-    # --- Настройки LLM (Ollama / локальная модель) ---
+    # --- Настройки LLM provider routing ---
     llm_provider_profile: str = field(
-        default_factory=lambda: os.getenv("LLM_PROVIDER_PROFILE", "local-first").strip()
-        or "local-first"
+        default_factory=lambda: os.getenv("LLM_PROVIDER_PROFILE", "gracekelly-primary").strip()
+        or "gracekelly-primary"
     )
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     ollama_model_name: str = os.getenv("OLLAMA_MODEL_NAME", "qwen2.5:7b")
@@ -579,7 +580,7 @@ class Settings:
 
     # --- Продакшн-режим ---
     # REQUIRE_OLLAMA=true → fail fast если Ollama недоступна при старте.
-    # По умолчанию false, чтобы не ломать локальную разработку без LLM.
+    # По умолчанию false; Ollama обязателен только для explicit local-first mode.
     require_ollama: bool = os.getenv("REQUIRE_OLLAMA", "false").strip().lower() in ("1", "true", "yes")
     circuit_breaker_enabled: bool = os.getenv(
         "CIRCUIT_BREAKER_ENABLED", "true"
@@ -684,7 +685,7 @@ class Settings:
         Проверяет доступность критичных зависимостей при старте.
 
         Если REQUIRE_OLLAMA=true и Ollama недоступна — поднимает RuntimeError.
-        Если REQUIRE_OLLAMA=false (по умолчанию) — только предупреждение.
+        Если активный профиль использует Ollama и REQUIRE_OLLAMA=false — только предупреждение.
         """
         import logging
         import urllib.request
@@ -787,35 +788,37 @@ class Settings:
             raise RuntimeError(
                 f"\nERROR: LLM provider profile '{self.llm_provider_profile}' requires paid provider credentials.\n"
                 f"       Missing env vars: {missing}\n"
-                "       Set the required keys in .env or switch to LLM_PROVIDER_PROFILE=local-first."
+                "       Set the required keys in .env or switch to LLM_PROVIDER_PROFILE=gracekelly-primary."
             )
 
         # Проверка Ollama
-        ollama_ok = False
-        try:
-            req = urllib.request.Request(
-                f"{self.ollama_base_url}/api/tags",
-                method="GET",
-            )
-            with urllib.request.urlopen(req, timeout=3):
-                ollama_ok = True
-        except Exception as exc:
-            if self.require_ollama:
-                raise RuntimeError(
-                    f"\nERROR: Cannot connect to Ollama at {self.ollama_base_url}\n"
-                    f"       Причина: {exc}\n"
-                    f"       Запустите Ollama: ollama serve\n"
-                    f"       Затем: ollama pull {self.ollama_model_name}\n"
-                ) from exc
-            log.warning(
-                "Ollama недоступна по адресу %s (%s). "
-                "Установите REQUIRE_OLLAMA=true для fail-fast в продакшне.",
-                self.ollama_base_url,
-                exc,
-            )
+        active_provider_ids = {active_profile.fast.provider, active_profile.strong.provider}
+        if self.require_ollama or "ollama" in active_provider_ids:
+            ollama_ok = False
+            try:
+                req = urllib.request.Request(
+                    f"{self.ollama_base_url}/api/tags",
+                    method="GET",
+                )
+                with urllib.request.urlopen(req, timeout=3):
+                    ollama_ok = True
+            except Exception as exc:
+                if self.require_ollama:
+                    raise RuntimeError(
+                        f"\nERROR: Cannot connect to Ollama at {self.ollama_base_url}\n"
+                        f"       Причина: {exc}\n"
+                        f"       Запустите Ollama: ollama serve\n"
+                        f"       Затем: ollama pull {self.ollama_model_name}\n"
+                    ) from exc
+                log.warning(
+                    "Ollama недоступна по адресу %s (%s). "
+                    "Установите REQUIRE_OLLAMA=true для fail-fast в explicit local-first mode.",
+                    self.ollama_base_url,
+                    exc,
+                )
 
-        if ollama_ok:
-            log.info("Ollama доступна: %s", self.ollama_base_url)
+            if ollama_ok:
+                log.info("Ollama доступна: %s", self.ollama_base_url)
 
         # Проверка директории ChromaDB
         try:

@@ -78,6 +78,7 @@ get_current_tenant = _get_current_tenant
 
 if TYPE_CHECKING:
     from api.routers.conversation import Citation as CitationModel
+    from config.settings import Settings
 
 
 async def _stream_ollama(
@@ -170,7 +171,7 @@ except ImportError:
 try:
     from config.settings import get_settings
 except ImportError:
-    def get_settings() -> Any:
+    def get_settings() -> Settings:
         class _S:
             project_root = PROJECT_ROOT
             data_dir = PROJECT_ROOT / "data"
@@ -201,7 +202,7 @@ except ImportError:
             otel_enabled = False
             otel_exporter_otlp_endpoint = "http://localhost:4317"
             otel_service_name = "rag-support-assistant"
-        return _S()
+        return cast("Settings", _S())
 
 _build_provider_runtime = None
 try:
@@ -1331,6 +1332,17 @@ async def _probe_ollama(base_url: str) -> ComponentStatus:
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             resp = await client.get(f"{base_url}/api/tags")
+            resp.raise_for_status()
+        return ComponentStatus(status="ok", latency_ms=round((time.monotonic() - t0) * 1000, 1))
+    except Exception as exc:
+        return ComponentStatus(status="error", latency_ms=round((time.monotonic() - t0) * 1000, 1), detail=str(exc))
+
+
+async def _probe_gracekelly(base_url: str, timeout_sec: float = 2.0) -> ComponentStatus:
+    t0 = time.monotonic()
+    try:
+        async with httpx.AsyncClient(timeout=timeout_sec) as client:
+            resp = await client.get(f"{base_url.rstrip('/')}/healthz/ready")
             resp.raise_for_status()
         return ComponentStatus(status="ok", latency_ms=round((time.monotonic() - t0) * 1000, 1))
     except Exception as exc:

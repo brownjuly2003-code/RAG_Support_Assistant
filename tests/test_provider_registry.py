@@ -14,7 +14,7 @@ def test_load_provider_registry_from_yaml() -> None:
         Path(__file__).resolve().parent.parent / "config" / "providers.yml"
     )
 
-    assert registry.default_profile == "local-first"
+    assert registry.default_profile == "gracekelly-primary"
     assert set(registry.provider_ids()) == {"gracekelly", "mistral", "ollama"}
     assert registry.get_profile("gracekelly-primary").strong.provider == "gracekelly"
     assert registry.get_provider("ollama").default_models.fast == "qwen2.5:7b"

@@ -33,7 +33,7 @@ Get-Content data/alerts.log -Tail 40
 
 ## Порядок разбора
 
-1. Сначала проверь `/api/health`. Если `ollama` или `chromadb` в статусе `error`, сначала чини инфраструктуру.
+1. Сначала проверь `/api/health`. Если активный LLM provider (`gracekelly` для default `gracekelly-primary`, `ollama` только для explicit `local-first`) или `chromadb` в статусе `error`, сначала чини инфраструктуру.
 2. Потом открой `/api/metrics` и сравни, какая метрика красная.
 3. Затем смотри конкретные trace_id через SQL и `/api/admin/traces/{trace_id}`
    (admin auth). Legacy unauthenticated `/traces-ui` удалён 2026-04-27 (Codex P0).
@@ -165,15 +165,19 @@ LIMIT 10;
 ```
 
 ```powershell
+# Для default GraceKelly profile
+Invoke-RestMethod http://127.0.0.1:8011/healthz/ready | ConvertTo-Json -Depth 5
+
+# Только для explicit local-first / Ollama fallback
 Invoke-RestMethod http://localhost:11434/api/tags | ConvertTo-Json -Depth 5
 ```
 
 Что делать:
 
-1. Если Ollama отвечает медленно или нестабильно, сначала восстанови её доступность.
+1. Если активный LLM provider отвечает медленно или нестабильно, сначала восстанови его доступность.
 2. Если модель работает, но latency стабильно высокая, снизь `RAG_RETRIEVAL_TOP_K`.
 3. Если узкое место в rerank, снизь `RAG_RERANK_TOP_K`.
-4. Если рост задержки постоянный и связан с ресурсами хоста, вынеси Ollama на отдельную машину или усили хост.
+4. Если рост задержки постоянный и связан с ресурсами хоста, вынеси активный LLM provider на отдельную машину или усили хост.
 
 ### `thumbs_down_rate > 20%` за 7 дней при `n >= 50`
 
