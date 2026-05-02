@@ -1763,13 +1763,35 @@ class ConversationSession:
         usage = _new_llm_usage("agentic")
 
         for _ in range(max_loops):
+            prompt = "\n\n".join(
+                f"{item.get('role', 'user')}: {item.get('content', '')}" for item in messages
+            )
             try:
+                t0 = time.monotonic()
                 response = tool_llm.generate_with_tools(messages, _agentic_tool_definitions())
             except Exception as exc:
                 logger.warning("[agentic] provider tool loop unavailable: %s", exc)
                 return None
             usage = _merge_llm_usage(usage, _capture_llm_usage(tool_llm, "agentic"))
-            raw_tool_calls = getattr(response, "tool_calls", None) or []
+            raw_tool_calls = cast(list[dict[str, Any]], getattr(response, "tool_calls", None) or [])
+            traced_tool_calls: list[str] | list[dict[str, Any]] | None
+            if raw_tool_calls:
+                traced_tool_calls = raw_tool_calls
+            else:
+                traced_tool_calls = list(tool_calls) or None
+            trace_llm_call(
+                trace_id=active_trace_id,
+                node_name="agentic_tool_loop",
+                prompt=prompt,
+                response=str(response.text or ""),
+                model=(
+                    _normalize_optional_str(getattr(response, "model", None))
+                    or _get_llm_model_name(tool_llm)
+                    or ""
+                ),
+                duration_ms=(time.monotonic() - t0) * 1000,
+                tool_calls=traced_tool_calls,
+            )
             if not raw_tool_calls:
                 answer = str(response.text or "").strip()
                 if not answer:

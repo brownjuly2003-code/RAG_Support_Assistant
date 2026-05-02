@@ -190,6 +190,79 @@ def test_agentic_provider_tool_loop_uses_unified_generate_with_tools(
     assert any(item["content"] == "ORDER:42:acme" for item in tool_messages)
 
 
+def test_agentic_provider_tool_loop_traces_tool_call_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    traced_calls: list[dict[str, object]] = []
+    raw_tool_call = {
+        "name": "search_kb",
+        "arguments": {"query": "return policy"},
+    }
+
+    class _FakeToolLLM:
+        provider_id = "gracekelly"
+        model_name = "claude-sonnet-4-6-api"
+        supports_tool_use = True
+
+        def __init__(self) -> None:
+            self.last_response = None
+            self.calls = 0
+
+        def generate_with_tools(self, messages, tools, **kwargs):
+            _ = messages, tools, kwargs
+            self.calls += 1
+            if self.calls == 1:
+                response = LLMResponse(
+                    text="",
+                    provider=self.provider_id,
+                    model=self.model_name,
+                    tool_calls=[raw_tool_call],
+                )
+            else:
+                response = LLMResponse(
+                    text="The item can be returned within 14 days.",
+                    provider=self.provider_id,
+                    model=self.model_name,
+                )
+            self.last_response = response
+            return response
+
+    monkeypatch.setattr(
+        "config.settings.get_settings",
+        lambda: SimpleNamespace(agentic_mode=True, agent_max_tool_loops=2),
+    )
+    monkeypatch.setattr(agent_tools, "search_kb", lambda query, tenant_id, retriever=None: "KB")
+    monkeypatch.setattr(
+        agent_graph,
+        "start_trace",
+        lambda trace_id=None, tenant_id="default": trace_id or "trace-tools-observe",
+    )
+    monkeypatch.setattr(agent_graph, "log_step", lambda trace_id, node_name, state: None)
+    monkeypatch.setattr(agent_graph, "finish_trace", lambda trace_id, final_state: None)
+    monkeypatch.setattr(
+        agent_graph,
+        "trace_llm_call",
+        lambda **kwargs: traced_calls.append(dict(kwargs)),
+    )
+
+    session = agent_graph.ConversationSession(retriever=object(), llm=_FakeToolLLM())
+
+    result = session.ask(
+        "Need the return policy.",
+        trace_id="trace-tools-observe",
+        tenant_id="acme",
+        user_id="agent-1",
+        session_id="session-tools",
+    )
+
+    assert result["tool_calls"] == ["search_kb"]
+    tool_trace = next(
+        call for call in traced_calls if call.get("tool_calls") == [raw_tool_call]
+    )
+    assert tool_trace["trace_id"] == "trace-tools-observe"
+    assert tool_trace["node_name"] == "agentic_tool_loop"
+
+
 def test_api_ask_passes_confirm_flag_into_session(
     monkeypatch: pytest.MonkeyPatch,
     client_with_key,

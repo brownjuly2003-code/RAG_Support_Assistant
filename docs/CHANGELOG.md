@@ -2,6 +2,19 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Agentic-Tool-Trace-Metadata] — 2026-05-02 — Langfuse metadata for provider tool loops
+
+- `agent/graph.py` теперь трассирует каждый `generate_with_tools` turn в
+  provider-backed agentic loop через `trace_llm_call`.
+- Tool-call turn передаёт raw provider `tool_calls` в Langfuse generation
+  metadata; финальный answer turn сохраняет уже выполненные tool names.
+- `tests/test_agent_tools.py` закрепляет regression: provider tool-loop должен
+  отправлять `tool_calls` metadata в `trace_llm_call`.
+- Verification: red test confirmed the missing trace metadata; green focused
+  test; `tests/test_agent_tools.py` + `tests/test_langfuse_trace.py` green;
+  `mypy agent/graph.py` clean; full local pytest green:
+  **677 passed, 16 skipped**; `ruff check .` clean; `git diff --check` clean.
+
 ## [GraceKelly-Default-Health] — 2026-05-02 — GraceKelly primary as default provider profile
 
 - `config/providers.yml`, `config/settings.py` и `.env.example` переведены на
