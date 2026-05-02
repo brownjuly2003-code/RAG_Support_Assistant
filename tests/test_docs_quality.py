@@ -75,3 +75,19 @@ def test_old_arc_verification_report_is_marked_historical() -> None:
 
     assert "Historical snapshot" in content
     assert "docs/plans/2026-05-01-backlog.md" in content
+
+
+def test_live_gracekelly_docs_require_explicit_user_opt_in() -> None:
+    smoke = (PROJECT_ROOT / "docs" / "operations" / "gracekelly-smoke.md").read_text(
+        encoding="utf-8"
+    )
+    task_177 = (
+        PROJECT_ROOT
+        / "codex-tasks"
+        / "task-177-regression-via-gracekelly-claude.md"
+    ).read_text(encoding="utf-8")
+
+    assert "explicit user opt-in" in smoke
+    assert "live GraceKelly" in smoke
+    assert "explicit user opt-in" in task_177
+    assert "live GraceKelly/Mistral" in task_177

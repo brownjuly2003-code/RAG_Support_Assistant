@@ -23,6 +23,11 @@ This file is kept in `codex-tasks/` as a visible historical task note; do not
 restart the original `claude-sonnet-4-6-api` single-model path unless you
 explicitly want a browser-only stress test rather than the product pipeline.
 
+> **Live warning.** Any rerun of this historical benchmark requires explicit user opt-in.
+> The live GraceKelly/Mistral path can use browser routing and
+> paid direct Mistral/API calls through `--allow-paid-apis`; keep mock/default
+> flows as the default.
+
 ## Goal
 Получить честный quality/cost/latency сигнал на Claude Sonnet 4.6, не упираясь в Mistral free-tier 60 rpm. Candidate = `claude-sonnet-4-6-api` через GraceKelly (`gracekelly-primary` profile, browser.perplexity adapter). Baseline = `ministral-3b-latest` direct Mistral (уже в `external-mistral` profile). Расширить curated dataset до 20 cases на текущем KB, чтобы статистика была не из 5 точек.
 

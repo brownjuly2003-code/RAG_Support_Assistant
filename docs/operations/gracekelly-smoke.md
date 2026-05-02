@@ -3,6 +3,10 @@
 Manual runtime smoke for the live GraceKelly integration in `RAG_Support_Assistant`.
 This script is intentionally not wired into CI.
 
+> **Live warning.** Run this smoke only after explicit user opt-in. It targets
+> live GraceKelly runtime behavior and may exercise browser-backed or API-backed
+> upstream paths depending on the active GraceKelly configuration.
+
 ## Preconditions
 
 - `D:\GraceKelly\` is running and listening on `http://127.0.0.1:8011`.
