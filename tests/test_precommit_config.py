@@ -82,6 +82,15 @@ def test_type_check_tooling_is_locked_for_ci() -> None:
     assert re.search(r"^mypy==", locked, flags=re.MULTILINE)
 
 
+def test_pytest_plugins_are_locked_for_ci() -> None:
+    requirements = (PROJECT_ROOT / "requirements-dev.txt").read_text(encoding="utf-8")
+    locked = (PROJECT_ROOT / "requirements-dev.lock").read_text(encoding="utf-8")
+
+    for package in ["pytest-asyncio", "pytest-timeout"]:
+        assert re.search(fr"^{package}==", requirements, flags=re.MULTILINE)
+        assert re.search(fr"^{package}==", locked, flags=re.MULTILINE)
+
+
 def test_precommit_repo_wide_hooks_skip_tracked_legacy_outputs() -> None:
     config = yaml.safe_load(
         (PROJECT_ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
