@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 from packaging.requirements import Requirement
 import yaml
@@ -63,3 +64,62 @@ def test_ci_security_audits_locked_requirements_without_pip_resolution() -> None
 
     assert "pip-audit --strict --disable-pip --require-hashes -r requirements.lock" in security_job
     assert "pip-audit -r requirements.txt" not in security_job
+
+
+def test_runtime_session_dependency_is_locked() -> None:
+    requirements = (PROJECT_ROOT / "requirements.txt").read_text(encoding="utf-8")
+    locked = (PROJECT_ROOT / "requirements.lock").read_text(encoding="utf-8")
+
+    assert re.search(r"^itsdangerous>=", requirements, flags=re.MULTILINE)
+    assert re.search(r"^itsdangerous==", locked, flags=re.MULTILINE)
+
+
+def test_type_check_tooling_is_locked_for_ci() -> None:
+    requirements = (PROJECT_ROOT / "requirements-dev.txt").read_text(encoding="utf-8")
+    locked = (PROJECT_ROOT / "requirements-dev.lock").read_text(encoding="utf-8")
+
+    assert re.search(r"^mypy==", requirements, flags=re.MULTILINE)
+    assert re.search(r"^mypy==", locked, flags=re.MULTILINE)
+
+
+def test_precommit_repo_wide_hooks_skip_tracked_legacy_outputs() -> None:
+    config = yaml.safe_load(
+        (PROJECT_ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
+    )
+    precommit_hooks = next(
+        repo["hooks"]
+        for repo in config["repos"]
+        if repo["repo"] == "https://github.com/pre-commit/pre-commit-hooks"
+    )
+    hooks = {hook["id"]: hook for hook in precommit_hooks}
+
+    excluded_paths = {
+        "trailing-whitespace": [
+            "archive-legacy/rag_poc_architecture.md",
+            "audit_opus_27_04_26.md",
+        ],
+        "end-of-file-fixer": [
+            "archive-legacy/prompt_for_github.md",
+            "reports/regression/20260425T044732Z-ministral-3b-latest-vs-mistral-small-latest.json",
+        ],
+        "detect-private-key": [
+            "codex-tasks/cleanup-report.md",
+            "codex-tasks/Archive/task-126-hygiene-consistency-audit.md",
+        ],
+    }
+
+    for hook_id, paths in excluded_paths.items():
+        exclude = hooks[hook_id]["exclude"]
+        for path in paths:
+            assert re.search(exclude, path)
+
+
+def test_ci_helm_render_uses_validation_placeholders() -> None:
+    content = (PROJECT_ROOT / ".github" / "workflows" / "ci.yml").read_text(
+        encoding="utf-8"
+    )
+    helm_job = content.split("  helm:", 1)[1].split("  lint:", 1)[0]
+
+    assert "--set secrets.existingSecret=ci-placeholder" in helm_job
+    assert "--set env.CORS_ORIGINS=https://support.example.com" in helm_job
+    assert "--set postgresql.auth.password=ci-placeholder" in helm_job

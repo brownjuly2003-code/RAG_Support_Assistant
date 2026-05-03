@@ -43,4 +43,3 @@ def test_all_templates_include_viewport_meta() -> None:
     ]
 
     assert not missing, f"Templates without viewport meta: {missing}"
-

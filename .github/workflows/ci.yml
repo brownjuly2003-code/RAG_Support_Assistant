@@ -56,7 +56,12 @@ jobs:
         run: helm lint deploy/helm/ --strict
 
       - name: Render chart
-        run: helm template deploy/helm/ --values deploy/helm/values.yaml > /tmp/rendered.yaml
+        run: |
+          helm template deploy/helm/ --values deploy/helm/values.yaml \
+            --set secrets.existingSecret=ci-placeholder \
+            --set env.CORS_ORIGINS=https://support.example.com \
+            --set postgresql.auth.password=ci-placeholder \
+            > /tmp/rendered.yaml
 
       - uses: helm/kind-action@v1
 

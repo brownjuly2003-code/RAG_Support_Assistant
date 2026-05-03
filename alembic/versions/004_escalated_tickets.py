@@ -38,4 +38,3 @@ def downgrade() -> None:
     op.drop_index("idx_escalated_tickets_session_id", table_name="escalated_tickets")
     op.drop_index("idx_escalated_tickets_tenant_id", table_name="escalated_tickets")
     op.drop_table("escalated_tickets")
-
