@@ -132,3 +132,18 @@ def test_ci_helm_render_uses_validation_placeholders() -> None:
     assert "--set secrets.existingSecret=ci-placeholder" in helm_job
     assert "--set env.CORS_ORIGINS=https://support.example.com" in helm_job
     assert "--set postgresql.auth.password=ci-placeholder" in helm_job
+
+
+def test_ci_integration_tests_are_bounded_without_nested_testcontainers() -> None:
+    content = (PROJECT_ROOT / ".github" / "workflows" / "ci.yml").read_text(
+        encoding="utf-8"
+    )
+    integration_job = content.split("  test-integration:", 1)[1].split("  pre-commit:", 1)[0]
+    regression_test = (
+        PROJECT_ROOT / "tests" / "integration" / "test_regression_eval_live.py"
+    ).read_text(encoding="utf-8")
+
+    assert "timeout-minutes: 20" in integration_job
+    assert "pytest tests/integration -q --timeout=120 --timeout-method=thread" in integration_job
+    assert "GITHUB_ACTIONS" in regression_test
+    assert "RAG_RUN_TESTCONTAINERS_IN_CI" in regression_test

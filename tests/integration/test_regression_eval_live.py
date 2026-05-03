@@ -94,6 +94,8 @@ def _write_curated_cases(path: Path) -> None:
 
 @pytest.mark.integration
 def test_regression_eval_live_no_asyncpg_race_no_fk_violation(monkeypatch: pytest.MonkeyPatch) -> None:
+    if os.getenv("GITHUB_ACTIONS") == "true" and os.getenv("RAG_RUN_TESTCONTAINERS_IN_CI") != "1":
+        pytest.skip("testcontainers regression eval is opt-in on GitHub Actions")
     pytest.importorskip("docker")
     if shutil.which("docker") is None:
         pytest.skip("docker not available")

@@ -142,6 +142,7 @@ jobs:
     # Codex audit 2026-04-27 H4: integration job must block PRs.
     # If a Postgres/Redis-backed test fails, the PR should turn red.
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16
@@ -186,7 +187,7 @@ jobs:
           pip install --require-hashes -r requirements-dev.lock
 
       - name: Run integration tests
-        run: pytest tests/integration -q
+        run: pytest tests/integration -q --timeout=120 --timeout-method=thread
 
   pre-commit:
     runs-on: ubuntu-latest
