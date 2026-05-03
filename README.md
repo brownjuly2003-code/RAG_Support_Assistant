@@ -876,15 +876,16 @@ python scripts/migrate_default_collection.py
 - Latest axe audit: [docs/a11y/axe-audit-2026-04-21.md](docs/a11y/axe-audit-2026-04-21.md)
 - Current blocking status: **PASS** for scanned UI pages and rendered Jinja
   templates (`0` critical, `0` serious)
+- Axe/Lighthouse verification 2026-05-03: `tests/test_a11y.py` ran with
+  `@axe-core/cli` 4.11.3 installed and completed with `38 passed`.
+- Lighthouse mobile `/static/chat.html`: performance `99`, accessibility
+  `100`, best-practices `96`, SEO `90`.
 - Local unit gate runs `tests/test_a11y.py` through `@axe-core/cli` when the
   CLI is installed; axe subprocesses use an explicit timeout budget so the
   full unit suite does not hang under `pytest --timeout=60`.
 - Source status: static coverage now includes `/static/widget.html`; source
   updates have landed for explicit `<main>` landmarks, the admin analytics
   `<nav>` landmark, and the rendered `ask_result` heading order.
-- Remaining verification work: rerun `@axe-core/cli` and Lighthouse when the
-  local/CI tooling is installed. Treat the historical moderate findings in the
-  2026-04-21 report as pending verification, not current blockers.
 
 ## Tests
 

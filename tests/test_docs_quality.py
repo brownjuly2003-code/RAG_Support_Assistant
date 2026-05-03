@@ -27,7 +27,7 @@ def test_active_docs_do_not_contain_common_mojibake_markers() -> None:
     assert offenders == []
 
 
-def test_accessibility_docs_distinguish_source_updates_from_tooling_verification() -> None:
+def test_accessibility_docs_record_completed_tooling_verification() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
     audit = (PROJECT_ROOT / "docs" / "a11y" / "axe-audit-2026-04-21.md").read_text(
         encoding="utf-8"
@@ -36,10 +36,13 @@ def test_accessibility_docs_distinguish_source_updates_from_tooling_verification
         PROJECT_ROOT / "docs" / "plans" / "2026-05-01-backlog.md"
     ).read_text(encoding="utf-8")
 
-    assert "Remaining verification work" in readme
+    assert "Axe/Lighthouse verification 2026-05-03" in readme
+    assert "Lighthouse mobile `/static/chat.html`: performance `99`" in readme
     assert "Post-audit source updates" in audit
+    assert "Verification refresh 2026-05-03" in audit
+    assert "`38 passed`" in audit
     assert "`static/widget.html`" in audit
-    assert "A11y remaining work is verification" in backlog
+    assert "A11y/performance verification is closed" in backlog
     assert "moderate landmark/region cleanup can be handled as polish" not in backlog
 
 
@@ -49,6 +52,7 @@ def test_next_session_handoff_points_at_live_batch_n_decision_only() -> None:
     )
 
     assert "Live Batch N benchmark decision" in content
+    assert "A11y/performance verification" not in content.split("## Remaining Work", 1)[1]
     assert "run or document only mock/default benchmark flows" not in content
 
 

@@ -15,13 +15,13 @@ def test_active_backlog_prompts_do_not_target_closed_agent_copilot_lane() -> Non
     assert "implement the remaining Agent Copilot context UI backlog item" not in content
 
 
-def test_next_session_plan_avoids_closed_streaming_and_helm_lanes() -> None:
+def test_next_session_plan_avoids_closed_streaming_helm_and_a11y_lanes() -> None:
     content = (PROJECT_ROOT / "next-session-3-subagents.md").read_text(encoding="utf-8")
 
     assert "streaming parity" not in content
     assert "Helm secret split" not in content
     assert "Batch N" in content
-    assert "A11y/performance verification" in content
+    assert "A11y/performance verification" not in content.split("## Remaining Work", 1)[1]
 
 
 def test_active_backlog_labels_remaining_work_as_blocked_or_opt_in() -> None:
@@ -29,6 +29,6 @@ def test_active_backlog_labels_remaining_work_as_blocked_or_opt_in() -> None:
         encoding="utf-8"
     )
 
-    assert "Requires Explicit Opt-In / External Tooling" in content
+    assert "Requires Explicit Opt-In" in content
     assert "Live Batch N benchmark" in content
-    assert "axe/Lighthouse verification" in content
+    assert "A11y/performance verification is closed" in content

@@ -7,7 +7,7 @@
     <style>
         :root {
             color-scheme: light;
-            --bg-shell: radial-gradient(circle at top, #f9fbff 0%, #eef3fb 48%, #e6edf8 100%);
+            --bg-shell: #eef3fb;
             --panel: rgba(255, 255, 255, 0.92);
             --panel-strong: #ffffff;
             --panel-border: rgba(104, 128, 168, 0.18);
@@ -51,7 +51,7 @@
             min-height: 0;
             flex-direction: column;
             border-radius: 20px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.98));
+            background: #ffffff;
             border: 1px solid var(--panel-border);
             box-shadow: var(--shadow-main);
             overflow: hidden;
@@ -64,18 +64,8 @@
             justify-content: space-between;
             gap: 12px;
             padding: 16px 18px 14px;
-            background:
-                radial-gradient(circle at top left, rgba(255, 255, 255, 0.22), transparent 42%),
-                linear-gradient(135deg, var(--brand-start), var(--brand-end));
+            background: var(--brand-start);
             color: #ffffff;
-        }
-
-        .widget-header::after {
-            content: "";
-            position: absolute;
-            inset: auto 16px 0;
-            height: 1px;
-            background: rgba(255, 255, 255, 0.18);
         }
 
         .widget-brand {
@@ -246,7 +236,7 @@
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: #70809b;
+            color: var(--text-secondary);
         }
 
         .widget-input-row {

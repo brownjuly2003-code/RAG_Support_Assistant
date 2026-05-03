@@ -246,6 +246,11 @@ def _axe_cli_available() -> bool:
     return probe.returncode == 0
 
 
+def _axe_chrome_startup_failed(completed: subprocess.CompletedProcess[str]) -> bool:
+    output = f"{completed.stderr}\n{completed.stdout}".lower()
+    return "sessionnotcreatederror" in output and "chrome not reachable" in output
+
+
 @pytest.mark.skipif(
     not _axe_cli_available(),
     reason="@axe-core/cli not installed (npm i -g @axe-core/cli) — running headless axe scan unavailable",
@@ -276,21 +281,26 @@ def test_axe_has_no_serious_or_critical_findings(
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
 
-    try:
-        completed = subprocess.run(
-            command,
-            cwd=tmp_path,
-            capture_output=True,
-            text=True,
-            check=False,
-            env=env,
-            timeout=AXE_SUBPROCESS_TIMEOUT_SEC,
-        )
-    except subprocess.TimeoutExpired as exc:
-        pytest.fail(
-            f"axe-cli timed out after {AXE_SUBPROCESS_TIMEOUT_SEC}s for {page_path}: {exc}"
-        )
+    completed = None
+    for attempt in range(2):
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=tmp_path,
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+                timeout=AXE_SUBPROCESS_TIMEOUT_SEC,
+            )
+        except subprocess.TimeoutExpired as exc:
+            pytest.fail(
+                f"axe-cli timed out after {AXE_SUBPROCESS_TIMEOUT_SEC}s for {page_path}: {exc}"
+            )
+        if completed.returncode == 0 or attempt == 1 or not _axe_chrome_startup_failed(completed):
+            break
 
+    assert completed is not None
     assert completed.returncode == 0, completed.stderr or completed.stdout
 
     data = json.loads(report_path.read_text(encoding="utf-8"))[0]
