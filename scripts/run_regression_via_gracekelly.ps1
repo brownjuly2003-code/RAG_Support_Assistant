@@ -14,11 +14,12 @@
     6. Cleans up disposable containers on exit.
 
 .EXAMPLE
-    .\scripts\run_regression_via_gracekelly.ps1
+    .\scripts\run_regression_via_gracekelly.ps1 -AllowLive
 #>
 
 [CmdletBinding()]
 param(
+    [switch]$AllowLive,
     [string]$GraceKellyUrl = "http://127.0.0.1:8011",
     [string]$PostgresImage = "postgres:16-alpine",
     [string]$RedisImage = "redis:7-alpine",
@@ -155,6 +156,13 @@ function Find-FirstPropertyValue($value, [string[]]$names) {
 
 $ProjectRoot = (Split-Path -Parent $PSScriptRoot | Resolve-Path).Path
 Import-DotEnv (Join-Path $ProjectRoot ".env")
+
+if (-not $AllowLive) {
+    Write-Fatal @"
+This wrapper runs live GraceKelly/Mistral regression work and passes --allow-paid-apis.
+Re-run with -AllowLive only after explicit user opt-in for live service/API cost.
+"@
+}
 
 # ---------------------------------------------------------------------------
 # 1. GraceKelly readiness guard

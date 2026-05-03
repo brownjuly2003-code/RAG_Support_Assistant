@@ -41,6 +41,11 @@ def test_run_regression_supports_provider_targets_in_mock_mode(
         raise AssertionError("provider benchmark mock mode should not call live runtime")
 
     monkeypatch.setattr(regression_eval, "execute_case_with_runtime", _fail_if_runtime_used)
+    monkeypatch.setattr(
+        regression_eval,
+        "execute_case_with_provider_target",
+        _fail_if_runtime_used,
+    )
 
     report = regression_eval.run_regression(
         baseline="ollama-small",
@@ -59,6 +64,17 @@ def test_run_regression_supports_provider_targets_in_mock_mode(
     assert report["aggregate"]["candidate_refusal_rate"] == 0.0
     assert report["cases"][0]["baseline"]["answer"]
     assert len(report["cases"][0]["candidate"]["citations"]) == 1
+
+
+def test_gracekelly_wrapper_requires_explicit_live_opt_in() -> None:
+    script = (Path(__file__).resolve().parent.parent / "scripts" / "run_regression_via_gracekelly.ps1").read_text(
+        encoding="utf-8"
+    )
+    preflight = script.split("# 1. GraceKelly readiness guard", 1)[0]
+
+    assert "[switch]$AllowLive" in script
+    assert "if (-not $AllowLive)" in preflight
+    assert "--allow-paid-apis" in script
 
 
 def test_run_regression_supports_experiment_targets_in_mock_mode(

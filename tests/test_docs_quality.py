@@ -82,6 +82,9 @@ def test_old_arc_verification_report_is_marked_historical() -> None:
 
 
 def test_live_gracekelly_docs_require_explicit_user_opt_in() -> None:
+    quickstart = (PROJECT_ROOT / "docs" / "QUICKSTART.md").read_text(
+        encoding="utf-8"
+    )
     smoke = (PROJECT_ROOT / "docs" / "operations" / "gracekelly-smoke.md").read_text(
         encoding="utf-8"
     )
@@ -91,7 +94,9 @@ def test_live_gracekelly_docs_require_explicit_user_opt_in() -> None:
         / "task-177-regression-via-gracekelly-claude.md"
     ).read_text(encoding="utf-8")
 
+    assert "run_regression_via_gracekelly.ps1 -AllowLive" in quickstart
     assert "explicit user opt-in" in smoke
     assert "live GraceKelly" in smoke
     assert "explicit user opt-in" in task_177
     assert "live GraceKelly/Mistral" in task_177
+    assert "requires `-AllowLive`" in task_177

@@ -165,7 +165,7 @@ answers and cost/latency metrics are simulated from `evaluation/curated_cases.js
 so the command does not call GraceKelly or Mistral and does not persist to the DB when
 `--no-persist` is set. Live provider calls require explicit `--allow-paid-apis`.
 
-Результаты в `reports/regression/<timestamp>-*.{json,md}`. PowerShell wrapper `scripts\run_regression_via_gracekelly.ps1` поднимает disposable Postgres + Redis + ингест + регрессию одной командой.
+Результаты в `reports/regression/<timestamp>-*.{json,md}`. PowerShell wrapper `scripts\run_regression_via_gracekelly.ps1 -AllowLive` поднимает disposable Postgres + Redis + ингест + регрессию одной командой после explicit live opt-in.
 
 ## 10. Частые засады
 

@@ -12,7 +12,7 @@ GraceKelly browser routing.
 Current evidence:
 
 - `evaluation/curated_cases.jsonl` contains 20 cases.
-- `scripts/run_regression_via_gracekelly.ps1` supports `-CandidateProfile`.
+- `scripts/run_regression_via_gracekelly.ps1` supports `-CandidateProfile` and requires `-AllowLive`.
 - Full 20-case evidence landed in `reports/regression/20260426T113855Z-*`.
 - Final closure is documented in
   `codex-tasks/verification-report-regression-gracekelly.md` rev 5.
@@ -25,8 +25,8 @@ explicitly want a browser-only stress test rather than the product pipeline.
 
 > **Live warning.** Any rerun of this historical benchmark requires explicit user opt-in.
 > The live GraceKelly/Mistral path can use browser routing and
-> paid direct Mistral/API calls through `--allow-paid-apis`; keep mock/default
-> flows as the default.
+> paid direct Mistral/API calls through `--allow-paid-apis`; the wrapper now
+> also requires `-AllowLive`. Keep mock/default flows as the default.
 
 ## Goal
 Получить честный quality/cost/latency сигнал на Claude Sonnet 4.6, не упираясь в Mistral free-tier 60 rpm. Candidate = `claude-sonnet-4-6-api` через GraceKelly (`gracekelly-primary` profile, browser.perplexity adapter). Baseline = `ministral-3b-latest` direct Mistral (уже в `external-mistral` profile). Расширить curated dataset до 20 cases на текущем KB, чтобы статистика была не из 5 точек.

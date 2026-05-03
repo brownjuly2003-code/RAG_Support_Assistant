@@ -89,8 +89,8 @@ Codex-спеку; закрытые пункты сюда **не включены
 - Active backlog: [`docs/plans/2026-05-01-backlog.md`](../docs/plans/2026-05-01-backlog.md).
 - Batch G/H/I/J/K/L/M are closed in current git history.
 - Remaining work is no longer the old arc 102-122 roadmap. The real open items
-  are optional live Batch N benchmark selection and non-blocking
-  a11y/performance verification. Agent Copilot context quality, tool-call
+  are optional live Batch N benchmark selection and post-production
+  resolution-rate measurement. Agent Copilot context quality, tool-call
   observability, documentation truth sync, GraceKelly-primary default provider
-  alignment, and regression-eval CI gate wiring are closed in the active
-  backlog.
+  alignment, regression-eval CI gate wiring, and accessibility/performance verification
+  are closed in the active backlog.

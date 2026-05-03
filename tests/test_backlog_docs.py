@@ -32,3 +32,23 @@ def test_active_backlog_labels_remaining_work_as_blocked_or_opt_in() -> None:
     assert "Requires Explicit Opt-In" in content
     assert "Live Batch N benchmark" in content
     assert "A11y/performance verification is closed" in content
+
+
+def test_active_backlog_does_not_treat_closed_lighthouse_as_live_work() -> None:
+    content = (PROJECT_ROOT / "docs" / "plans" / "2026-05-01-backlog.md").read_text(
+        encoding="utf-8"
+    )
+    project_status = content.split("## Project Status", 1)[1].split(
+        "## Requires Explicit Opt-In", 1
+    )[0]
+
+    assert "Lighthouse/performance measurement" not in project_status
+
+
+def test_historical_roadmap_current_pointer_excludes_closed_a11y_work() -> None:
+    content = (PROJECT_ROOT / "codex-tasks" / "ROADMAP.md").read_text(
+        encoding="utf-8"
+    )
+    current_pointer = content.split("## Current follow-up pointer", 1)[1]
+
+    assert "a11y/performance verification" not in current_pointer
