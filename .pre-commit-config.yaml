@@ -32,8 +32,9 @@ repos:
     rev: v2.10.0
     hooks:
       - id: pip-audit
-        args: ["--strict", "-r", "requirements.txt"]
-        # Fails on any known vuln in pinned deps. Override per-CVE with
-        # --ignore-vuln if a fix is unavailable.
-        # Note: pip-audit 2.10+ rejected the legacy "--require-hashes=false"
-        # argument; the default already does not require hashes.
+        args: ["--strict", "--disable-pip", "--require-hashes", "--timeout", "15", "--progress-spinner", "off", "--cache-dir", ".tmp/pip-audit-cache", "-r", "requirements.lock"]
+        files: ^(?:requirements(?:-dev)?\.(?:txt|lock)|\.pre-commit-config\.yaml)$
+        pass_filenames: false
+        # Audit the generated lock only. requirements.txt is intentionally
+        # loose and sends pip-audit through pip resolution. Use a repo-local
+        # ignored cache to avoid hangs in the default pip cache location.
