@@ -121,3 +121,54 @@ def test_autopilot_runner_blocks_executor_changes_outside_allowed_paths(
     assert "Changed file outside allowed paths: outside.txt" in result.stdout
     assert (repo / "outside.txt").read_text(encoding="utf-8").strip() == "outside"
     assert "outside.txt" in (repo / ".autopilot" / "BLOCKED.md").read_text(encoding="utf-8")
+
+
+def test_autopilot_runner_falls_back_to_backlog_task_when_pi_planner_fails(
+    tmp_path: Path,
+) -> None:
+    repo = _init_repo(tmp_path)
+    (repo / "BACKLOG.md").write_text(
+        "\n".join(
+            [
+                "# Backlog",
+                "",
+                "## Autopilot Task Queue",
+                "",
+                "### AP-1: Docs task",
+                "",
+                "- Allowed files/directories: `docs/`",
+                "- Acceptance criteria: docs are updated.",
+                "- Required verification: `git diff --check`.",
+                "- Commit allowed: yes.",
+                "- Suggested commit message: `docs: update backlog task`",
+            ]
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    _run(["git", "add", "BACKLOG.md"], cwd=repo)
+    _run(["git", "commit", "-m", "add backlog"], cwd=repo)
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    (tools / "pi.cmd").write_text("@echo off\nexit /b 1\n", encoding="utf-8", newline="\r\n")
+    (tools / "codex.cmd").write_text(
+        "\n".join(
+            [
+                "@echo off",
+                "echo outside> outside.txt",
+                "exit /b 0",
+            ]
+        ),
+        encoding="utf-8",
+        newline="\r\n",
+    )
+    env = os.environ.copy()
+    env["PATH"] = f"{tools}{os.pathsep}{env['PATH']}"
+
+    result = _run_autopilot(repo, env=env)
+
+    assert result.returncode == 1
+    assert "Falling back to BACKLOG.md autopilot task queue." in result.stdout
+    assert "Changed file outside allowed paths: outside.txt" in result.stdout
+    allowed = (repo / ".autopilot" / "allowed-paths.txt").read_text(encoding="utf-8")
+    assert allowed.strip() == "docs/"

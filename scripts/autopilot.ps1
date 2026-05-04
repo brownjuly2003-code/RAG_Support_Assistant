@@ -292,7 +292,13 @@ Also write .autopilot/commit-message.txt with one short commit message.
 Do not edit product code. Do not ask the user anything. If no safe task exists, write .autopilot/BLOCKED.md instead.
 "@
 
-    Invoke-Checked "pi planner" "pi" @("--tools", "read,grep,find,ls,write", "--no-session", "-p", $prompt)
+    try {
+        Invoke-Checked "pi planner" "pi" @("--tools", "read,grep,find,ls,write", "--no-session", "-p", $prompt)
+    }
+    catch {
+        Write-Log "Planner failed: $($_.Exception.Message)"
+        Invoke-BacklogPlanner
+    }
     if (Test-Path -Path $BlockedPath) {
         throw "Planner wrote BLOCKED.md"
     }
@@ -302,6 +308,83 @@ Do not edit product code. Do not ask the user anything. If no safe task exists, 
     if (-not (Test-Path -Path $AllowedPathsPath)) {
         throw "Planner did not write allowed-paths.txt"
     }
+}
+
+function Invoke-BacklogPlanner {
+    $backlogPath = Join-Path $ProjectRoot "BACKLOG.md"
+    if (-not (Test-Path -Path $backlogPath)) {
+        throw "Planner failed and BACKLOG.md is missing"
+    }
+
+    $lines = [System.IO.File]::ReadAllLines($backlogPath)
+    $queueStart = -1
+    for ($i = 0; $i -lt $lines.Length; $i++) {
+        if ($lines[$i].Trim() -eq "## Autopilot Task Queue") {
+            $queueStart = $i
+            break
+        }
+    }
+    if ($queueStart -lt 0) {
+        throw "Planner failed and BACKLOG.md has no Autopilot Task Queue"
+    }
+
+    $taskStart = -1
+    for ($i = $queueStart + 1; $i -lt $lines.Length; $i++) {
+        if ($lines[$i] -match "^###\s+(.+)$") {
+            $taskStart = $i
+            break
+        }
+        if ($lines[$i] -match "^##\s+") {
+            break
+        }
+    }
+    if ($taskStart -lt 0) {
+        throw "Planner failed and Autopilot Task Queue has no task"
+    }
+
+    $taskLines = New-Object System.Collections.Generic.List[string]
+    $title = ($lines[$taskStart] -replace "^###\s+", "").Trim()
+    $taskLines.Add($lines[$taskStart])
+    for ($i = $taskStart + 1; $i -lt $lines.Length; $i++) {
+        if ($lines[$i] -match "^###\s+" -or $lines[$i] -match "^##\s+") {
+            break
+        }
+        $taskLines.Add($lines[$i])
+    }
+
+    $allowedLine = $null
+    $commitAllowed = $false
+    $commitMessage = "autopilot: apply bounded task"
+    foreach ($line in $taskLines) {
+        if ($line -match "^\s*-\s*Allowed files/directories:") {
+            $allowedLine = $line
+        }
+        if ($line -match "^\s*-\s*Commit allowed:\s*yes\.?\s*$") {
+            $commitAllowed = $true
+        }
+        if ($line -match '^\s*-\s*Suggested commit message:\s*`([^`]+)`') {
+            $commitMessage = $Matches[1]
+        }
+    }
+    if ($null -eq $allowedLine) {
+        throw "Planner failed and selected backlog task has no allowed files"
+    }
+
+    $allowed = New-Object System.Collections.Generic.List[string]
+    $matches = [regex]::Matches($allowedLine, '`([^`]+)`')
+    foreach ($match in $matches) {
+        $allowed.Add((Normalize-RepoPath $match.Groups[1].Value))
+    }
+    if ($allowed.Count -eq 0) {
+        throw "Planner failed and selected backlog task has no parseable allowed paths"
+    }
+
+    $taskText = "# $title`n`n$([System.String]::Join("`n", $taskLines))`n`ncommit allowed: $(if ($commitAllowed) { "yes" } else { "no" })`n"
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($NextTaskPath, $taskText, $utf8NoBom)
+    [System.IO.File]::WriteAllText($AllowedPathsPath, [System.String]::Join("`n", $allowed), $utf8NoBom)
+    [System.IO.File]::WriteAllText($CommitMessagePath, $commitMessage, $utf8NoBom)
+    Write-Log "Falling back to BACKLOG.md autopilot task queue."
 }
 
 function Invoke-Executor {
