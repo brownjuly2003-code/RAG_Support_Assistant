@@ -157,6 +157,17 @@ function Get-GitLines {
     }
 }
 
+function Test-CommitSubjectExists {
+    param([string]$Subject)
+    $subjects = Get-GitLines @("log", "--format=%s")
+    foreach ($line in $subjects) {
+        if ($line -eq $Subject) {
+            return $true
+        }
+    }
+    return $false
+}
+
 function Normalize-RepoPath {
     param([string]$Path)
     $p = $Path.Trim()
@@ -442,14 +453,42 @@ function Invoke-BacklogPlanner {
     }
 
     $taskStart = -1
-    for ($i = $queueStart + 1; $i -lt $lines.Length; $i++) {
-        if ($lines[$i] -match "^###\s+(.+)$") {
-            $taskStart = $i
+    $searchStart = $queueStart + 1
+    while ($searchStart -lt $lines.Length) {
+        $candidateStart = -1
+        for ($i = $searchStart; $i -lt $lines.Length; $i++) {
+            if ($lines[$i] -match "^###\s+(.+)$") {
+                $candidateStart = $i
+                break
+            }
+            if ($lines[$i] -match "^##\s+") {
+                break
+            }
+        }
+        if ($candidateStart -lt 0) {
             break
         }
-        if ($lines[$i] -match "^##\s+") {
-            break
+
+        $candidateLines = New-Object System.Collections.Generic.List[string]
+        for ($i = $candidateStart; $i -lt $lines.Length; $i++) {
+            if ($i -ne $candidateStart -and ($lines[$i] -match "^###\s+" -or $lines[$i] -match "^##\s+")) {
+                break
+            }
+            $candidateLines.Add($lines[$i])
         }
+        $candidateCommitMessage = $null
+        foreach ($line in $candidateLines) {
+            if ($line -match '^\s*-\s*Suggested commit message:\s*`([^`]+)`') {
+                $candidateCommitMessage = $Matches[1]
+            }
+        }
+        if ($null -ne $candidateCommitMessage -and (Test-CommitSubjectExists $candidateCommitMessage)) {
+            Write-Log "Skipping completed backlog task: $candidateCommitMessage"
+            $searchStart = $candidateStart + $candidateLines.Count
+            continue
+        }
+        $taskStart = $candidateStart
+        break
     }
     if ($taskStart -lt 0) {
         throw "Planner failed and Autopilot Task Queue has no task"

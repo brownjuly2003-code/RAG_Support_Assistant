@@ -186,6 +186,74 @@ def test_autopilot_runner_falls_back_to_backlog_task_when_pi_planner_fails(
     assert allowed.strip() == "docs/"
 
 
+def test_autopilot_runner_fallback_skips_committed_backlog_task(
+    tmp_path: Path,
+) -> None:
+    repo = _init_repo(tmp_path)
+    (repo / "completed.txt").write_text("done", encoding="utf-8")
+    _run(["git", "add", "completed.txt"], cwd=repo)
+    _run(["git", "commit", "-m", "test: guard historical backlog pointers"], cwd=repo)
+    (repo / "BACKLOG.md").write_text(
+        "\n".join(
+            [
+                "# Backlog",
+                "",
+                "## Autopilot Task Queue",
+                "",
+                "### AP-1: Completed task",
+                "",
+                "- Allowed files/directories: `tests/test_docs_quality.py`, `BACKLOG.md`, `2026-05-02-non-live-backlog.md`",
+                "- Acceptance criteria: already complete.",
+                "- Required verification: `git diff --check`.",
+                "- Commit allowed: yes.",
+                "- Suggested commit message: `test: guard historical backlog pointers`",
+                "",
+                "### AP-2: State task",
+                "",
+                "- Allowed files/directories: `AGENT_STATE.md`",
+                "- Acceptance criteria: state is updated.",
+                "- Required verification: `git diff --check`.",
+                "- Commit allowed: yes.",
+                "- Suggested commit message: `docs: refresh autopilot state snapshot`",
+            ]
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    _run(["git", "add", "BACKLOG.md"], cwd=repo)
+    _run(["git", "commit", "-m", "add backlog"], cwd=repo)
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    (tools / "pi.cmd").write_text("@echo off\nexit /b 1\n", encoding="utf-8", newline="\r\n")
+    (tools / "codex.cmd").write_text(
+        "\n".join(
+            [
+                "@echo off",
+                "echo state> AGENT_STATE.md",
+                "exit /b 0",
+            ]
+        ),
+        encoding="utf-8",
+        newline="\r\n",
+    )
+    for name, body in {
+        "ruff.cmd": "@echo off\nexit /b 0\n",
+        "python.cmd": "@echo off\nexit /b 0\n",
+    }.items():
+        (tools / name).write_text(body, encoding="utf-8", newline="\r\n")
+    env = os.environ.copy()
+    env["PATH"] = f"{tools}{os.pathsep}{env['PATH']}"
+
+    result = _run_autopilot(repo, env=env)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Skipping completed backlog task: test: guard historical backlog pointers" in result.stdout
+    allowed = (repo / ".autopilot" / "allowed-paths.txt").read_text(encoding="utf-8")
+    assert allowed.strip() == "AGENT_STATE.md"
+    log = _run(["git", "log", "-1", "--pretty=%s"], cwd=repo)
+    assert log.stdout.strip() == "docs: refresh autopilot state snapshot"
+
+
 def test_autopilot_runner_accepts_planner_artifacts_when_pi_hangs(
     tmp_path: Path,
 ) -> None:
