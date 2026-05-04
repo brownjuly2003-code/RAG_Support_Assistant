@@ -41,11 +41,23 @@ def _init_repo(tmp_path: Path) -> Path:
     return repo
 
 
-def _run_autopilot(repo: Path, *, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def _run_autopilot(
+    repo: Path,
+    *,
+    env: dict[str, str] | None = None,
+    args: list[str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     if POWERSHELL is None:
         pytest.skip("PowerShell is unavailable")
     return subprocess.run(
-        [POWERSHELL, "-ExecutionPolicy", "Bypass", "-File", str(repo / "scripts" / "autopilot.ps1")],
+        [
+            POWERSHELL,
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(repo / "scripts" / "autopilot.ps1"),
+            *(args or []),
+        ],
         cwd=repo,
         env=env,
         stdout=subprocess.PIPE,
@@ -170,6 +182,45 @@ def test_autopilot_runner_falls_back_to_backlog_task_when_pi_planner_fails(
     assert result.returncode == 1
     assert "Falling back to BACKLOG.md autopilot task queue." in result.stdout
     assert "Changed file outside allowed paths: outside.txt" in result.stdout
+    allowed = (repo / ".autopilot" / "allowed-paths.txt").read_text(encoding="utf-8")
+    assert allowed.strip() == "docs/"
+
+
+def test_autopilot_runner_accepts_planner_artifacts_when_pi_hangs(
+    tmp_path: Path,
+) -> None:
+    repo = _init_repo(tmp_path)
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    (tools / "pi.cmd").write_text(
+        "\n".join(
+            [
+                "@echo off",
+                "if not exist .autopilot mkdir .autopilot",
+                "echo test task> .autopilot\\NEXT_TASK.md",
+                "echo docs/> .autopilot\\allowed-paths.txt",
+                "echo test commit> .autopilot\\commit-message.txt",
+                "ping -n 4 127.0.0.1 >nul",
+                "exit /b 0",
+            ]
+        ),
+        encoding="utf-8",
+        newline="\r\n",
+    )
+    for name, body in {
+        "codex.cmd": "@echo off\nexit /b 0\n",
+        "ruff.cmd": "@echo off\nexit /b 0\n",
+        "python.cmd": "@echo off\nexit /b 0\n",
+    }.items():
+        (tools / name).write_text(body, encoding="utf-8", newline="\r\n")
+    env = os.environ.copy()
+    env["PATH"] = f"{tools}{os.pathsep}{env['PATH']}"
+
+    result = _run_autopilot(repo, env=env, args=["-PlannerTimeoutSec", "1"])
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Planner timed out after 1s after writing artifacts; stopped planner process." in result.stdout
+    assert not (repo / ".autopilot" / "LOCK").exists()
     allowed = (repo / ".autopilot" / "allowed-paths.txt").read_text(encoding="utf-8")
     assert allowed.strip() == "docs/"
 

@@ -71,6 +71,77 @@ function Invoke-Checked {
     }
 }
 
+function Stop-ProcessTree {
+    param([int]$ProcessId)
+    $children = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.ParentProcessId -eq $ProcessId }
+    foreach ($child in $children) {
+        Stop-ProcessTree ([int]$child.ProcessId)
+    }
+    Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+}
+
+function Invoke-PiPlanner {
+    param([string]$Prompt)
+    $runnerPath = Join-Path $AutopilotDir "planner-runner.ps1"
+    $stdoutPath = Join-Path $AutopilotDir "planner.stdout.tmp"
+    $stderrPath = Join-Path $AutopilotDir "planner.stderr.tmp"
+    $exitCodePath = Join-Path $AutopilotDir "planner.exitcode.tmp"
+    $escapedProjectRoot = $ProjectRoot -replace "'", "''"
+    $escapedExitCodePath = $exitCodePath -replace "'", "''"
+    $runner = @"
+`$ErrorActionPreference = "Stop"
+Set-Location -Path '$escapedProjectRoot'
+`$env:OPENAI_API_KEY = `$null
+`$prompt = @'
+$Prompt
+'@
+& pi --tools read,grep,find,ls,write --no-session -p `$prompt
+`$code = `$LASTEXITCODE
+if (`$null -eq `$code) {
+    `$code = 0
+}
+[System.IO.File]::WriteAllText('$escapedExitCodePath', [string]`$code, [System.Text.Encoding]::UTF8)
+exit `$code
+"@
+    [System.IO.File]::WriteAllText($runnerPath, $runner, [System.Text.Encoding]::UTF8)
+    Remove-Item -Path $stdoutPath,$stderrPath,$exitCodePath -Force -ErrorAction SilentlyContinue
+    Write-Log "RUN: pi --tools read,grep,find,ls,write --no-session -p <planner prompt>"
+    $process = Start-Process -FilePath "powershell" -ArgumentList @("-ExecutionPolicy", "Bypass", "-File", $runnerPath) -WorkingDirectory $ProjectRoot -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -WindowStyle Hidden -PassThru
+    try {
+        $timeoutMs = [Math]::Max(1, $PlannerTimeoutSec) * 1000
+        if (-not $process.WaitForExit($timeoutMs)) {
+            Stop-ProcessTree ([int]$process.Id)
+            if ((Test-Path -Path $NextTaskPath) -and (Test-Path -Path $AllowedPathsPath)) {
+                Write-Log "Planner timed out after ${PlannerTimeoutSec}s after writing artifacts; stopped planner process."
+                return
+            }
+            throw "pi planner timed out after ${PlannerTimeoutSec}s without required artifacts"
+        }
+
+        $process.WaitForExit()
+        $process.Refresh()
+        $code = $null
+        if (Test-Path -Path $exitCodePath) {
+            $rawCode = [System.IO.File]::ReadAllText($exitCodePath).Trim()
+            if ($rawCode -match "^-?\d+$") {
+                $code = [int]$rawCode
+            }
+        }
+        if ($null -eq $code -and $null -ne $process.ExitCode) {
+            $code = $process.ExitCode
+        }
+        if ($null -eq $code) {
+            throw "pi planner did not report an exit code"
+        }
+        if ($code -ne 0) {
+            throw "pi planner failed with exit code $code"
+        }
+    }
+    finally {
+        Remove-Item -Path $runnerPath,$stdoutPath,$stderrPath,$exitCodePath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Get-GitLines {
     param([string[]]$Arguments)
     Push-Location $ProjectRoot
@@ -335,7 +406,7 @@ Do not edit product code. Do not ask the user anything. If no safe task exists, 
 "@
 
     try {
-        Invoke-Checked "pi planner" "pi" @("--tools", "read,grep,find,ls,write", "--no-session", "-p", $prompt)
+        Invoke-PiPlanner $prompt
     }
     catch {
         Write-Log "Planner failed: $($_.Exception.Message)"
