@@ -1,5 +1,9 @@
 # Non-Live Backlog Continuation - 2026-05-02
 
+> Historical completion note. This non-live continuation is complete; the active
+> backlog source is now `docs/plans/2026-05-01-backlog.md`, with live
+> GraceKelly/Mistral benchmark work requiring explicit opt-in.
+
 ## Goal
 Continue the remaining safe backlog without running live GraceKelly, Mistral, or paid/API benchmark paths.
 
