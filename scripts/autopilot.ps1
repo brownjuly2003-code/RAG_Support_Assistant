@@ -84,6 +84,7 @@ function Invoke-PiPlanner {
     param([string]$Prompt)
     $runnerPath = Join-Path $AutopilotDir "planner-runner.ps1"
     $promptPath = Join-Path $AutopilotDir "planner.prompt.md"
+    $stdinPath = Join-Path $AutopilotDir "planner.stdin.tmp"
     $stdoutPath = Join-Path $AutopilotDir "planner.stdout.tmp"
     $stderrPath = Join-Path $AutopilotDir "planner.stderr.tmp"
     $exitCodePath = Join-Path $AutopilotDir "planner.exitcode.tmp"
@@ -104,9 +105,10 @@ if (`$null -eq `$code) {
 exit `$code
 "@
     [System.IO.File]::WriteAllText($runnerPath, $runner, [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllText($stdinPath, "", [System.Text.Encoding]::UTF8)
     Remove-Item -Path $stdoutPath,$stderrPath,$exitCodePath -Force -ErrorAction SilentlyContinue
     Write-Log "RUN: pi --model openai-codex/gpt-5.3-codex-spark --thinking minimal --tools write --no-session -p @.autopilot/planner.prompt.md"
-    $process = Start-Process -FilePath "powershell" -ArgumentList @("-ExecutionPolicy", "Bypass", "-File", $runnerPath) -WorkingDirectory $ProjectRoot -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -WindowStyle Hidden -PassThru
+    $process = Start-Process -FilePath "powershell" -ArgumentList @("-ExecutionPolicy", "Bypass", "-File", $runnerPath) -WorkingDirectory $ProjectRoot -RedirectStandardInput $stdinPath -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -WindowStyle Hidden -PassThru
     try {
         $timeoutMs = [Math]::Max(1, $PlannerTimeoutSec) * 1000
         if (-not $process.WaitForExit($timeoutMs)) {
@@ -138,7 +140,7 @@ exit `$code
         }
     }
     finally {
-        Remove-Item -Path $runnerPath,$promptPath,$stdoutPath,$stderrPath,$exitCodePath -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $runnerPath,$promptPath,$stdinPath,$stdoutPath,$stderrPath,$exitCodePath -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -485,6 +487,9 @@ function Invoke-Planner {
     $context = Get-PlannerContext
     $prompt = @"
 You are the pi.dev planner for this repository. The runner has already read the repository context below. Use that context; do not claim you lack file access. Choose exactly one bounded task.
+
+Treat git log commit subjects as completed work. Do not choose a task whose suggested commit message already appears in git log.
+Do not choose an AGENT_STATE.md-only snapshot refresh solely because HEAD changed; that housekeeping task is complete when its commit subject already appears in git log.
 
 Write .autopilot/NEXT_TASK.md with:
 - task title

@@ -93,6 +93,13 @@ def test_autopilot_runner_blocked_file_exits_before_planner(tmp_path: Path) -> N
     assert not (autopilot_dir / "LOCK").exists()
 
 
+def test_autopilot_runner_redirects_planner_stdin_to_empty_file() -> None:
+    script = AUTOPILOT_SCRIPT.read_text(encoding="utf-8")
+
+    assert 'Join-Path $AutopilotDir "planner.stdin.tmp"' in script
+    assert "-RedirectStandardInput $stdinPath" in script
+
+
 def test_autopilot_runner_blocks_executor_changes_outside_allowed_paths(
     tmp_path: Path,
 ) -> None:
@@ -311,6 +318,8 @@ def test_autopilot_runner_pi_planner_gets_preloaded_context(
                 "if ($promptText -notlike '*Repository context*') { exit 1 }",
                 "if ($promptText -notlike '*git status --short*') { exit 1 }",
                 "if ($promptText -notlike '*AGENT_STATE.md*') { exit 1 }",
+                "if ($promptText -notlike '*Treat git log commit subjects as completed work*') { exit 1 }",
+                "if ($promptText -notlike '*Do not choose an AGENT_STATE.md-only snapshot refresh solely because HEAD changed*') { exit 1 }",
                 "if ($argText -notlike '*--tools*write*') { exit 1 }",
                 "if (-not (Test-Path '.autopilot')) { New-Item -ItemType Directory -Path '.autopilot' | Out-Null }",
                 "Set-Content -Path '.autopilot/NEXT_TASK.md' -Value @('# AP-2: State task', '', '## Commit allowed', 'yes') -Encoding utf8",
