@@ -109,7 +109,7 @@ function Get-ChangedPaths {
         }
         $paths.Add((Normalize-RepoPath $raw))
     }
-    return $paths
+    return ,$paths
 }
 
 function Get-AllowedPaths {
@@ -127,7 +127,7 @@ function Get-AllowedPaths {
     if ($allowed.Count -eq 0) {
         throw ".autopilot/allowed-paths.txt is empty"
     }
-    return $allowed
+    return ,$allowed
 }
 
 function Test-PathAllowed {
@@ -152,7 +152,7 @@ function Assert-ChangedFilesAllowed {
             throw "Changed file outside allowed paths: $path"
         }
     }
-    return $changed
+    return ,$changed
 }
 
 function Assert-CleanTree {
