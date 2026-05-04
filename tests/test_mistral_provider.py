@@ -47,6 +47,20 @@ def test_mistral_provider_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> N
         _build_provider()
 
 
+@pytest.mark.parametrize("placeholder", ["changeme", "change-me", "change_me"])
+def test_mistral_provider_rejects_placeholder_api_key_before_http_call(
+    monkeypatch: pytest.MonkeyPatch, placeholder: str
+) -> None:
+    def _fail_if_http_is_called(*args, **kwargs):
+        raise AssertionError("placeholder key should fail before an HTTP request")
+
+    monkeypatch.setenv("MISTRAL_API_KEY", placeholder)
+    monkeypatch.setattr("httpx.post", _fail_if_http_is_called)
+
+    with pytest.raises(RuntimeError, match="MISTRAL_API_KEY"):
+        _build_provider()
+
+
 def test_mistral_provider_returns_llm_response_with_usage_and_cost(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

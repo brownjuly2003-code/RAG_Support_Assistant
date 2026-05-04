@@ -78,6 +78,29 @@ def test_settings_validate_requires_mistral_api_key_for_external_mistral_profile
         settings.validate()
 
 
+def test_settings_validate_requires_mistral_api_key_for_mixed_paid_fast_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from config.settings import Settings
+
+    calls: list[object] = []
+
+    def _fail_if_network_is_probed(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise urllib.error.URLError("offline")
+
+    monkeypatch.setenv("LLM_PROVIDER_PROFILE", "gracekelly-mixed")
+    monkeypatch.delenv("MISTRAL_API_KEY", raising=False)
+    monkeypatch.setattr("urllib.request.urlopen", _fail_if_network_is_probed)
+
+    settings = Settings()
+
+    with pytest.raises(RuntimeError, match="MISTRAL_API_KEY"):
+        settings.validate()
+
+    assert calls == []
+
+
 def test_settings_validate_accepts_gracekelly_primary_without_paid_keys(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -97,17 +120,26 @@ def test_settings_validate_accepts_gracekelly_primary_without_paid_keys(
     assert settings.llm_provider_profile == "gracekelly-primary"
 
 
+@pytest.mark.parametrize("placeholder", ["changeme", "change-me", "change_me"])
 def test_settings_validate_rejects_placeholder_api_key_for_external_mistral(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, placeholder: str
 ) -> None:
     from config.settings import Settings
 
+    calls: list[object] = []
+
+    def _fail_if_network_is_probed(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise urllib.error.URLError("offline")
+
     monkeypatch.setenv("LLM_PROVIDER_PROFILE", "external-mistral")
-    monkeypatch.setenv("MISTRAL_API_KEY", "changeme")
+    monkeypatch.setenv("MISTRAL_API_KEY", placeholder)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: _OkResponse())
+    monkeypatch.setattr("urllib.request.urlopen", _fail_if_network_is_probed)
 
     settings = Settings()
 
     with pytest.raises(RuntimeError, match="MISTRAL_API_KEY"):
         settings.validate()
+
+    assert calls == []

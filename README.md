@@ -895,9 +895,9 @@ Run the full test suite:
 pytest tests/ -v
 ```
 
-On the current Windows development machine, disable the broken auto-loaded
-Schemathesis plugin and force pytest temp files into the repo when the user
-temp root is not readable:
+On Windows, use the repository-local temp directory and disable the broken
+auto-loaded Schemathesis plugin. The full workflow is documented in
+[`docs/windows-test-workflow.md`](docs/windows-test-workflow.md):
 
 ```bash
 python -m pytest -p no:schemathesis --basetemp=.tmp/pytest
