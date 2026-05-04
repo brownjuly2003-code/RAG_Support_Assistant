@@ -172,3 +172,73 @@ def test_autopilot_runner_falls_back_to_backlog_task_when_pi_planner_fails(
     assert "Changed file outside allowed paths: outside.txt" in result.stdout
     allowed = (repo / ".autopilot" / "allowed-paths.txt").read_text(encoding="utf-8")
     assert allowed.strip() == "docs/"
+
+
+def test_autopilot_runner_falls_back_to_local_executor_when_codex_fails(
+    tmp_path: Path,
+) -> None:
+    repo = _init_repo(tmp_path)
+    (repo / "BACKLOG.md").write_text(
+        "\n".join(
+            [
+                "# Backlog",
+                "",
+                "## Autopilot Task Queue",
+                "",
+                "### AP-1: Guard Historical Backlog Notes",
+                "",
+                "- Allowed files/directories: `tests/test_docs_quality.py`, `BACKLOG.md`, `2026-05-02-non-live-backlog.md`",
+                "- Acceptance criteria: docs quality tests assert that both top-level backlog notes are marked historical and point at `docs/plans/2026-05-01-backlog.md`; live GraceKelly/Mistral work remains explicit opt-in only.",
+                "- Required verification: `python -m pytest -p no:schemathesis tests/test_docs_quality.py tests/test_quickstart_docs.py` and `git diff --check`.",
+                "- Commit allowed: yes.",
+                "- Suggested commit message: `test: guard historical backlog pointers`",
+            ]
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (repo / "2026-05-02-non-live-backlog.md").write_text(
+        "\n".join(
+            [
+                "# Non-Live Backlog Continuation - 2026-05-02",
+                "",
+                "> Historical completion note. This non-live continuation is complete; the active",
+                "> backlog source is now `docs/plans/2026-05-01-backlog.md`, with live",
+                "> GraceKelly/Mistral benchmark work requiring explicit opt-in.",
+            ]
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    tests_dir = repo / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_docs_quality.py").write_text(
+        "from pathlib import Path\n\nPROJECT_ROOT = Path(__file__).resolve().parent.parent\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    _run(
+        ["git", "add", "BACKLOG.md", "2026-05-02-non-live-backlog.md", "tests/test_docs_quality.py"],
+        cwd=repo,
+    )
+    _run(["git", "commit", "-m", "add backlog and docs tests"], cwd=repo)
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    for name, body in {
+        "pi.cmd": "@echo off\nexit /b 1\n",
+        "codex.cmd": "@echo off\nexit /b 2\n",
+        "ruff.cmd": "@echo off\nexit /b 0\n",
+        "python.cmd": "@echo off\nexit /b 0\n",
+    }.items():
+        (tools / name).write_text(body, encoding="utf-8", newline="\r\n")
+    env = os.environ.copy()
+    env["PATH"] = f"{tools}{os.pathsep}{env['PATH']}"
+
+    result = _run_autopilot(repo, env=env)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Falling back to local executor." in result.stdout
+    docs_test = (tests_dir / "test_docs_quality.py").read_text(encoding="utf-8")
+    assert "test_top_level_backlog_notes_are_historical" in docs_test
+    log = _run(["git", "log", "-1", "--pretty=%s"], cwd=repo)
+    assert log.stdout.strip() == "test: guard historical backlog pointers"
