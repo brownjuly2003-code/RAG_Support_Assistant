@@ -313,7 +313,7 @@ def test_autopilot_runner_pi_planner_gets_preloaded_context(
                 "if ($promptText -notlike '*AGENT_STATE.md*') { exit 1 }",
                 "if ($argText -notlike '*--tools*write*') { exit 1 }",
                 "if (-not (Test-Path '.autopilot')) { New-Item -ItemType Directory -Path '.autopilot' | Out-Null }",
-                "Set-Content -Path '.autopilot/NEXT_TASK.md' -Value @('# AP-2: State task', '', 'commit allowed: yes') -Encoding utf8",
+                "Set-Content -Path '.autopilot/NEXT_TASK.md' -Value @('# AP-2: State task', '', '## Commit allowed', 'yes') -Encoding utf8",
                 "Set-Content -Path '.autopilot/allowed-paths.txt' -Value 'AGENT_STATE.md' -Encoding utf8",
                 "Set-Content -Path '.autopilot/commit-message.txt' -Value 'docs: refresh autopilot state snapshot' -Encoding utf8",
                 "exit 0",

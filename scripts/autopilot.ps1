@@ -316,8 +316,23 @@ function Get-CommitAllowed {
     if (-not (Test-Path -Path $NextTaskPath)) {
         return $false
     }
-    $task = [System.IO.File]::ReadAllText($NextTaskPath)
-    return ($task -match "(?im)^\s*commit allowed:\s*yes\s*$")
+    $lines = [System.IO.File]::ReadAllLines($NextTaskPath)
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i].Trim()
+        if ($line -match "^(?:[-*]\s*)?commit allowed\s*:\s*yes\s*$") {
+            return $true
+        }
+        if ($line -match "^(?:#{1,6}\s*|[-*]\s*)?commit allowed\s*$") {
+            for ($j = $i + 1; $j -lt $lines.Count; $j++) {
+                $next = $lines[$j].Trim()
+                if ($next.Length -eq 0) {
+                    continue
+                }
+                return ($next -match "^(?:[-*]\s*)?yes\s*$")
+            }
+        }
+    }
+    return $false
 }
 
 function Get-CommitMessage {
