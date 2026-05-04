@@ -83,19 +83,19 @@ function Stop-ProcessTree {
 function Invoke-PiPlanner {
     param([string]$Prompt)
     $runnerPath = Join-Path $AutopilotDir "planner-runner.ps1"
+    $promptPath = Join-Path $AutopilotDir "planner.prompt.md"
     $stdoutPath = Join-Path $AutopilotDir "planner.stdout.tmp"
     $stderrPath = Join-Path $AutopilotDir "planner.stderr.tmp"
     $exitCodePath = Join-Path $AutopilotDir "planner.exitcode.tmp"
     $escapedProjectRoot = $ProjectRoot -replace "'", "''"
     $escapedExitCodePath = $exitCodePath -replace "'", "''"
+    [System.IO.File]::WriteAllText($promptPath, $Prompt, [System.Text.Encoding]::UTF8)
     $runner = @"
 `$ErrorActionPreference = "Stop"
 Set-Location -Path '$escapedProjectRoot'
 `$env:OPENAI_API_KEY = `$null
-`$prompt = @'
-$Prompt
-'@
-& pi --tools read,grep,find,ls,write --no-session -p `$prompt
+`$promptArg = '@.autopilot/planner.prompt.md'
+& pi --model openai-codex/gpt-5.3-codex-spark --thinking minimal --tools write --no-session --no-extensions --no-skills --no-prompt-templates --no-themes --no-context-files -p `$promptArg
 `$code = `$LASTEXITCODE
 if (`$null -eq `$code) {
     `$code = 0
@@ -105,7 +105,7 @@ exit `$code
 "@
     [System.IO.File]::WriteAllText($runnerPath, $runner, [System.Text.Encoding]::UTF8)
     Remove-Item -Path $stdoutPath,$stderrPath,$exitCodePath -Force -ErrorAction SilentlyContinue
-    Write-Log "RUN: pi --tools read,grep,find,ls,write --no-session -p <planner prompt>"
+    Write-Log "RUN: pi --model openai-codex/gpt-5.3-codex-spark --thinking minimal --tools write --no-session -p @.autopilot/planner.prompt.md"
     $process = Start-Process -FilePath "powershell" -ArgumentList @("-ExecutionPolicy", "Bypass", "-File", $runnerPath) -WorkingDirectory $ProjectRoot -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -WindowStyle Hidden -PassThru
     try {
         $timeoutMs = [Math]::Max(1, $PlannerTimeoutSec) * 1000
@@ -138,7 +138,7 @@ exit `$code
         }
     }
     finally {
-        Remove-Item -Path $runnerPath,$stdoutPath,$stderrPath,$exitCodePath -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $runnerPath,$promptPath,$stdoutPath,$stderrPath,$exitCodePath -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -155,6 +155,74 @@ function Get-GitLines {
     finally {
         Pop-Location
     }
+}
+
+function Read-PlannerContextFile {
+    param(
+        [string]$RelativePath,
+        [int]$MaxChars = 12000
+    )
+    $path = Join-Path $ProjectRoot $RelativePath
+    if (-not (Test-Path -Path $path)) {
+        return "## $RelativePath`n[MISSING]"
+    }
+    $text = [System.IO.File]::ReadAllText($path)
+    if ($text.Length -gt $MaxChars) {
+        $text = "$($text.Substring(0, $MaxChars))`n[TRUNCATED]"
+    }
+    return "## $RelativePath`n$text"
+}
+
+function Join-ContextLines {
+    param(
+        [string[]]$Lines,
+        [string]$EmptyText
+    )
+    if ($Lines.Count -eq 0) {
+        return $EmptyText
+    }
+    return [System.String]::Join("`n", $Lines)
+}
+
+function Get-PlannerContext {
+    $statusLines = @(Get-GitLines @("status", "--short"))
+    $logLines = @(Get-GitLines @("log", "--oneline", "-12"))
+    $docsRoot = Join-Path $ProjectRoot "docs"
+    $docsLines = @()
+    if (Test-Path -Path $docsRoot) {
+        $docsLines = @(
+            Get-ChildItem -Path $docsRoot -Recurse -Filter "*.md" |
+                Sort-Object -Property FullName |
+                Select-Object -First 80 |
+                ForEach-Object { Normalize-RepoPath ($_.FullName.Substring($ProjectRoot.Length + 1)) }
+        )
+    }
+    $statusText = Join-ContextLines $statusLines "clean"
+    $logText = Join-ContextLines $logLines "[no git log output]"
+    $docsText = Join-ContextLines $docsLines "[no docs markdown files found]"
+    $agentState = Read-PlannerContextFile "AGENT_STATE.md"
+    $backlog = Read-PlannerContextFile "BACKLOG.md"
+    $readme = Read-PlannerContextFile "README.md" 8000
+    $activePlan = Read-PlannerContextFile "docs/plans/2026-05-01-backlog.md"
+
+    return @"
+## git status --short
+$statusText
+
+## git log --oneline -12
+$logText
+
+## docs markdown files
+$docsText
+
+$agentState
+
+$backlog
+
+$readme
+
+$activePlan
+"@
 }
 
 function Test-CommitSubjectExists {
@@ -399,8 +467,9 @@ function Invoke-Planner {
         Remove-Item -Path $CommitMessagePath -Force
     }
 
+    $context = Get-PlannerContext
     $prompt = @"
-You are the pi.dev planner for this repository. Read AGENT_STATE.md, BACKLOG.md, README.md, docs, and git state. Choose exactly one bounded task.
+You are the pi.dev planner for this repository. The runner has already read the repository context below. Use that context; do not claim you lack file access. Choose exactly one bounded task.
 
 Write .autopilot/NEXT_TASK.md with:
 - task title
@@ -414,6 +483,11 @@ Write .autopilot/NEXT_TASK.md with:
 Also write .autopilot/allowed-paths.txt with one repo-relative allowed file or directory per line.
 Also write .autopilot/commit-message.txt with one short commit message.
 Do not edit product code. Do not ask the user anything. If no safe task exists, write .autopilot/BLOCKED.md instead.
+
+Use only the write tool to create `.autopilot/NEXT_TASK.md`, `.autopilot/allowed-paths.txt`, and `.autopilot/commit-message.txt` or `.autopilot/BLOCKED.md`.
+
+Repository context:
+$context
 "@
 
     try {

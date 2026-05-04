@@ -254,6 +254,101 @@ def test_autopilot_runner_fallback_skips_committed_backlog_task(
     assert log.stdout.strip() == "docs: refresh autopilot state snapshot"
 
 
+def test_autopilot_runner_pi_planner_gets_preloaded_context(
+    tmp_path: Path,
+) -> None:
+    repo = _init_repo(tmp_path)
+    (repo / "AGENT_STATE.md").write_text("state snapshot", encoding="utf-8")
+    (repo / "BACKLOG.md").write_text(
+        "\n".join(
+            [
+                "# Backlog",
+                "",
+                "## Autopilot Task Queue",
+                "",
+                "### AP-2: State task",
+                "",
+                "- Allowed files/directories: `AGENT_STATE.md`",
+                "- Acceptance criteria: state is updated.",
+                "- Required verification: `git diff --check`.",
+                "- Commit allowed: yes.",
+                "- Suggested commit message: `docs: refresh autopilot state snapshot`",
+            ]
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (repo / "README.md").write_text("# Readme\n", encoding="utf-8", newline="\n")
+    plans_dir = repo / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "2026-05-01-backlog.md").write_text(
+        "# Active plan\n", encoding="utf-8", newline="\n"
+    )
+    _run(
+        ["git", "add", "AGENT_STATE.md", "BACKLOG.md", "README.md", "docs/plans/2026-05-01-backlog.md"],
+        cwd=repo,
+    )
+    _run(["git", "commit", "-m", "add planner context"], cwd=repo)
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    (tools / "pi.cmd").write_text(
+        "@echo off\r\npowershell -ExecutionPolicy Bypass -File \"%~dp0\\pi-fake.ps1\" %*\r\n",
+        encoding="utf-8",
+        newline="\r\n",
+    )
+    (tools / "pi-fake.ps1").write_text(
+        "\n".join(
+            [
+                "$argText = $args -join \"`n\"",
+                "Set-Content -Path (Join-Path $PSScriptRoot 'pi-args.txt') -Value $argText -Encoding utf8",
+                "if ($argText -notlike '*@.autopilot/planner.prompt.md*') { exit 1 }",
+                "$promptArg = $null",
+                "foreach ($arg in $args) { if ($arg -like '@*') { $promptArg = $arg; break } }",
+                "if ($null -eq $promptArg) { exit 1 }",
+                "$promptPath = $promptArg.Substring(1)",
+                "if (-not (Test-Path $promptPath)) { exit 1 }",
+                "$promptText = Get-Content -Path $promptPath -Raw -Encoding utf8",
+                "if ($promptText -notlike '*Repository context*') { exit 1 }",
+                "if ($promptText -notlike '*git status --short*') { exit 1 }",
+                "if ($promptText -notlike '*AGENT_STATE.md*') { exit 1 }",
+                "if ($argText -notlike '*--tools*write*') { exit 1 }",
+                "if (-not (Test-Path '.autopilot')) { New-Item -ItemType Directory -Path '.autopilot' | Out-Null }",
+                "Set-Content -Path '.autopilot/NEXT_TASK.md' -Value @('# AP-2: State task', '', 'commit allowed: yes') -Encoding utf8",
+                "Set-Content -Path '.autopilot/allowed-paths.txt' -Value 'AGENT_STATE.md' -Encoding utf8",
+                "Set-Content -Path '.autopilot/commit-message.txt' -Value 'docs: refresh autopilot state snapshot' -Encoding utf8",
+                "exit 0",
+            ]
+        ),
+        encoding="utf-8",
+        newline="\r\n",
+    )
+    (tools / "codex.cmd").write_text(
+        "\n".join(
+            [
+                "@echo off",
+                "echo updated state> AGENT_STATE.md",
+                "exit /b 0",
+            ]
+        ),
+        encoding="utf-8",
+        newline="\r\n",
+    )
+    for name, body in {
+        "ruff.cmd": "@echo off\nexit /b 0\n",
+        "python.cmd": "@echo off\nexit /b 0\n",
+    }.items():
+        (tools / name).write_text(body, encoding="utf-8", newline="\r\n")
+    env = os.environ.copy()
+    env["PATH"] = f"{tools}{os.pathsep}{env['PATH']}"
+
+    result = _run_autopilot(repo, env=env)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Falling back to BACKLOG.md autopilot task queue." not in result.stdout
+    log = _run(["git", "log", "-1", "--pretty=%s"], cwd=repo)
+    assert log.stdout.strip() == "docs: refresh autopilot state snapshot"
+
+
 def test_autopilot_runner_accepts_planner_artifacts_when_pi_hangs(
     tmp_path: Path,
 ) -> None:
