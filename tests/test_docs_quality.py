@@ -120,3 +120,22 @@ def test_live_gracekelly_docs_require_explicit_user_opt_in() -> None:
     assert "explicit user opt-in" in task_177
     assert "live GraceKelly/Mistral" in task_177
     assert "requires `-AllowLive`" in task_177
+
+
+def test_top_level_backlog_notes_are_historical_pointers() -> None:
+    backlog = (PROJECT_ROOT / "BACKLOG.md").read_text(encoding="utf-8")
+    non_live_backlog = (
+        PROJECT_ROOT / "2026-05-02-non-live-backlog.md"
+    ).read_text(encoding="utf-8")
+    historical_notes = {
+        "BACKLOG.md": backlog.split("## Historical Safe Tasks", 1)[1].split(
+            "## Safe Task 1", 1
+        )[0],
+        "2026-05-02-non-live-backlog.md": non_live_backlog.split("## Goal", 1)[0],
+    }
+
+    for name, note in historical_notes.items():
+        assert "Historical" in note, name
+        assert "docs/plans/2026-05-01-backlog.md" in note, name
+        assert "live GraceKelly/Mistral" in note, name
+        assert "explicit opt-in only" in note, name

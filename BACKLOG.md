@@ -24,7 +24,7 @@
 
 > Historical safe-task snapshot. The tasks below are closed in current history;
 > use `docs/plans/2026-05-01-backlog.md` as the active backlog source. The only
-> remaining benchmark lane is explicit live GraceKelly/Mistral opt-in.
+> remaining benchmark lane is live GraceKelly/Mistral work: explicit opt-in only.
 
 ## Safe Task 1: Add a Local Gate Wrapper
 
