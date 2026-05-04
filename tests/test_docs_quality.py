@@ -46,6 +46,26 @@ def test_accessibility_docs_record_completed_tooling_verification() -> None:
     assert "moderate landmark/region cleanup can be handled as polish" not in backlog
 
 
+def test_roadmap_does_not_reopen_closed_lighthouse_work() -> None:
+    roadmap = (PROJECT_ROOT / "codex-tasks" / "ROADMAP.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "- [ ] Lighthouse mobile \u226590" not in roadmap
+    assert "accessibility/performance verification\n  are closed" in roadmap
+
+
+def test_backlog_parallel_prompt_does_not_reopen_closed_mock_guardrails() -> None:
+    backlog = (
+        PROJECT_ROOT / "docs" / "plans" / "2026-05-01-backlog.md"
+    ).read_text(encoding="utf-8")
+    prompt_section = backlog.split("## Parallel Session Prompts", 1)[1]
+
+    assert "Live Batch N benchmark decision" in prompt_section
+    assert "Batch N Mock Benchmark Safety" not in prompt_section
+    assert "Write failing doc guardrail tests" not in prompt_section
+
+
 def test_next_session_handoff_points_at_live_batch_n_decision_only() -> None:
     content = (PROJECT_ROOT / "next-session-3-subagents.md").read_text(
         encoding="utf-8"

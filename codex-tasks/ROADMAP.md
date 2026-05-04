@@ -81,7 +81,7 @@ Codex-спеку; закрытые пункты сюда **не включены
 - [x] 293 теста passing (>280 target)
 - [x] README обновлён с новыми фичами/env vars (task-124)
 - [x] axe-core: 0 critical/serious — follow-up [task-132](Archive/task-132-run-axe-audit.md)
-- [ ] Lighthouse mobile ≥90 — отдельный performance sweep, не часть закрытия этой roadmap
+- [x] Lighthouse mobile ≥90 — closed by the 2026-05-03 axe/Lighthouse verification refresh
 - [ ] Resolution rate ≥50% (если появится production трафик) — постпродакшн
 
 ## Current follow-up pointer

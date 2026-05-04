@@ -622,7 +622,7 @@ python scripts/regression_eval.py \
 - Default mode is `mock-provider-benchmark`: answers are derived from the
   curated dataset and pricing/latency/refusal metrics are simulated so CI does
   not spend paid API budget accidentally.
-- Live calls require an explicit `--allow-paid-apis` flag or
+- Live calls require explicit opt-in via `--allow-paid-apis` or
   `LLM_BENCHMARK_ALLOW_PAID_APIS=true`.
 - Reports compare pass rate, latency, total cost, and refusal rate for the
   baseline and candidate provider targets.
