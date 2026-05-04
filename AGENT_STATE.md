@@ -5,14 +5,16 @@
 - Project: RAG Support Assistant.
 - Stack: Python 3.13, FastAPI, LangGraph, ChromaDB, Postgres, Redis, static HTML UI, Helm/Docker deploy artifacts.
 - Branch: `master`.
-- Baseline HEAD: `be1d7ef`.
-- Baseline file count: 593 repo files from `rg --files`.
+- Snapshot date: 2026-05-04 (Europe/Bucharest).
+- Baseline HEAD: `3d4fc0d`.
+- Baseline file count: 603 repo files from `rg --files`.
 - Baseline JS bundle size: not applicable; no frontend bundler config was found.
 - Baseline i18n key count: not applicable; no i18n JSON catalog was found.
-- Git status at audit time: clean.
+- Git status at snapshot time: no tracked changes; unrestricted untracked scans may emit local access warnings for user-level git ignore and `.pytest-tmp-*` directories.
 
 ## Runtime
 
+- Shell context: Windows PowerShell 5.1 in `D:\RAG_Support_Assistant`.
 - pi CLI: available, `pi 0.72.1`.
 - codex CLI: available, `codex-cli 0.128.0`.
 - Python: available, `Python 3.13.7`.
@@ -20,8 +22,10 @@
 
 ## Last Verified Gates
 
-- `git status --short`: clean at audit time.
-- `git rev-parse --short HEAD`: `be1d7ef`.
+- `git -c core.excludesfile= -c status.showUntrackedFiles=no status --short`: no entries.
+- `git -c core.excludesfile= status --short -- AGENT_STATE.md`: no entries before this snapshot refresh.
+- `git rev-parse --short HEAD`: `3d4fc0d`.
+- `rg --files`: 603 repo files.
 - `Get-Command pi`: available.
 - `Get-Command codex`: available.
 - `pi --version`: `0.72.1`.
