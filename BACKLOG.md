@@ -1,5 +1,27 @@
 # Backlog
 
+## Autopilot Task Queue
+
+### AP-1: Guard Historical Backlog Notes
+
+- Allowed files/directories: `tests/test_docs_quality.py`, `BACKLOG.md`, `2026-05-02-non-live-backlog.md`
+- Acceptance criteria: docs quality tests assert that both top-level backlog notes are marked historical and point at `docs/plans/2026-05-01-backlog.md`; live GraceKelly/Mistral work remains explicit opt-in only.
+- Required verification: `python -m pytest -p no:schemathesis tests/test_docs_quality.py tests/test_quickstart_docs.py` and `git diff --check`.
+- Commit allowed: yes.
+- Suggested commit message: `test: guard historical backlog pointers`
+- Forbidden scope: GraceKelly, Mistral, paid/API benchmark commands, scheduler installation, deploy, production data, `.env`, secrets, dependency changes.
+
+### AP-2: Refresh Autopilot State Snapshot
+
+- Allowed files/directories: `AGENT_STATE.md`
+- Acceptance criteria: state snapshot names the current HEAD, says scheduler installation is opt-in only, and points default safe work at `docs/plans/2026-05-01-backlog.md`.
+- Required verification: `git diff --check`.
+- Commit allowed: yes.
+- Suggested commit message: `docs: refresh autopilot state snapshot`
+- Forbidden scope: GraceKelly, Mistral, paid/API benchmark commands, scheduler installation, deploy, production data, `.env`, secrets, dependency changes.
+
+## Historical Safe Tasks
+
 > Historical safe-task snapshot. The tasks below are closed in current history;
 > use `docs/plans/2026-05-01-backlog.md` as the active backlog source. The only
 > remaining benchmark lane is explicit live GraceKelly/Mistral opt-in.
