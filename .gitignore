@@ -31,3 +31,6 @@ reports/regression/*.log
 reports/regression/*.err
 reports/regression/*.json
 reports/regression/*.md
+
+# Autopilot runtime state
+.autopilot/
