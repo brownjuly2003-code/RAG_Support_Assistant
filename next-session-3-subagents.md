@@ -1,9 +1,9 @@
 # Next Session: Current Backlog Handoff
 
 ## Goal
-Continue only the remaining non-live-service backlog safely. Do not run live
-GraceKelly, Mistral, or paid/API benchmark paths unless the user explicitly opts
-in during that session.
+Track the remaining live Batch N benchmark decision only. No non-live
+autopilot-safe backlog remains; do not run live GraceKelly, Mistral, or
+paid/API benchmark paths unless the user explicitly opts in during that session.
 
 ## Current Baseline
 - Latest completed work:
@@ -18,6 +18,8 @@ in during that session.
     enforcement without invoking real `pi` or `codex`.
   - Active benchmark-doc guardrail: any `--allow-paid-apis` example in active
     benchmark docs must be explicitly labeled live and opt-in/manual.
+  - Top-level AP housekeeping tasks are closed: `test: guard historical backlog
+    pointers` and `docs: refresh autopilot state snapshot`.
 - Active source of truth: `docs/plans/2026-05-01-backlog.md`.
 
 ## Remaining Work
@@ -25,19 +27,16 @@ in during that session.
       closed. Live GraceKelly/Mistral e2e remains explicit opt-in only.
 
 ## Suggested Subagents
-- [ ] Subagent 1: inspect active docs (`README.md`, `docs/QUICKSTART.md`,
-      `codex-tasks/ROADMAP.md`, `docs/plans/2026-05-01-backlog.md`) for stale
-      pointers to already-closed follow-up work.
-- [ ] Subagent 2: inspect Batch N live benchmark docs/tests read-only and
-      confirm the new doc guardrail covers every active `--allow-paid-apis`
-      example. Do not run live benchmark commands.
+None for default non-live work. Use subagents only if the session explicitly
+opts into planning or running the live Batch N benchmark.
 
 ## Next Session Plan
-- Start with `git status --short` and confirm the branch is clean.
+- Start with `git status --short` and confirm any dirty state is expected
+  before changing files.
 - Read `docs/plans/2026-05-01-backlog.md` and this handoff before changing
   files.
-- Prefer read-only audit first: stale docs, stale backlog pointers, or missing
-  guardrails only.
+- If no explicit live opt-in is given, keep work read-only or docs-only and do
+  not reopen closed AP housekeeping tasks.
 - If making changes, keep scope to docs/tests unless a focused failing test
   proves runtime code needs a small fix.
 - Do not run GraceKelly, Mistral, paid/API benchmarks, scheduler installation,
@@ -46,7 +45,9 @@ in during that session.
 - Verify with focused tests first, then `git diff --check`; run full pytest if
   source or test files changed.
 
-## Done When
-- [ ] No live paid/API benchmark has run without explicit opt-in.
-- [ ] Active handoff/backlog docs do not point future sessions at closed lanes.
-- [ ] `git status --short` contains only intended files before any commit.
+## Current Session Checks
+- [x] No live paid/API benchmark has run without explicit opt-in.
+- [x] Active handoff/backlog docs do not point future sessions at closed lanes.
+- [x] `git status --short` was reviewed; tracked changes are limited to the
+      backlog/handoff docs, and the known untracked research note remains
+      untouched.
