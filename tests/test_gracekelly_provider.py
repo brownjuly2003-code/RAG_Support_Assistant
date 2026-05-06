@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
@@ -172,6 +173,82 @@ def test_gracekelly_provider_raises_provider_unavailable_when_ready_check_fails(
 
     with pytest.raises(ProviderUnavailable):
         provider.generate([{"role": "user", "content": "hello"}])
+
+
+def test_gracekelly_provider_raises_provider_unavailable_when_orchestrate_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from llm.providers.base import ProviderUnavailable
+
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: _FakeResponse(status_code=200))
+    monkeypatch.setattr(
+        "httpx.post",
+        lambda *args, **kwargs: _FakeResponse(
+            payload={
+                "status": "failed",
+                "failure_code": "provider_unavailable",
+                "failure_message": "Adapter circuit breaker is open.",
+            }
+        ),
+    )
+
+    provider = _build_provider()
+
+    with pytest.raises(ProviderUnavailable) as exc_info:
+        provider.generate([{"role": "user", "content": "hello"}])
+
+    assert exc_info.value.reason == "provider_unavailable"
+    assert "Adapter circuit breaker is open." in str(exc_info.value)
+
+
+def test_gracekelly_provider_stream_raises_provider_unavailable_when_orchestrate_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from llm.providers.base import ProviderUnavailable
+
+    class _FakeStreamResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        async def __aenter__(self) -> "_FakeStreamResponse":
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb) -> None:
+            _ = exc_type, exc, tb
+
+        async def aiter_lines(self):
+            yield (
+                'data: {"status": "failed", "failure_code": "provider_unavailable", '
+                '"failure_message": "Adapter circuit breaker is open."}'
+            )
+
+    class _FakeAsyncClient:
+        def __init__(self, *, timeout: float) -> None:
+            self.timeout = timeout
+
+        async def __aenter__(self) -> "_FakeAsyncClient":
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb) -> None:
+            _ = exc_type, exc, tb
+
+        def stream(self, method: str, url: str, *, headers: dict[str, str], json: dict[str, Any]):
+            _ = method, url, headers, json
+            return _FakeStreamResponse()
+
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: _FakeResponse(status_code=200))
+    monkeypatch.setattr("httpx.AsyncClient", _FakeAsyncClient)
+
+    provider = _build_provider()
+
+    async def _collect() -> list[str]:
+        return [chunk async for chunk in provider.generate_stream([{"role": "user", "content": "hello"}])]
+
+    with pytest.raises(ProviderUnavailable) as exc_info:
+        asyncio.run(_collect())
+
+    assert exc_info.value.reason == "provider_unavailable"
+    assert "Adapter circuit breaker is open." in str(exc_info.value)
 
 
 def test_gracekelly_provider_reuses_successful_ready_check(

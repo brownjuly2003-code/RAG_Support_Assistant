@@ -174,6 +174,25 @@ class GraceKellyProvider:
         return self.model_name
 
     def _parse_response(self, data: dict[str, Any], prompt: str) -> LLMResponse:
+        status = data.get("status")
+        if isinstance(status, str) and status.strip().lower() == "failed":
+            failure_code = data.get("failure_code")
+            failure_message = data.get("failure_message")
+            reason = (
+                failure_code.strip()
+                if isinstance(failure_code, str) and failure_code.strip()
+                else "orchestrate_failed"
+            )
+            message = (
+                failure_message.strip()
+                if isinstance(failure_message, str) and failure_message.strip()
+                else "GraceKelly orchestrate task failed"
+            )
+            raise ProviderUnavailable(
+                message,
+                provider_id=self.provider_id,
+                reason=reason,
+            )
         raw_result = data.get("result")
         result: dict[str, Any] = raw_result if isinstance(raw_result, dict) else {}
         raw_metadata = data.get("metadata")
@@ -304,6 +323,25 @@ class GraceKellyProvider:
                     except json.JSONDecodeError:
                         continue
                     buffer = ""
+                    status = payload_data.get("status")
+                    if isinstance(status, str) and status.strip().lower() == "failed":
+                        failure_code = payload_data.get("failure_code")
+                        failure_message = payload_data.get("failure_message")
+                        reason = (
+                            failure_code.strip()
+                            if isinstance(failure_code, str) and failure_code.strip()
+                            else "orchestrate_failed"
+                        )
+                        message = (
+                            failure_message.strip()
+                            if isinstance(failure_message, str) and failure_message.strip()
+                            else "GraceKelly orchestrate task failed"
+                        )
+                        raise ProviderUnavailable(
+                            message,
+                            provider_id=self.provider_id,
+                            reason=reason,
+                        )
                     text = payload_data.get("text")
                     event_type = payload_data.get("type") or payload_data.get("event")
                     if isinstance(text, str) and text and event_type not in {"accepted", "complete"}:

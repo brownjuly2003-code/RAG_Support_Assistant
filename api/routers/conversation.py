@@ -405,8 +405,14 @@ async def ask(
     if response.citations:
         asyncio.create_task(_app._record_citation_stats(tenant, list(response.citations)))
     if cache_hit:
-        return JSONResponse(content={**response.model_dump(), "cached": True})
-    return response
+        return JSONResponse(
+            content={**response.model_dump(), "cached": True},
+            media_type="application/json; charset=utf-8",
+        )
+    return JSONResponse(
+        content=response.model_dump(),
+        media_type="application/json; charset=utf-8",
+    )
 
 
 @router.post("/chat")
