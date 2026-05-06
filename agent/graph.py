@@ -1249,6 +1249,10 @@ def make_suggest_questions_node(llm: SupportsInvoke) -> Callable[[GraphState], G
             return state
         if state.get("route") != "auto":
             return {**state, "suggested_questions": []}
+        if get_settings is not None:
+            settings = get_settings()
+            if not getattr(settings, "suggested_questions_enabled", True):
+                return {**state, "suggested_questions": []}
 
         trace_id = state.get("trace_id", "unknown-trace-id")
         docs = state.get("graded_docs") or state.get("context_docs", []) or []
@@ -1506,7 +1510,7 @@ def build_support_graph(
     workflow.add_node("grade_docs", make_grade_docs_node(llm_fast))
     workflow.add_node("generate", make_generate_node(llm_fast, llm_strong))
     workflow.add_node("verify_facts", make_verify_facts_node(llm_fast))
-    workflow.add_node("evaluate", make_evaluate_node(llm_fast, llm_strong))
+    workflow.add_node("evaluate", make_evaluate_node(llm_fast, llm_fast))
     workflow.add_node("route_or_retry", make_route_or_retry_node(min_quality=min_quality))
     workflow.add_node("suggest_questions", make_suggest_questions_node(llm_strong))
     workflow.add_node("rewrite_query", make_rewrite_query_node(llm_strong))

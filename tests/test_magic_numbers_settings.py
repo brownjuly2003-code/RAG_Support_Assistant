@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -155,3 +156,116 @@ def test_run_qa_pipeline_uses_quality_threshold_setting(monkeypatch) -> None:
     )
 
     assert captured["min_quality"] == 73
+
+
+def test_build_support_graph_uses_fast_llm_for_evaluate_node(monkeypatch) -> None:
+    from agent.state import create_initial_state
+
+    class FakeWorkflow:
+        def __init__(self, *_args, **_kwargs) -> None:
+            self.nodes: dict[str, object] = {}
+
+        def add_node(self, name: str, node) -> None:
+            self.nodes[name] = node
+
+        def set_entry_point(self, _name: str) -> None:
+            return None
+
+        def add_edge(self, *_args, **_kwargs) -> None:
+            return None
+
+        def add_conditional_edges(self, *_args, **_kwargs) -> None:
+            return None
+
+        def compile(self):
+            return self
+
+    fast_llm = MagicMock()
+    fast_llm.invoke.return_value = "82"
+    fast_llm.provider_id = "mistral"
+    fast_llm.model_name = "ministral-3b-latest"
+    strong_llm = MagicMock()
+    strong_llm.invoke.return_value = "12"
+    strong_llm.provider_id = "gracekelly"
+    strong_llm.model_name = "claude-sonnet-4-6"
+
+    monkeypatch.setattr(agent_graph, "StateGraph", FakeWorkflow)
+    monkeypatch.setattr(
+        agent_graph,
+        "build_provider_runtime",
+        lambda settings: SimpleNamespace(fast=fast_llm, strong=strong_llm),
+    )
+    monkeypatch.setattr(
+        "config.settings.get_settings",
+        lambda: SimpleNamespace(quality_threshold=80),
+    )
+    monkeypatch.setattr(agent_graph, "trace_llm_call", lambda **kwargs: None)
+    monkeypatch.setattr(agent_graph, "log_step", lambda *args, **kwargs: None)
+
+    workflow = agent_graph.build_support_graph(retriever=object(), llm=None)
+    state = create_initial_state(question="Analyze contract X", trace_id="trace-evaluate")
+    state["complexity"] = "complex"
+    state["answer"] = "Answer"
+
+    result = workflow.nodes["evaluate"](state)
+
+    assert result["quality_score"] == 82
+    fast_llm.invoke.assert_called_once()
+    strong_llm.invoke.assert_not_called()
+
+
+def test_suggest_questions_node_respects_disabled_setting(monkeypatch) -> None:
+    llm = MagicMock()
+
+    monkeypatch.setattr(
+        agent_graph,
+        "get_settings",
+        lambda: SimpleNamespace(suggested_questions_enabled=False),
+    )
+
+    state = {
+        "trace_id": "trace-1",
+        "route": "auto",
+        "question": "Как оформить возврат?",
+        "answer": "Заполните форму возврата.",
+        "graded_docs": [],
+    }
+
+    result = agent_graph.make_suggest_questions_node(llm)(state)
+
+    assert result["suggested_questions"] == []
+    llm.invoke.assert_not_called()
+
+
+def test_get_or_create_session_uses_self_rag_max_iterations_setting(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    import api.app as api_app
+
+    captured: dict[str, object] = {}
+
+    class FakeConversationSession:
+        def __init__(self, *, retriever, llm, max_iterations, max_history):
+            _ = retriever, llm, max_history
+            captured["max_iterations"] = max_iterations
+
+    monkeypatch.setattr(api_app, "_db_retry_after", float("inf"))
+    monkeypatch.setattr(api_app, "_session_llm_state", {})
+    monkeypatch.setattr(api_app, "_session_last_access", {})
+    monkeypatch.setattr(api_app, "_retriever", object())
+    monkeypatch.setattr(api_app, "_vector_store", None)
+    monkeypatch.setattr(api_app, "_get_retriever", None)
+    monkeypatch.setattr(api_app, "_ConversationSession", FakeConversationSession)
+    monkeypatch.setattr(
+        api_app,
+        "get_settings",
+        lambda: SimpleNamespace(
+            vectordb_chroma_dir=tmp_path / "missing",
+            self_rag_max_iterations=0,
+        ),
+    )
+
+    asyncio.run(api_app._get_or_create_session(None, "default"))
+
+    assert captured["max_iterations"] == 0

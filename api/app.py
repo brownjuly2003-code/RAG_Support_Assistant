@@ -1193,7 +1193,7 @@ async def _get_or_create_session(
             session = _ConversationSession(
                 retriever=session_retriever,
                 llm=_llm,
-                max_iterations=2,
+                max_iterations=max(0, int(getattr(settings, "self_rag_max_iterations", 2) or 0)),
                 max_history=20,
             )
             setattr(session, "_tenant_id", tenant_id)

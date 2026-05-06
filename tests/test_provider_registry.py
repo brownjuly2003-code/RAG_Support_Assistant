@@ -31,7 +31,7 @@ def test_provider_registry_resolves_model_alias_and_pricing() -> None:
     resolved = registry.resolve_model("gk-fast")
 
     assert resolved.provider == "gracekelly"
-    assert resolved.model == "mistral-small"
+    assert resolved.model == "sonar-2"
     assert resolved.input_price_per_1m_tokens == 0.0
     assert resolved.output_price_per_1m_tokens == 0.0
 

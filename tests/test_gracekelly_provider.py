@@ -80,10 +80,10 @@ def test_gracekelly_provider_generates_answer_after_ready_check(
 
     assert captured["health"] == 1
     assert captured["health_url"] == "http://127.0.0.1:8011/healthz/ready"
-    assert captured["post_url"] == "http://127.0.0.1:8011/api/v1/smart"
+    assert captured["post_url"] == "http://127.0.0.1:8011/api/v1/orchestrate"
     assert captured["json"]["model"] == "mistral-small"
+    assert captured["json"]["requested_models"] == ["mistral-small"]
     assert captured["json"]["reliability_level"] == "quick"
-    assert captured["json"]["dry_run"] is False
     assert "USER:\nhello" in captured["json"]["prompt"]
     assert response.text == "GraceKelly answer"
     assert response.provider == "gracekelly"
@@ -311,7 +311,7 @@ def test_gracekelly_provider_routes_tool_requests_to_orchestrate(
     assert response.metadata["status"] == "completed"
 
 
-def test_gracekelly_provider_keeps_simple_requests_on_smart_endpoint(
+def test_gracekelly_provider_routes_simple_requests_to_orchestrate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured: dict[str, Any] = {}
@@ -342,6 +342,8 @@ def test_gracekelly_provider_keeps_simple_requests_on_smart_endpoint(
     provider = _build_provider()
     response = provider.generate([{"role": "user", "content": "hello"}])
 
-    assert captured["post_url"] == "http://127.0.0.1:8011/api/v1/smart"
+    assert captured["post_url"] == "http://127.0.0.1:8011/api/v1/orchestrate"
+    assert captured["json"]["model"] == "mistral-small"
+    assert captured["json"]["requested_models"] == ["mistral-small"]
     assert "tools" not in captured["json"]
     assert response.text == "Простой ответ"

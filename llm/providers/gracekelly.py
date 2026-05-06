@@ -233,31 +233,16 @@ class GraceKellyProvider:
         reliability_level = str(kwargs.pop("reliability_level", "quick") or "quick")
         metadata = kwargs.pop("metadata", None)
         started = time.perf_counter()
-        if self._should_use_orchestrate(
+        payload = self._build_orchestrate_payload(
+            prompt,
             tools=tools,
             schema=schema if isinstance(schema, dict) else None,
             requested_models=requested_models,
             merge_strategy=merge_strategy,
             reliability_level=reliability_level,
-        ):
-            payload = self._build_orchestrate_payload(
-                prompt,
-                tools=tools,
-                schema=schema if isinstance(schema, dict) else None,
-                requested_models=requested_models,
-                merge_strategy=merge_strategy,
-                reliability_level=reliability_level,
-                metadata=metadata if isinstance(metadata, dict) else None,
-            )
-            data = self._post_json("/api/v1/orchestrate", payload)
-        else:
-            payload = {
-                "prompt": prompt,
-                "model": self.model_name,
-                "reliability_level": reliability_level,
-                "dry_run": False,
-            }
-            data = self._post_json("/api/v1/smart", payload)
+            metadata=metadata if isinstance(metadata, dict) else None,
+        )
+        data = self._post_json("/api/v1/orchestrate", payload)
 
         response = self._parse_response(data, prompt)
         response.latency_ms = int((time.perf_counter() - started) * 1000)

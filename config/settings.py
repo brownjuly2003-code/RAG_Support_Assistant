@@ -350,6 +350,11 @@ class Settings:
             "FACT_VERIFICATION_ENABLED", "true"
         ).strip().lower() in ("1", "true", "yes")
     )
+    suggested_questions_enabled: bool = field(
+        default_factory=lambda: os.getenv(
+            "SUGGESTED_QUESTIONS_ENABLED", "true"
+        ).strip().lower() in ("1", "true", "yes")
+    )
     fact_verify_consensus_enabled: bool = field(
         default_factory=lambda: os.getenv(
             "FACT_VERIFY_CONSENSUS_ENABLED", "false"

@@ -34,7 +34,7 @@ providers:
     enabled: true
     api_key_env: GRACEKELLY_API_KEY
     default_models:
-      fast: mistral-small
+      fast: sonar-2
       strong: claude-sonnet-4-6
     capabilities:
       supports_tool_use: true
@@ -46,8 +46,8 @@ providers:
       requests_per_minute: 0
       tokens_per_minute: 0
     models:
-      - name: mistral-small
-        aliases: [gk-mistral, gk-fast]
+      - name: sonar-2
+        aliases: [gk-sonar, gk-fast]
         input_price_per_1m_tokens: 0.0
         output_price_per_1m_tokens: 0.0
       - name: claude-sonnet-4-6
@@ -108,7 +108,7 @@ routing_profiles:
     description: GraceKelly orchestrator for both tiers (Perplexity Pro-backed default), with explicit Ollama fallback on failure.
     fast:
       provider: gracekelly
-      model: mistral-small
+      model: sonar-2
     strong:
       provider: gracekelly
       model: claude-sonnet-4-6
