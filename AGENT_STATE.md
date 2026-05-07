@@ -50,13 +50,19 @@
 
 ## Next Step
 
-Non-live autopilot-safe backlog is empty. The single remaining plan item is the
-Live Batch N benchmark (GraceKelly+Mistral regression) — explicit user opt-in
-only because of paid-API cost. See `docs/plans/2026-05-01-backlog.md` and
-`next-session-3-subagents.md` for the opt-in surface.
+Non-live autopilot-safe backlog is empty.
 
-Untracked-state pending decision: 18 local commits ahead of `origin/master`
-(push requires explicit user approval).
+Live Batch N benchmark (GraceKelly+Mistral regression) — user opted in on
+2026-05-07; the run was aborted at provider init because Ollama was not
+serving on localhost:11434 and `MISTRAL_API_KEY` was in `.env` but not in the
+subprocess environment. No paid API calls were made and no report was
+produced. The recipe to retry cleanly is recorded in
+`docs/plans/2026-05-01-backlog.md` (start `ollama serve` and export `.env`
+into the shell before re-running `scripts/regression_eval.py`).
+
+Push status: `origin/master` is at `1cfa5dc` as of 2026-05-07 (20 commits
+pushed during this session, including the AGENT_STATE refresh and the pi
+research relocation).
 
 To run another dry-run of the autopilot guardrails:
 
