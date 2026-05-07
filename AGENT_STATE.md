@@ -34,7 +34,7 @@
 - `powershell -ExecutionPolicy Bypass -File scripts/autopilot.ps1 -DryRun`: passed (last verified 2026-05-04).
 - PAUSE protocol dry-run simulation: passed (last verified 2026-05-04).
 - BLOCKED protocol dry-run simulation: passed (last verified 2026-05-04).
-- `python -m pytest -p no:schemathesis --basetemp=.tmp/pytest`: 716 passed, 4 skipped (last verified 2026-05-04 against `ace8a2b`; not re-run for the 2026-05-07 snapshot since no source files changed since).
+- `python -m pytest -p no:schemathesis -p no:cacheprovider --basetemp=.tmp/pytest-may07-snapshot --ignore=tests/integration`: 735 passed, 4 skipped (verified 2026-05-07 at `d0016c2`; 16:20 wall time).
 - `python -m mypy auth db/models.py db/engine.py llm/providers/ config/settings.py agent/state.py agent/prompts.py agent/prompt_registry.py agent/tools.py agent/graph.py --no-incremental`: 18 source files clean (verified 2026-05-07).
 - `python -m mypy api/app.py --no-incremental --follow-imports=skip`: clean (verified 2026-05-07).
 - `python -m ruff check .`: All checks passed (verified 2026-05-07).
