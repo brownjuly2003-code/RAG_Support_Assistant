@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 import shutil
 import subprocess
@@ -11,6 +12,16 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 AUTOPILOT_SCRIPT = PROJECT_ROOT / "scripts" / "autopilot.ps1"
 POWERSHELL = shutil.which("powershell") or shutil.which("pwsh")
+
+# `scripts/autopilot.ps1` targets Windows PowerShell 5.1: it relies on
+# `Start-Process` parameter sets and process semantics that PowerShell Core
+# on Linux (the GitHub Actions ubuntu runner) does not implement. Skip the
+# whole module off-Windows so CI on Linux stays green; the Windows test
+# workflow exercises this file directly.
+pytestmark = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="autopilot.ps1 targets Windows PowerShell 5.1; pwsh on Linux does not support the parameter sets it uses",
+)
 
 
 def _run(command: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
