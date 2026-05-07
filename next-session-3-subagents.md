@@ -23,8 +23,11 @@ paid/API benchmark paths unless the user explicitly opts in during that session.
 - Active source of truth: `docs/plans/2026-05-01-backlog.md`.
 
 ## Remaining Work
-- [ ] Live Batch N benchmark decision: mock/default docs and guardrails are
-      closed. Live GraceKelly/Mistral e2e remains explicit opt-in only.
+- [x] Live Batch N benchmark decision: closed 2026-05-07 — mock-provider
+      benchmark run is the canonical regression signal (see Recently Closed
+      in `docs/plans/2026-05-01-backlog.md`). A live GraceKelly+Mistral run
+      remains a discretionary experiment for specific business reasons, not a
+      backlog item.
 
 ## Suggested Subagents
 None for default non-live work. Use subagents only if the session explicitly

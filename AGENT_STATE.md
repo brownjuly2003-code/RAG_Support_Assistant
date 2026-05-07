@@ -50,19 +50,17 @@
 
 ## Next Step
 
-Non-live autopilot-safe backlog is empty.
+All `docs/plans/2026-05-01-backlog.md` items are now closed. The Live Batch N
+benchmark decision was closed 2026-05-07: the mock-provider regression run
+logged in the backlog *Recently Closed* section is the canonical gate signal,
+and a live GraceKelly+Mistral run is treated as a discretionary experiment
+rather than a backlog item. The 2026-05-07 live attempt is recorded in the
+backlog for history (run aborted at provider init — Ollama not serving and
+`MISTRAL_API_KEY` not in subprocess env; no paid API calls were made and no
+report produced). The rerun recipe is in the same backlog entry.
 
-Live Batch N benchmark (GraceKelly+Mistral regression) — user opted in on
-2026-05-07; the run was aborted at provider init because Ollama was not
-serving on localhost:11434 and `MISTRAL_API_KEY` was in `.env` but not in the
-subprocess environment. No paid API calls were made and no report was
-produced. The recipe to retry cleanly is recorded in
-`docs/plans/2026-05-01-backlog.md` (start `ollama serve` and export `.env`
-into the shell before re-running `scripts/regression_eval.py`).
-
-Push status: `origin/master` is at `1cfa5dc` as of 2026-05-07 (20 commits
-pushed during this session, including the AGENT_STATE refresh and the pi
-research relocation).
+Push status: `origin/master` is current with `master` at this snapshot's
+HEAD (push performed 2026-05-07; refresh after each new commit).
 
 To run another dry-run of the autopilot guardrails:
 
