@@ -1,0 +1,56 @@
+---
+title: RAG Support Assistant
+description: Internal codebase docs — architecture, operations, plans, and research.
+template: splash
+hero:
+  tagline: |
+    FastAPI · LangGraph · ChromaDB · Postgres · Redis ·
+    Ollama / GraceKelly / Mistral providers · multi-tenant.
+  actions:
+    - text: Architecture overview
+      link: /architecture/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/brownjuly2003-code/RAG_Support_Assistant
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## At a glance
+
+<CardGrid stagger>
+  <Card title="Architecture" icon="puzzle">
+    LangGraph state machine, FastAPI thin app-shell with extracted routers,
+    pluggable LLM providers (Ollama / GraceKelly / Mistral), tenant-aware
+    ChromaDB, Postgres + Redis runtime.
+  </Card>
+  <Card title="Operations" icon="rocket">
+    Quickstart, runbook, disaster-recovery scenarios A–F, Helm chart with
+    secrets split, age-encrypted backups, weekly cronjobs.
+  </Card>
+  <Card title="Plans & history" icon="document">
+    Closed plan items (Steps 1–9 of `2026-04-27-next-steps.md` plus the
+    `2026-05-01` backlog) and the audit-hardening session notes.
+  </Card>
+  <Card title="Research" icon="open-book">
+    Notes on the 2026 RAG landscape, eval metrics, production monitoring,
+    UI patterns, and one upstream `pi` Windows-hang investigation.
+  </Card>
+</CardGrid>
+
+## Auto-generated
+
+The pages below are regenerated on every `npm run dev` / `npm run build` from
+the live source tree:
+
+- [LangGraph state machine](/architecture/langgraph/) — parsed from `agent/graph.py`.
+- [API routes catalog](/architecture/routes/) — parsed from `api/app.py` and `api/routers/*.py`.
+- [Provider routing matrix](/architecture/providers/) — parsed from `config/providers.yml`.
+
+## Status snapshot
+
+The latest gates and HEAD are recorded in
+[`AGENT_STATE.md`](/guides/agent-state/). Plan progress lives in
+[`docs/plans/`](/guides/plans/2026-05-01-backlog/).

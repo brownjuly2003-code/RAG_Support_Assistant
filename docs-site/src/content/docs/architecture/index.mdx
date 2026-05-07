@@ -1,0 +1,88 @@
+---
+title: Architecture overview
+description: How the RAG Support Assistant is wired — request lifecycle, modules, and data flow.
+---
+
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+## Request lifecycle
+
+```mermaid
+flowchart LR
+    Client[Client / static UI] --> FastAPI[FastAPI<br/>api.app + routers]
+    FastAPI --> Auth[JWT auth + tenant filter]
+    Auth --> Pipeline{LangGraph<br/>agent.graph}
+    Pipeline -->|retrieval| Chroma[ChromaDB<br/>tenant-aware]
+    Pipeline -->|LLM call| Provider[Provider router<br/>Ollama / GraceKelly / Mistral]
+    Pipeline -->|persist| Postgres[(Postgres<br/>traces + sessions)]
+    Pipeline -->|cache| Redis[(Redis<br/>rate-limit + sessions)]
+    FastAPI -->|metrics| Prom[Prometheus]
+    FastAPI -->|tracing| OTel[OpenTelemetry / Langfuse]
+```
+
+## Top-level modules
+
+<CardGrid>
+  <Card title="api/" icon="rocket">
+    Thin FastAPI app shell + routers split per concern (auth, sessions, agent,
+    admin, analytics, feedback, conversation, upload). Late-binding through
+    `api._shared.app_module()` keeps `monkeypatch.setattr(api.app, ...)` tests
+    working.
+  </Card>
+  <Card title="agent/" icon="puzzle">
+    LangGraph state machine: `state.py` (TypedDict shape), `graph.py` (nodes
+    + edges), `prompts.py`, `prompt_registry.py` (experiment-aware
+    sticky-rollout), `tools.py`. See the auto-generated
+    [LangGraph state machine](/architecture/langgraph/).
+  </Card>
+  <Card title="llm/providers/" icon="random">
+    Pluggable provider abstraction: `base.py` interface, `ollama.py`,
+    `gracekelly.py` (browser-proxy to Perplexity Pro), `mistral.py`
+    (OpenAI-compatible). Failover to local via routing profiles. See the
+    [provider routing matrix](/architecture/providers/).
+  </Card>
+  <Card title="vectordb/" icon="seti:db">
+    Hybrid retriever (BM25 + dense + cross-encoder rerank). Tenant-aware
+    `vectordb.manager` wraps the base ChromaDB engine in `_base_manager.py`;
+    each tenant gets an isolated collection.
+  </Card>
+  <Card title="evaluation/" icon="approve-check">
+    Online + offline evaluators, RAGAS, regression runner with mock-by-default
+    paid-API gate, experiment registry, rollback watcher, weekly improvement
+    backlog, threshold recommendations.
+  </Card>
+  <Card title="tracing/" icon="setting">
+    `sqlite_trace.py` (canonical) + `_base_trace.py` (tenant-aware wrapper),
+    Langfuse + OpenTelemetry adapters, request-id propagation across
+    `asyncio.to_thread` boundaries.
+  </Card>
+</CardGrid>
+
+## Data stores
+
+| Store | Purpose | Notes |
+| --- | --- | --- |
+| **ChromaDB** | Vector store for KB chunks. | Tenant-aware collection per tenant. Persistent on disk. |
+| **Postgres** | Traces, sessions, feedback, escalated tickets, experiments. | Alembic migrations 001–017. Round-trip CI gate. |
+| **Redis** | Rate-limit counters, JWT refresh sessions, ephemeral cache. | Optional in dev (in-memory fallback). |
+| **SQLite (dev only)** | Trace/feedback fallback when Postgres is not configured. | WAL mode, integrity-check before restore-verify. |
+
+## Cross-cutting concerns
+
+- **Multi-tenancy** is enforced at four layers: schema (tenant_id columns),
+  propagation (`api/middleware/tenant.py`), query enforcement (per-router
+  filters), and per-tenant ChromaDB collections.
+- **Resilience** wraps the Ollama path with timeout → retry → circuit breaker →
+  pipeline semaphore → wall-time budget; identical chain applied to GraceKelly
+  and Mistral.
+- **Observability** ships 24+ Prometheus metrics, alert rules in
+  `deploy/helm/`, and OpenTelemetry → Langfuse generation tracing.
+- **Security** stays fail-fast on missing JWT/SESSION/admin secrets at startup
+  when `RAG_ENV=production`. Tenant isolation is tested cross-tenant for every
+  surface.
+
+<Aside type="note" title="See also">
+  - [Module layout & deprecations](/guides/deprecations/) — historical shim
+    cleanup phases and the current canonical import map.
+  - [Quickstart](/guides/quickstart/) — boot the stack end-to-end locally.
+</Aside>
