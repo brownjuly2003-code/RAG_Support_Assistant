@@ -33,13 +33,13 @@ flowchart LR
     LangGraph state machine: `state.py` (TypedDict shape), `graph.py` (nodes
     + edges), `prompts.py`, `prompt_registry.py` (experiment-aware
     sticky-rollout), `tools.py`. See the auto-generated
-    [LangGraph state machine](/architecture/langgraph/).
+    [LangGraph state machine](/RAG_Support_Assistant/architecture/langgraph/).
   </Card>
   <Card title="llm/providers/" icon="random">
     Pluggable provider abstraction: `base.py` interface, `ollama.py`,
     `gracekelly.py` (browser-proxy to Perplexity Pro), `mistral.py`
     (OpenAI-compatible). Failover to local via routing profiles. See the
-    [provider routing matrix](/architecture/providers/).
+    [provider routing matrix](/RAG_Support_Assistant/architecture/providers/).
   </Card>
   <Card title="vectordb/" icon="seti:db">
     Hybrid retriever (BM25 + dense + cross-encoder rerank). Tenant-aware
@@ -82,7 +82,7 @@ flowchart LR
   surface.
 
 <Aside type="note" title="See also">
-  - [Module layout & deprecations](/guides/deprecations/) — historical shim
+  - [Module layout & deprecations](/RAG_Support_Assistant/guides/deprecations/) — historical shim
     cleanup phases and the current canonical import map.
-  - [Quickstart](/guides/quickstart/) — boot the stack end-to-end locally.
+  - [Quickstart](/RAG_Support_Assistant/guides/quickstart/) — boot the stack end-to-end locally.
 </Aside>

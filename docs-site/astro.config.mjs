@@ -18,14 +18,14 @@ export default defineConfig({
         },
       ],
       sidebar: [
-        { label: 'Home', link: '/' },
+        { label: 'Home', slug: 'index' },
         {
           label: 'Architecture',
           items: [
-            { label: 'Overview', link: '/architecture/' },
-            { label: 'LangGraph state machine', link: '/architecture/langgraph/' },
-            { label: 'API routes catalog', link: '/architecture/routes/' },
-            { label: 'Provider routing', link: '/architecture/providers/' },
+            { label: 'Overview', slug: 'architecture' },
+            { label: 'LangGraph state machine', slug: 'architecture/langgraph' },
+            { label: 'API routes catalog', slug: 'architecture/routes' },
+            { label: 'Provider routing', slug: 'architecture/providers' },
             { label: 'Module layout', slug: 'guides/deprecations' },
           ],
         },
