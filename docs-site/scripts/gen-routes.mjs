@@ -11,7 +11,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, '..', '..');
 const ROUTERS_DIR = join(PROJECT_ROOT, 'api', 'routers');
 const APP_FILE = join(PROJECT_ROOT, 'api', 'app.py');
-const OUT_FILE = join(__dirname, '..', 'src', 'content', 'docs', 'architecture', 'routes.mdx');
+const OUT_FILE_EN = join(__dirname, '..', 'src', 'content', 'docs', 'architecture', 'routes.mdx');
+const OUT_FILE_RU = join(__dirname, '..', 'src', 'content', 'docs', 'ru', 'architecture', 'routes.mdx');
 
 const METHOD_RE = /@(?:app|router)\.(get|post|put|patch|delete|head|options)\(\s*["']([^"']+)["']/gi;
 
@@ -120,36 +121,73 @@ async function main() {
     .map(([group, items]) => `| [${group}](#${slugFor(group)}) | ${items.length} |`)
     .join('\n');
 
-  function renderGroupSection(group, items) {
-    if (!items.length) return '';
-    const rows = items
-      .map(
-        (r) =>
-          `| ${methodCellHtml(r.method)} | \`${r.path}\` | <span style="font-size:0.75rem;color:var(--sl-color-gray-3)">${r.file}</span> |`,
-      )
-      .join('\n');
-    return `### ${group}
+  const groupCount = [...byGroup.values()].filter((items) => items.length > 0).length;
+
+  function renderMdx(locale) {
+    const L = locale === 'ru'
+      ? {
+          title: 'Каталог маршрутов API',
+          description: 'Автогенерируемый каталог всех FastAPI-маршрутов, сгруппированный по продуктовым областям.',
+          totalCard: 'Всего эндпоинтов',
+          filesCard: 'Файлов-источников',
+          groupsCard: 'Групп',
+          byGroupHeading: 'По группе',
+          byGroupHeader: '| Группа | Эндпоинтов |',
+          byFileHeading: 'По файлу',
+          byFileHeader: '| Файл | Эндпоинтов |',
+          routesHeading: 'Маршруты по группе',
+          tableHeader: '| Метод | Путь | Источник |',
+          empty: '_маршрутов не обнаружено_',
+          emptyRow: '| _маршрутов не обнаружено_ | 0 |',
+          sourceTitle: 'Источник',
+          sourceBody: `Сгенерировано из <code>api/app.py</code> и <code>api/routers/*.py</code> через\n  regex по декораторам маршрутов FastAPI в <code>docs-site/scripts/gen-routes.mjs</code>.\n  Правки в этом файле перезаписываются каждым <code>npm run build</code> — меняйте генератор, если нужен другой layout.`,
+        }
+      : {
+          title: 'API routes catalog',
+          description: 'Auto-generated catalog of every FastAPI route, grouped by product area.',
+          totalCard: 'Total endpoints',
+          filesCard: 'Source files',
+          groupsCard: 'Groups',
+          byGroupHeading: 'By group',
+          byGroupHeader: '| Group | Endpoints |',
+          byFileHeading: 'By file',
+          byFileHeader: '| File | Endpoints |',
+          routesHeading: 'Routes by group',
+          tableHeader: '| Method | Path | Source |',
+          empty: '_no routes detected_',
+          emptyRow: '| _no routes detected_ | 0 |',
+          sourceTitle: 'Source',
+          sourceBody: `Generated from <code>api/app.py</code> and <code>api/routers/*.py</code> via\n  regex on FastAPI route decorators by <code>docs-site/scripts/gen-routes.mjs</code>.\n  Edits to this file are overwritten on every <code>npm run build</code> — change\n  the generator script if you need a different layout.`,
+        };
+
+    function renderGroupSection(group, items) {
+      if (!items.length) return '';
+      const rows = items
+        .map(
+          (r) =>
+            `| ${methodCellHtml(r.method)} | \`${r.path}\` | <span style="font-size:0.75rem;color:var(--sl-color-gray-3)">${r.file}</span> |`,
+        )
+        .join('\n');
+      return `### ${group}
 
 <div class="route-table">
 
-| Method | Path | Source |
+${L.tableHeader}
 | --- | --- | --- |
 ${rows}
 
 </div>
 `;
-  }
+    }
 
-  const groupSections = [...byGroup.entries()]
-    .filter(([, items]) => items.length > 0)
-    .map(([group, items]) => renderGroupSection(group, items))
-    .join('\n');
+    const groupSections = [...byGroup.entries()]
+      .filter(([, items]) => items.length > 0)
+      .map(([group, items]) => renderGroupSection(group, items))
+      .join('\n');
 
-  const groupCount = [...byGroup.values()].filter((items) => items.length > 0).length;
-
-  const mdx = `---
-title: API routes catalog
-description: Auto-generated catalog of every FastAPI route, grouped by product area.
+    return `---
+title: ${L.title}
+description: ${L.description}
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -157,51 +195,51 @@ import { Aside } from '@astrojs/starlight/components';
 <div class="q-cardgrid q-cardgrid--accent" data-route-summary>
   <article class="q-card">
     <h3 class="q-title">
-      <span class="q-label">Total endpoints</span>
+      <span class="q-label">${L.totalCard}</span>
     </h3>
     <div class="q-body"><p>${all.length}</p></div>
   </article>
   <article class="q-card">
     <h3 class="q-title">
-      <span class="q-label">Source files</span>
+      <span class="q-label">${L.filesCard}</span>
     </h3>
     <div class="q-body"><p>${byFile.size}</p></div>
   </article>
   <article class="q-card">
     <h3 class="q-title">
-      <span class="q-label">Groups</span>
+      <span class="q-label">${L.groupsCard}</span>
     </h3>
     <div class="q-body"><p>${groupCount}</p></div>
   </article>
 </div>
 
-## By group
+## ${L.byGroupHeading}
 
-| Group | Endpoints |
+${L.byGroupHeader}
 | --- | ---: |
-${groupSummaryRows || '| _no routes detected_ | 0 |'}
+${groupSummaryRows || L.emptyRow}
 
-## By file
+## ${L.byFileHeading}
 
-| File | Endpoints |
+${L.byFileHeader}
 | --- | ---: |
-${fileSummaryRows || '| _no routes detected_ | 0 |'}
+${fileSummaryRows || L.emptyRow}
 
-## Routes by group
+## ${L.routesHeading}
 
-${groupSections || '_no routes detected_'}
+${groupSections || L.empty}
 
-<Aside type="tip" title="Source">
-  Generated from <code>api/app.py</code> and <code>api/routers/*.py</code> via
-  regex on FastAPI route decorators by <code>docs-site/scripts/gen-routes.mjs</code>.
-  Edits to this file are overwritten on every <code>npm run build</code> — change
-  the generator script if you need a different layout.
+<Aside type="tip" title="${L.sourceTitle}">
+  ${L.sourceBody}
 </Aside>
 `;
+  }
 
-  await mkdir(dirname(OUT_FILE), { recursive: true });
-  await writeFile(OUT_FILE, mdx, 'utf8');
-  console.log(`[gen-routes] wrote ${all.length} routes from ${byFile.size} files across ${[...byGroup.values()].filter((items) => items.length > 0).length} groups`);
+  for (const [out, locale] of [[OUT_FILE_EN, 'en'], [OUT_FILE_RU, 'ru']]) {
+    await mkdir(dirname(out), { recursive: true });
+    await writeFile(out, renderMdx(locale), 'utf8');
+  }
+  console.log(`[gen-routes] wrote ${all.length} routes from ${byFile.size} files across ${groupCount} groups (en + ru)`);
 }
 
 main().catch((err) => {

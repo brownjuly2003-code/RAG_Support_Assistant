@@ -10,7 +10,8 @@ import { parse } from 'yaml';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, '..', '..');
 const PROVIDERS_FILE = join(PROJECT_ROOT, 'config', 'providers.yml');
-const OUT_FILE = join(__dirname, '..', 'src', 'content', 'docs', 'architecture', 'providers.mdx');
+const OUT_FILE_EN = join(__dirname, '..', 'src', 'content', 'docs', 'architecture', 'providers.mdx');
+const OUT_FILE_RU = join(__dirname, '..', 'src', 'content', 'docs', 'ru', 'architecture', 'providers.mdx');
 
 function tierCell(tier) {
   if (!tier) return '—';
@@ -31,36 +32,89 @@ async function main() {
   const routingProfiles = cfg.routing_profiles || {};
   const defaultProfile = cfg.default_profile || cfg.default_routing_profile;
 
-  const providerRows = providers.map((p) => {
-    const id = p.id || p.name || '?';
-    const label = p.label || id;
-    const kind = p.kind || '—';
-    const enabled = p.enabled === false ? 'disabled' : 'enabled';
-    const auth = p.api_key_env ? `\`${p.api_key_env}\`` : '—';
-    const modelCount = Array.isArray(p.models) ? p.models.length : 0;
-    return `| \`${id}\` | ${label} | ${kind} | ${enabled} | ${auth} | ${modelCount} |`;
-  });
+  function buildRows(locale) {
+    const disabledLabel = locale === 'ru' ? 'выключен' : 'disabled';
+    const enabledLabel = locale === 'ru' ? 'включён' : 'enabled';
 
-  const modelRows = providers.flatMap((p) =>
-    (Array.isArray(p.models) ? p.models : []).map((m) => {
-      const aliases = Array.isArray(m.aliases) && m.aliases.length > 0
-        ? m.aliases.map((a) => `\`${a}\``).join(', ')
-        : '—';
-      const inPrice = m.input_price_per_1m_tokens ?? 0;
-      const outPrice = m.output_price_per_1m_tokens ?? 0;
-      return `| \`${p.id}\` | \`${m.name}\` | ${aliases} | $${inPrice.toFixed(2)} | $${outPrice.toFixed(2)} |`;
-    }),
-  );
+    const providerRows = providers.map((p) => {
+      const id = p.id || p.name || '?';
+      const label = p.label || id;
+      const kind = p.kind || '—';
+      const enabled = p.enabled === false ? disabledLabel : enabledLabel;
+      const auth = p.api_key_env ? `\`${p.api_key_env}\`` : '—';
+      const modelCount = Array.isArray(p.models) ? p.models.length : 0;
+      return `| \`${id}\` | ${label} | ${kind} | ${enabled} | ${auth} | ${modelCount} |`;
+    });
 
-  const profileRows = Object.entries(routingProfiles).map(([name, prof]) => {
-    const isDefault = name === defaultProfile;
-    const marker = isDefault ? ' _(default)_' : '';
-    return `| \`${name}\`${marker} | ${tierCell(prof.fast)} | ${tierCell(prof.strong)} | ${tierCell(prof.fallback)} | ${prof.description ? prof.description.replace(/\|/g, '\\|') : '—'} |`;
-  });
+    const modelRows = providers.flatMap((p) =>
+      (Array.isArray(p.models) ? p.models : []).map((m) => {
+        const aliases = Array.isArray(m.aliases) && m.aliases.length > 0
+          ? m.aliases.map((a) => `\`${a}\``).join(', ')
+          : '—';
+        const inPrice = m.input_price_per_1m_tokens ?? 0;
+        const outPrice = m.output_price_per_1m_tokens ?? 0;
+        return `| \`${p.id}\` | \`${m.name}\` | ${aliases} | $${inPrice.toFixed(2)} | $${outPrice.toFixed(2)} |`;
+      }),
+    );
 
-  const mdx = `---
-title: Provider routing matrix
-description: Auto-generated routing matrix from config/providers.yml.
+    const defaultMarker = locale === 'ru' ? ' _(по умолчанию)_' : ' _(default)_';
+    const profileRows = Object.entries(routingProfiles).map(([name, prof]) => {
+      const marker = name === defaultProfile ? defaultMarker : '';
+      return `| \`${name}\`${marker} | ${tierCell(prof.fast)} | ${tierCell(prof.strong)} | ${tierCell(prof.fallback)} | ${prof.description ? prof.description.replace(/\|/g, '\\|') : '—'} |`;
+    });
+
+    return { providerRows, modelRows, profileRows };
+  }
+
+  function renderMdx(locale) {
+    const { providerRows, modelRows, profileRows } = buildRows(locale);
+    const L = locale === 'ru'
+      ? {
+          title: 'Матрица маршрутизации провайдеров',
+          description: 'Автогенерируемая матрица маршрутизации из config/providers.yml.',
+          providersCard: 'Провайдеров',
+          profilesCard: 'Профилей маршрутизации',
+          defaultCard: 'Профиль по умолчанию',
+          providersHeading: 'Провайдеры',
+          providersHeader: '| ID | Метка | Тип | Включён | Auth env var | Моделей |',
+          providersEmpty: '| _нет_ | | | | | |',
+          modelsHeading: 'Модели',
+          modelsIntro: 'Цены в USD за 1M токенов.',
+          modelsHeader: '| Провайдер | Модель | Алиасы | Вход | Выход |',
+          modelsEmpty: '| _нет_ | | | | |',
+          profilesHeading: 'Профили маршрутизации',
+          profilesIntro: 'Профиль по умолчанию помечен _(по умолчанию)_.',
+          profilesHeader: '| Профиль | Быстрый тир | Сильный тир | Запасной | Описание |',
+          profilesEmpty: '| _нет_ | | | | |',
+          sourceTitle: 'Источник',
+          sourceBody: `Сгенерировано из <code>config/providers.yml</code>. Перезапустите\n  <code>npm run dev</code> или <code>npm run build</code> для обновления.`,
+          noneLabel: 'нет',
+        }
+      : {
+          title: 'Provider routing matrix',
+          description: 'Auto-generated routing matrix from config/providers.yml.',
+          providersCard: 'Providers',
+          profilesCard: 'Routing profiles',
+          defaultCard: 'Default profile',
+          providersHeading: 'Providers',
+          providersHeader: '| ID | Label | Kind | Enabled | Auth env var | Models |',
+          providersEmpty: '| _none_ | | | | | |',
+          modelsHeading: 'Models',
+          modelsIntro: 'Prices are USD per 1M tokens.',
+          modelsHeader: '| Provider | Model | Aliases | Input | Output |',
+          modelsEmpty: '| _none_ | | | | |',
+          profilesHeading: 'Routing profiles',
+          profilesIntro: 'The default profile is marked _(default)_.',
+          profilesHeader: '| Profile | Fast tier | Strong tier | Fallback | Description |',
+          profilesEmpty: '| _none_ | | | | |',
+          sourceTitle: 'Source',
+          sourceBody: `Generated from <code>config/providers.yml</code>. Re-run\n  <code>npm run dev</code> or <code>npm run build</code> to refresh.`,
+          noneLabel: 'none',
+        };
+
+    return `---
+title: ${L.title}
+description: ${L.description}
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -68,56 +122,59 @@ import { Aside } from '@astrojs/starlight/components';
 <div class="q-cardgrid q-cardgrid--accent">
   <article class="q-card">
     <h3 class="q-title">
-      <span class="q-label">Providers</span>
+      <span class="q-label">${L.providersCard}</span>
     </h3>
     <div class="q-body"><p>${providers.length}</p></div>
   </article>
   <article class="q-card">
     <h3 class="q-title">
-      <span class="q-label">Routing profiles</span>
+      <span class="q-label">${L.profilesCard}</span>
     </h3>
     <div class="q-body"><p>${Object.keys(routingProfiles).length}</p></div>
   </article>
   <article class="q-card">
     <h3 class="q-title">
-      <span class="q-label">Default profile</span>
+      <span class="q-label">${L.defaultCard}</span>
     </h3>
-    <div class="q-body"><p><code>${defaultProfile || 'none'}</code></p></div>
+    <div class="q-body"><p><code>${defaultProfile || L.noneLabel}</code></p></div>
   </article>
 </div>
 
-## Providers
+## ${L.providersHeading}
 
-| ID | Label | Kind | Enabled | Auth env var | Models |
+${L.providersHeader}
 | --- | --- | --- | :---: | --- | ---: |
-${providerRows.join('\n') || '| _none_ | | | | | |'}
+${providerRows.join('\n') || L.providersEmpty}
 
-## Models
+## ${L.modelsHeading}
 
-Prices are USD per 1M tokens.
+${L.modelsIntro}
 
-| Provider | Model | Aliases | Input | Output |
+${L.modelsHeader}
 | --- | --- | --- | ---: | ---: |
-${modelRows.join('\n') || '| _none_ | | | | |'}
+${modelRows.join('\n') || L.modelsEmpty}
 
-## Routing profiles
+## ${L.profilesHeading}
 
-The default profile is marked _(default)_.
+${L.profilesIntro}
 
-| Profile | Fast tier | Strong tier | Fallback | Description |
+${L.profilesHeader}
 | --- | --- | --- | --- | --- |
-${profileRows.join('\n') || '| _none_ | | | | |'}
+${profileRows.join('\n') || L.profilesEmpty}
 
-<Aside type="tip" title="Source">
-  Generated from <code>config/providers.yml</code>. Re-run
-  <code>npm run dev</code> or <code>npm run build</code> to refresh.
+<Aside type="tip" title="${L.sourceTitle}">
+  ${L.sourceBody}
 </Aside>
 `;
+  }
 
-  await mkdir(dirname(OUT_FILE), { recursive: true });
-  await writeFile(OUT_FILE, mdx, 'utf8');
+  for (const [out, locale] of [[OUT_FILE_EN, 'en'], [OUT_FILE_RU, 'ru']]) {
+    await mkdir(dirname(out), { recursive: true });
+    await writeFile(out, renderMdx(locale), 'utf8');
+  }
+  const enModelsCount = buildRows('en').modelRows.length;
   console.log(
-    `[gen-providers] wrote ${providers.length} providers, ${modelRows.length} models, ${Object.keys(routingProfiles).length} profiles`,
+    `[gen-providers] wrote ${providers.length} providers, ${enModelsCount} models, ${Object.keys(routingProfiles).length} profiles (en + ru)`,
   );
 }
 

@@ -34,3 +34,9 @@ reports/regression/*.md
 
 # Autopilot runtime state
 .autopilot/
+
+# Playwright MCP captures (per-session diagnostic, not site assets)
+.playwright-mcp/
+
+# Ad-hoc QA screenshots at repo root (per-session captures, not committed assets)
+/*.png

@@ -1,0 +1,150 @@
+---
+title: Воспроизвести E20
+description: Засеять демо-базу, загрузить документ с E20, задать вопрос поддержки и проверить найденные доказательства.
+---
+
+Эта страница использует один детерминированный сценарий поддержки: E20
+лежит в засеянном документе `errors_e10_e30.md`. Цель — засеять демо-базу,
+загрузить исходные документы через публичный upload-API, задать вопрос
+про E20 и проверить, что найденные доказательства указывают на засеянный
+источник.
+
+Живой output ask пока не закоммичен. Команды ниже — это воспроизводимый
+путь; не трактуйте иллюстративное ожидаемое поведение как измеренный
+бенчмарк провайдера.
+
+## Предусловия
+
+Команды запускаются из корня репозитория после локальной настройки по
+странице [Запустить локально](/RAG_Support_Assistant/ru/guides/quickstart/).
+API должен быть поднят на `http://localhost:8000` с настроенным профилем
+провайдера:
+
+```powershell
+cd D:\RAG_Support_Assistant
+python main.py
+```
+
+Для локальной разработки `/api/auth/login` принимает `admin/admin`,
+только если `ADMIN_PASSWORD_HASH` не задан:
+
+```powershell
+$login = curl.exe -s http://localhost:8000/api/auth/login `
+  -H "Content-Type: application/json" `
+  -d '{"username":"admin","password":"admin"}' | ConvertFrom-Json
+$env:ACCESS_TOKEN = $login.access_token
+```
+
+## Засеять документы
+
+Сидер пишет ровно три демо-документа: гарантия, возвраты и ошибки
+E10-E30. Он создаёт исходные файлы, индексация — на следующем шаге.
+
+```powershell
+python -m demo.seed_docs
+Get-ChildItem demo\docs
+Select-String -Path demo\docs\errors_e10_e30.md -Pattern "E20"
+```
+
+## Загрузить в базу знаний
+
+Залейте три засеянных файла через тот же upload-эндпоинт, что использует
+приложение. Эндпоинт индексирует синхронно, если Celery недоступен;
+если в ответе возвращается id асинхронной задачи, цикл ниже опрашивает
+`/api/tasks/{task_id}` до тех пор, пока задача не дойдёт до `SUCCESS`
+(или другого терминального не-pending статуса).
+
+```powershell
+$files = @(
+  "warranty.md",
+  "returns_policy.md",
+  "errors_e10_e30.md"
+)
+
+foreach ($name in $files) {
+  $upload = curl.exe -s -X POST http://localhost:8000/api/upload `
+    -H "Authorization: Bearer $env:ACCESS_TOKEN" `
+    -F "file=@demo/docs/$name" | ConvertFrom-Json
+
+  $upload
+
+  if ($upload.message -match 'task_id=([A-Za-z0-9_-]+)') {
+    $taskId = $Matches[1]
+    for ($i = 0; $i -lt 30; $i++) {
+      $status = curl.exe -s "http://localhost:8000/api/tasks/$taskId" `
+        -H "Authorization: Bearer $env:ACCESS_TOKEN" | ConvertFrom-Json
+      Write-Host "$taskId → $($status.status)"
+      if ($status.status -in @('SUCCESS','FAILURE','REVOKED')) { break }
+      Start-Sleep -Seconds 2
+    }
+  }
+}
+```
+
+## Задать вопрос про E20
+
+Подготовьте UTF-8 JSON-пейлоад и вызовите синхронный ask-эндпоинт. Ответ
+API содержит `answer`, `sources`, `citations` и `trace_id`.
+
+```powershell
+@'
+{"question":"Как исправить E20?"}
+'@ | Set-Content -Encoding utf8 "$env:TEMP\e20-question.json"
+
+curl.exe -s -X POST http://localhost:8000/api/ask `
+  -H "Authorization: Bearer $env:ACCESS_TOKEN" `
+  -H "Content-Type: application/json" `
+  --data-binary "@$env:TEMP\e20-question.json" |
+  Set-Content -Encoding utf8 "$env:TEMP\e20-answer.json"
+
+Get-Content -Raw -Encoding utf8 "$env:TEMP\e20-answer.json" | ConvertFrom-Json
+```
+
+## Проверить доказательства и трейс
+
+Сначала посмотрите доказательства на уровне ответа. Для grounded-ответа
+на E20 хотя бы один источник или цитата должны указывать на
+`errors_e10_e30.md`.
+
+```powershell
+$answer = Get-Content -Raw -Encoding utf8 "$env:TEMP\e20-answer.json" | ConvertFrom-Json
+$answer.sources | Select-Object source,page_content
+$answer.citations | Select-Object doc_id,title,excerpt
+```
+
+Если в ответе есть `trace_id`, проинспектируйте сохранённый трейс графа:
+
+```powershell
+if ($answer.trace_id) {
+  curl.exe -s "http://localhost:8000/api/admin/traces/$($answer.trace_id)" `
+    -H "Authorization: Bearer $env:ACCESS_TOKEN" |
+    Set-Content -Encoding utf8 "$env:TEMP\e20-trace.json"
+
+  Get-Content -Raw -Encoding utf8 "$env:TEMP\e20-trace.json" | ConvertFrom-Json
+}
+```
+
+## Ожидаемое grounded-поведение
+
+Ожидаемый ответ должен сказать, что E20 — это проблема со сливом воды,
+и сослаться на `errors_e10_e30.md`. Засеянный источник перечисляет такие
+возможные причины:
+
+- засорённый сливной фильтр;
+- перегиб сливного шланга;
+- неисправность сливного насоса.
+
+Точные формулировки, цитаты, предложенные уточнения и score-поля могут
+меняться от провайдера к провайдеру и от конфигурации к конфигурации.
+Закоммиченная документация не заявляет цифр по live-качеству, latency
+или сравнению провайдеров для этого сценария.
+
+## Ограничения
+
+Демо-база содержит три документа, а evaluation-фикстура — 12 кейсов по
+шести категориям: коды ошибок, сброс пароля, гарантия, установка,
+биллинг и общее. Категории установка, биллинг и сброс пароля не
+покрываются полностью трёхдокументной демо-базой.
+
+Эта страница — детерминированный trust-путь для одного вопроса с опорой
+на базу знаний, а не сравнительный бенчмарк провайдеров.

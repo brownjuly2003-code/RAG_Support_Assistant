@@ -33,15 +33,14 @@ export default defineConfig({
       sidebar: [
         { label: 'Home', translations: { ru: 'Главная' }, slug: 'index' },
         { label: 'What it does', translations: { ru: 'Что делает' }, slug: 'examples' },
-        // Only Home and "What it does" have RU mirror pages. The other five
-        // items currently route to English content from the RU sidebar — the
-        // " (EN)" suffix matches the in-page convention used by ru/index.mdx
-        // hero actions and "Start here" list.
-        { label: 'Reproduce E20', translations: { ru: 'Воспроизвести E20 (EN)' }, slug: 'reproduce-e20' },
-        { label: 'Architecture', translations: { ru: 'Архитектура (EN)' }, slug: 'architecture' },
-        { label: 'Evaluation', translations: { ru: 'Оценка (EN)' }, slug: 'evaluation' },
-        { label: 'Try locally', translations: { ru: 'Запустить локально (EN)' }, slug: 'guides/quickstart' },
-        { label: 'API', translations: { ru: 'API (EN)' }, slug: 'architecture/routes' },
+        // Все верхнеуровневые пункты сайдбара имеют RU-зеркала:
+        // Architecture/* — через генераторы scripts/gen-*.mjs, остальные —
+        // как hand-written MDX под src/content/docs/ru/.
+        { label: 'Reproduce E20', translations: { ru: 'Воспроизвести E20' }, slug: 'reproduce-e20' },
+        { label: 'Architecture', translations: { ru: 'Архитектура' }, slug: 'architecture' },
+        { label: 'Evaluation', translations: { ru: 'Оценка' }, slug: 'evaluation' },
+        { label: 'Try locally', translations: { ru: 'Запустить локально' }, slug: 'guides/quickstart' },
+        { label: 'API', translations: { ru: 'API' }, slug: 'architecture/routes' },
       ],
       customCss: ['./src/assets/custom.css'],
     }),

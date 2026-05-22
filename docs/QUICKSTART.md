@@ -1,19 +1,19 @@
 # Quickstart — RAG Support Assistant
 
-> Минимальный набор шагов чтобы поднять сервис локально и убедиться что он работает.
+> The minimum steps to run the service locally and verify it works.
 
-## 0. Что нужно
+## 0. Requirements
 
-- Python 3.11+ (тестировано на 3.13)
-- Docker Desktop (для Postgres + Redis в dev и для regression eval)
-- ~8 GB места под embeddings/reranker/cache; explicit Ollama mode дополнительно требует место под модели.
+- Python 3.11+ (tested on 3.13)
+- Docker Desktop (for Postgres + Redis in dev and for regression eval)
+- ~8 GB disk space for embeddings/reranker/cache; explicit Ollama mode requires additional space for models.
 
-По выбранному profile:
-- **GraceKelly** на `D:\GraceKelly\` (port 8011) — default local orchestrator для Claude Sonnet 4.6 / GPT-5 / Gemini через Perplexity Pro.
-- **Ollama** (`https://ollama.com/download`) — для explicit `local-first` сценария или fallback.
-- **Mistral API key** (`MISTRAL_API_KEY`) — для прямого Mistral fast-tier.
+Per selected profile:
+- **GraceKelly** at `D:\GraceKelly\` (port 8011) — default local orchestrator for Claude Sonnet 4.6 / GPT-5 / Gemini via Perplexity Pro.
+- **Ollama** (`https://ollama.com/download`) — for explicit `local-first` scenario or fallback.
+- **Mistral API key** (`MISTRAL_API_KEY`) — for direct Mistral fast-tier.
 
-## 1. Зависимости
+## 1. Dependencies
 
 ```bash
 cd D:\RAG_Support_Assistant
@@ -22,26 +22,26 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-## 2. Конфиг
+## 2. Configuration
 
 ```bash
 cp .env.example .env              # Windows: copy .env.example .env
 ```
 
-Откройте `.env` и заполните то, что нужно. Минимальные сценарии:
+Open `.env` and fill in the required values. Minimal scenarios:
 
-| Сценарий | Обязательные переменные |
+| Scenario | Required variables |
 | --- | --- |
-| **GraceKelly primary** (default) | `GRACEKELLY_BASE_URL=http://127.0.0.1:8011`, `LLM_PROVIDER_PROFILE=gracekelly-primary` подразумевается |
+| **GraceKelly primary** (default) | `GRACEKELLY_BASE_URL=http://127.0.0.1:8011`, `LLM_PROVIDER_PROFILE=gracekelly-primary` is implied |
 | **Local-only Ollama** | `LLM_PROVIDER_PROFILE=local-first` |
 | **+ Mistral fast tier** | `MISTRAL_API_KEY=<key>` + `LLM_PROVIDER_PROFILE=external-mistral` |
 | **GraceKelly mixed routing** (Claude Sonnet 4.6 reasoning) | `MISTRAL_API_KEY=<key>` + `LLM_PROVIDER_PROFILE=gracekelly-mixed` + `GRACEKELLY_REQUEST_TIMEOUT_SEC=120` |
 
-Полный список переменных — `README.md` секция **Environment Variables**.
+Full list of variables — see `README.md` section **Environment Variables**.
 
-## 3. Инфраструктура (Postgres + Redis)
+## 3. Infrastructure (Postgres + Redis)
 
-Для dev — поднять disposable контейнеры:
+For dev — spin up disposable containers:
 
 ```bash
 docker run -d --name rag-postgres -p 5432:5432 \
@@ -51,47 +51,47 @@ docker run -d --name rag-postgres -p 5432:5432 \
 docker run -d --name rag-redis -p 6379:6379 redis:7-alpine
 ```
 
-Затем миграции:
+Then run migrations:
 
 ```bash
 alembic upgrade head
 ```
 
-## 4. Сценарий A — GraceKelly primary (default)
+## 4. Scenario A — GraceKelly primary (default)
 
 ```bash
-# Поднять GraceKelly в отдельном терминале
+# Start GraceKelly in a separate terminal
 cd D:\GraceKelly
 uvicorn gracekelly.main:create_app --factory --host 127.0.0.1 --port 8011
 
-# Запуск
+# Launch RAG Support Assistant
 cd D:\RAG_Support_Assistant
 python main.py
 ```
 
-Открыть `http://localhost:8000/static/login.html` (password+SSO) или
-`http://localhost:8000/static/chat.html` (chat UI). После логина —
-`/agent` для agent copilot dashboard. (legacy `/` index UI удалён
-2026-04-27 — был unauthenticated, см. SESSION-NOTES-2026-04-27.)
+Open `http://localhost:8000/static/login.html` (password + SSO) or
+`http://localhost:8000/static/chat.html` (chat UI). After login —
+`/agent` for the agent copilot dashboard. (legacy `/` index UI was removed
+2026-04-27 — it was unauthenticated, see SESSION-NOTES-2026-04-27.)
 
-`gracekelly-primary` profile направляет fast и strong tier через локальный GraceKelly orchestrator. `/api/health/ready` проверяет GraceKelly readiness и не требует Ollama, если активный профиль не использует Ollama.
+`gracekelly-primary` profile routes fast and strong tiers through the local GraceKelly orchestrator. `/api/health/ready` checks GraceKelly readiness and does not require Ollama if the active profile does not use Ollama.
 
-## 5. Сценарий B — explicit Local-only Ollama
+## 5. Scenario B — explicit Local-only Ollama
 
 ```bash
-# Поднять Ollama и стянуть модели
+# Start Ollama and pull models
 ollama serve &
 ollama pull qwen2.5:7b
 
-# Запуск с явным local-first profile
+# Launch with explicit local-first profile
 LLM_PROVIDER_PROFILE=local-first python main.py
 ```
 
-## 6. Сценарий C — GraceKelly mixed routing
+## 6. Scenario C — GraceKelly mixed routing
 
-Полезно когда нужно качество reasoning (Claude Sonnet 4.6) для финальных ответов, но фоновую обработку (классификация, grade_docs, verify_facts) делает быстрый Mistral API.
+Useful when you need reasoning quality (Claude Sonnet 4.6) for final answers, but want background processing (classification, grade_docs, verify_facts) handled by fast Mistral API.
 
-1. Поднять GraceKelly (отдельный проект):
+1. Start GraceKelly (separate project):
 
    ```bash
    cd D:\GraceKelly
@@ -99,7 +99,7 @@ LLM_PROVIDER_PROFILE=local-first python main.py
    uvicorn gracekelly.main:create_app --factory --host 127.0.0.1 --port 8011
    ```
 
-2. В `D:\RAG_Support_Assistant\.env`:
+2. In `D:\RAG_Support_Assistant\.env`:
 
    ```
    MISTRAL_API_KEY=<your-key>
@@ -107,42 +107,56 @@ LLM_PROVIDER_PROFILE=local-first python main.py
    GRACEKELLY_REQUEST_TIMEOUT_SEC=120
    ```
 
-3. Запустить RAG:
+3. Launch RAG:
 
    ```bash
    python main.py
    ```
 
-`gracekelly-mixed` profile направляет fast tier через Mistral API (~1-3s/call), strong tier (final answer) через GraceKelly browser → Perplexity Pro (Claude Sonnet 4.6, ~30-60s/call).
+`gracekelly-mixed` profile routes fast tier through Mistral API (~1-3s/call), strong tier (final answer) through GraceKelly browser → Perplexity Pro (Claude Sonnet 4.6, ~30-60s/call).
 
-## 7. Загрузка документов и первый запрос
+## 7. Document ingestion and first query
 
 ```bash
-# Документ для ингеста (PDF, MD, TXT)
+# Document for ingestion (PDF, MD, TXT)
+# PowerShell (Windows) — note: curl.exe, not curl (which is the Invoke-WebRequest alias)
+curl.exe -X POST http://localhost:8000/api/upload `
+    -H "Authorization: Bearer <admin-jwt>" `
+    -F "file=@docs/warranty.md"
+
+# Bash (Linux/macOS)
 curl -X POST http://localhost:8000/api/upload \
     -H "Authorization: Bearer <admin-jwt>" \
     -F "file=@docs/warranty.md"
 
-# Первый запрос
+# First query
+# PowerShell (Windows)
+curl.exe -X POST http://localhost:8000/api/ask `
+    -H "Authorization: Bearer <admin-jwt>" `
+    -H "Content-Type: application/json" `
+    -d '{"question":"What is the warranty period?"}'
+
+# Bash (Linux/macOS)
 curl -X POST http://localhost:8000/api/ask \
+    -H "Authorization: Bearer <admin-jwt>" \
     -H "Content-Type: application/json" \
-    -d '{"query":"Какой срок гарантии?"}'
+    -d '{"question":"What is the warranty period?"}'
 ```
 
-Получить admin JWT для dev: `POST /api/auth/login` с `admin/admin` (если `ADMIN_PASSWORD_HASH` не задан в `.env`).
+To get admin JWT for dev: `POST /api/auth/login` with `admin/admin` (if `ADMIN_PASSWORD_HASH` is not set in `.env`).
 
 ## 8. Health checks
 
 ```bash
 curl http://localhost:8000/api/health/live      # liveness
-curl http://localhost:8000/api/health/ready     # readiness (зависимости)
-curl http://localhost:8000/api/metrics          # снимок метрик
-curl http://localhost:8000/api/admin/providers  # активный routing profile + recent usage (auth)
+curl http://localhost:8000/api/health/ready     # readiness (dependencies)
+curl http://localhost:8000/api/metrics          # metrics snapshot
+curl http://localhost:8000/api/admin/providers  # active routing profile + recent usage (auth)
 ```
 
 ## 9. Regression eval
 
-Для непрерывной проверки качества против curated 20-кейс датасета:
+For continuous quality checks against a curated 20-case dataset:
 
 ```bash
 # Mock provider benchmark (no GK, no quota burn)
@@ -160,25 +174,40 @@ python scripts/regression_eval.py \
     --allow-paid-apis
 ```
 
-Без `--allow-paid-apis` provider/model targets run in `mock-provider-benchmark` mode:
+Without `--allow-paid-apis`, provider/model targets run in `mock-provider-benchmark` mode:
 answers and cost/latency metrics are simulated from `evaluation/curated_cases.jsonl`,
 so the command does not call GraceKelly or Mistral and does not persist to the DB when
 `--no-persist` is set. Live provider calls require explicit `--allow-paid-apis`.
 
-Результаты в `reports/regression/<timestamp>-*.{json,md}`. PowerShell wrapper `scripts\run_regression_via_gracekelly.ps1 -AllowLive` поднимает disposable Postgres + Redis + ингест + регрессию одной командой после explicit live opt-in.
+Results are written to `reports/regression/<timestamp>-*.{json,md}`. PowerShell wrapper
+`scripts\run_regression_via_gracekelly.ps1 -AllowLive` spins up disposable Postgres + Redis + ingestion + regression in one command after explicit live opt-in.
 
-## 10. Частые засады
+## 10. Common issues
 
-- **`vector store is not initialized`** — нет ингестированных документов. Загрузить через `POST /api/upload` или прогнать ингест-скрипт.
-- **`[provider_unavailable]` в ответах** — циркуит-брейкер открыт у адаптера. Дождаться cooldown (60s) или сбросить вручную: `POST /api/admin/circuit-breaker/reset`.
-- **`[model_mismatch] ... but UI shows 'Sonar'`** — Perplexity server-side auto-router подменил модель. Это external GK error, классифицирован как infrastructure_failure в regression eval. Пересмотреть запрос или попробовать другую формулировку.
-- **`HF_HUB_OFFLINE=1`** в env, но `BAAI/bge-m3` не в кэше → embeddings падают. Стянуть один раз с `HF_HUB_OFFLINE` пустым, потом включать обратно.
-- **Postgres `DuplicateObject` на ENUM** — миграция 012 чувствительна к двойному `CREATE TYPE`. Исправлено в `d163942`; если ловится — обновить ветку.
+:::caution[vector store is not initialized]
+No ingested documents found. Upload via `POST /api/upload` or run the ingestion script.
+:::
 
-## 11. Где смотреть дальше
+:::caution[[provider_unavailable]]
+Circuit breaker is open at the adapter. Wait for cooldown (60s) or reset manually: `POST /api/admin/circuit-breaker/reset`.
+:::
 
-- `README.md` — полный спектр env vars + публичные endpoints + Prometheus метрики.
-- `docs/runbook.md` — оперативный runbook для дежурного (алерты, диагностика, действия).
-- `docs/disaster-recovery.md` — DR сценарии A-F (потеря данных, шифрование, encryption-key).
-- `docs/operations/` — runbook'и по backup, helm, gracekelly smoke.
-- `docs/CHANGELOG.md` — история изменений по аркам.
+:::caution[[model_mismatch] … but UI shows 'Sonar']
+Perplexity server-side auto-router replaced the model. This is an external GK error, classified as `infrastructure_failure` in regression eval. Reconsider the query or try a different phrasing.
+:::
+
+:::caution[HF_HUB_OFFLINE=1]
+If `HF_HUB_OFFLINE=1` is set in env but `BAAI/bge-m3` is not cached — embeddings will fail. Pull the model once with `HF_HUB_OFFLINE` empty, then re-enable.
+:::
+
+:::caution[Postgres DuplicateObject on ENUM]
+Migration 012 is sensitive to duplicate `CREATE TYPE`. Fixed in `d163942`; if you hit this — update the branch.
+:::
+
+## 11. Where to go next
+
+- `README.md` — full list of env vars + public endpoints + Prometheus metrics.
+- `docs/runbook.md` — operational runbook for on-call (alerts, diagnostics, actions).
+- `docs/disaster-recovery.md` — DR scenarios A-F (data loss, encryption, encryption-key).
+- `docs/operations/` — runbooks for backup, helm, gracekelly smoke.
+- `docs/CHANGELOG.md` — change history by arcs.

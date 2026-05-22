@@ -5,5 +5,13 @@ src/content/docs/guides/
 src/content/docs/architecture/langgraph.mdx
 src/content/docs/architecture/routes.mdx
 src/content/docs/architecture/providers.mdx
+src/content/docs/ru/architecture/langgraph.mdx
+src/content/docs/ru/architecture/routes.mdx
+src/content/docs/ru/architecture/providers.mdx
 .env
 .env.production
+
+# Internal workspace artifacts — handoffs, review briefs, raw provider output.
+# Files prefixed with _ are private to the local checkout.
+_*.md
+_*.txt

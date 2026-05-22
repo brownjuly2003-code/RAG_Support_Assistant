@@ -1,0 +1,130 @@
+---
+title: Оценка
+description: Что оценивается в репозитории, как это измеряется и где границы. Без leaderboard'а и без сравнения провайдеров.
+---
+
+Эта страница описывает, что именно оценивается в репозитории, как это
+измеряется и где проходят границы. Здесь нет leaderboard'а и нет
+сравнения провайдеров: закоммиченная поверхность оценки — это офлайн-фикстура
+плюс runtime-оценщики, не живой бенчмарк конкретной модели.
+
+Детерминированный путь, который проходит один поддерживаемый вопрос
+end-to-end, — на странице [Воспроизвести E20](/RAG_Support_Assistant/ru/reproduce-e20/).
+
+## Что закоммичено
+
+<div class="q-cardgrid q-cardgrid--accent">
+  <article class="q-card">
+    <h3 class="q-title">
+      <span class="q-label">Фикстура на 12 кейсов</span>
+    </h3>
+    <div class="q-body">
+      <p><code>evaluation/test_cases.json</code> содержит 12 вопросов по шести категориям: <code>error_codes</code>, <code>reset_password</code>, <code>warranty</code>, <code>installation</code>, <code>billing</code>, <code>general</code>. У каждого кейса поля <code>question</code>, <code>expected_keywords</code>, <code>expected_answer</code> и <code>category</code>.</p>
+    </div>
+  </article>
+
+  <article class="q-card">
+    <h3 class="q-title">
+      <span class="q-label">Офлайн-оценщик</span>
+    </h3>
+    <div class="q-body">
+      <p><code>evaluation/ragas_eval.py</code> реализует <code>RAGEvaluator</code> с четырьмя keyword-метриками без зависимости от пакета <code>ragas</code>: faithfulness, answer_relevancy, context_precision, context_recall. Fallback детерминированный и работает без платного embeddings-API.</p>
+    </div>
+  </article>
+
+  <article class="q-card">
+    <h3 class="q-title">
+      <span class="q-label">Бенчмарк-раннер</span>
+    </h3>
+    <div class="q-body">
+      <p><code>evaluation/benchmark_runner.py</code> читает фикстуру, скорит каждый кейс против <code>expected_answer</code> через <code>RAGEvaluator</code> и пишет агрегаты плюс per-question результаты в <code>data/evaluation/benchmark_results.json</code>. Флаг <code>--use-embeddings</code> переключает <code>answer_relevancy</code> на embedding-вариант.</p>
+    </div>
+  </article>
+
+  <article class="q-card">
+    <h3 class="q-title">
+      <span class="q-label">Онлайн-оценщики</span>
+    </h3>
+    <div class="q-body">
+      <p><code>evaluation/online_evaluators.py</code> скорит живое состояние трейса на момент запроса: покрытие цитатами, аномалия длины ответа по z-score, hit-rate поиска по <code>relevance_score</code>, эффективность использования инструментов, совпадение паттерна отказа, детектор PII по <code>config/evaluator_patterns.yml</code>.</p>
+    </div>
+  </article>
+</div>
+
+## Чего НЕ закоммичено
+
+- Нет cross-provider чисел по живому графу. Репозиторий гоняет
+  офлайн-путь, не multi-model bake-off, и документация не заявляет
+  сравнительных результатов между провайдерами.
+- Нет leaderboard'а. Нет закоммиченного output вида «модель A обходит
+  модель B на этих двенадцати вопросах», и фикстура слишком мала,
+  чтобы такое заявление было осмысленным, даже если бы output был.
+- Нет paid-API-базовой линии. `RAGEvaluator` работает без `ragas` и
+  без embeddings-сервиса; embedding-вариант `answer_relevancy`
+  включается явно через `--use-embeddings` у бенчмарк-раннера.
+
+## Почему фикстура ограничена
+
+Засеянная демо-база содержит три документа (`demo/seed_docs.py`):
+гарантия, возвраты и `errors_e10_e30.md`. Фикстура на 12 кейсов
+покрывает шесть категорий, поэтому для трёх из них (`installation`,
+`billing`, `reset_password`) в демо-базе нет поддерживающего документа.
+Эти кейсы всё равно проходят через граф, но шаг retrieve, как ожидается,
+вернёт фрагменты с низкой релевантностью, и оценки оценщика это отражают —
+по дизайну, не случайно.
+
+Если нужен детерминированный trust-путь на поддерживаемом сценарии,
+страница [Воспроизвести E20](/RAG_Support_Assistant/ru/reproduce-e20/)
+проводит ingest, ask и инспекцию трейса end-to-end на засеянном источнике.
+
+## Как запустить офлайн-бенчмарк
+
+```powershell
+cd D:\RAG_Support_Assistant
+python evaluation/benchmark_runner.py
+# или с embedding-вариантом answer_relevancy:
+python evaluation/benchmark_runner.py --use-embeddings
+# или в кастомный output:
+python evaluation/benchmark_runner.py --output data/evaluation/my_run.json
+```
+
+Раннер пишет `data/evaluation/benchmark_results.json`. Закоммиченная
+документация не встраивает sample-output из этого файла; локальный
+прогон — единственный источник истины для любых чисел, которые вы
+будете цитировать.
+
+## Формат output
+
+Структура `data/evaluation/benchmark_results.json` — это то, что
+раннер кладёт после прогона. Файл коммитится в репозиторий в
+пустом состоянии (все скоры на нуле) и перезаписывается локальным
+прогоном:
+
+```json
+{
+  "aggregate": {
+    "faithfulness": 0.0,
+    "answer_relevancy": 0.0,
+    "context_precision": 0.0,
+    "context_recall": 0.0
+  },
+  "per_question": [
+    {
+      "question": "Что означает ошибка E401?",
+      "category": "error_codes",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      }
+    }
+  ],
+  "num_cases": 12,
+  "timestamp": "…"
+}
+```
+
+Нули выше — состояние закоммиченного файла, не измеренный результат.
+Реальные значения появляются после `python evaluation/benchmark_runner.py`
+против локально проиндексированной демо-базы.

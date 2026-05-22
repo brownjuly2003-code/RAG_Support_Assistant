@@ -12,8 +12,8 @@ hero:
     - text: Смотреть пример
       link: /RAG_Support_Assistant/ru/examples/
       variant: primary
-    - text: Воспроизвести E20 (EN)
-      link: /RAG_Support_Assistant/reproduce-e20/
+    - text: Воспроизвести E20
+      link: /RAG_Support_Assistant/ru/reproduce-e20/
     - text: GitHub
       link: https://github.com/brownjuly2003-code/RAG_Support_Assistant
 ---
@@ -50,9 +50,46 @@ hero:
   </article>
 </div>
 
+### Путь одного вопроса через LangGraph
+
+```mermaid
+flowchart LR
+  Q([Вопрос]) --> CL[classify_complexity]
+  CL --> TR[transform_query]
+  TR --> RT[retrieve]
+  RT --> GR[grade_docs]
+  GR --> GE[generate]
+  GE --> VF[verify_facts]
+  VF --> EV[evaluate]
+  EV --> RO{route_or_retry}
+  RO -->|auto| OK([Ответ + источники])
+  RO -.->|retry| TR
+```
+
+Полный flowchart со всеми 12 узлами и условными переходами автоматически
+генерируется из `agent/graph.py` на странице
+[LangGraph state machine](/RAG_Support_Assistant/ru/architecture/langgraph/).
+
+### Что возвращает `/api/ask` на вопрос «Как исправить E20?»
+
+```json
+{
+  "answer": "Ошибка E20 связана с проблемой слива воды. Возможные причины: засорённый сливной фильтр, перегиб сливного шланга или неисправность сливного насоса [1].",
+  "sources": [
+    { "source": "errors_e10_e30.md", "page_content": "E20 — проблема со сливом воды …" }
+  ],
+  "citations": [
+    { "index": 1, "doc_id": "errors_e10_e30.md", "title": "errors_e10_e30.md", "excerpt": "клапан слива / фильтр …" }
+  ]
+}
+```
+
+Форма закреплена Pydantic-моделями `AskResponse`, `SourceInfo`, `Citation` в `api/routers/conversation.py`. Полный разбор узлов графа — на странице [Что делает ассистент](/RAG_Support_Assistant/ru/examples/).
+
 ## Начать здесь
 
 - [Что делает ассистент](/RAG_Support_Assistant/ru/examples/) — один вопрос E20 проходит через весь граф.
-- [Воспроизвести E20 (EN)](/RAG_Support_Assistant/reproduce-e20/) — детерминированный путь доверия: засеять, загрузить, спросить, проверить.
-- [Запустить локально (EN)](/RAG_Support_Assistant/guides/quickstart/) — как поднять стек локально.
+- [Воспроизвести E20](/RAG_Support_Assistant/ru/reproduce-e20/) — детерминированный путь доверия: засеять, загрузить, спросить, проверить.
+- [Запустить локально](/RAG_Support_Assistant/ru/guides/quickstart/) — как поднять стек локально.
+- [Оценка](/RAG_Support_Assistant/ru/evaluation/) — что измеряется, как, и где границы.
 - [GitHub](https://github.com/brownjuly2003-code/RAG_Support_Assistant) — исходный код.

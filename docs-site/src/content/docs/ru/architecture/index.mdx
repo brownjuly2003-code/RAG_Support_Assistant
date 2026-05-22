@@ -1,0 +1,108 @@
+---
+title: Обзор архитектуры
+description: Как устроен RAG Support Assistant — жизненный цикл запроса, модули и потоки данных.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Жизненный цикл запроса
+
+Один пользовательский вопрос проходит этот путь до того, как вернётся
+grounded-ответ. Диаграмма покрывает синхронный путь `/api/ask`; пути
+ingest и admin используют ту же поверхность, но пропускают стадию
+LangGraph.
+
+```mermaid
+flowchart LR
+    Q[Вопрос пользователя] --> API[FastAPI<br/>api.app + routers]
+    API --> Auth[JWT-аутентификация<br/>+ tenant-фильтр]
+    Auth --> Graph{LangGraph<br/>узлы agent.graph}
+    Graph -->|retrieve| Chroma[(ChromaDB<br/>коллекция тенанта)]
+    Graph -->|generate| LLM[Маршрутизатор провайдеров<br/>Ollama / GraceKelly / Mistral]
+    Graph -->|verify_facts<br/>+ evaluate| Eval[Онлайн-оценщики<br/>+ состояние трейса]
+    Graph -->|persist trace| Trace[(SQLite<br/>tracing.sqlite_trace)]
+    Eval --> Out[Grounded-ответ<br/>+ цитаты + follow-up]
+    API -.->|метрики| Prom[Prometheus]
+    API -.->|спаны| OTel[OpenTelemetry / Langfuse]
+```
+
+Путь одностoронний; узловой цикл LangGraph (retry, rewrite_query) живёт
+внутри блока `Graph` и подробно описан на странице
+[Конечный автомат LangGraph](/RAG_Support_Assistant/ru/architecture/langgraph/).
+Каждый узел, хранилище и провайдер мапится на каталог ниже.
+
+## Модули верхнего уровня
+
+<div class="q-cardgrid q-cardgrid--accent">
+  <article class="q-card">
+    <h3 class="q-title">
+      <span class="q-label">api/</span>
+    </h3>
+    <div class="q-body"><p>Тонкая оболочка FastAPI + роутеры по функциональным областям (auth, sessions, agent, admin, analytics, feedback, conversation, upload). Позднее связывание через <code>api._shared.app_module()</code> сохраняет работоспособность тестов с <code>monkeypatch.setattr(api.app, ...)</code>.</p></div>
+  </article>
+
+  <article class="q-card">
+    <h3 class="q-title">
+      <span class="q-label">agent/</span>
+    </h3>
+    <div class="q-body"><p>Конечный автомат LangGraph: <code>state.py</code> (форма TypedDict), <code>graph.py</code> (узлы + рёбра), <code>prompts.py</code>, <code>prompt_registry.py</code> (sticky-rollout с поддержкой экспериментов), <code>tools.py</code>. См. автогенерируемую страницу <a href="/RAG_Support_Assistant/ru/architecture/langgraph/">Конечный автомат LangGraph</a>.</p></div>
+  </article>
+
+  <article class="q-card">
+    <h3 class="q-title">
+      <span class="q-label">llm/providers/</span>
+    </h3>
+    <div class="q-body"><p>Подключаемая абстракция провайдеров: интерфейс <code>base.py</code>, <code>ollama.py</code>, <code>gracekelly.py</code> (browser-прокси к Perplexity Pro), <code>mistral.py</code> (OpenAI-совместимый). Failover к локали через профили маршрутизации. См. <a href="/RAG_Support_Assistant/ru/architecture/providers/">матрицу маршрутизации провайдеров</a>.</p></div>
+  </article>
+
+  <article class="q-card">
+    <h3 class="q-title">
+      <span class="q-label">vectordb/</span>
+    </h3>
+    <div class="q-body"><p>Гибридный ретривер (BM25 + dense + cross-encoder rerank). Tenant-aware <code>vectordb.manager</code> оборачивает базовый ChromaDB-движок из <code>_base_manager.py</code>; каждый тенант приземляется в отдельную коллекцию.</p></div>
+  </article>
+
+  <article class="q-card">
+    <h3 class="q-title">
+      <span class="q-label">evaluation/</span>
+    </h3>
+    <div class="q-body"><p>Онлайн- и офлайн-оценщики, RAGAS-style метрики без пакета ragas, regression-раннер с дефолтным mock-ом для платных API, реестр экспериментов, rollback-watcher, недельный backlog улучшений, рекомендации порогов.</p></div>
+  </article>
+
+  <article class="q-card">
+    <h3 class="q-title">
+      <span class="q-label">tracing/</span>
+    </h3>
+    <div class="q-body"><p><code>tracing._base_trace</code> — каноничное SQLite-хранилище; <code>tracing.sqlite_trace</code> — публичный API поверх него, добавляющий PII-редакцию на <code>log_step</code> (production-код импортирует из <code>tracing.sqlite_trace</code>). Адаптеры Langfuse и OpenTelemetry экспортируют те же span-данные, когда настроены.</p></div>
+  </article>
+</div>
+
+## Хранилища данных
+
+| Хранилище | Назначение | Замечания |
+| --- | --- | --- |
+| **ChromaDB** | Векторное хранилище для чанков базы знаний. | Коллекция на тенанта. Персистентно на диске. |
+| **SQLite** | Каноничное хранилище трейсов LangGraph (`tracing.sqlite_trace` поверх `tracing._base_trace`). | WAL-режим; runtime-хранилище, не dev-only fallback. |
+| **Postgres** | Сессии, фидбэк, эскалации, эксперименты. | Alembic-миграции 001–017. Round-trip CI gate. Трейсинг сюда не пишется. |
+| **Redis** | Счётчики rate-limit, JWT refresh-сессии, эфемерный кеш. | Опциональный в dev (in-memory fallback). |
+
+## Сквозные аспекты
+
+- **Мульти-тенантность** обеспечивается на четырёх уровнях: схема
+  (колонки tenant_id), пропагация (`api/middleware/tenant.py`),
+  enforcement в запросах (фильтры в каждом роутере), отдельные
+  ChromaDB-коллекции на тенанта.
+- **Resilience** — вызовы провайдеров обёрнуты в настраиваемую цепочку
+  слоёв timeout, retry, circuit-breaker, semaphore и wall-time budget;
+  точная композиция живёт в `llm/providers/runtime.py`.
+- **Observability** поставляется с 24+ Prometheus-метриками, alert-правилами
+  в `deploy/helm/` и трейсингом generation через OpenTelemetry → Langfuse.
+- **Безопасность** остаётся fail-fast на отсутствии JWT/SESSION/admin-секретов
+  на старте при `RAG_ENV=production`. Изоляция тенантов проверяется
+  cross-tenant на каждой поверхности.
+
+<Aside type="note" title="См. также">
+  - [Модули и deprecations (EN)](/RAG_Support_Assistant/guides/deprecations/) — фазы
+    зачистки shim-ов и текущая каноничная import-карта.
+  - [Запустить локально](/RAG_Support_Assistant/ru/guides/quickstart/) — поднять стек end-to-end локально.
+</Aside>

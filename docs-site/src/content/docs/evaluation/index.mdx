@@ -90,3 +90,38 @@ python evaluation/benchmark_runner.py --output data/evaluation/my_run.json
 The runner writes `data/evaluation/benchmark_results.json`. The committed
 docs do not embed sample output from that file; treat the local run as the
 source of truth for any numbers you cite.
+
+## Output shape
+
+The structure of `data/evaluation/benchmark_results.json` is what the
+runner writes after a run. The file is committed to the repository in
+an empty state (all scores at zero) and overwritten by a local run:
+
+```json
+{
+  "aggregate": {
+    "faithfulness": 0.0,
+    "answer_relevancy": 0.0,
+    "context_precision": 0.0,
+    "context_recall": 0.0
+  },
+  "per_question": [
+    {
+      "question": "Что означает ошибка E401?",
+      "category": "error_codes",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      }
+    }
+  ],
+  "num_cases": 12,
+  "timestamp": "…"
+}
+```
+
+The zeros above are the committed empty state, not a measured result.
+Real values appear after `python evaluation/benchmark_runner.py` runs
+against a locally indexed demo KB.
