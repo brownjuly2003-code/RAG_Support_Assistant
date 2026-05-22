@@ -18,6 +18,16 @@ const METHOD_RE = /@(?:app|router)\.(get|post|put|patch|delete|head|options)\(\s
 // Stable group order surfaced on the page.
 const GROUP_ORDER = ['Ask/Chat', 'KB', 'Experiments', 'Analytics', 'Auth', 'Admin', 'System'];
 
+// api/app.py mounts a single APIRouter(prefix="/api") that includes every
+// router under api/routers/ EXCEPT root_pages.py, which is mounted on the
+// app directly without a prefix (serves /agent dashboard, /metrics, and the
+// /admin/traces/{trace_id} HTML redirect at root level).
+function fullPath(file, path) {
+  if (path.startsWith('/api/')) return path;
+  if (file.endsWith('api/app.py') || file.endsWith('api/routers/root_pages.py')) return path;
+  return `/api${path}`;
+}
+
 // Map a source file (or, as a fallback, a route path) to a product group.
 function groupFor(file, path) {
   const f = file.toLowerCase();
@@ -55,8 +65,11 @@ function methodCellHtml(method) {
   return `<span class="${cls}">${method}</span>`;
 }
 
+// Match Starlight's heading-id generator: it strips non-word punctuation
+// rather than replacing it with a hyphen, so "Ask/Chat" → "askchat" (not
+// "ask-chat"). Aligning slugFor keeps cross-anchors live.
 function slugFor(group) {
-  return group.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  return group.toLowerCase().replace(/[^a-z0-9]+/g, '').trim();
 }
 
 async function main() {
@@ -74,11 +87,12 @@ async function main() {
     }
   }
 
-  all.sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
-
   for (const r of all) {
+    r.path = fullPath(r.file, r.path);
     r.group = groupFor(r.file, r.path);
   }
+
+  all.sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
 
   const byFile = new Map();
   for (const r of all) {

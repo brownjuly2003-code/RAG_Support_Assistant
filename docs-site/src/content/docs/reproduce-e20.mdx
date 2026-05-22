@@ -48,9 +48,10 @@ Select-String -Path demo\docs\errors_e10_e30.md -Pattern "E20"
 ## Ingest KB
 
 Upload the three seeded files through the same document-upload endpoint used
-by the app. The endpoint ingests synchronously when Celery is unavailable; if
-it returns an async task id inside the response message, the loop polls the
-task endpoint.
+by the app. The endpoint ingests synchronously when Celery is unavailable;
+if it returns an async task id inside the response message, the loop below
+polls `/api/tasks/{task_id}` until the task reaches `SUCCESS` (or a terminal
+non-pending state) before moving on.
 
 ```powershell
 $files = @(
@@ -67,8 +68,14 @@ foreach ($name in $files) {
   $upload
 
   if ($upload.message -match 'task_id=([A-Za-z0-9_-]+)') {
-    curl.exe -s "http://localhost:8000/api/tasks/$($Matches[1])" `
-      -H "Authorization: Bearer $env:ACCESS_TOKEN"
+    $taskId = $Matches[1]
+    for ($i = 0; $i -lt 30; $i++) {
+      $status = curl.exe -s "http://localhost:8000/api/tasks/$taskId" `
+        -H "Authorization: Bearer $env:ACCESS_TOKEN" | ConvertFrom-Json
+      Write-Host "$taskId → $($status.status)"
+      if ($status.status -in @('SUCCESS','FAILURE','REVOKED')) { break }
+      Start-Sleep -Seconds 2
+    }
   }
 }
 ```

@@ -54,9 +54,11 @@ The walkthrough below names each node in the order the graph actually executes.
 3. **Retrieve 1-3: `retrieve`** — hybrid search against a per-tenant ChromaDB collection.
    Tenant isolation is enforced by collection separation: the tenant id is
    resolved from the JWT at API entry and used to select a dedicated Chroma
-   collection (`{prefix}_{tenant_id}` — see `vectordb/manager.py`). Cross-tenant
-   data cannot share a collection. Postgres-side queries filter by
-   `tenant_id` at the ORM layer.
+   collection (`{prefix}_{sanitize(tenant_id)}` — see `vectordb/manager.py`).
+   The sanitizer strips non-`[A-Za-z0-9._-]` characters to `_` and truncates
+   to fit Chroma's 63-char collection-name limit, so isolation holds as long
+   as raw tenant ids remain distinct after sanitization. Postgres-side
+   queries filter by `tenant_id` at the ORM layer.
 
 4. **Generate 4-5: `grade_docs`** (Corrective RAG — the LLM re-grades each retrieved
    chunk `YES`/`NO` for actual relevance rather than trusting the vector
@@ -112,27 +114,35 @@ The walkthrough below names each node in the order the graph actually executes.
 
 ### Output
 
-The QA prompt presents each retrieved chunk with a `source=<filename>` tag
-(see `agent/prompts.py`), and the model is asked to ground its answer in
-those passages. A grounded answer for the bundled E20 case looks roughly
-like:
+The QA prompt labels each retrieved chunk with a `source=<filename>` tag
+internally (see `agent/prompts.py`) and asks the model to emit a numbered
+`[N]` citation whenever it leans on a specific fact. The filenames the
+citations point at come back separately in the `sources` / `citations`
+fields of the `/api/ask` JSON response. A grounded answer for the bundled
+E20 case looks roughly like:
 
 ```text
 Ошибка E20 связана с проблемой слива воды. Возможные причины:
 засорённый сливной фильтр, перегиб сливного шланга или неисправность
-сливного насоса.
+сливного насоса [1].
 
-Источники: source=errors_e10_e30.md
 Возможно, вас также интересует:
   • Что делать, если фильтр чистый, а ошибка остаётся?
   • Где найти инструкцию по разборке сливного узла?
   • Какие коды ошибок ещё связаны с водой?
 ```
 
-The exact wording, the suggested follow-ups, and which `source=` tags appear
-all vary by run — the block above is illustrative, but the body of the
-answer is constrained to what the `errors_e10_e30.md` entry for E20 actually
-says (clogged filter, kinked drain hose, faulty drain pump).
+```json
+{
+  "sources": ["errors_e10_e30.md"],
+  "citations": [{ "ref": 1, "source": "errors_e10_e30.md" }]
+}
+```
+
+The exact wording, the suggested follow-ups, and which sources appear all
+vary by run — the block above is illustrative, but the body of the answer
+is constrained to what the `errors_e10_e30.md` entry for E20 actually says
+(clogged filter, kinked drain hose, faulty drain pump).
 
 The case's `expected_keywords` (`ошибка`, `проверьте`, `устройство`) are not
 checked against the answer text — `benchmark_runner` feeds them to
@@ -179,8 +189,10 @@ qualitative read on the bundled fixture set, not a measured number.
   <Card title="Multi-tenant by construction">
     The tenant id is resolved from the JWT at API entry and routes every
     vector query to a dedicated per-tenant ChromaDB collection
-    (`{prefix}_{tenant_id}`). Postgres-side queries filter by `tenant_id` at
-    the ORM layer. Two tenants never share a vector collection.
+    (`{prefix}_{sanitize(tenant_id)}`). Postgres-side queries filter by
+    `tenant_id` at the ORM layer. Tenants land in separate collections as
+    long as their raw ids stay distinct after the sanitization and 63-char
+    truncation applied to fit Chroma's collection-name rules.
   </Card>
   <Card title="Observable end to end">
     The trace store records node order, state snapshots, retrieved-doc

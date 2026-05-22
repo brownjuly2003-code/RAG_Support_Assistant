@@ -64,7 +64,7 @@ end, see [Reproduce E20](/RAG_Support_Assistant/reproduce-e20/).
       <span class="q-label">Benchmark runner</span>
     </p>
     <div class="q-body">
-      <p><code>evaluation/benchmark_runner.py</code> loads the fixture, runs the evaluator (with <code>--mock-answers</code> for metric-only smoke or against a real retriever/LLM when available), and writes results to <code>data/evaluation/benchmark_results.json</code>.</p>
+      <p><code>evaluation/benchmark_runner.py</code> loads the fixture, scores each case against its <code>expected_answer</code> through <code>RAGEvaluator</code>, and writes aggregate plus per-question results to <code>data/evaluation/benchmark_results.json</code>. <code>--use-embeddings</code> swaps the keyword-based <code>answer_relevancy</code> for the embedding-based variant.</p>
     </div>
   </article>
 
@@ -115,8 +115,8 @@ cd D:\RAG_Support_Assistant
 python evaluation/benchmark_runner.py
 # or with the embedding-based variant of answer_relevancy:
 python evaluation/benchmark_runner.py --use-embeddings
-# or metric-smoke without a real LLM:
-python evaluation/benchmark_runner.py --mock-answers
+# or write to a custom output path:
+python evaluation/benchmark_runner.py --output data/evaluation/my_run.json
 ```
 
 The runner writes `data/evaluation/benchmark_results.json`. The committed

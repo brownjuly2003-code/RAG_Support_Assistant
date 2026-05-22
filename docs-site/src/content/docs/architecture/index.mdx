@@ -19,7 +19,7 @@ flowchart LR
     Graph -->|retrieve| Chroma[(ChromaDB<br/>per-tenant collection)]
     Graph -->|generate| LLM[Provider router<br/>Ollama / GraceKelly / Mistral]
     Graph -->|verify_facts<br/>+ evaluate| Eval[Online evaluators<br/>+ trace state]
-    Graph -->|persist trace| PG[(Postgres<br/>traces + sessions)]
+    Graph -->|persist trace| Trace[(SQLite<br/>tracing.sqlite_trace)]
     Eval --> Out[Grounded answer<br/>+ citations + follow-ups]
     API -.->|metrics| Prom[Prometheus]
     API -.->|spans| OTel[OpenTelemetry / Langfuse]
@@ -62,9 +62,10 @@ Each node, store, and provider maps to a directory below.
     backlog, threshold recommendations.
   </Card>
   <Card title="tracing/" icon="setting">
-    `sqlite_trace.py` (canonical) + `_base_trace.py` (tenant-aware wrapper),
-    Langfuse + OpenTelemetry adapters, request-id propagation across
-    `asyncio.to_thread` boundaries.
+    `tracing._base_trace` is the canonical SQLite store; `tracing.sqlite_trace`
+    is the public API that wraps it and adds PII redaction on `log_step`
+    (production code imports from `tracing.sqlite_trace`). Langfuse and
+    OpenTelemetry adapters export the same span data when configured.
   </Card>
 </CardGrid>
 
@@ -72,10 +73,10 @@ Each node, store, and provider maps to a directory below.
 
 | Store | Purpose | Notes |
 | --- | --- | --- |
-| **ChromaDB** | Vector store for KB chunks. | Tenant-aware collection per tenant. Persistent on disk. |
-| **Postgres** | Traces, sessions, feedback, escalated tickets, experiments. | Alembic migrations 001–017. Round-trip CI gate. |
+| **ChromaDB** | Vector store for KB chunks. | Per-tenant collection. Persistent on disk. |
+| **SQLite** | Canonical LangGraph trace store (`tracing.sqlite_trace` over `tracing._base_trace`). | WAL mode; runtime store, not a dev-only fallback. |
+| **Postgres** | Sessions, feedback, escalated tickets, experiments. | Alembic migrations 001–017. Round-trip CI gate. Tracing does not go here. |
 | **Redis** | Rate-limit counters, JWT refresh sessions, ephemeral cache. | Optional in dev (in-memory fallback). |
-| **SQLite (dev only)** | Trace/feedback fallback when Postgres is not configured. | WAL mode, integrity-check before restore-verify. |
 
 ## Cross-cutting concerns
 
