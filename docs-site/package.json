@@ -17,5 +17,9 @@
     "astro": "^6.3.0",
     "sharp": "^0.34.5",
     "yaml": "^2.8.4"
+  },
+  "devDependencies": {
+    "playwright": "^1.60.0",
+    "rehype-mermaid": "^3.0.0"
   }
 }

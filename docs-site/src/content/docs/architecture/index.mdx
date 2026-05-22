@@ -7,18 +7,28 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Request lifecycle
 
+A single user question travels through this path before a grounded answer
+is returned. The diagram covers the synchronous `/api/ask` path; ingest and
+admin paths share the same surface but skip the LangGraph stage.
+
 ```mermaid
 flowchart LR
-    Client[Client / static UI] --> FastAPI[FastAPI<br/>api.app + routers]
-    FastAPI --> Auth[JWT auth + tenant filter]
-    Auth --> Pipeline{LangGraph<br/>agent.graph}
-    Pipeline -->|retrieval| Chroma[ChromaDB<br/>tenant-aware]
-    Pipeline -->|LLM call| Provider[Provider router<br/>Ollama / GraceKelly / Mistral]
-    Pipeline -->|persist| Postgres[(Postgres<br/>traces + sessions)]
-    Pipeline -->|cache| Redis[(Redis<br/>rate-limit + sessions)]
-    FastAPI -->|metrics| Prom[Prometheus]
-    FastAPI -->|tracing| OTel[OpenTelemetry / Langfuse]
+    Q[User question] --> API[FastAPI<br/>api.app + routers]
+    API --> Auth[JWT auth + tenant filter]
+    Auth --> Graph{LangGraph<br/>agent.graph nodes}
+    Graph -->|retrieve| Chroma[(ChromaDB<br/>per-tenant collection)]
+    Graph -->|generate| LLM[Provider router<br/>Ollama / GraceKelly / Mistral]
+    Graph -->|verify_facts<br/>+ evaluate| Eval[Online evaluators<br/>+ trace state]
+    Graph -->|persist trace| PG[(Postgres<br/>traces + sessions)]
+    Eval --> Out[Grounded answer<br/>+ citations + follow-ups]
+    API -.->|metrics| Prom[Prometheus]
+    API -.->|spans| OTel[OpenTelemetry / Langfuse]
 ```
+
+The path is one-way; the LangGraph node loop (retry, rewrite_query) lives
+inside the `Graph` box and is detailed in
+[LangGraph state machine](/RAG_Support_Assistant/architecture/langgraph/).
+Each node, store, and provider maps to a directory below.
 
 ## Top-level modules
 
