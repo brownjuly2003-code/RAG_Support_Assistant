@@ -106,40 +106,18 @@ ${
 <div class="q-cardgrid q-cardgrid--accent">
   <article class="q-card">
     <p class="q-title">
-      <span class="q-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <circle cx="6" cy="6" r="2.5" />
-          <circle cx="18" cy="6" r="2.5" />
-          <circle cx="12" cy="18" r="2.5" />
-        </svg>
-      </span>
       <span class="q-label">Total nodes</span>
     </p>
     <div class="q-body"><p>${totalNodes}</p></div>
   </article>
   <article class="q-card">
     <p class="q-title">
-      <span class="q-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d="M4 12h13" />
-          <path d="M14 7l5 5-5 5" />
-        </svg>
-      </span>
       <span class="q-label">Direct edges</span>
     </p>
     <div class="q-body"><p>${parsed.edges.length}</p></div>
   </article>
   <article class="q-card">
     <p class="q-title">
-      <span class="q-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d="M4 18V6" />
-          <path d="M4 6l6 6" />
-          <path d="M4 6l6-2" />
-          <path d="M10 12l5 4" />
-          <path d="M10 12l4-3" />
-        </svg>
-      </span>
       <span class="q-label">Conditional routers</span>
     </p>
     <div class="q-body"><p>${parsed.conditionalEdges.length}</p></div>

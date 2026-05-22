@@ -68,39 +68,18 @@ import { Aside } from '@astrojs/starlight/components';
 <div class="q-cardgrid q-cardgrid--accent">
   <article class="q-card">
     <p class="q-title">
-      <span class="q-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <rect x="3" y="4" width="18" height="6" rx="1.5" />
-          <rect x="3" y="14" width="18" height="6" rx="1.5" />
-          <circle cx="7" cy="7" r="0.8" fill="currentColor" />
-          <circle cx="7" cy="17" r="0.8" fill="currentColor" />
-        </svg>
-      </span>
       <span class="q-label">Providers</span>
     </p>
     <div class="q-body"><p>${providers.length}</p></div>
   </article>
   <article class="q-card">
     <p class="q-title">
-      <span class="q-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d="M4 6h10" />
-          <path d="M4 12h13" />
-          <path d="M4 18h7" />
-          <path d="M14 6l3 3-3 3" />
-        </svg>
-      </span>
       <span class="q-label">Routing profiles</span>
     </p>
     <div class="q-body"><p>${Object.keys(routingProfiles).length}</p></div>
   </article>
   <article class="q-card">
     <p class="q-title">
-      <span class="q-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d="M4 10l5 1 3-6 3 6 5-1-4 5 1 5-5-3-5 3 1-5z" />
-        </svg>
-      </span>
       <span class="q-label">Default profile</span>
     </p>
     <div class="q-body"><p><code>${defaultProfile || 'none'}</code></p></div>

@@ -157,44 +157,18 @@ import { Aside } from '@astrojs/starlight/components';
 <div class="q-cardgrid q-cardgrid--accent" data-route-summary>
   <article class="q-card">
     <p class="q-title">
-      <span class="q-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d="M5 7l7 5 7-5" />
-          <path d="M5 7v10h14V7" />
-          <path d="M5 7l7-3 7 3" />
-        </svg>
-      </span>
       <span class="q-label">Total endpoints</span>
     </p>
     <div class="q-body"><p>${all.length}</p></div>
   </article>
   <article class="q-card">
     <p class="q-title">
-      <span class="q-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d="M5 4v16" />
-          <path d="M5 8h4" />
-          <path d="M5 14h4" />
-          <path d="M9 6h10v4H9z" />
-          <path d="M9 14h10v4H9z" />
-        </svg>
-      </span>
       <span class="q-label">Source files</span>
     </p>
     <div class="q-body"><p>${byFile.size}</p></div>
   </article>
   <article class="q-card">
     <p class="q-title">
-      <span class="q-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <circle cx="6" cy="6" r="2.5" />
-          <circle cx="18" cy="6" r="2.5" />
-          <circle cx="12" cy="18" r="2.5" />
-          <path d="M8.2 7.5l3 7.5" />
-          <path d="M15.8 7.5l-3 7.5" />
-          <path d="M8.5 6h7" />
-        </svg>
-      </span>
       <span class="q-label">Groups</span>
     </p>
     <div class="q-body"><p>${groupCount}</p></div>
