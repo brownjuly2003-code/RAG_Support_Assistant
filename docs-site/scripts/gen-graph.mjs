@@ -105,21 +105,21 @@ ${
 
 <div class="q-cardgrid q-cardgrid--accent">
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">Total nodes</span>
-    </p>
+    </h3>
     <div class="q-body"><p>${totalNodes}</p></div>
   </article>
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">Direct edges</span>
-    </p>
+    </h3>
     <div class="q-body"><p>${parsed.edges.length}</p></div>
   </article>
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">Conditional routers</span>
-    </p>
+    </h3>
     <div class="q-body"><p>${parsed.conditionalEdges.length}</p></div>
   </article>
 </div>

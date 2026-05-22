@@ -15,36 +15,36 @@ end, see [Reproduce E20](/RAG_Support_Assistant/reproduce-e20/).
 
 <div class="q-cardgrid q-cardgrid--accent">
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">12-case fixture</span>
-    </p>
+    </h3>
     <div class="q-body">
       <p><code>evaluation/test_cases.json</code> ships 12 questions across six categories: <code>error_codes</code>, <code>reset_password</code>, <code>warranty</code>, <code>installation</code>, <code>billing</code>, <code>general</code>. Each case carries <code>question</code>, <code>expected_keywords</code>, <code>expected_answer</code>, and <code>category</code> fields.</p>
     </div>
   </article>
 
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">Offline evaluator</span>
-    </p>
+    </h3>
     <div class="q-body">
       <p><code>evaluation/ragas_eval.py</code> implements a <code>RAGEvaluator</code> with four keyword-based metrics without the <code>ragas</code> package: faithfulness, answer_relevancy, context_precision, context_recall. The fallback is deterministic and runs without a paid embedding API.</p>
     </div>
   </article>
 
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">Benchmark runner</span>
-    </p>
+    </h3>
     <div class="q-body">
       <p><code>evaluation/benchmark_runner.py</code> loads the fixture, scores each case against its <code>expected_answer</code> through <code>RAGEvaluator</code>, and writes aggregate plus per-question results to <code>data/evaluation/benchmark_results.json</code>. <code>--use-embeddings</code> swaps the keyword-based <code>answer_relevancy</code> for the embedding-based variant.</p>
     </div>
   </article>
 
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">Online evaluators</span>
-    </p>
+    </h3>
     <div class="q-body">
       <p><code>evaluation/online_evaluators.py</code> scores live trace state at request time: citation coverage, answer-length anomaly via z-score, retrieval hit-rate over <code>relevance_score</code>, tool-use efficiency, refusal-pattern match, and PII detection driven by <code>config/evaluator_patterns.yml</code>.</p>
     </div>

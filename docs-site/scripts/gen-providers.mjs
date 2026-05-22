@@ -67,21 +67,21 @@ import { Aside } from '@astrojs/starlight/components';
 
 <div class="q-cardgrid q-cardgrid--accent">
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">Providers</span>
-    </p>
+    </h3>
     <div class="q-body"><p>${providers.length}</p></div>
   </article>
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">Routing profiles</span>
-    </p>
+    </h3>
     <div class="q-body"><p>${Object.keys(routingProfiles).length}</p></div>
   </article>
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">Default profile</span>
-    </p>
+    </h3>
     <div class="q-body"><p><code>${defaultProfile || 'none'}</code></p></div>
   </article>
 </div>

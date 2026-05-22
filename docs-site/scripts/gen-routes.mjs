@@ -156,21 +156,21 @@ import { Aside } from '@astrojs/starlight/components';
 
 <div class="q-cardgrid q-cardgrid--accent" data-route-summary>
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">Total endpoints</span>
-    </p>
+    </h3>
     <div class="q-body"><p>${all.length}</p></div>
   </article>
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">Source files</span>
-    </p>
+    </h3>
     <div class="q-body"><p>${byFile.size}</p></div>
   </article>
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">Groups</span>
-    </p>
+    </h3>
     <div class="q-body"><p>${groupCount}</p></div>
   </article>
 </div>

@@ -12,7 +12,6 @@ Offline benchmark: загружает тест-кейсы, прогоняет ч
 
 RAGEvaluator работает без запущенного сервера:
 - без retriever/llm — оценивает только если передан answer
-- с --mock-answers — генерирует синтетические ответы для теста метрик
 """
 
 from __future__ import annotations

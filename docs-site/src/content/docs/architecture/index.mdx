@@ -34,44 +34,44 @@ Each node, store, and provider maps to a directory below.
 
 <div class="q-cardgrid q-cardgrid--accent">
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">api/</span>
-    </p>
+    </h3>
     <div class="q-body"><p>Thin FastAPI app shell + routers split per concern (auth, sessions, agent, admin, analytics, feedback, conversation, upload). Late-binding through <code>api._shared.app_module()</code> keeps <code>monkeypatch.setattr(api.app, ...)</code> tests working.</p></div>
   </article>
 
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">agent/</span>
-    </p>
+    </h3>
     <div class="q-body"><p>LangGraph state machine: <code>state.py</code> (TypedDict shape), <code>graph.py</code> (nodes + edges), <code>prompts.py</code>, <code>prompt_registry.py</code> (experiment-aware sticky-rollout), <code>tools.py</code>. See the auto-generated <a href="/RAG_Support_Assistant/architecture/langgraph/">LangGraph state machine</a>.</p></div>
   </article>
 
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">llm/providers/</span>
-    </p>
+    </h3>
     <div class="q-body"><p>Pluggable provider abstraction: <code>base.py</code> interface, <code>ollama.py</code>, <code>gracekelly.py</code> (browser-proxy to Perplexity Pro), <code>mistral.py</code> (OpenAI-compatible). Failover to local via routing profiles. See the <a href="/RAG_Support_Assistant/architecture/providers/">provider routing matrix</a>.</p></div>
   </article>
 
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">vectordb/</span>
-    </p>
+    </h3>
     <div class="q-body"><p>Hybrid retriever (BM25 + dense + cross-encoder rerank). Tenant-aware <code>vectordb.manager</code> wraps the base ChromaDB engine in <code>_base_manager.py</code>; each tenant lands in a separate collection.</p></div>
   </article>
 
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">evaluation/</span>
-    </p>
+    </h3>
     <div class="q-body"><p>Online + offline evaluators, RAGAS-style metrics without the ragas package, regression runner with mock-by-default paid-API gate, experiment registry, rollback watcher, weekly improvement backlog, threshold recommendations.</p></div>
   </article>
 
   <article class="q-card">
-    <p class="q-title">
+    <h3 class="q-title">
       <span class="q-label">tracing/</span>
-    </p>
+    </h3>
     <div class="q-body"><p><code>tracing._base_trace</code> is the canonical SQLite store; <code>tracing.sqlite_trace</code> is the public API that wraps it and adds PII redaction on <code>log_step</code> (production code imports from <code>tracing.sqlite_trace</code>). Langfuse and OpenTelemetry adapters export the same span data when configured.</p></div>
   </article>
 </div>
