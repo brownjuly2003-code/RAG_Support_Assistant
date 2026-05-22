@@ -53,6 +53,26 @@
   color: #991b1b;
 }
 
+.doc-accent-grid .card {
+  border-inline-start: 4px solid var(--doc-accent-color);
+}
+
+.doc-accent-grid .card:nth-of-type(1) {
+  --doc-accent-color: #7c3aed;
+}
+
+.doc-accent-grid .card:nth-of-type(2) {
+  --doc-accent-color: #d97706;
+}
+
+.doc-accent-grid .card:nth-of-type(3) {
+  --doc-accent-color: #059669;
+}
+
+.doc-accent-grid .card:nth-of-type(4) {
+  --doc-accent-color: #64748b;
+}
+
 :root[data-theme='dark'] .route-method-get {
   background: #064e3b;
   color: #a7f3d0;
@@ -69,4 +89,20 @@
 :root[data-theme='dark'] .route-method-delete {
   background: #7f1d1d;
   color: #fecaca;
+}
+
+:root[data-theme='dark'] .doc-accent-grid .card:nth-of-type(1) {
+  --doc-accent-color: #c4b5fd;
+}
+
+:root[data-theme='dark'] .doc-accent-grid .card:nth-of-type(2) {
+  --doc-accent-color: #fbbf24;
+}
+
+:root[data-theme='dark'] .doc-accent-grid .card:nth-of-type(3) {
+  --doc-accent-color: #34d399;
+}
+
+:root[data-theme='dark'] .doc-accent-grid .card:nth-of-type(4) {
+  --doc-accent-color: #cbd5e1;
 }

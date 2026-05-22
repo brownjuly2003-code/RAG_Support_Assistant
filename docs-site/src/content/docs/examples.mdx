@@ -1,0 +1,235 @@
+---
+title: What the assistant does
+description: End-to-end example — a customer-support question, the LangGraph nodes that handle it, the citation format the model is asked to emit, and how the bundled offline evaluator scores the result.
+---
+
+import { Card, CardGrid, Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+The assistant answers customer-support questions in Russian on top of a tenant's
+knowledge base. The goal is to keep the model from emitting unsupported answers
+about a tenant's error codes, warranty terms, or billing flow — so answerable
+claims are grounded in retrieved KB passages, and up to ten extracted claims
+are re-checked against them when fact verification is enabled and retrieved
+context is non-empty, before the answer leaves the graph.
+
+## A real question, end to end
+
+The repo ships a 12-case fixture set under `evaluation/test_cases.json`
+covering six categories: error codes, password reset, warranty, installation,
+billing, general. The bundled demo seeder (`demo/seed_docs.py`) writes source
+files for later ingestion via the normal KB-upload flow; the seeder itself
+does not build a vector index. Below is one of those cases walked through the
+full LangGraph pipeline against that bundled corpus once ingested.
+
+- Demo corpus: warranty, returns, and E10-E30 errors (`errors_e10_e30.md`).
+
+### Input
+
+> Как исправить E20?
+
+### What happens inside the graph
+
+The pipeline is a LangGraph state machine. It lives in
+[`agent/graph.py`](https://github.com/brownjuly2003-code/RAG_Support_Assistant/blob/master/agent/graph.py)
+and the full flowchart — with every node and conditional edge — is rendered
+automatically on the
+[LangGraph state machine](/RAG_Support_Assistant/architecture/langgraph/) page.
+The walkthrough below names each node in the order the graph actually executes.
+
+<Steps>
+
+1. **Retrieve 1-3: `classify_complexity`** — classifies the question as `simple`, `complex`,
+   or `unknown`. The label drives model routing (fast model for simple, strong
+   model for complex), not the path through the graph: every question still
+   passes through `transform_query` next.
+
+2. **Retrieve 1-3: `transform_query`** — rewrites the user question into a single
+   `search_query`. When chat history is present, follow-ups are first
+   rewritten into a standalone query. When HyDE is enabled (hypothetical-
+   document embedding — the LLM drafts a plausible answer, which is then
+   embedded and used as the retrieval probe), the generated hypothetical
+   answer is stored as `hyde_query`, and `retrieve` uses it in preference
+   to `search_query` when HyDE succeeds.
+
+3. **Retrieve 1-3: `retrieve`** — hybrid search against a per-tenant ChromaDB collection.
+   Tenant isolation is enforced by collection separation: the tenant id is
+   resolved from the JWT at API entry and used to select a dedicated Chroma
+   collection (`{prefix}_{tenant_id}` — see `vectordb/manager.py`). Cross-tenant
+   data cannot share a collection. Postgres-side queries filter by
+   `tenant_id` at the ORM layer.
+
+4. **Generate 4-5: `grade_docs`** (Corrective RAG — the LLM re-grades each retrieved
+   chunk `YES`/`NO` for actual relevance rather than trusting the vector
+   similarity ranking) — `NO` chunks are filtered out before generation,
+   with the top-ranked vector hit preserved as a fallback when other
+   chunks survive. This shapes what `generate` sees but does not by itself
+   trigger a retry; the retry decision is made later in `route_or_retry`
+   from the self-eval scores.
+
+5. **Generate 4-5: `generate`** — the QA prompt receives only the graded chunks plus the
+   question, with each chunk presented as `[Документ N | source=<filename>]`.
+   The model is chosen by the active routing profile (default
+   `gracekelly-primary`, with Ollama fallback on provider failure — see
+   [Provider routing](/RAG_Support_Assistant/architecture/providers/)).
+
+6. **Verify & Decide 6-8: `verify_facts`** — when fact verification is enabled and retrieved
+   context is non-empty, up to ten claims are extracted from the draft
+   answer and each one is re-checked against the retrieved chunks. Each
+   checked claim is labelled `supported` / `unsupported` in the trace,
+   and `factuality_score` is written as the percentage of supported
+   claims; skipped or no-claim paths write `100`. This labelling is
+   independent of the next step's self-eval.
+
+7. **Verify & Decide 6-8: `evaluate`** — runs an LLM self-eval against the retrieved context
+   and produces `quality_score` (1–100) and `relevance_score` (derived
+   as `quality_score / 100`, rounded to three decimals — normally 0.01–1.0
+   because `quality_score` is clamped to 1–100). These are the scores
+   `route_or_retry` reads next.
+
+8. **Verify & Decide 6-8: `route_or_retry`** — sets a verdict from the two scores and the
+   remaining iteration budget. Both gates must pass for `auto`:
+
+   - `auto` (quality ≥ `min_quality` *and* relevance ≥ `min_relevance`,
+     defaults 80 and 0.8) → `suggest_questions` → `log`
+   - `retry` (either gate below threshold, iterations left) →
+     `rewrite_query` → `retrieve` → … (Self-RAG — the loop that rewrites
+     the query and re-retrieves when the self-eval is too low, capped by
+     `max_iterations`)
+   - `human` (either gate below threshold, iterations exhausted) → `log`
+     directly, no suggestions
+   - `error` (state carries an error from an earlier node) → `handle_error`
+     → END
+
+9. **Finalize 9-10: `suggest_questions`** — three follow-ups are generated from the answer
+   context to seed the next turn. Only runs on the `auto` verdict.
+
+10. **Finalize 9-10: `log`** — the trace store records node order, state snapshots,
+    retrieved-doc references and citations, provider/model, token usage, and
+    estimated cost. Per-node latency and LLM span timing are carried by
+    Langfuse and OpenTelemetry when those exporters are configured.
+
+</Steps>
+
+### Output
+
+The QA prompt presents each retrieved chunk with a `source=<filename>` tag
+(see `agent/prompts.py`), and the model is asked to ground its answer in
+those passages. A grounded answer for the bundled E20 case looks roughly
+like:
+
+```text
+Ошибка E20 связана с проблемой слива воды. Возможные причины:
+засорённый сливной фильтр, перегиб сливного шланга или неисправность
+сливного насоса.
+
+Источники: source=errors_e10_e30.md
+Возможно, вас также интересует:
+  • Что делать, если фильтр чистый, а ошибка остаётся?
+  • Где найти инструкцию по разборке сливного узла?
+  • Какие коды ошибок ещё связаны с водой?
+```
+
+The exact wording, the suggested follow-ups, and which `source=` tags appear
+all vary by run — the block above is illustrative, but the body of the
+answer is constrained to what the `errors_e10_e30.md` entry for E20 actually
+says (clogged filter, kinked drain hose, faulty drain pump).
+
+The case's `expected_keywords` (`ошибка`, `проверьте`, `устройство`) are not
+checked against the answer text — `benchmark_runner` feeds them to
+`context_recall`, which scores whether the keywords surface in the
+**retrieved context**. The `expected_answer` field is consumed separately
+as the answer fixture for offline answer-quality metrics.
+
+## What changes across question types
+
+Every question traverses the same backbone:
+`classify → transform → retrieve → grade → generate → verify → evaluate →
+route_or_retry`. What differs across categories is which scores `evaluate`
+tends to produce, and therefore which verdict `route_or_retry` picks. The
+table below names what tends to drive a retry per category; it is a
+qualitative read on the bundled fixture set, not a measured number.
+
+| Category         | Example                              | What can drive a retry |
+|------------------|--------------------------------------|------------------------|
+| `error_codes`    | *Что означает ошибка E401?*           | Question mentions a code not present in the indexed KB (E401 is in the fixture set but not in `errors_e10_e30.md`, which only covers E10/E20/E25/E30) — retrieval returns off-topic chunks, `evaluate` drops, `route_or_retry` rewrites. The walked-through case above (E20) is in the KB and grades cleanly. |
+| `reset_password` | *Как сбросить пароль?*                | Short factual; the demo KB has no password-reset document, so retrieval returns empty/off-topic and `evaluate` scores would drop. |
+| `warranty`       | *Сколько длится гарантия?*            | Short factual; the demo KB has the warranty document, so retrieval should ground cleanly. |
+| `installation`   | *Как установить приложение?*          | No installation document in the demo KB — retrieval returns empty or off-topic, `evaluate` scores drop, `route_or_retry` triggers `retry` or `human`. |
+| `billing`        | *Как отменить подписку?*              | No billing document in the demo KB — same path as `installation`. |
+| `general`        | *Как связаться с поддержкой?*         | Short factual; if the answer can be inferred from the bundled docs, `evaluate` passes; otherwise the same empty-retrieval path applies. |
+
+## What this actually demonstrates
+
+<div class="doc-accent-grid">
+<CardGrid>
+  <Card title="Grounded answers, not unsupported generation">
+    Up to ten claims are extracted from the final answer and each is
+    cross-checked against the retrieved chunks in `verify_facts`, which
+    labels them `supported` / `unsupported` and writes a `factuality_score`
+    as the supported-claim percentage. `evaluate` then runs an independent
+    self-eval against the retrieved context, and `route_or_retry` uses that
+    score (not the `verify_facts` labels) to decide retry vs ship.
+  </Card>
+  <Card title="Self-correcting retrieval">
+    Corrective RAG (`grade_docs`) drops off-topic chunks before generation.
+    Self-RAG retry (`route_or_retry` → `rewrite_query` → `retrieve` → …) is
+    triggered by the `evaluate` scores, not by chunk count, and is capped
+    by `max_iterations`.
+  </Card>
+  <Card title="Multi-tenant by construction">
+    The tenant id is resolved from the JWT at API entry and routes every
+    vector query to a dedicated per-tenant ChromaDB collection
+    (`{prefix}_{tenant_id}`). Postgres-side queries filter by `tenant_id` at
+    the ORM layer. Two tenants never share a vector collection.
+  </Card>
+  <Card title="Observable end to end">
+    The trace store records node order, state snapshots, retrieved-doc
+    references, provider/model, token usage, and cost — so any answer in
+    production can be reconstructed offline. Langfuse and OpenTelemetry
+    carry LLM timings and span data when configured.
+  </Card>
+</CardGrid>
+</div>
+
+## Try it locally
+
+<Tabs>
+<TabItem label="API call">
+```bash
+docker compose up -d                # postgres, redis, chroma, api
+python -m demo.seed_docs            # writes demo KB files to demo/docs/
+                                    # (then ingest them via your usual
+                                    #  KB upload flow — seed_docs only
+                                    #  creates the source files)
+curl -X POST http://localhost:8000/api/ask \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $JWT" \
+  -d '{"question": "Как исправить E20?"}'
+```
+</TabItem>
+<TabItem label="Offline fixture evaluation">
+```bash
+# Evaluate the 12 expected-answer fixtures with the offline evaluator
+# (this scores fixtures with context_recall / answer fields; it does not
+#  run the live graph end-to-end).
+python -m evaluation.benchmark_runner \
+  --cases evaluation/test_cases.json \
+  --output runs/local.json
+```
+</TabItem>
+</Tabs>
+
+<Aside type="note">
+This page describes pipeline behavior — the shape of the graph and what each
+node guarantees. Numeric quality metrics (recall, grounding score, p95
+latency) belong on a separate evaluation page once a measured graph run
+against a fixed corpus is published; the in-repo `evaluation/` harness can
+produce that data, but cross-provider numbers are not yet committed here.
+</Aside>
+
+## Where to go next
+
+- [LangGraph state machine](/RAG_Support_Assistant/architecture/langgraph/) — the auto-generated flowchart of the nodes referenced above.
+- [Architecture overview](/RAG_Support_Assistant/architecture/) — request lifecycle, modules, datastores, cross-cutting concerns.
+- [Provider routing](/RAG_Support_Assistant/architecture/providers/) — which models answer which profile, with costs.
+- [API routes catalog](/RAG_Support_Assistant/architecture/routes/) — the surface a client integrates against.

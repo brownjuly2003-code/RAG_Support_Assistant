@@ -1,0 +1,53 @@
+---
+title: RAG Support Assistant
+description: "Публичная документация RAG Support Assistant: демо-KB, LangGraph path и воспроизводимый сценарий E20."
+template: splash
+hero:
+  tagline: |
+    Агент клиентской поддержки извлекает документы поддержки продукта,
+    проводит каждый ответ через LangGraph и удерживает ответы на известных
+    источниках. Документация показывает этот путь через демо-KB из трех
+    документов, фикстуру на 12 кейсов и сценарий воспроизведения E20.
+  actions:
+    - text: Смотреть пример
+      link: /RAG_Support_Assistant/ru/examples/
+      icon: right-arrow
+      variant: primary
+    - text: Reproduce E20 (EN)
+      link: /RAG_Support_Assistant/reproduce-e20/
+      icon: setting
+    - text: GitHub
+      link: https://github.com/brownjuly2003-code/RAG_Support_Assistant
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Доказательства
+
+<CardGrid>
+  <Card title="Опубликованный docs hub" icon="document">
+    Документация опубликована под `/RAG_Support_Assistant`. Английская и
+    русская стартовые страницы поддерживаются явно.
+  </Card>
+  <Card title="Засеянная демо-база" icon="open-book">
+    Демо-база начинается с трех документов: гарантия, возвраты и ошибки
+    E10-E30. E20 есть в `errors_e10_e30.md`.
+  </Card>
+  <Card title="Фикстура для оценки" icon="check-circle">
+    Фикстура содержит 12 кейсов: ошибки, сброс пароля, гарантия, установка,
+    биллинг и общие вопросы. Демо-KB из трех документов покрывает не все
+    категории фикстуры.
+  </Card>
+  <Card title="Проверяемая API-поверхность" icon="puzzle">
+    Каталог API связан с FastAPI route decorators, а `/api/ask` возвращает
+    ответ вместе с документами и citations.
+  </Card>
+</CardGrid>
+
+## Начать здесь
+
+- [Что делает ассистент](/RAG_Support_Assistant/ru/examples/) проходит один вопрос E20 через граф.
+- [Воспроизвести E20 (EN)](/RAG_Support_Assistant/reproduce-e20/) дает детерминированный путь доверия.
+- [Запустить локально (EN)](/RAG_Support_Assistant/guides/quickstart/) описывает локальную настройку.
+- [GitHub](https://github.com/brownjuly2003-code/RAG_Support_Assistant) содержит исходный код.

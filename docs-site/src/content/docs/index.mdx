@@ -1,16 +1,21 @@
 ---
 title: RAG Support Assistant
-description: Internal codebase docs — architecture, operations, plans, and research.
+description: Customer-support RAG assistant docs with a seeded KB, LangGraph path, and reproducible E20 scenario.
 template: splash
 hero:
   tagline: |
-    FastAPI · LangGraph · ChromaDB · Postgres · Redis ·
-    Ollama / GraceKelly / Mistral providers · multi-tenant.
+    A customer-support agent that retrieves product support documents, routes
+    each answer through LangGraph, and keeps responses grounded in known
+    sources. The docs prove the path with a three-document demo KB, a 12-case
+    fixture, and an E20 reproduction track.
   actions:
-    - text: Architecture overview
-      link: /RAG_Support_Assistant/architecture/
+    - text: See the example
+      link: /RAG_Support_Assistant/examples/
       icon: right-arrow
       variant: primary
+    - text: Reproduce E20
+      link: /RAG_Support_Assistant/reproduce-e20/
+      icon: setting
     - text: GitHub
       link: https://github.com/brownjuly2003-code/RAG_Support_Assistant
       icon: external
@@ -18,39 +23,31 @@ hero:
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## At a glance
+## Proof points
 
-<CardGrid stagger>
-  <Card title="Architecture" icon="puzzle">
-    LangGraph state machine, FastAPI thin app-shell with extracted routers,
-    pluggable LLM providers (Ollama / GraceKelly / Mistral), tenant-aware
-    ChromaDB, Postgres + Redis runtime.
+<CardGrid>
+  <Card title="Published docs hub" icon="document">
+    Docs are published under `/RAG_Support_Assistant`. English and Russian
+    entry pages are maintained explicitly.
   </Card>
-  <Card title="Operations" icon="rocket">
-    Quickstart, runbook, disaster-recovery scenarios A–F, Helm chart with
-    secrets split, age-encrypted backups, weekly cronjobs.
+  <Card title="Seeded support KB" icon="open-book">
+    The demo KB starts from three seed documents: warranty, returns, and
+    E10-E30 errors. E20 is present in `errors_e10_e30.md`.
   </Card>
-  <Card title="Plans & history" icon="document">
-    Closed plan items (Steps 1–9 of `2026-04-27-next-steps.md` plus the
-    `2026-05-01` backlog) and the audit-hardening session notes.
+  <Card title="Fixture-backed evaluation" icon="check-circle">
+    The fixture set has 12 cases across error codes, password reset, warranty,
+    installation, billing, and general support. The three-document demo KB does
+    not cover every fixture category.
   </Card>
-  <Card title="Research" icon="open-book">
-    Notes on the 2026 RAG landscape, eval metrics, production monitoring,
-    UI patterns, and one upstream `pi` Windows-hang investigation.
+  <Card title="Traceable integration surface" icon="puzzle">
+    The API catalog is tied to FastAPI route decorators, and `/api/ask`
+    returns an answer with documents and citations.
   </Card>
 </CardGrid>
 
-## Auto-generated
+## Start here
 
-The pages below are regenerated on every `npm run dev` / `npm run build` from
-the live source tree:
-
-- [LangGraph state machine](/RAG_Support_Assistant/architecture/langgraph/) — parsed from `agent/graph.py`.
-- [API routes catalog](/RAG_Support_Assistant/architecture/routes/) — parsed from `api/app.py` and `api/routers/*.py`.
-- [Provider routing matrix](/RAG_Support_Assistant/architecture/providers/) — parsed from `config/providers.yml`.
-
-## Status snapshot
-
-The latest gates and HEAD are recorded in
-[`AGENT_STATE.md`](/RAG_Support_Assistant/guides/agent-state/). Plan progress lives in
-[`docs/plans/`](/RAG_Support_Assistant/guides/plans/2026-05-01-backlog/).
+- [What it does](/RAG_Support_Assistant/examples/) walks one E20 question through the graph.
+- [Reproduce E20](/RAG_Support_Assistant/reproduce-e20/) gives the deterministic trust path.
+- [Try locally](/RAG_Support_Assistant/guides/quickstart/) covers the local setup path.
+- [GitHub](https://github.com/brownjuly2003-code/RAG_Support_Assistant) contains the source.

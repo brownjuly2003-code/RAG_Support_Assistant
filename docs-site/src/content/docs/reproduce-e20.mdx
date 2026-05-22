@@ -1,0 +1,139 @@
+---
+title: Reproduce E20
+description: Seed the demo KB, ingest the E20 source document, ask the support question, and inspect retrieved evidence.
+---
+
+This page uses one deterministic support scenario: E20 is present in the
+seeded `errors_e10_e30.md` document. The goal is to seed the demo KB, ingest
+the source documents through the public upload API, ask the E20 question, and
+check that retrieved evidence points back to the seeded source.
+
+Live ask output is not committed yet. The commands below are the reproducible
+path; do not treat the illustrative expected behavior as a measured provider
+benchmark.
+
+## Prerequisites
+
+Run commands from the repository root after completing the local setup in
+[Try locally](/RAG_Support_Assistant/guides/quickstart/). The API must be
+running on `http://localhost:8000` with a configured provider profile:
+
+```powershell
+cd D:\RAG_Support_Assistant
+python main.py
+```
+
+For local development, `/api/auth/login` accepts `admin/admin` only when
+`ADMIN_PASSWORD_HASH` is not set:
+
+```powershell
+$login = curl.exe -s http://localhost:8000/api/auth/login `
+  -H "Content-Type: application/json" `
+  -d '{"username":"admin","password":"admin"}' | ConvertFrom-Json
+$env:ACCESS_TOKEN = $login.access_token
+```
+
+## Seed docs
+
+The seeder writes exactly three demo documents: warranty, returns, and
+E10-E30 errors. It creates source files only; ingestion happens in the next
+step.
+
+```powershell
+python -m demo.seed_docs
+Get-ChildItem demo\docs
+Select-String -Path demo\docs\errors_e10_e30.md -Pattern "E20"
+```
+
+## Ingest KB
+
+Upload the three seeded files through the same document-upload endpoint used
+by the app. The endpoint ingests synchronously when Celery is unavailable; if
+it returns an async task id inside the response message, the loop polls the
+task endpoint.
+
+```powershell
+$files = @(
+  "warranty.md",
+  "returns_policy.md",
+  "errors_e10_e30.md"
+)
+
+foreach ($name in $files) {
+  $upload = curl.exe -s -X POST http://localhost:8000/api/upload `
+    -H "Authorization: Bearer $env:ACCESS_TOKEN" `
+    -F "file=@demo/docs/$name" | ConvertFrom-Json
+
+  $upload
+
+  if ($upload.message -match 'task_id=([A-Za-z0-9_-]+)') {
+    curl.exe -s "http://localhost:8000/api/tasks/$($Matches[1])" `
+      -H "Authorization: Bearer $env:ACCESS_TOKEN"
+  }
+}
+```
+
+## Ask E20 Question
+
+Create a UTF-8 JSON payload and call the synchronous ask endpoint. The API
+response includes `answer`, `sources`, `citations`, and `trace_id`.
+
+```powershell
+@'
+{"question":"Как исправить E20?"}
+'@ | Set-Content -Encoding utf8 "$env:TEMP\e20-question.json"
+
+curl.exe -s -X POST http://localhost:8000/api/ask `
+  -H "Authorization: Bearer $env:ACCESS_TOKEN" `
+  -H "Content-Type: application/json" `
+  --data-binary "@$env:TEMP\e20-question.json" |
+  Set-Content -Encoding utf8 "$env:TEMP\e20-answer.json"
+
+Get-Content -Raw -Encoding utf8 "$env:TEMP\e20-answer.json" | ConvertFrom-Json
+```
+
+## Inspect Retrieved Evidence / Trace
+
+First inspect the response-level evidence. For a grounded E20 answer, at
+least one source or citation should point to `errors_e10_e30.md`.
+
+```powershell
+$answer = Get-Content -Raw -Encoding utf8 "$env:TEMP\e20-answer.json" | ConvertFrom-Json
+$answer.sources | Select-Object source,page_content
+$answer.citations | Select-Object doc_id,title,excerpt
+```
+
+If the response includes a `trace_id`, inspect the stored graph trace:
+
+```powershell
+if ($answer.trace_id) {
+  curl.exe -s "http://localhost:8000/api/admin/traces/$($answer.trace_id)" `
+    -H "Authorization: Bearer $env:ACCESS_TOKEN" |
+    Set-Content -Encoding utf8 "$env:TEMP\e20-trace.json"
+
+  Get-Content -Raw -Encoding utf8 "$env:TEMP\e20-trace.json" | ConvertFrom-Json
+}
+```
+
+## Expected Grounded Behavior
+
+The expected answer should say that E20 is a drain-water issue and should cite
+`errors_e10_e30.md`. The seeded source lists these possible causes:
+
+- clogged drain filter;
+- kinked drain hose;
+- faulty drain pump.
+
+The exact wording, citations, suggested follow-ups, and score fields can vary
+by provider and runtime configuration. The committed docs do not claim live
+quality, latency, or provider-comparison numbers for this scenario.
+
+## Limitations
+
+The demo KB has three documents, while the evaluation fixture has 12 cases
+across six categories: error codes, password reset, warranty, installation,
+billing, and general support. Installation, billing, and reset-password
+fixture categories are not fully covered by the three-document demo KB.
+
+This page is the deterministic trust path for one KB-backed question, not a
+cross-provider benchmark.

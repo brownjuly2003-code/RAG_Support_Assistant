@@ -1,0 +1,237 @@
+---
+title: Что делает ассистент
+description: Сквозной пример — вопрос пользователя, узлы LangGraph, формат цитирования, который модель обязана выдавать, и как офлайн-evaluator считает результат.
+---
+
+import { Card, CardGrid, Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Ассистент отвечает на вопросы клиентской поддержки по русскоязычной базе знаний
+конкретного тенанта. Задача — не дать модели сгенерировать ничем не подкреплённый
+ответ о кодах ошибок, гарантии или биллинге конкретной компании: ответы на
+вопросы, по которым в KB есть пассажи, обоснованны на retrieved-фрагментах, и
+до десяти извлечённых claim'ов перепроверяются по ним, когда fact-verification
+включён и retrieved-контекст непуст, ещё до того, как ответ покинет граф.
+
+## Реальный вопрос, end-to-end
+
+В репозитории есть 12-кейсовый fixture-набор `evaluation/test_cases.json` по
+шести категориям: коды ошибок, сброс пароля, гарантия, установка, биллинг,
+общее. Демо-seeder (`demo/seed_docs.py`) кладёт исходные файлы для дальнейшего
+indexing'а через обычный KB-upload; сам seeder векторный индекс не строит.
+Ниже один из этих кейсов прогнан через полный LangGraph-пайплайн на этом
+корпусе после ingest'а.
+
+- Демо-корпус: гарантия, возвраты и ошибки E10-E30 (`errors_e10_e30.md`).
+
+### Вход
+
+> Как исправить E20?
+
+### Что происходит внутри графа
+
+Пайплайн — это state machine LangGraph. Он живёт в
+[`agent/graph.py`](https://github.com/brownjuly2003-code/RAG_Support_Assistant/blob/master/agent/graph.py);
+полный flowchart со всеми узлами и conditional edge'ами автогенерится на
+странице [LangGraph state machine](/RAG_Support_Assistant/ru/architecture/langgraph/).
+Walkthrough ниже называет каждый узел в том порядке, в котором их реально
+проходит граф.
+
+<Steps>
+
+1. **Retrieve 1-3: `classify_complexity`** — классифицирует вопрос как `simple`, `complex`
+   или `unknown`. Метка управляет роутингом модели (быстрая для простых,
+   сильная для сложных), а не путём через граф: любой вопрос дальше уходит
+   в `transform_query`.
+
+2. **Retrieve 1-3: `transform_query`** — переписывает вопрос в одну строку `search_query`.
+   Если есть chat history, follow-up'ы сначала переписываются в самодостаточный
+   query. Если включён HyDE (hypothetical-document embedding — LLM пишет
+   правдоподобный ответ-черновик, который потом эмбеддится и идёт как
+   retrieval-probe), сгенерированный гипотетический ответ сохраняется как
+   `hyde_query`, и при успешном HyDE узел `retrieve` использует его вместо
+   `search_query`.
+
+3. **Retrieve 1-3: `retrieve`** — гибридный поиск по per-tenant коллекции ChromaDB.
+   Изоляция тенантов сделана через разделение коллекций: tenant_id берётся
+   из JWT на входе в API и используется для выбора отдельной Chroma-коллекции
+   (`{prefix}_{tenant_id}` — см. `vectordb/manager.py`). Данные разных
+   тенантов не могут попасть в одну коллекцию. Postgres-запросы фильтруют
+   по `tenant_id` на уровне ORM.
+
+4. **Generate 4-5: `grade_docs`** (Corrective RAG — LLM сам пере-оценивает каждый
+   retrieved-чанк по схеме `YES`/`NO` на actual-relevance, а не доверяет
+   ранжированию по vector-сходству) — `NO`-чанки отбрасываются до
+   генерации, при этом топ-1 vector-hit сохраняется как fallback, если хоть
+   что-то ещё прошло. Это формирует то, что увидит `generate`, но само по
+   себе retry не запускает — решение о retry принимает `route_or_retry` уже
+   по self-eval-скорам.
+
+5. **Generate 4-5: `generate`** — QA-prompt получает только отграждированные чанки плюс
+   вопрос, каждый чанк подаётся в виде `[Документ N | source=<filename>]`.
+   Модель выбирается активным routing-профилем (по умолчанию
+   `gracekelly-primary`, fallback на Ollama при сбое провайдера — см.
+   [Provider routing](/RAG_Support_Assistant/ru/architecture/providers/)).
+
+6. **Verify & Decide 6-8: `verify_facts`** — когда fact-verification включён и retrieved-контекст
+   непустой, из черновика ответа извлекаются до десяти claim'ов, и каждый
+   из них перепроверяется против retrieved-чанков. Каждый проверенный claim
+   помечается `supported` / `unsupported` в трейсе, а в `factuality_score`
+   пишется процент supported-claim'ов; на skip'нутых путях / без claim'ов
+   пишется `100`. Эта разметка независима от self-eval'а следующего шага.
+
+7. **Verify & Decide 6-8: `evaluate`** — запускает LLM-self-eval против retrieved-контекста и
+   выдаёт `quality_score` (1–100) и `relevance_score` (выводится как
+   `quality_score / 100`, округлённый до трёх знаков — обычно 0.01–1.0,
+   потому что `quality_score` зажат в 1–100). Эти скоры читает дальше
+   `route_or_retry`.
+
+8. **Verify & Decide 6-8: `route_or_retry`** — выставляет verdict из двух скоров и оставшегося
+   iteration-бюджета. Для `auto` должны пройти ОБА гейта:
+
+   - `auto` (quality ≥ `min_quality` *и* relevance ≥ `min_relevance`,
+     дефолты 80 и 0.8) → `suggest_questions` → `log`
+   - `retry` (любой из гейтов ниже порога, итерации ещё есть) →
+     `rewrite_query` → `retrieve` → … (Self-RAG — цикл, который
+     переписывает query и заново retrieve'ит, когда self-eval слишком
+     низкий, ограничен `max_iterations`)
+   - `human` (любой из гейтов ниже порога, итерации исчерпаны) → `log`
+     напрямую, без suggestions
+   - `error` (state несёт ошибку из более раннего узла) →
+     `handle_error` → END
+
+9. **Finalize 9-10: `suggest_questions`** — генерирует три follow-up'а из контекста
+   ответа, чтобы засеять следующий turn. Запускается только при verdict'е
+   `auto`.
+
+10. **Finalize 9-10: `log`** — трейс-стор сохраняет порядок узлов, snapshot'ы состояния,
+    ссылки на retrieved-документы и цитаты, provider/model, расход токенов
+    и оценку cost'а. Per-node latency и LLM span timing уносят Langfuse и
+    OpenTelemetry, когда соответствующие экспортёры настроены.
+
+</Steps>
+
+### Выход
+
+QA-prompt подаёт каждый retrieved-чанк с тегом `source=<filename>` (см.
+`agent/prompts.py`), и модель обязана обосновать ответ этими пассажами.
+Заземлённый ответ для бандлового кейса E20 выглядит примерно так:
+
+```text
+Ошибка E20 связана с проблемой слива воды. Возможные причины:
+засорённый сливной фильтр, перегиб сливного шланга или неисправность
+сливного насоса.
+
+Источники: source=errors_e10_e30.md
+Возможно, вас также интересует:
+  • Что делать, если фильтр чистый, а ошибка остаётся?
+  • Где найти инструкцию по разборке сливного узла?
+  • Какие коды ошибок ещё связаны с водой?
+```
+
+Точная формулировка, follow-up'ы и набор `source=`-тегов варьируется от
+прогона к прогону — блок выше иллюстративный, но тело ответа ограничено
+тем, что реально написано в `errors_e10_e30.md` про E20 (засорённый фильтр,
+перегиб сливного шланга, неисправность сливного насоса).
+
+`expected_keywords` этого кейса (`ошибка`, `проверьте`, `устройство`) НЕ
+сверяются с текстом ответа — `benchmark_runner` подаёт их в
+`context_recall`, которое проверяет, появляются ли ключевые слова в
+**retrieved-контексте**. Поле `expected_answer` потребляется отдельно как
+answer-fixture для офлайн-метрик качества ответа.
+
+## Что меняется на разных типах вопросов
+
+Любой вопрос проходит один и тот же бэкбон:
+`classify → transform → retrieve → grade → generate → verify → evaluate →
+route_or_retry`. Различия между категориями — в том, какие скоры обычно
+выдаёт `evaluate`, и какой verdict из-за этого выберет `route_or_retry`.
+Таблица ниже называет, что чаще всего может триггерить retry по категории;
+это качественная оценка по бандловому fixture-сету, не измеренное число.
+
+| Категория        | Пример                                | Что может триггерить retry |
+|------------------|---------------------------------------|----------------------------|
+| `error_codes`    | *Что означает ошибка E401?*           | Вопрос про код, которого нет в индексе (E401 есть в fixture-сете, но не в `errors_e10_e30.md`, где только E10/E20/E25/E30) — retrieval возвращает не-в-тему чанки, `evaluate` падает, `route_or_retry` переписывает запрос. Walkthrough выше (E20) в KB есть и приземляется чисто. |
+| `reset_password` | *Как сбросить пароль?*                | Короткий factual; в демо-KB нет документа про сброс пароля, поэтому retrieval вернёт пусто / не-в-тему и `evaluate` упадёт. |
+| `warranty`       | *Сколько длится гарантия?*            | Короткий factual; документ про гарантию в демо-KB есть, retrieval приземляется чисто. |
+| `installation`   | *Как установить приложение?*          | В демо-KB нет документа про установку — retrieval вернёт пусто или не-в-тему, `evaluate` упадёт, `route_or_retry` уйдёт в `retry` или `human`. |
+| `billing`        | *Как отменить подписку?*              | В демо-KB нет документа про биллинг — тот же путь, что у `installation`. |
+| `general`        | *Как связаться с поддержкой?*         | Короткий factual; если ответ выводится из бандловых документов — `evaluate` пройдёт, иначе тот же путь с пустым retrieval'ом. |
+
+## Что это в итоге демонстрирует
+
+<div class="doc-accent-grid">
+<CardGrid>
+  <Card title="Заземлённые ответы, без неподкреплённой генерации">
+    Из финального ответа извлекается до десяти claim'ов, каждый сверяется
+    с retrieved-чанками в `verify_facts`, который проставляет каждому
+    `supported` / `unsupported` и пишет `factuality_score` как процент
+    supported-claim'ов. `evaluate` отдельно прогоняет self-eval против
+    retrieved-контекста, и решение retry-vs-ship принимает
+    `route_or_retry` именно по этому скору, а не по меткам
+    `verify_facts`.
+  </Card>
+  <Card title="Самокорректирующийся retrieval">
+    Corrective RAG (`grade_docs`) выкидывает не-в-тему чанки до
+    генерации. Self-RAG retry
+    (`route_or_retry` → `rewrite_query` → `retrieve` → …) триггерится
+    скорами `evaluate`, а не количеством чанков, и ограничен
+    `max_iterations`.
+  </Card>
+  <Card title="Мульти-тенант by construction">
+    tenant_id берётся из JWT на входе в API и адресует каждый
+    vector-запрос в отдельную per-tenant ChromaDB-коллекцию
+    (`{prefix}_{tenant_id}`). Postgres-запросы фильтруют по `tenant_id`
+    на уровне ORM. Два тенанта никогда не делят vector-коллекцию.
+  </Card>
+  <Card title="Наблюдаемость end-to-end">
+    Трейс-стор пишет порядок узлов, snapshot'ы состояния, ссылки на
+    retrieved-документы, provider/model, расход токенов и cost — любой
+    ответ из прод'а можно офлайн воссоздать. LLM-тайминги и span'ы несут
+    Langfuse и OpenTelemetry, когда настроены.
+  </Card>
+</CardGrid>
+</div>
+
+## Запустить локально
+
+<Tabs>
+<TabItem label="API-вызов">
+```bash
+docker compose up -d                # postgres, redis, chroma, api
+python -m demo.seed_docs            # пишет файлы демо-KB в demo/docs/
+                                    # (потом надо отдельно проиндексировать
+                                    #  через ваш обычный KB-upload —
+                                    #  seed_docs только создаёт исходники)
+curl -X POST http://localhost:8000/api/ask \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $JWT" \
+  -d '{"question": "Как исправить E20?"}'
+```
+</TabItem>
+<TabItem label="Офлайн-evaluator на фикстурах">
+```bash
+# Прогоняет 12 expected-answer-фикстур через офлайн-evaluator
+# (скорит фикстуры через context_recall / answer; live-граф
+#  end-to-end НЕ запускает).
+python -m evaluation.benchmark_runner \
+  --cases evaluation/test_cases.json \
+  --output runs/local.json
+```
+</TabItem>
+</Tabs>
+
+<Aside type="note">
+Эта страница описывает поведение пайплайна — форму графа и что гарантирует
+каждый узел. Численные метрики качества (recall, grounding score, p95
+latency) живут на отдельной странице оценки — когда будет опубликован
+измеренный прогон графа на фиксированном корпусе; in-repo `evaluation/`
+такие данные собирать умеет, но cross-provider числа здесь пока не
+коммитнуты.
+</Aside>
+
+## Куда дальше
+
+- [LangGraph state machine](/RAG_Support_Assistant/ru/architecture/langgraph/) — автогенерируемый flowchart всех упомянутых выше узлов.
+- [Обзор архитектуры](/RAG_Support_Assistant/ru/architecture/) — request lifecycle, модули, хранилища, cross-cutting concerns.
+- [Provider routing](/RAG_Support_Assistant/ru/architecture/providers/) — какая модель отвечает в каком профиле и за сколько.
+- [API routes catalog](/RAG_Support_Assistant/ru/architecture/routes/) — surface, к которому подключается клиент.
