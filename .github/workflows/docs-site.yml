@@ -45,6 +45,10 @@ jobs:
         working-directory: docs-site
         run: npm ci
 
+      - name: Install chromium-headless-shell for rehype-mermaid SSR
+        working-directory: docs-site
+        run: npx --yes playwright install --with-deps chromium-headless-shell
+
       - name: Build
         working-directory: docs-site
         run: npm run build
