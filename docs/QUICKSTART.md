@@ -177,7 +177,7 @@ python scripts/regression_eval.py \
 Without `--allow-paid-apis`, provider/model targets run in `mock-provider-benchmark` mode:
 answers and cost/latency metrics are simulated from `evaluation/curated_cases.jsonl`,
 so the command does not call GraceKelly or Mistral and does not persist to the DB when
-`--no-persist` is set. Live provider calls require explicit `--allow-paid-apis`.
+`--no-persist` is set. Live provider calls require explicit opt-in via `--allow-paid-apis`.
 
 Results are written to `reports/regression/<timestamp>-*.{json,md}`. PowerShell wrapper
 `scripts\run_regression_via_gracekelly.ps1 -AllowLive` spins up disposable Postgres + Redis + ingestion + regression in one command after explicit live opt-in.
