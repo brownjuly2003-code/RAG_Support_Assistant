@@ -14,11 +14,24 @@ const OUT_DIR = join(__dirname, '..', 'src', 'content', 'docs', 'guides');
 
 const ROOT_FILES = [
   { src: 'README.md', dest: 'overview.md', title: 'Project overview' },
-  { src: 'AGENT_STATE.md', dest: 'agent-state.md', title: 'Agent state snapshot' },
-  { src: 'BACKLOG.md', dest: 'backlog.md', title: 'Backlog' },
-  { src: 'AUTOPILOT.md', dest: 'autopilot.md', title: 'Autopilot guardrails' },
   { src: 'DEPRECATIONS.md', dest: 'deprecations.md', title: 'Module layout & deprecations' },
 ];
+
+// Internal/kitchen docs that must NOT be published or indexed by Pagefind.
+// Matched against the path relative to docs/ (slugified, forward slashes).
+// Anything under these directories or matching these filenames is skipped.
+const KITCHEN_DIR_PREFIXES = ['plans/', 'research/', 'operations/', 'a11y/', 'superpowers/'];
+const KITCHEN_FILE_RES = [
+  /^session-notes-/i,
+  /^rag_modernization_plan_/i,
+  /^(windows-test-workflow|local-gate|runbook|disaster-recovery|backlog|agent-state|autopilot)\.md$/i,
+];
+
+function isKitchen(slugRel) {
+  if (KITCHEN_DIR_PREFIXES.some((p) => slugRel.startsWith(p))) return true;
+  const base = slugRel.split('/').pop();
+  return KITCHEN_FILE_RES.some((re) => re.test(base));
+}
 
 async function walkMarkdown(dir, prefix = '') {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -82,12 +95,17 @@ async function main() {
   let count = 0;
 
   // 1) docs/ tree
+  let skipped = 0;
   if (existsSync(SRC_DOCS)) {
     const all = await walkMarkdown(SRC_DOCS);
     for (const { full, rel } of all) {
+      const destRel = slugifyPath(rel);
+      if (isKitchen(destRel)) {
+        skipped++;
+        continue;
+      }
       const raw = await readFile(full, 'utf8');
       const title = deriveTitle(raw, basename(rel));
-      const destRel = slugifyPath(rel);
       const destAbs = join(OUT_DIR, destRel);
       const sourcePath = `docs/${rel.replace(/\\/g, '/')}`;
       await copyOne(full, destAbs, title, sourcePath);
@@ -104,7 +122,10 @@ async function main() {
     count++;
   }
 
-  console.log(`[sync-docs] copied ${count} markdown files into ${relative(PROJECT_ROOT, OUT_DIR)}`);
+  console.log(
+    `[sync-docs] copied ${count} markdown files into ${relative(PROJECT_ROOT, OUT_DIR)}` +
+      (skipped ? ` (skipped ${skipped} kitchen files)` : ''),
+  );
 }
 
 main().catch((err) => {

@@ -134,15 +134,21 @@ E20 case looks roughly like:
 
 ```json
 {
-  "sources": ["errors_e10_e30.md"],
-  "citations": [{ "ref": 1, "source": "errors_e10_e30.md" }]
+  "sources": [
+    { "source": "errors_e10_e30.md", "page_content": "E20 — проблема со сливом воды …" }
+  ],
+  "citations": [
+    { "index": 1, "doc_id": "errors_e10_e30.md", "title": "errors_e10_e30.md", "excerpt": "клапан слива / фильтр …" }
+  ]
 }
 ```
 
-The exact wording, the suggested follow-ups, and which sources appear all
-vary by run — the block above is illustrative, but the body of the answer
-is constrained to what the `errors_e10_e30.md` entry for E20 actually says
-(clogged filter, kinked drain hose, faulty drain pump).
+The exact field values vary by run, but the shape is fixed: `sources` is a
+list of `{source, page_content}` and `citations` is a list of
+`{index, doc_id, title, excerpt}` — see the `AskResponse`, `SourceInfo`,
+and `Citation` Pydantic models in `api/routers/conversation.py`. The body
+of the answer is constrained to what the `errors_e10_e30.md` entry for E20
+actually says (clogged filter, kinked drain hose, faulty drain pump).
 
 The case's `expected_keywords` (`ошибка`, `проверьте`, `устройство`) are not
 checked against the answer text — `benchmark_runner` feeds them to

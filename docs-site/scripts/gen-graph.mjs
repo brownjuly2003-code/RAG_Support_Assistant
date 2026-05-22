@@ -76,12 +76,14 @@ async function main() {
   const parsed = parseGraph(src);
   const mermaid = renderMermaid(parsed);
 
+  const totalNodes = parsed.nodes.filter((n) => n !== 'START' && n !== 'END').length;
+
   const mdx = `---
 title: LangGraph state machine
 description: Auto-generated state-machine diagram for the LangGraph agent.
 ---
 
-import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
 
 The diagram below is generated from \`agent/graph.py\` at build time. Conditional
 edges are listed underneath; they fan out to multiple downstream nodes based on
@@ -101,17 +103,48 @@ ${
 
 ## Node count
 
-<CardGrid>
-  <Card title="Total nodes" icon="puzzle">
-    ${parsed.nodes.filter((n) => n !== 'START' && n !== 'END').length}
-  </Card>
-  <Card title="Direct edges" icon="random">
-    ${parsed.edges.length}
-  </Card>
-  <Card title="Conditional routers" icon="approve-check">
-    ${parsed.conditionalEdges.length}
-  </Card>
-</CardGrid>
+<div class="q-cardgrid q-cardgrid--accent">
+  <article class="q-card">
+    <p class="q-title">
+      <span class="q-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <circle cx="6" cy="6" r="2.5" />
+          <circle cx="18" cy="6" r="2.5" />
+          <circle cx="12" cy="18" r="2.5" />
+        </svg>
+      </span>
+      <span class="q-label">Total nodes</span>
+    </p>
+    <div class="q-body"><p>${totalNodes}</p></div>
+  </article>
+  <article class="q-card">
+    <p class="q-title">
+      <span class="q-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M4 12h13" />
+          <path d="M14 7l5 5-5 5" />
+        </svg>
+      </span>
+      <span class="q-label">Direct edges</span>
+    </p>
+    <div class="q-body"><p>${parsed.edges.length}</p></div>
+  </article>
+  <article class="q-card">
+    <p class="q-title">
+      <span class="q-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M4 18V6" />
+          <path d="M4 6l6 6" />
+          <path d="M4 6l6-2" />
+          <path d="M10 12l5 4" />
+          <path d="M10 12l4-3" />
+        </svg>
+      </span>
+      <span class="q-label">Conditional routers</span>
+    </p>
+    <div class="q-body"><p>${parsed.conditionalEdges.length}</p></div>
+  </article>
+</div>
 
 <Aside type="tip" title="Source">
   Generated from <code>agent/graph.py</code>. Re-run <code>npm run dev</code> or

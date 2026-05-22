@@ -19,6 +19,14 @@
   font-size: 0.875rem;
 }
 
+.route-table {
+  overflow-x: auto;
+}
+
+.route-table table {
+  min-width: 36rem;
+}
+
 .route-table td,
 .route-table th {
   font-family: var(--sl-font-system-mono);

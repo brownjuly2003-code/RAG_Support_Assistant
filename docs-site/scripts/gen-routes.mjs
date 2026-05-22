@@ -31,6 +31,9 @@ function fullPath(file, path) {
 // Map a source file (or, as a fallback, a route path) to a product group.
 function groupFor(file, path) {
   const f = file.toLowerCase();
+  // fullPath() may have prepended "/api"; strip it for path-fallback tests
+  // so /api/admin/providers still matches the /admin/* rule below.
+  const p = path.replace(/^\/api(?=\/)/, '');
   // Admin routers split by responsibility, so the experiments/evaluations
   // ones land in their own product groups instead of the generic Admin pile.
   if (f.includes('admin_experiments')) return 'Experiments';
@@ -41,12 +44,13 @@ function groupFor(file, path) {
   if (f.includes('analytics')) return 'Analytics';
   if (f.includes('auth_sso') || f.includes('session_auth')) return 'Auth';
   if (f.includes('system.py') || f.includes('root_pages') || f.endsWith('api/app.py')) return 'System';
-  // misc.py mixes /admin/* with /channels/*; pick the group from the path.
-  if (path.startsWith('/admin')) return 'Admin';
-  if (path.startsWith('/auth') || path.startsWith('/sessions')) return 'Auth';
-  if (path.startsWith('/analytics')) return 'Analytics';
-  if (path.startsWith('/ask') || path.startsWith('/chat') || path.startsWith('/agent') || path === '/feedback' || path === '/escalate') return 'Ask/Chat';
-  if (path.startsWith('/upload') || path.startsWith('/tasks')) return 'KB';
+  // misc.py mixes /admin/* with /channels/*; pick the group from the (unprefixed) path.
+  if (p.startsWith('/admin')) return 'Admin';
+  if (p.startsWith('/channels')) return 'Ask/Chat';
+  if (p.startsWith('/auth') || p.startsWith('/sessions')) return 'Auth';
+  if (p.startsWith('/analytics')) return 'Analytics';
+  if (p.startsWith('/ask') || p.startsWith('/chat') || p.startsWith('/agent') || p === '/feedback' || p === '/escalate') return 'Ask/Chat';
+  if (p.startsWith('/upload') || p.startsWith('/tasks')) return 'KB';
   return 'System';
 }
 
