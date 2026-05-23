@@ -59,18 +59,23 @@ def test_parallel_requests_keep_sessions_isolated_by_tenant(
         ("default", uuid.uuid4().hex, "Q5"),
     ]
 
-    def _send(tenant: str, session_id: str, question: str) -> dict:
-        with TestClient(integration_api_app.app) as client:
-            response = client.post(
-                "/api/ask",
-                json={"question": question, "session_id": session_id},
-                headers=integration_headers(tenant, "admin"),
-            )
+    def _send(client: TestClient, tenant: str, session_id: str, question: str) -> dict:
+        response = client.post(
+            "/api/ask",
+            json={"question": question, "session_id": session_id},
+            headers=integration_headers(tenant, "admin"),
+        )
         assert response.status_code == 200
         return response.json()
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        results = list(executor.map(lambda args: _send(*args), requests))
+    # Lifespan startup must run once, not per-thread: parallel TestClient
+    # context-managers against the same FastAPI app race on the shared anyio
+    # BlockingPortal and deadlock (CI run 26322755886, pre-existing on 1.0.0
+    # starlette too). httpx.Client itself is safe for concurrent use across
+    # threads, so a single client services all five workers.
+    with TestClient(integration_api_app.app) as client:
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            results = list(executor.map(lambda args: _send(client, *args), requests))
 
     assert {item["answer"] for item in results} == {
         "acme:Q1",
