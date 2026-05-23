@@ -1,8 +1,9 @@
 // docs-site/scripts/gen-screenshot-webp.mjs
 //
-// Generates WebP variants alongside every PNG under public/screenshots/
-// and re-optimises the PNGs with sharp's compressionLevel:9 + adaptiveFiltering.
-// Idempotent: skips files whose mtime is older than the source PNG.
+// Generates WebP variants alongside every PNG under public/screenshots/.
+// Source PNGs are kept as-is — the `<picture>` source switches modern
+// browsers to WebP (~40% smaller) while PNG stays the fallback.
+// Idempotent: skips WebP files whose mtime is newer than the source PNG.
 // Run: node scripts/gen-screenshot-webp.mjs
 
 import sharp from 'sharp';
