@@ -108,6 +108,7 @@ def main() -> None:
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT_PATH, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
+        f.write("\n")
     print(f"\nResults saved to: {OUT_PATH}")
 
 

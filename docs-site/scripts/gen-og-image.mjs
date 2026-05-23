@@ -100,7 +100,7 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
 </svg>`;
 
 mkdirSync(OUT_DIR, { recursive: true });
-writeFileSync(OUT_SVG, svg, 'utf8');
+writeFileSync(OUT_SVG, svg + '\n', 'utf8');
 
 await sharp(Buffer.from(svg))
   .png({ compressionLevel: 9 })
