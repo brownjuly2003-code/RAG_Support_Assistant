@@ -123,8 +123,8 @@ LLM_PROVIDER_PROFILE=local-first python main.py
 
 ```bash
 # Документ для ингеста (PDF, MD, TXT)
-# PowerShell (Windows)
-curl -X POST http://localhost:8000/api/upload `
+# PowerShell (Windows) — заметка: curl.exe, не curl (последний — alias к Invoke-WebRequest)
+curl.exe -X POST http://localhost:8000/api/upload `
     -H "Authorization: Bearer <admin-jwt>" `
     -F "file=@docs/warranty.md"
 
@@ -135,14 +135,16 @@ curl -X POST http://localhost:8000/api/upload \
 
 # Первый запрос
 # PowerShell (Windows)
-curl -X POST http://localhost:8000/api/ask `
+curl.exe -X POST http://localhost:8000/api/ask `
+    -H "Authorization: Bearer <admin-jwt>" `
     -H "Content-Type: application/json" `
-    -d '{"query":"Какой срок гарантии?"}'
+    -d '{"question":"Какой срок гарантии?"}'
 
 # Bash (Linux/macOS)
 curl -X POST http://localhost:8000/api/ask \
+    -H "Authorization: Bearer <admin-jwt>" \
     -H "Content-Type: application/json" \
-    -d '{"query":"Какой срок гарантии?"}'
+    -d '{"question":"Какой срок гарантии?"}'
 ```
 
 Получить admin JWT для dev: `POST /api/auth/login` с `admin/admin` (если `ADMIN_PASSWORD_HASH` не задан в `.env`).
@@ -212,4 +214,3 @@ Perplexity server-side auto-router подменил модель. Это externa
 - `docs/disaster-recovery.md` — DR сценарии A-F (потеря данных, шифрование, encryption-key).
 - `docs/operations/` — runbook'и по backup, helm, gracekelly smoke.
 - `docs/CHANGELOG.md` — история изменений по аркам.
-
