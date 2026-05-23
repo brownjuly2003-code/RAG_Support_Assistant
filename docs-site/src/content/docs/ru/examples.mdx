@@ -12,12 +12,23 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 извлечённых утверждений перепроверяются по ним до того, как ответ покинет
 граф, — если включена проверка фактов и контекст поиска непустой.
 
-## Превью docs-хаба
+## Поверхность продукта
 
-Три скриншота с опубликованного docs-хаба: лэндинг, секция «Measured baseline»
-страницы оценки и автогенерируемая схема LangGraph. Это поверхность,
-на которую попадает читатель; живой endpoint `/api/ask` описан ниже
-в [Запустить локально](#запустить-локально).
+Первый скриншот — чат-UI ассистента с засеянным ответом на `E20` (тот же
+кейс, который разобран ниже в «Реальный вопрос, end-to-end»). Это статический
+UI-shell `static/chat.html`, отрендеренный через production-функцию
+`addMessage` с тем же контрактом ответа, что отдаёт живой `/api/ask`
+(sources + citations + badges Качество/Маршрут). Layout, citation-pill,
+disclosure «Источники» — реальный DOM; подменяется только сетевой запрос.
+Остальные три скриншота — с самого docs-хаба: лэндинг, секция
+«Measured baseline» и автогенерируемая схема LangGraph.
+
+<figure>
+  <img src="/RAG_Support_Assistant/screenshots/00-chat-e20.png"
+       alt="Чат-UI RAG Support Assistant: вопрос «Как исправить E20?» от пользователя и ответ ассистента с citation-pill [1], бейджами Качество: 92 и Маршрут: auto, развёрнутым блоком Источники со ссылкой на errors_e10_e30.md."
+       width="1280" height="820" loading="lazy" />
+  <figcaption>Чат-UI — E20 walkthrough через production-функцию <code>addMessage</code> с засеянным fixture-ответом (citation, бейджи, sources disclosure — реальный DOM).</figcaption>
+</figure>
 
 <figure>
   <img src="/RAG_Support_Assistant/screenshots/01-landing.png"

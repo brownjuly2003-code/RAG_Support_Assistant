@@ -12,13 +12,24 @@ claims are grounded in retrieved KB passages, and up to ten extracted claims
 are re-checked against them when fact verification is enabled and retrieved
 context is non-empty, before the answer leaves the graph.
 
-## Docs surface at a glance
+## Product surface
 
-Three screenshots from the published docs hub itself — the landing entry point,
-the measured-baseline section of the evaluation page, and the auto-generated
-LangGraph flowchart. They show the documentation surface a reader actually
-lands on; the live `/api/ask` endpoint is described under
-[Try it locally](#try-it-locally).
+The first screenshot is the assistant's chat UI rendered against a seeded
+`E20` answer — the same case walked end to end under "A real question, end
+to end" below. It is the static UI shell from `static/chat.html` with the
+exact response shape the live `/api/ask` endpoint returns (sources +
+citations + quality/route badges), so the layout, citation pill, and
+"Источники" disclosure match production; only the network call is replaced
+by a seeded fixture. The other three screenshots are from the docs hub
+itself: the landing entry, the measured-baseline section, and the
+auto-generated LangGraph flowchart.
+
+<figure>
+  <img src="/RAG_Support_Assistant/screenshots/00-chat-e20.png"
+       alt="RAG Support Assistant chat UI: user question 'Как исправить E20?' followed by the assistant's grounded answer with a [1] citation pill, Качество: 92 and Маршрут: auto badges, and an expanded Источники block citing errors_e10_e30.md."
+       width="1280" height="820" loading="lazy" />
+  <figcaption>Chat UI — E20 walkthrough rendered through the production <code>addMessage</code> path against a seeded fixture response (citation, badges, sources disclosure all real DOM).</figcaption>
+</figure>
 
 <figure>
   <img src="/RAG_Support_Assistant/screenshots/01-landing.png"
