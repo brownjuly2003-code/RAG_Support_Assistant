@@ -11,9 +11,11 @@ __pycache__/
 htmlcov/
 .env
 *.env.local
-data/
-# Published baseline: small JSON, referenced from docs-site/evaluation
+data/*
+# Published baseline (referenced from docs-site/evaluation). Re-include needs
+# the parent data/* form above, NOT data/, so the child paths can match.
 !data/evaluation/
+data/evaluation/*
 !data/evaluation/benchmark_results.json
 .vscode/
 .idea/

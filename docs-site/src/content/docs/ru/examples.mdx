@@ -24,30 +24,42 @@ disclosure «Источники» — реальный DOM; подменяетс
 «Measured baseline» и автогенерируемая схема LangGraph.
 
 <figure>
-  <img src="/RAG_Support_Assistant/screenshots/00-chat-e20.png"
-       alt="Чат-UI RAG Support Assistant: вопрос «Как исправить E20?» от пользователя и ответ ассистента с citation-pill [1], бейджами Качество: 92 и Маршрут: auto, развёрнутым блоком Источники со ссылкой на errors_e10_e30.md."
-       width="1280" height="820" loading="lazy" />
+  <picture>
+    <source srcset="/RAG_Support_Assistant/screenshots/00-chat-e20.webp" type="image/webp" />
+    <img src="/RAG_Support_Assistant/screenshots/00-chat-e20.png"
+         alt="Чат-UI RAG Support Assistant: вопрос «Как исправить E20?» от пользователя и ответ ассистента с citation-pill [1], бейджами Качество: 92 и Маршрут: auto, развёрнутым блоком Источники со ссылкой на errors_e10_e30.md."
+         width="1280" height="820" loading="lazy" decoding="async" />
+  </picture>
   <figcaption>Чат-UI — E20 walkthrough через production-функцию <code>addMessage</code> с засеянным fixture-ответом (citation, бейджи, sources disclosure — реальный DOM).</figcaption>
 </figure>
 
 <figure>
-  <img src="/RAG_Support_Assistant/screenshots/01-landing.png"
-       alt="Лэндинг docs-хаба RAG Support Assistant: заголовок, intro-абзац, кнопки See the example / Reproduce E20 / GitHub и начало карточек Proof points."
-       width="1440" height="900" loading="lazy" />
+  <picture>
+    <source srcset="/RAG_Support_Assistant/screenshots/01-landing.webp" type="image/webp" />
+    <img src="/RAG_Support_Assistant/screenshots/01-landing.png"
+         alt="Лэндинг docs-хаба RAG Support Assistant: заголовок, intro-абзац, кнопки See the example / Reproduce E20 / GitHub и начало карточек Proof points."
+         width="1440" height="900" loading="lazy" decoding="async" />
+  </picture>
   <figcaption>Лэндинг — заголовок, три кнопки навигации, секция Proof points.</figcaption>
 </figure>
 
 <figure>
-  <img src="/RAG_Support_Assistant/screenshots/02-evaluation.png"
-       alt="Страница оценки — секция Measured baseline с таблицей агрегатов (faithfulness 0.042, answer_relevancy 0.549, context_precision 0.190, context_recall 0.250) и per-category разрезом."
-       width="1440" height="900" loading="lazy" />
+  <picture>
+    <source srcset="/RAG_Support_Assistant/screenshots/02-evaluation.webp" type="image/webp" />
+    <img src="/RAG_Support_Assistant/screenshots/02-evaluation.png"
+         alt="Страница оценки — секция Measured baseline с таблицей агрегатов (faithfulness 0.042, answer_relevancy 0.549, context_precision 0.190, context_recall 0.250) и per-category разрезом."
+         width="1440" height="900" loading="lazy" decoding="async" />
+  </picture>
   <figcaption>Страница оценки — измеренные агрегаты + per-category числа из <code>benchmark_offline_with_docs.py</code>.</figcaption>
 </figure>
 
 <figure>
-  <img src="/RAG_Support_Assistant/screenshots/03-langgraph.png"
-       alt="Схема LangGraph state-машины inline: classify_complexity, transform_query, retrieve, grade_docs, generate, verify_facts, evaluate, route_or_retry с ветками suggest_questions / rewrite_query / handle_error."
-       width="1440" height="900" loading="lazy" />
+  <picture>
+    <source srcset="/RAG_Support_Assistant/screenshots/03-langgraph.webp" type="image/webp" />
+    <img src="/RAG_Support_Assistant/screenshots/03-langgraph.png"
+         alt="Схема LangGraph state-машины inline: classify_complexity, transform_query, retrieve, grade_docs, generate, verify_facts, evaluate, route_or_retry с ветками suggest_questions / rewrite_query / handle_error."
+         width="1440" height="900" loading="lazy" decoding="async" />
+  </picture>
   <figcaption>Архитектура / LangGraph — flowchart Mermaid, сгенерированный из <code>agent/graph.py</code>.</figcaption>
 </figure>
 

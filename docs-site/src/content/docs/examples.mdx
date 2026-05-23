@@ -25,30 +25,42 @@ itself: the landing entry, the measured-baseline section, and the
 auto-generated LangGraph flowchart.
 
 <figure>
-  <img src="/RAG_Support_Assistant/screenshots/00-chat-e20.png"
-       alt="RAG Support Assistant chat UI: user question 'Как исправить E20?' followed by the assistant's grounded answer with a [1] citation pill, Качество: 92 and Маршрут: auto badges, and an expanded Источники block citing errors_e10_e30.md."
-       width="1280" height="820" loading="lazy" />
+  <picture>
+    <source srcset="/RAG_Support_Assistant/screenshots/00-chat-e20.webp" type="image/webp" />
+    <img src="/RAG_Support_Assistant/screenshots/00-chat-e20.png"
+         alt="RAG Support Assistant chat UI: user question 'Как исправить E20?' followed by the assistant's grounded answer with a [1] citation pill, Качество: 92 and Маршрут: auto badges, and an expanded Источники block citing errors_e10_e30.md."
+         width="1280" height="820" loading="lazy" decoding="async" />
+  </picture>
   <figcaption>Chat UI — E20 walkthrough rendered through the production <code>addMessage</code> path against a seeded fixture response (citation, badges, sources disclosure all real DOM).</figcaption>
 </figure>
 
 <figure>
-  <img src="/RAG_Support_Assistant/screenshots/01-landing.png"
-       alt="Landing page of the RAG Support Assistant docs hub: title, intro paragraph, See the example / Reproduce E20 / GitHub buttons, and the start of the Proof points cards."
-       width="1440" height="900" loading="lazy" />
+  <picture>
+    <source srcset="/RAG_Support_Assistant/screenshots/01-landing.webp" type="image/webp" />
+    <img src="/RAG_Support_Assistant/screenshots/01-landing.png"
+         alt="Landing page of the RAG Support Assistant docs hub: title, intro paragraph, See the example / Reproduce E20 / GitHub buttons, and the start of the Proof points cards."
+         width="1440" height="900" loading="lazy" decoding="async" />
+  </picture>
   <figcaption>Landing entry — title, three navigation buttons, Proof points.</figcaption>
 </figure>
 
 <figure>
-  <img src="/RAG_Support_Assistant/screenshots/02-evaluation.png"
-       alt="Evaluation page — Measured baseline section with aggregate metric table (faithfulness 0.042, answer_relevancy 0.549, context_precision 0.190, context_recall 0.250) and per-category breakdown."
-       width="1440" height="900" loading="lazy" />
+  <picture>
+    <source srcset="/RAG_Support_Assistant/screenshots/02-evaluation.webp" type="image/webp" />
+    <img src="/RAG_Support_Assistant/screenshots/02-evaluation.png"
+         alt="Evaluation page — Measured baseline section with aggregate metric table (faithfulness 0.042, answer_relevancy 0.549, context_precision 0.190, context_recall 0.250) and per-category breakdown."
+         width="1440" height="900" loading="lazy" decoding="async" />
+  </picture>
   <figcaption>Evaluation page — measured aggregate + per-category numbers from <code>benchmark_offline_with_docs.py</code>.</figcaption>
 </figure>
 
 <figure>
-  <img src="/RAG_Support_Assistant/screenshots/03-langgraph.png"
-       alt="LangGraph state machine flowchart rendered inline: classify_complexity, transform_query, retrieve, grade_docs, generate, verify_facts, evaluate, route_or_retry with branches to suggest_questions / rewrite_query / handle_error."
-       width="1440" height="900" loading="lazy" />
+  <picture>
+    <source srcset="/RAG_Support_Assistant/screenshots/03-langgraph.webp" type="image/webp" />
+    <img src="/RAG_Support_Assistant/screenshots/03-langgraph.png"
+         alt="LangGraph state machine flowchart rendered inline: classify_complexity, transform_query, retrieve, grade_docs, generate, verify_facts, evaluate, route_or_retry with branches to suggest_questions / rewrite_query / handle_error."
+         width="1440" height="900" loading="lazy" decoding="async" />
+  </picture>
   <figcaption>Architecture / LangGraph — Mermaid flowchart auto-generated from <code>agent/graph.py</code>.</figcaption>
 </figure>
 
