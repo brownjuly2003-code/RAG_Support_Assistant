@@ -1,0 +1,17 @@
+---
+// Starlight already emits per-page og:title, og:description, og:url, og:locale,
+// and <link rel="canonical">. This override only fills in the Twitter equivalents
+// (twitter:title / twitter:description), which Starlight does not emit by default
+// — without them some crawlers (Twitter, LinkedIn) fall back to og:* but others
+// leave the card blank, so make them explicit.
+import Default from '@astrojs/starlight/components/Head.astro';
+
+const { entry } = Astro.locals.starlightRoute;
+const pageTitle = entry?.data?.title ?? 'RAG Support Assistant';
+const pageDescription =
+  entry?.data?.description ??
+  'LangGraph-based RAG service with offline evaluation, observability, and a reproducible E20 walkthrough.';
+---
+<Default><slot /></Default>
+<meta name="twitter:title" content={pageTitle} />
+<meta name="twitter:description" content={pageDescription} />

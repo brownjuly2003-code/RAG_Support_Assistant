@@ -12,6 +12,9 @@ htmlcov/
 .env
 *.env.local
 data/
+# Published baseline: small JSON, referenced from docs-site/evaluation
+!data/evaluation/
+!data/evaluation/benchmark_results.json
 .vscode/
 .idea/
 *.swp

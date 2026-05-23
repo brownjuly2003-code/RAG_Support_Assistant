@@ -12,7 +12,7 @@ const personLd = {
   '@type': 'Person',
   '@id': `${SITE_URL}/#julia-edomskikh`,
   name: 'Julia Edomskikh',
-  email: 'mailto:uedomskikh@gmail.com',
+  email: 'uedomskikh@gmail.com',
   jobTitle: 'Senior Data Analyst / Data Engineer',
   url: 'https://github.com/brownjuly2003-code',
   sameAs: ['https://github.com/brownjuly2003-code'],
@@ -28,7 +28,7 @@ const projectLd = {
   url: SITE_URL,
   codeRepository: REPO_URL,
   programmingLanguage: 'Python',
-  applicationCategory: 'DeveloperApplication',
+  applicationCategory: 'BusinessApplication',
   license: 'https://opensource.org/licenses/MIT',
   author: { '@id': `${SITE_URL}/#julia-edomskikh` },
   image: OG_IMAGE,
@@ -37,7 +37,6 @@ const projectLd = {
 const headTags = [
   { tag: 'meta', attrs: { property: 'og:type', content: 'website' } },
   { tag: 'meta', attrs: { property: 'og:site_name', content: 'RAG Support Assistant' } },
-  { tag: 'meta', attrs: { property: 'og:url', content: SITE_URL } },
   { tag: 'meta', attrs: { property: 'og:image', content: OG_IMAGE } },
   { tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
   { tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
@@ -51,6 +50,7 @@ const headTags = [
   },
   { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' } },
   { tag: 'meta', attrs: { name: 'twitter:image', content: OG_IMAGE } },
+  { tag: 'meta', attrs: { name: 'twitter:image:alt', content: 'RAG Support Assistant — LangGraph retrieval, observability, offline evaluation.' } },
   { tag: 'meta', attrs: { name: 'author', content: 'Julia Edomskikh' } },
   {
     tag: 'script',
@@ -80,6 +80,9 @@ export default defineConfig({
       description:
         'Public docs for RAG Support Assistant: product examples, architecture, local setup, and API routes.',
       head: headTags,
+      components: {
+        Head: './src/components/Head.astro',
+      },
       defaultLocale: 'root',
       locales: {
         root: { label: 'English', lang: 'en' },
