@@ -1,0 +1,146 @@
+{
+  "aggregate": {
+    "faithfulness": 0.0417,
+    "answer_relevancy": 0.5486,
+    "context_precision": 0.1905,
+    "context_recall": 0.25
+  },
+  "per_question": [
+    {
+      "question": "Что означает ошибка E401?",
+      "category": "error_codes",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.75,
+        "context_precision": 0.1429,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "question": "Почему появляется код 503?",
+      "category": "error_codes",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.5,
+        "context_precision": 0.1429,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "question": "Как исправить E20?",
+      "category": "error_codes",
+      "scores": {
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.3333,
+        "context_precision": 0.6667,
+        "context_recall": 1.0
+      }
+    },
+    {
+      "question": "Как сбросить пароль?",
+      "category": "reset_password",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.6667,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "question": "Восстановление доступа к аккаунту",
+      "category": "reset_password",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.6667,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "question": "Сколько длится гарантия?",
+      "category": "warranty",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.3333,
+        "context_precision": 0.4,
+        "context_recall": 0.6667
+      }
+    },
+    {
+      "question": "Условия гарантийного обслуживания",
+      "category": "warranty",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.6,
+        "context_recall": 1.0
+      }
+    },
+    {
+      "question": "Как установить приложение?",
+      "category": "installation",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.6667,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "question": "Инструкция по установке на Windows",
+      "category": "installation",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.3333,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "question": "Как отменить подписку?",
+      "category": "billing",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.6667,
+        "context_precision": 0.1667,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "question": "Изменить способ оплаты",
+      "category": "billing",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 1.0,
+        "context_precision": 0.1667,
+        "context_recall": 0.3333
+      }
+    },
+    {
+      "question": "Как связаться с поддержкой?",
+      "category": "general",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.6667,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      }
+    }
+  ],
+  "num_cases": 12,
+  "timestamp": "2026-05-23T03:57:20",
+  "context_source": "demo/docs (category->doc mapping)",
+  "category_coverage": {
+    "error_codes": 3,
+    "reset_password": 2,
+    "warranty": 2,
+    "installation": 2,
+    "billing": 2,
+    "general": 1
+  },
+  "supported_categories": [
+    "billing",
+    "error_codes",
+    "warranty"
+  ]
+}

@@ -78,50 +78,92 @@ ask, and trace inspection end to end against the seeded source.
 
 ## How to run the offline benchmark
 
+There are two runners. The default one runs against empty context (so only
+`answer_relevancy` is meaningful); the second one feeds each case the seeded
+demo doc whose category matches, which exercises all four metrics.
+
 ```powershell
 cd D:\RAG_Support_Assistant
+python -m demo.seed_docs                              # writes demo/docs/*.md
+
+# Baseline: empty context, scores answer_relevancy only.
 python evaluation/benchmark_runner.py
-# or with the embedding-based variant of answer_relevancy:
-python evaluation/benchmark_runner.py --use-embeddings
-# or write to a custom output path:
+
+# With docs: category->doc mapping for the three supported categories.
+python evaluation/benchmark_offline_with_docs.py
+
+# Or write to a custom output path:
 python evaluation/benchmark_runner.py --output data/evaluation/my_run.json
 ```
 
-The runner writes `data/evaluation/benchmark_results.json`. The committed
-docs do not embed sample output from that file; treat the local run as the
-source of truth for any numbers you cite.
+Both runners write `data/evaluation/benchmark_results.json`. The committed
+file is the output of `benchmark_offline_with_docs.py` so the numbers below
+are reproducible from a clean checkout.
+
+## Measured baseline
+
+The numbers below come from `evaluation/benchmark_offline_with_docs.py`
+against the seeded `demo/docs/` KB. Three categories have a supporting doc;
+three do not — that gap is the dominant signal in the aggregate.
+
+| Metric | Aggregate (n=12) |
+| --- | --- |
+| `faithfulness` | 0.042 |
+| `answer_relevancy` | 0.549 |
+| `context_precision` | 0.190 |
+| `context_recall` | 0.250 |
+
+Per-category mean scores:
+
+| Category | n | Has doc? | faithfulness | answer_relevancy | context_precision | context_recall |
+| --- | --- | --- | --- | --- | --- | --- |
+| `error_codes`   | 3 | yes | 0.167 | 0.528 | 0.317 | 0.333 |
+| `warranty`      | 2 | yes | 0.000 | 0.167 | 0.500 | 0.833 |
+| `billing`       | 2 | yes (returns_policy.md, partial overlap) | 0.000 | 0.833 | 0.167 | 0.167 |
+| `reset_password`| 2 | no  | 0.000 | 0.667 | 0.000 | 0.000 |
+| `installation`  | 2 | no  | 0.000 | 0.500 | 0.000 | 0.000 |
+| `general`       | 1 | no  | 0.000 | 0.667 | 0.000 | 0.000 |
+
+`faithfulness` is low because the answers in the fixture are written as
+prose that does not always overlap word-for-word with the demo doc text;
+context_precision/recall are zero for unsupported categories by design,
+not by accident. These are honest numbers, not a leaderboard.
 
 ## Output shape
 
 The structure of `data/evaluation/benchmark_results.json` is what the
-runner writes after a run. The file is committed to the repository in
-an empty state (all scores at zero) and overwritten by a local run:
+offline-with-docs runner writes after a run — that file is committed:
 
 ```json
 {
   "aggregate": {
-    "faithfulness": 0.0,
-    "answer_relevancy": 0.0,
-    "context_precision": 0.0,
-    "context_recall": 0.0
+    "faithfulness": 0.0417,
+    "answer_relevancy": 0.5486,
+    "context_precision": 0.1905,
+    "context_recall": 0.25
   },
   "per_question": [
     {
       "question": "Что означает ошибка E401?",
       "category": "error_codes",
       "scores": {
-        "faithfulness": 0.0,
-        "answer_relevancy": 0.0,
-        "context_precision": 0.0,
-        "context_recall": 0.0
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.6667,
+        "context_precision": 0.4,
+        "context_recall": 0.6667
       }
     }
   ],
   "num_cases": 12,
+  "context_source": "demo/docs (category->doc mapping)",
+  "category_coverage": { "error_codes": 3, "warranty": 2, "billing": 2,
+                          "reset_password": 2, "installation": 2, "general": 1 },
+  "supported_categories": ["billing", "error_codes", "warranty"],
   "timestamp": "…"
 }
 ```
 
-The zeros above are the committed empty state, not a measured result.
-Real values appear after `python evaluation/benchmark_runner.py` runs
-against a locally indexed demo KB.
+`benchmark_runner.py` (no docs) writes the same shape but the four
+aggregate fields collapse to keyword-only `answer_relevancy` ≈ 0.549 and
+zeros elsewhere — that's the baseline against which the demo-doc run
+is an honest improvement.

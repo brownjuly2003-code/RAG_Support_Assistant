@@ -12,6 +12,35 @@ claims are grounded in retrieved KB passages, and up to ten extracted claims
 are re-checked against them when fact verification is enabled and retrieved
 context is non-empty, before the answer leaves the graph.
 
+## Docs surface at a glance
+
+Three screenshots from the published docs hub itself — the landing entry point,
+the measured-baseline section of the evaluation page, and the auto-generated
+LangGraph flowchart. They show the documentation surface a reader actually
+lands on; the live `/api/ask` endpoint is described under
+[Try it locally](#try-it-locally).
+
+<figure>
+  <img src="/RAG_Support_Assistant/screenshots/01-landing.png"
+       alt="Landing page of the RAG Support Assistant docs hub: title, intro paragraph, See the example / Reproduce E20 / GitHub buttons, and the start of the Proof points cards."
+       width="1440" height="900" loading="lazy" />
+  <figcaption>Landing entry — title, three navigation buttons, Proof points.</figcaption>
+</figure>
+
+<figure>
+  <img src="/RAG_Support_Assistant/screenshots/02-evaluation.png"
+       alt="Evaluation page — Measured baseline section with aggregate metric table (faithfulness 0.042, answer_relevancy 0.549, context_precision 0.190, context_recall 0.250) and per-category breakdown."
+       width="1440" height="900" loading="lazy" />
+  <figcaption>Evaluation page — measured aggregate + per-category numbers from <code>benchmark_offline_with_docs.py</code>.</figcaption>
+</figure>
+
+<figure>
+  <img src="/RAG_Support_Assistant/screenshots/03-langgraph.png"
+       alt="LangGraph state machine flowchart rendered inline: classify_complexity, transform_query, retrieve, grade_docs, generate, verify_facts, evaluate, route_or_retry with branches to suggest_questions / rewrite_query / handle_error."
+       width="1440" height="900" loading="lazy" />
+  <figcaption>Architecture / LangGraph — Mermaid flowchart auto-generated from <code>agent/graph.py</code>.</figcaption>
+</figure>
+
 ## A real question, end to end
 
 The repo ships a 12-case fixture set under `evaluation/test_cases.json`

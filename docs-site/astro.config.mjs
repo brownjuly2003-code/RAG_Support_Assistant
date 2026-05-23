@@ -3,6 +3,67 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import rehypeMermaid from 'rehype-mermaid';
 
+const SITE_URL = 'https://brownjuly2003-code.github.io/RAG_Support_Assistant';
+const OG_IMAGE = `${SITE_URL}/og-image.png`;
+const REPO_URL = 'https://github.com/brownjuly2003-code/RAG_Support_Assistant';
+
+const personLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  '@id': `${SITE_URL}/#julia-edomskikh`,
+  name: 'Julia Edomskikh',
+  email: 'mailto:uedomskikh@gmail.com',
+  jobTitle: 'Senior Data Analyst / Data Engineer',
+  url: 'https://github.com/brownjuly2003-code',
+  sameAs: ['https://github.com/brownjuly2003-code'],
+};
+
+const projectLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareSourceCode',
+  '@id': `${SITE_URL}/#project`,
+  name: 'RAG Support Assistant',
+  description:
+    'LangGraph-based RAG service with offline evaluation, observability, and a reproducible E20 walkthrough.',
+  url: SITE_URL,
+  codeRepository: REPO_URL,
+  programmingLanguage: 'Python',
+  applicationCategory: 'DeveloperApplication',
+  license: 'https://opensource.org/licenses/MIT',
+  author: { '@id': `${SITE_URL}/#julia-edomskikh` },
+  image: OG_IMAGE,
+};
+
+const headTags = [
+  { tag: 'meta', attrs: { property: 'og:type', content: 'website' } },
+  { tag: 'meta', attrs: { property: 'og:site_name', content: 'RAG Support Assistant' } },
+  { tag: 'meta', attrs: { property: 'og:url', content: SITE_URL } },
+  { tag: 'meta', attrs: { property: 'og:image', content: OG_IMAGE } },
+  { tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
+  { tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
+  { tag: 'meta', attrs: { property: 'og:image:type', content: 'image/png' } },
+  {
+    tag: 'meta',
+    attrs: {
+      property: 'og:image:alt',
+      content: 'RAG Support Assistant — LangGraph retrieval, observability, offline evaluation.',
+    },
+  },
+  { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' } },
+  { tag: 'meta', attrs: { name: 'twitter:image', content: OG_IMAGE } },
+  { tag: 'meta', attrs: { name: 'author', content: 'Julia Edomskikh' } },
+  {
+    tag: 'script',
+    attrs: { type: 'application/ld+json' },
+    content: JSON.stringify(personLd),
+  },
+  {
+    tag: 'script',
+    attrs: { type: 'application/ld+json' },
+    content: JSON.stringify(projectLd),
+  },
+];
+
 export default defineConfig({
   site: 'https://brownjuly2003-code.github.io',
   base: '/RAG_Support_Assistant',
@@ -18,6 +79,7 @@ export default defineConfig({
       },
       description:
         'Public docs for RAG Support Assistant: product examples, architecture, local setup, and API routes.',
+      head: headTags,
       defaultLocale: 'root',
       locales: {
         root: { label: 'English', lang: 'en' },

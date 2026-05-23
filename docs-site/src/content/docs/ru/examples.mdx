@@ -12,6 +12,34 @@ import { Steps, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 извлечённых утверждений перепроверяются по ним до того, как ответ покинет
 граф, — если включена проверка фактов и контекст поиска непустой.
 
+## Превью docs-хаба
+
+Три скриншота с опубликованного docs-хаба: лэндинг, секция «Measured baseline»
+страницы оценки и автогенерируемая схема LangGraph. Это поверхность,
+на которую попадает читатель; живой endpoint `/api/ask` описан ниже
+в [Запустить локально](#запустить-локально).
+
+<figure>
+  <img src="/RAG_Support_Assistant/screenshots/01-landing.png"
+       alt="Лэндинг docs-хаба RAG Support Assistant: заголовок, intro-абзац, кнопки See the example / Reproduce E20 / GitHub и начало карточек Proof points."
+       width="1440" height="900" loading="lazy" />
+  <figcaption>Лэндинг — заголовок, три кнопки навигации, секция Proof points.</figcaption>
+</figure>
+
+<figure>
+  <img src="/RAG_Support_Assistant/screenshots/02-evaluation.png"
+       alt="Страница оценки — секция Measured baseline с таблицей агрегатов (faithfulness 0.042, answer_relevancy 0.549, context_precision 0.190, context_recall 0.250) и per-category разрезом."
+       width="1440" height="900" loading="lazy" />
+  <figcaption>Страница оценки — измеренные агрегаты + per-category числа из <code>benchmark_offline_with_docs.py</code>.</figcaption>
+</figure>
+
+<figure>
+  <img src="/RAG_Support_Assistant/screenshots/03-langgraph.png"
+       alt="Схема LangGraph state-машины inline: classify_complexity, transform_query, retrieve, grade_docs, generate, verify_facts, evaluate, route_or_retry с ветками suggest_questions / rewrite_query / handle_error."
+       width="1440" height="900" loading="lazy" />
+  <figcaption>Архитектура / LangGraph — flowchart Mermaid, сгенерированный из <code>agent/graph.py</code>.</figcaption>
+</figure>
+
 ## Реальный вопрос, end-to-end
 
 В репозитории лежит набор из 12 фикстурных вопросов

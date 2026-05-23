@@ -79,52 +79,93 @@ end-to-end, — на странице [Воспроизвести E20](/RAG_Supp
 
 ## Как запустить офлайн-бенчмарк
 
+Раннера два. Базовый гоняет с пустым контекстом (осмыслен только
+`answer_relevancy`); второй кормит каждому кейсу засеянный демо-документ
+по mapping'у категории — это поднимает все четыре метрики.
+
 ```powershell
 cd D:\RAG_Support_Assistant
+python -m demo.seed_docs                              # пишет demo/docs/*.md
+
+# Базовый: пустой контекст, считает только answer_relevancy.
 python evaluation/benchmark_runner.py
-# или с embedding-вариантом answer_relevancy:
-python evaluation/benchmark_runner.py --use-embeddings
-# или в кастомный output:
+
+# С документами: category->doc mapping для трёх поддерживаемых категорий.
+python evaluation/benchmark_offline_with_docs.py
+
+# Или в кастомный output:
 python evaluation/benchmark_runner.py --output data/evaluation/my_run.json
 ```
 
-Раннер пишет `data/evaluation/benchmark_results.json`. Закоммиченная
-документация не встраивает sample-output из этого файла; локальный
-прогон — единственный источник истины для любых чисел, которые вы
-будете цитировать.
+Оба раннера пишут `data/evaluation/benchmark_results.json`. Закоммиченный
+файл — это output `benchmark_offline_with_docs.py`, поэтому числа ниже
+воспроизводятся с чистого чекаута.
+
+## Измеренный baseline
+
+Числа ниже — output `evaluation/benchmark_offline_with_docs.py` против
+засеянной демо-базы `demo/docs/`. Три категории имеют поддерживающий
+документ, три — нет; этот gap и есть доминирующий сигнал в агрегате.
+
+| Метрика | Aggregate (n=12) |
+| --- | --- |
+| `faithfulness` | 0.042 |
+| `answer_relevancy` | 0.549 |
+| `context_precision` | 0.190 |
+| `context_recall` | 0.250 |
+
+Per-category mean scores:
+
+| Категория | n | Есть документ? | faithfulness | answer_relevancy | context_precision | context_recall |
+| --- | --- | --- | --- | --- | --- | --- |
+| `error_codes`   | 3 | да | 0.167 | 0.528 | 0.317 | 0.333 |
+| `warranty`      | 2 | да | 0.000 | 0.167 | 0.500 | 0.833 |
+| `billing`       | 2 | да (returns_policy.md, частичный overlap) | 0.000 | 0.833 | 0.167 | 0.167 |
+| `reset_password`| 2 | нет | 0.000 | 0.667 | 0.000 | 0.000 |
+| `installation`  | 2 | нет | 0.000 | 0.500 | 0.000 | 0.000 |
+| `general`       | 1 | нет | 0.000 | 0.667 | 0.000 | 0.000 |
+
+`faithfulness` низкий, потому что ответы в фикстуре написаны прозой,
+которая не всегда совпадает дословно с текстом демо-документа;
+context_precision/recall равны нулю для категорий без документа —
+по дизайну, не случайно. Это честные числа, не leaderboard.
 
 ## Формат output
 
 Структура `data/evaluation/benchmark_results.json` — это то, что
-раннер кладёт после прогона. Файл коммитится в репозиторий в
-пустом состоянии (все скоры на нуле) и перезаписывается локальным
-прогоном:
+offline-with-docs раннер пишет после прогона; именно этот файл
+закоммичен:
 
 ```json
 {
   "aggregate": {
-    "faithfulness": 0.0,
-    "answer_relevancy": 0.0,
-    "context_precision": 0.0,
-    "context_recall": 0.0
+    "faithfulness": 0.0417,
+    "answer_relevancy": 0.5486,
+    "context_precision": 0.1905,
+    "context_recall": 0.25
   },
   "per_question": [
     {
       "question": "Что означает ошибка E401?",
       "category": "error_codes",
       "scores": {
-        "faithfulness": 0.0,
-        "answer_relevancy": 0.0,
-        "context_precision": 0.0,
-        "context_recall": 0.0
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.6667,
+        "context_precision": 0.4,
+        "context_recall": 0.6667
       }
     }
   ],
   "num_cases": 12,
+  "context_source": "demo/docs (category->doc mapping)",
+  "category_coverage": { "error_codes": 3, "warranty": 2, "billing": 2,
+                          "reset_password": 2, "installation": 2, "general": 1 },
+  "supported_categories": ["billing", "error_codes", "warranty"],
   "timestamp": "…"
 }
 ```
 
-Нули выше — состояние закоммиченного файла, не измеренный результат.
-Реальные значения появляются после `python evaluation/benchmark_runner.py`
-против локально проиндексированной демо-базы.
+`benchmark_runner.py` без документов кладёт ту же структуру, но
+агрегат сводится к keyword-only `answer_relevancy` ≈ 0.549 и нулям
+остальные — это baseline, относительно которого прогон с демо-документами
+является честным улучшением.
