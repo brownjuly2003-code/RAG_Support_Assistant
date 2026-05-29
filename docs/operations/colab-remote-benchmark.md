@@ -48,3 +48,14 @@ ssh julia@192.168.1.133
 The iMac is an 8 GB Intel i5 host. It is not suitable for local LLM inference.
 If using it to open Colab manually, close the browser after downloading reports
 and do not start Lima/Docker unless continuing `DE_project` work.
+
+## Windows Laptop Thin-Client Check
+
+On 2026-05-30, the current Windows laptop was visible as `JULIADEV25` at
+`192.168.1.134`, with an Intel Core Ultra 5 125H, 16 GB physical RAM, and about
+6 GB free RAM during the check. WSL and Docker Desktop were already running,
+with `vmmemWSL` observed at about 1.07 GB RSS.
+
+Conclusion: do not use this laptop for local model or Docker-backed benchmark
+work under the 1 GB process limit. It is suitable only as a thin browser or SSH
+client for the Colab path.
