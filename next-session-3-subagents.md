@@ -16,6 +16,11 @@ paths unless the user explicitly opts in during that session.
   - Notebook clone target is `colab-remote-benchmark` until the branch lands on
     `master`.
   - `.pytest-tmp*/` local pytest basetemp directories are ignored.
+  - PR #1 is open and mergeable:
+    `https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`.
+  - CI passed on PR code head `6755403` after the notebook lint fix, ChromaDB
+    locked-audit update, and CI security config test alignment, before this
+    docs-only handoff refresh.
   - Agent Copilot semantic context UI and zero-overlap similar-ticket filtering.
   - Mock-safe benchmark Quickstart example and guardrail test.
   - `static/widget.html` a11y landmark coverage and color-contrast fix.
@@ -40,6 +45,9 @@ paths unless the user explicitly opts in during that session.
       backlog item.
 - [x] Colab remote benchmark setup: notebook and runbook are committed and the
       notebook branch was pushed for manual Colab use.
+- [x] Colab remote benchmark PR: PR #1 is open and mergeable. CI was green at
+      code head `6755403` before this docs-only handoff refresh. Merge remains
+      an explicit boundary.
 
 ## Suggested Subagents
 None for default non-live work. Use subagents only if the session explicitly
@@ -54,6 +62,8 @@ opts into planning or running a live benchmark.
   `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/colab-remote-benchmark/notebooks/rag_support_colab_remote_benchmark.ipynb`
 - If no explicit live opt-in is given, keep work read-only or docs-only and do
   not reopen closed AP housekeeping tasks.
+- If no explicit merge instruction is given, do not merge PR #1, enable
+  auto-merge, deploy, release, or delete branches.
 - If making changes, keep scope to docs/tests unless a focused failing test
   proves runtime code needs a small fix.
 - Do not run GraceKelly, Mistral, paid/API benchmarks, scheduler installation,
@@ -66,5 +76,7 @@ opts into planning or running a live benchmark.
 - [x] No live paid/API benchmark has run without explicit opt-in.
 - [x] Active handoff docs point future sessions at the Colab runbook branch,
       not the closed Batch N lane.
-- [x] `git status --short --branch` was reviewed; state-refresh commits are
-      local-only unless a later instruction explicitly permits another push.
+- [x] `git status --short --branch` was reviewed before this docs-only handoff
+      refresh; branch was clean against `origin/colab-remote-benchmark` at
+      `6755403`.
+- [x] PR #1 CI passed on code head `6755403`.

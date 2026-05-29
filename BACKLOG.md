@@ -9,7 +9,9 @@
 > GraceKelly/Mistral benchmark lane requires explicit opt-in only.
 > 2026-05-30 branch note: Colab remote benchmark setup is closed on
 > `colab-remote-benchmark`; current state is in `AGENT_STATE.md` and
-> `next-session-3-subagents.md`. No additional local backlog item is open.
+> `next-session-3-subagents.md`. PR #1 is open and mergeable; CI was green at
+> code head `6755403` before the docs-only handoff refresh. Merge remains an
+> explicit boundary. No additional local backlog item is open.
 
 ## Historical Safe Tasks
 
