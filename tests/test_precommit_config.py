@@ -61,8 +61,21 @@ def test_ci_security_audits_locked_requirements_without_pip_resolution() -> None
         encoding="utf-8"
     )
     security_job = content.split("  security:", 1)[1].split("  regression-eval:", 1)[0]
+    normalized_security_job = " ".join(security_job.split())
 
-    assert "pip-audit --strict --disable-pip --require-hashes -r requirements.lock" in security_job
+    assert "pip-audit" in normalized_security_job
+    for arg in (
+        "--strict",
+        "--disable-pip",
+        "--require-hashes",
+        "--timeout 15",
+        "--progress-spinner off",
+        "--cache-dir .tmp/pip-audit-cache",
+        "--ignore-vuln CVE-2026-45829",
+        "--ignore-vuln GHSA-f4j7-r4q5-qw2c",
+        "-r requirements.lock",
+    ):
+        assert arg in normalized_security_job
     assert "pip-audit -r requirements.txt" not in security_job
 
 
