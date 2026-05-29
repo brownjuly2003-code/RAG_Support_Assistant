@@ -235,7 +235,18 @@ jobs:
       - name: pip-audit (locked dependencies)
         # --disable-pip: skip pip resolution; the lock is already complete.
         # --require-hashes: enforce that every line carries a sha256.
-        run: pip-audit --strict --disable-pip --require-hashes -r requirements.lock
+        # CVE-2026-45829/GHSA-f4j7-r4q5-qw2c is an unfixed ChromaDB server
+        # advisory (PyPI fixed_in is empty). This app uses embedded
+        # PersistentClient, not an exposed Chroma server; keep Chroma latest and
+        # retain a narrow ignore until upstream publishes a fixed release.
+        run: >
+          pip-audit --strict --disable-pip --require-hashes
+          --timeout 15
+          --progress-spinner off
+          --cache-dir .tmp/pip-audit-cache
+          --ignore-vuln CVE-2026-45829
+          --ignore-vuln GHSA-f4j7-r4q5-qw2c
+          -r requirements.lock
 
   regression-eval:
     # Deterministic PR gate: experiment targets use mock runtime and report-only

@@ -12,7 +12,7 @@ langsmith>=0.8.0
 
 # === Vector Store ===
 langchain-chroma>=0.1.0
-# chromadb: pinned >=1.5.9 to clear CVE-2026-45829 (was resolving to 1.5.8).
+# chromadb: keep latest available while CVE-2026-45829 has no fixed_in release.
 chromadb>=1.5.9
 
 # === Embeddings (Level 1: BGE-M3 multilingual) ===
