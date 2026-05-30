@@ -41,6 +41,12 @@ that session.
     R5's baseline tokenizer fix is closed by `e91c1f1`: BM25 uses Unicode word
     tokens plus `casefold()` for both index and query tokenization; deeper RU
     lemmatization remains optional future tuning.
+    R7 has a partial live baseline: commit `7b0d9ee` makes incompatible Chroma
+    collections fail closed, and a separate ignored eval collection built from
+    the three tracked demo KB docs passed a 3-case live Mistral regression
+    (`ministral-3b-latest` vs `mistral-small-latest`, 100%/100%, 0
+    regressions). The default local `rag_docs_default` collection is still
+    stale/incompatible until rebuilt.
   - 2026-05-30 Claude CLI follow-up: read-only full-project `claude -p`
     review prompts were blocked by Anthropic cyber safeguards, and
     `claude ultrareview --timeout 30` returned "Ultrareview is currently
@@ -50,10 +56,12 @@ that session.
     ran `python scripts/weekly_report.py --dry-run`. Commit `a86b44c` keeps
     the repository root on `PYTHONPATH`; master CI run `26671830370` and
     manual Weekly Report dispatch `26671836799` both passed.
-  - 2026-05-30 readiness note: local `.env` contains `MISTRAL_API_KEY` and
-    Mistral `/v1/models` returned `200`; GraceKelly was not reachable on
-    `http://127.0.0.1:8011/healthz/ready`. No secret value was printed or
-    copied, and no local GraceKelly/Docker/Ollama/model process was started.
+  - 2026-05-30 readiness/runtime note: local `.env` contains
+    `MISTRAL_API_KEY` and Mistral `/v1/models` returned `200`; after explicit
+    user opt-in, GraceKelly was started locally on `http://127.0.0.1:8011`,
+    `/healthz/ready` returned `ok`, `/api/v1/models` returned a model catalog,
+    and a minimal `/api/v1/orchestrate` smoke succeeded. No secret value was
+    printed or copied.
   - Agent Copilot semantic context UI and zero-overlap similar-ticket filtering.
   - Mock-safe benchmark Quickstart example and guardrail test.
   - `static/widget.html` a11y landmark coverage and color-contrast fix.
@@ -83,6 +91,8 @@ that session.
 - [x] Weekly Report scheduled workflow import failure: closed 2026-05-30 by
       `a86b44c`; manual workflow_dispatch run `26671836799` passed on
       `master`.
+- [x] Chroma embedding compatibility guard: closed 2026-05-30 by `7b0d9ee`;
+      CI run `26679263174` and Pages run `26679263187` passed on `master`.
 
 ## Compact Resume Plan
 - Close current dirty WIP first, if still dirty.
@@ -92,6 +102,11 @@ that session.
   only default non-destructive local work is branch hygiene or focused follow-up
   from a new failing check. Do not repeat the audit-remediation family merely
   to refresh timestamps or handoff prose.
+- If continuing R7 locally, do not assume the default local Chroma store is
+  usable. Either rebuild `rag_docs_default` deliberately from the intended KB
+  corpus, or keep using an explicit eval prefix such as
+  `VECTORDB_COLLECTION_PREFIX=rag_eval_20260530t0835` for non-destructive
+  regression runs.
 
 ## Suggested Subagents
 None for default non-live work. Use subagents only if the session explicitly
@@ -130,3 +145,6 @@ opts into planning or running a live benchmark.
 - [x] Manual Weekly Report dispatch passed on `a86b44c` (`26671836799`).
 - [x] Codex audit remediation focused local checks passed; see `AGENT_STATE.md`
       for command-level evidence.
+- [x] Explicit live opt-in was received for GraceKelly/Mistral runtime.
+- [x] Live R7 partial baseline ran on a separate eval collection and passed
+      3/3 cases with 0 regressions.

@@ -95,6 +95,35 @@
 - `gh workflow run weekly-report.yml --ref master` followed by
   `gh run watch 26671836799 --exit-status`: manual Weekly Report dispatch
   passed on `a86b44c`.
+- `python -m pytest tests/test_startup_concurrency.py -q -p no:schemathesis -p no:cacheprovider`:
+  2 passed, 1 warning after commit `7b0d9ee` added the Chroma
+  embedding-compatibility startup guard.
+- `ruff check api/app.py tests/test_startup_concurrency.py`: All checks
+  passed after commit `7b0d9ee`.
+- `python -m pytest tests/test_startup_concurrency.py tests/test_health.py tests/test_magic_numbers_settings.py -q -p no:schemathesis -p no:cacheprovider`:
+  15 passed, 2 warnings after commit `7b0d9ee`.
+- `python -m py_compile api/app.py`: passed after commit `7b0d9ee`.
+- Live diagnostic regression before commit `7b0d9ee`:
+  `python scripts/regression_eval.py --baseline ministral-3b-latest --candidate mistral-small-latest --dataset evaluation/curated_cases.jsonl --tenant all --max-cases 1 --seed 42 --allow-paid-apis --no-persist`
+  reached live Mistral but failed the gate with 0% pass because the default
+  local Chroma collection expected embedding dimension 3 while `BAAI/bge-m3`
+  produced 1024.
+- Same live regression after commit `7b0d9ee`: failed fast before answer
+  generation with `vector store is not initialized` plus a clear log that the
+  existing Chroma store is incompatible and must be rebuilt.
+- Non-destructive live eval collection setup: copied `docs/warranty.md`,
+  `docs/returns_policy.md`, and `docs/errors_e10_e30.md` into
+  `.tmp/live-eval-seed-docs-20260530T0835`, then ingested them with
+  `VECTORDB_COLLECTION_PREFIX=rag_eval_20260530t0835` and
+  `INGESTION_BATCH_ENABLED=false`; ingestion loaded 3 documents and produced
+  6 chunks. No tracked data or existing default Chroma collection was deleted.
+- Live Mistral regression with the eval collection:
+  `VECTORDB_COLLECTION_PREFIX=rag_eval_20260530t0835 ONLINE_EVALUATORS_ENABLED=false python scripts/regression_eval.py --baseline ministral-3b-latest --candidate mistral-small-latest --dataset evaluation/curated_cases.jsonl --tenant all --max-cases 3 --seed 42 --allow-paid-apis --no-persist`
+  passed the gate: 3 effective cases, baseline pass rate 100%, candidate pass
+  rate 100%, 0 regressions, 0 infrastructure failures, baseline cost
+  `$0.000042`, candidate cost `$0.000228`.
+- `gh run list --branch master --limit 5`: CI run `26679263174` and Pages run
+  `26679263187` passed on pushed commit `7b0d9ee`.
 
 ## Operating Mode
 
@@ -131,6 +160,9 @@ benchmark PR is merged into `master`:
 - `a86b44c` fixes the scheduled Weekly Report workflow import path by keeping
   the repository root on `PYTHONPATH`; master CI and a manual Weekly Report
   dispatch passed on that commit.
+- `7b0d9ee` fails closed when a persisted Chroma collection is incompatible
+  with the active embedding model, with a regression test for dimension
+  mismatch.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
@@ -174,6 +206,15 @@ commit `f8ffb0f` is on `origin/master`.
   tokenizer fix is closed by `e91c1f1`: BM25 now uses Unicode word tokens plus
   `casefold()` for index and query tokenization; deeper RU lemmatization remains
   optional future tuning.
+- 2026-05-30 R7 live baseline follow-up: user explicitly opted into
+  GraceKelly/Mistral local runtime. Commit `7b0d9ee` makes startup fail closed
+  for an incompatible persisted Chroma collection instead of running retrieval
+  with dimension errors and empty citations. The default local
+  `rag_docs_default` collection remains stale/incompatible until rebuilt. A
+  separate ignored eval collection `rag_eval_20260530t0835_default` was built
+  from the three tracked demo KB docs and produced a passing 3-case live
+  Mistral baseline. This is only a partial R7 signal; full R7 still requires a
+  larger RU eval set and a larger live run.
 - 2026-05-30 Claude CLI follow-up: `claude -p` read-only full-project review
   prompts were blocked by Anthropic cyber safeguards, and
   `claude ultrareview --timeout 30` returned "Ultrareview is currently

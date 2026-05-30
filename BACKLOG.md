@@ -12,6 +12,11 @@
 > through PR #1 at `415d4c8`; current state is in `AGENT_STATE.md` and
 > `next-session-3-subagents.md`. Master CI and Pages deploy passed. No
 > additional local backlog item is open.
+> 2026-05-30 live opt-in note: commit `7b0d9ee` closed a runtime quality
+> blocker by failing closed on incompatible Chroma embedding dimensions. A
+> separate ignored eval collection passed a 3-case live Mistral regression; the
+> default local `rag_docs_default` collection still needs a deliberate rebuild
+> before it should be used for full RAG quality measurement.
 
 ## Historical Safe Tasks
 
