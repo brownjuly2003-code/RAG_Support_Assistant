@@ -1460,9 +1460,8 @@ async def _probe_redis() -> ComponentStatus:
 def _run_alembic_upgrade() -> None:
     """Apply pending alembic migrations. Idempotent.
 
-    Gated on AUTO_MIGRATE env (default "true"). On failure, logs warning
-    but does not abort startup so that the operator can run
-    `alembic upgrade head` manually.
+    Gated on AUTO_MIGRATE env (default "true"). In production, migration
+    failures abort startup unless AUTO_MIGRATE_FAIL_OPEN=true is explicit.
     """
     import os
 
@@ -1483,6 +1482,14 @@ def _run_alembic_upgrade() -> None:
         command.upgrade(cfg, "head")
         logger.info("alembic upgrade head: OK")
     except Exception as exc:  # noqa: BLE001
+        fail_open = os.getenv("AUTO_MIGRATE_FAIL_OPEN", "false").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        if getattr(get_settings(), "rag_env", "development") == "production" and not fail_open:
+            logger.error("alembic auto-migrate failed in production: %s", exc)
+            raise RuntimeError("alembic auto-migrate failed in production") from exc
         logger.warning("alembic auto-migrate skipped: %s", exc)
 
 

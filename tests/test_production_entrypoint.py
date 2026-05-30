@@ -9,6 +9,7 @@ Locks invariants exposed by Codex audit 2026-04-27 P0:
 from __future__ import annotations
 
 import importlib
+from types import SimpleNamespace
 
 import pytest
 
@@ -61,6 +62,43 @@ def test_production_import_disables_fastapi_docs(monkeypatch: pytest.MonkeyPatch
         settings_module = importlib.reload(settings_module)
         settings_module._settings = None
         importlib.reload(app_module)
+
+
+def test_production_auto_migrate_failure_fails_startup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import alembic.command
+    import api.app as app_module
+
+    monkeypatch.setenv("AUTO_MIGRATE", "true")
+    monkeypatch.delenv("AUTO_MIGRATE_FAIL_OPEN", raising=False)
+    monkeypatch.setattr(app_module, "get_settings", lambda: SimpleNamespace(rag_env="production"))
+    monkeypatch.setattr(
+        alembic.command,
+        "upgrade",
+        lambda config, revision: (_ for _ in ()).throw(RuntimeError("migration failed")),
+    )
+
+    with pytest.raises(RuntimeError, match="auto-migrate failed"):
+        app_module._run_alembic_upgrade()
+
+
+def test_production_auto_migrate_fail_open_requires_explicit_opt_in(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import alembic.command
+    import api.app as app_module
+
+    monkeypatch.setenv("AUTO_MIGRATE", "true")
+    monkeypatch.setenv("AUTO_MIGRATE_FAIL_OPEN", "true")
+    monkeypatch.setattr(app_module, "get_settings", lambda: SimpleNamespace(rag_env="production"))
+    monkeypatch.setattr(
+        alembic.command,
+        "upgrade",
+        lambda config, revision: (_ for _ in ()).throw(RuntimeError("migration failed")),
+    )
+
+    app_module._run_alembic_upgrade()
 
 
 @pytest.mark.parametrize(

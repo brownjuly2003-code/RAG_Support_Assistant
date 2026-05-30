@@ -312,7 +312,8 @@ Resilience layers apply in this order:
 | `ALLOW_ANONYMOUS_ADMIN` | `-` | Opt-in escape hatch when `API_KEY` is empty: set to `1`/`true` to permit anonymous admin (otherwise endpoints return HTTP 503). Local-dev only. Added 2026-04-26 audit. |
 | `HOST` | `127.0.0.1` (bare run) | Used only when launching via `python main.py`. Default Docker Compose is local-dev only and binds host ports to `127.0.0.1`. |
 | `PORT` | `8000` | Same — bare run only. |
-| `AUTO_MIGRATE` | `true` | Run `alembic upgrade head` in startup lifespan. On error logs warning, does not abort. |
+| `AUTO_MIGRATE` | `true` | Run `alembic upgrade head` in startup lifespan. In production, errors abort startup unless `AUTO_MIGRATE_FAIL_OPEN=true` is explicitly set. |
+| `AUTO_MIGRATE_FAIL_OPEN` | `false` | Production escape hatch for temporarily logging migration failures instead of aborting startup. |
 
 ### Database, cache, tracing, and analytics
 
