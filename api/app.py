@@ -1222,6 +1222,36 @@ async def _get_or_create_session(
 # Startup logic
 # ---------------------------------------------------------------------------
 
+def _is_embedding_dimension_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "dimension" in message and ("embedding" in message or "expecting" in message or "got" in message)
+
+
+def _validate_vector_store_embedding_compatibility(vector_store: Any, embeddings: Any) -> None:
+    if not hasattr(embeddings, "embed_query"):
+        return
+
+    collection = getattr(vector_store, "_collection", None)
+    if collection is not None and hasattr(collection, "count"):
+        try:
+            if int(collection.count()) == 0:
+                return
+        except Exception:
+            pass
+
+    try:
+        probe_vector = embeddings.embed_query("embedding compatibility probe")
+        if collection is not None and hasattr(collection, "query"):
+            collection.query(query_embeddings=[probe_vector], n_results=1)
+            return
+        if hasattr(vector_store, "similarity_search_by_vector"):
+            vector_store.similarity_search_by_vector(probe_vector, k=1)
+    except Exception as exc:
+        if _is_embedding_dimension_error(exc):
+            raise
+        logger.warning("Could not validate existing Chroma embedding compatibility: %s", exc)
+
+
 def initialize_vector_store() -> None:
     global _vector_store, _retriever, _chunks
 
@@ -1244,11 +1274,26 @@ def initialize_vector_store() -> None:
                     logger.warning("get_embeddings not available, skipping vector store load")
                     return
 
-                _vector_store = _Chroma(
+                vector_store = _Chroma(
                     persist_directory=str(chroma_dir),
                     embedding_function=embeddings,
                     collection_name=collection_name,
                 )
+                try:
+                    _validate_vector_store_embedding_compatibility(vector_store, embeddings)
+                except Exception as exc:
+                    logger.error(
+                        "Existing Chroma store at %s is incompatible with embedding model %s: %s. "
+                        "Rebuild the vector store before running RAG.",
+                        chroma_dir,
+                        getattr(settings, "embedding_model", "unknown"),
+                        exc,
+                    )
+                    _vector_store = None
+                    _retriever = None
+                    return
+
+                _vector_store = vector_store
 
                 if _get_retriever is not None:
                     retriever_params = inspect.signature(_get_retriever).parameters
