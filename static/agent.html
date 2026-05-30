@@ -149,20 +149,34 @@
         }
 
         function renderTicketList(tickets) {
-            ticketList.innerHTML = '';
+            ticketList.textContent = '';
             if (!tickets.length) {
-                ticketList.innerHTML = '<div class="empty-state">Тикетов нет.</div>';
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = 'Тикетов нет.';
+                ticketList.appendChild(empty);
                 return;
             }
 
             tickets.forEach(function(ticket) {
                 const button = document.createElement('button');
+                const status = String(ticket.status || '');
+                const statusClass = status.replace(/[^a-z0-9_-]/gi, '');
+                const statusBadge = document.createElement('span');
+                const question = document.createElement('strong');
+                const createdAt = document.createElement('span');
                 button.type = 'button';
                 button.className = 'ticket-card' + (ticket.id === currentTicketId ? ' active' : '');
-                button.innerHTML =
-                    '<span class="ticket-status status-' + ticket.status + '">' + ticket.status + '</span>' +
-                    '<strong>' + ticket.user_question + '</strong>' +
-                    '<span>' + (ticket.created_at || '').replace('T', ' ').slice(0, 16) + '</span>';
+                statusBadge.className = 'ticket-status';
+                if (statusClass) {
+                    statusBadge.classList.add('status-' + statusClass);
+                }
+                statusBadge.textContent = status;
+                question.textContent = ticket.user_question || '';
+                createdAt.textContent = String(ticket.created_at || '').replace('T', ' ').slice(0, 16);
+                button.appendChild(statusBadge);
+                button.appendChild(question);
+                button.appendChild(createdAt);
                 button.addEventListener('click', function() {
                     loadTicket(ticket.id);
                 });
@@ -171,29 +185,43 @@
         }
 
         function renderMessages(messages) {
-            ticketMessages.innerHTML = '';
+            ticketMessages.textContent = '';
             if (!messages.length) {
-                ticketMessages.innerHTML = '<div class="empty-state">История сообщений недоступна.</div>';
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = 'История сообщений недоступна.';
+                ticketMessages.appendChild(empty);
                 return;
             }
 
             messages.forEach(function(message) {
                 const item = document.createElement('article');
-                item.className = 'context-message ' + message.role;
-                item.innerHTML =
-                    '<div class="context-role">' + message.role + '</div>' +
-                    '<div class="context-content">' + message.content + '</div>';
+                const roleName = String(message.role || 'message');
+                const roleClass = roleName.replace(/[^a-z0-9_-]/gi, '') || 'message';
+                const role = document.createElement('div');
+                const content = document.createElement('div');
+                item.className = 'context-message';
+                item.classList.add(roleClass);
+                role.className = 'context-role';
+                role.textContent = roleName;
+                content.className = 'context-content';
+                content.textContent = message.content || '';
+                item.appendChild(role);
+                item.appendChild(content);
                 ticketMessages.appendChild(item);
             });
         }
 
         function renderQualityScores(scores) {
-            qualityScores.innerHTML = '';
+            qualityScores.textContent = '';
             const entries = Object.entries(scores || {}).filter(function(entry) {
                 return entry[1] !== null && entry[1] !== undefined && entry[1] !== '';
             });
             if (!entries.length) {
-                qualityScores.innerHTML = '<div class="empty-state">Оценки качества недоступны.</div>';
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = 'Оценки качества недоступны.';
+                qualityScores.appendChild(empty);
                 return;
             }
 
@@ -211,9 +239,12 @@
         }
 
         function renderRetrievedDocs(items) {
-            retrievedDocs.innerHTML = '';
+            retrievedDocs.textContent = '';
             if (!items.length) {
-                retrievedDocs.innerHTML = '<div class="empty-state">Документы не найдены.</div>';
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = 'Документы не найдены.';
+                retrievedDocs.appendChild(empty);
                 return;
             }
 
@@ -236,18 +267,24 @@
         }
 
         function renderSimilar(items) {
-            similarTickets.innerHTML = '';
+            similarTickets.textContent = '';
             if (!items.length) {
-                similarTickets.innerHTML = '<div class="empty-state">Нет похожих resolved тикетов.</div>';
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = 'Нет похожих resolved тикетов.';
+                similarTickets.appendChild(empty);
                 return;
             }
 
             items.forEach(function(item) {
                 const card = document.createElement('article');
+                const question = document.createElement('strong');
+                const response = document.createElement('p');
                 card.className = 'similar-card';
-                card.innerHTML =
-                    '<strong>' + item.user_question + '</strong>' +
-                    '<p>' + (item.operator_response || 'Ответ пока не сохранён.') + '</p>';
+                question.textContent = item.user_question || '';
+                response.textContent = item.operator_response || 'Ответ пока не сохранён.';
+                card.appendChild(question);
+                card.appendChild(response);
                 similarTickets.appendChild(card);
             });
         }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,6 +39,14 @@ def test_agent_page_renders_semantic_context_sections() -> None:
     assert 'id="qualityScores"' in html
     assert "renderRetrievedDocs(data.retrieved_docs || [])" in html
     assert "renderQualityScores(data.quality_scores || {})" in html
+
+
+def test_agent_page_builds_api_content_with_text_nodes() -> None:
+    html = (PROJECT_ROOT / "static" / "agent.html").read_text(encoding="utf-8")
+
+    unsafe_render_blocks = re.findall(r"\b(?:button|item|card)\.innerHTML\s*=[\s\S]*?;", html)
+
+    assert unsafe_render_blocks == []
 
 
 def test_agent_tickets_list_filters_by_tenant_and_status(
