@@ -4,8 +4,8 @@
 
 - Project: RAG Support Assistant.
 - Stack: Python 3.13, FastAPI, LangGraph, ChromaDB, Postgres, Redis, static HTML UI, Helm/Docker deploy artifacts.
-- Branch source: `master` tracks `origin/master`; latest pushed head is
-  `a86b44c46859bde474e3d92a65379efbd4adb27d`.
+- Branch source: `master` tracks `origin/master`; weekly-report fix
+  `a86b44c46859bde474e3d92a65379efbd4adb27d` is on `origin/master`.
 - Snapshot date: 2026-05-30 (Europe/Bucharest).
 - Baseline HEAD before this state refresh: `415d4c88baf52d4696987d5e2546dd7ce3ce576c`.
 - Baseline file count: 697 tracked files from `git ls-files`.
