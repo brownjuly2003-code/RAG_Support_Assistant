@@ -222,6 +222,18 @@
 - `ruff check tests/test_docs_quality.py tests/test_quickstart_docs.py tests/test_backlog_docs.py`:
   All checks passed after `8c70cf9`.
 - `git diff --check origin/master..HEAD`: passed after `8c70cf9`.
+- Ahead-series CI/meta verification:
+  `python -m pytest tests/test_precommit_config.py tests/test_github_workflows.py -q -p no:schemathesis -p no:cacheprovider --basetemp=.tmp/pytest-meta-ahead`:
+  16 passed, 1 warning after commit `f6efe4f`.
+- `python -c "import yaml, pathlib; yaml.safe_load(pathlib.Path(r'.github\\workflows\\ci.yml').read_text(encoding='utf-8')); yaml.safe_load(pathlib.Path(r'.pre-commit-config.yaml').read_text(encoding='utf-8')); print('yaml ok')"`:
+  passed after `f6efe4f`.
+- Ahead-series regression-tooling verification:
+  `python -m pytest tests/test_regression_runner.py tests/test_provider_benchmark.py tests/test_detect_stale_curated_cases.py -q -p no:schemathesis -p no:cacheprovider --basetemp=.tmp/pytest-regression-tooling-ahead`:
+  34 passed, 1 warning after `f6efe4f`.
+- `ruff check tests/test_regression_runner.py tests/test_provider_benchmark.py tests/test_detect_stale_curated_cases.py scripts/regression_eval.py`:
+  All checks passed after `f6efe4f`.
+- `python -m py_compile scripts/regression_eval.py tests/test_regression_runner.py tests/test_provider_benchmark.py tests/test_detect_stale_curated_cases.py`:
+  passed after `f6efe4f`.
 
 ## Operating Mode
 
@@ -288,6 +300,8 @@ benchmark PR is merged into `master`:
 - `8c70cf9` records the focused ahead-series verification; a follow-up
   docs/config gate passed `tests/test_docs_quality.py`,
   `tests/test_quickstart_docs.py`, and `tests/test_backlog_docs.py`.
+- `f6efe4f` records that docs/config gate; subsequent local meta and regression
+  tooling gates also passed without live APIs.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff

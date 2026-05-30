@@ -212,3 +212,8 @@ opts into planning or running a live benchmark.
 - [x] Docs/config ahead gate passed after `8c70cf9`: `tests/test_docs_quality.py`,
       `tests/test_quickstart_docs.py`, `tests/test_backlog_docs.py`, Ruff on
       those tests, and `git diff --check origin/master..HEAD`.
+- [x] Meta/CI ahead gate passed after `f6efe4f`: `tests/test_precommit_config.py`,
+      `tests/test_github_workflows.py`, and workflow/pre-commit YAML parsing.
+- [x] Regression-tooling ahead gate passed after `f6efe4f`:
+      `tests/test_regression_runner.py`, `tests/test_provider_benchmark.py`,
+      `tests/test_detect_stale_curated_cases.py`, Ruff, and py_compile.
