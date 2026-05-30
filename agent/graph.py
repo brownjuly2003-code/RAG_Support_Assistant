@@ -11,6 +11,7 @@ Level 3: + conversation memory, multi-query retrieval, contextual retrieval
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import inspect
 import re
@@ -58,6 +59,7 @@ from agent.prompts import (  # noqa: E402
     build_self_eval_prompt,
     build_suggested_questions_prompt,
     build_query_transform_prompt,
+    build_doc_grade_batch_prompt,
     build_doc_grade_prompt,
     build_query_rewrite_prompt,
     build_verify_claim_prompt,
@@ -314,6 +316,123 @@ def _parse_int_score(text: str, default: int = 50) -> int:
         return default
     value = int(numbers[0])
     return max(1, min(100, value))
+
+
+def _coerce_relevance_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"yes", "true", "relevant", "supported", "1"}:
+            return True
+        if normalized in {"no", "false", "irrelevant", "unsupported", "0"}:
+            return False
+    return None
+
+
+def _coerce_doc_grade_batch(
+    payload: Any,
+    doc_count: int,
+) -> list[tuple[bool, str]] | None:
+    if doc_count <= 0:
+        return []
+
+    raw_grades = payload
+    if isinstance(payload, dict):
+        raw_grades = payload.get("grades") or payload.get("documents") or payload.get("results")
+    if not isinstance(raw_grades, list):
+        return None
+
+    grades_by_index: dict[int, tuple[bool, str]] = {}
+    ordered_bool_grades: list[tuple[bool, str]] = []
+    for position, item in enumerate(raw_grades, start=1):
+        if isinstance(item, bool | str):
+            relevant = _coerce_relevance_bool(item)
+            if relevant is None:
+                return None
+            ordered_bool_grades.append((relevant, ""))
+            continue
+        if not isinstance(item, dict):
+            return None
+
+        raw_index = item.get("index") or item.get("doc_index") or item.get("document_index") or position
+        try:
+            index = int(raw_index)
+        except (TypeError, ValueError):
+            return None
+        if index < 1 or index > doc_count:
+            return None
+
+        relevant = _coerce_relevance_bool(item.get("relevant"))
+        if relevant is None:
+            relevant = _coerce_relevance_bool(item.get("verdict"))
+        if relevant is None:
+            return None
+        grades_by_index[index] = (relevant, str(item.get("reason") or ""))
+
+    if ordered_bool_grades:
+        if len(ordered_bool_grades) != doc_count:
+            return None
+        return ordered_bool_grades
+
+    if len(grades_by_index) != doc_count:
+        return None
+    return [grades_by_index[index] for index in range(1, doc_count + 1)]
+
+
+def _parse_doc_grade_batch_text(raw: str, doc_count: int) -> list[tuple[bool, str]] | None:
+    text = raw.strip()
+    if not text:
+        return None
+
+    try:
+        return _coerce_doc_grade_batch(json.loads(text), doc_count)
+    except json.JSONDecodeError:
+        pass
+
+    json_match = re.search(r"\{.*\}", text, flags=re.DOTALL)
+    if json_match:
+        try:
+            parsed = json.loads(json_match.group(0))
+        except json.JSONDecodeError:
+            parsed = None
+        if parsed is not None:
+            grades = _coerce_doc_grade_batch(parsed, doc_count)
+            if grades is not None:
+                return grades
+
+    indexed: dict[int, tuple[bool, str]] = {}
+    ordered: list[tuple[bool, str]] = []
+    for position, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip().strip("-*")
+        if not stripped:
+            continue
+        indexed_match = re.match(
+            r"^(?:doc(?:ument)?\s*)?(\d+)\s*[\).:\-]?\s*(yes|no|true|false|relevant|irrelevant)\b",
+            stripped,
+            flags=re.IGNORECASE,
+        )
+        if indexed_match:
+            index = int(indexed_match.group(1))
+            relevant = _coerce_relevance_bool(indexed_match.group(2))
+            if relevant is not None and 1 <= index <= doc_count:
+                indexed[index] = (relevant, "")
+            continue
+        ordered_match = re.match(
+            r"^(yes|no|true|false|relevant|irrelevant)\b",
+            stripped,
+            flags=re.IGNORECASE,
+        )
+        if ordered_match:
+            relevant = _coerce_relevance_bool(ordered_match.group(1))
+            if relevant is not None:
+                ordered.append((relevant, ""))
+
+    if len(indexed) == doc_count:
+        return [indexed[index] for index in range(1, doc_count + 1)]
+    if len(ordered) == doc_count:
+        return ordered
+    return None
 
 
 def _is_knowledge_gap(state: GraphState) -> bool:
@@ -851,54 +970,116 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
             with tracer.start_as_current_span("rag.rerank") as span:
                 span.set_attribute("rag.tenant_id", str(state.get("tenant_id", "default")))
                 span.set_attribute("rag.input_docs", len(context_docs))
-                for doc in context_docs:
-                    prompt = build_doc_grade_prompt(question=question, document=doc)
+                batch_grades: list[tuple[bool, str]] | None = None
+                if len(context_docs) > 1:
+                    batch_prompt = build_doc_grade_batch_prompt(question=question, documents=context_docs)
                     try:
                         t0 = time.monotonic()
+                        raw_verdict = ""
                         if _llm_supports_structured_output(llm):
                             try:
                                 structured = _invoke_with_schema(
                                     llm,
-                                    prompt,
+                                    batch_prompt,
                                     {
                                         "type": "object",
                                         "properties": {
-                                            "relevant": {"type": "boolean"},
-                                            "reason": {"type": "string"},
+                                            "grades": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "index": {"type": "integer"},
+                                                        "relevant": {"type": "boolean"},
+                                                        "reason": {"type": "string"},
+                                                    },
+                                                    "required": ["index", "relevant"],
+                                                    "additionalProperties": True,
+                                                },
+                                            }
                                         },
-                                        "required": ["relevant"],
+                                        "required": ["grades"],
                                         "additionalProperties": True,
                                     },
                                 )
                             except Exception:
                                 structured = None
-                            if isinstance(structured, dict) and isinstance(structured.get("relevant"), bool):
-                                is_relevant = bool(structured["relevant"])
-                                raw_verdict = str(structured.get("reason") or "")
-                            else:
-                                raw_verdict = llm.invoke(prompt).strip()
-                                is_relevant = raw_verdict.upper().startswith("YES")
-                        else:
-                            raw_verdict = llm.invoke(prompt).strip()
-                            is_relevant = raw_verdict.upper().startswith("YES")
+                            if structured is not None:
+                                raw_verdict = str(structured)
+                                batch_grades = _coerce_doc_grade_batch(structured, len(context_docs))
+                        if batch_grades is None:
+                            raw_verdict = llm.invoke(batch_prompt).strip()
+                            batch_grades = _parse_doc_grade_batch_text(raw_verdict, len(context_docs))
                         usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "grade_docs"))
                         usage_recorded = True
                         trace_llm_call(
                             trace_id=trace_id,
                             node_name="grade_docs",
-                            prompt=prompt,
+                            prompt=batch_prompt,
                             response=raw_verdict,
                             model=model,
                             duration_ms=(time.monotonic() - t0) * 1000,
                             tool_calls=state.get("tool_calls") or None,
                         )
                     except Exception as exc:
-                        logger.warning("[grade_docs] LLM error: %s", exc, extra={"trace_id": trace_id})
-                        is_relevant = True
-                    if is_relevant:
-                        graded.append(doc)
-                    else:
-                        filtered_count += 1
+                        logger.warning("[grade_docs] Batch LLM error: %s", exc, extra={"trace_id": trace_id})
+                        batch_grades = None
+
+                if batch_grades is not None:
+                    for doc, (is_relevant, _reason) in zip(context_docs, batch_grades):
+                        if is_relevant:
+                            graded.append(doc)
+                        else:
+                            filtered_count += 1
+                else:
+                    for doc in context_docs:
+                        prompt = build_doc_grade_prompt(question=question, document=doc)
+                        try:
+                            t0 = time.monotonic()
+                            if _llm_supports_structured_output(llm):
+                                try:
+                                    structured = _invoke_with_schema(
+                                        llm,
+                                        prompt,
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "relevant": {"type": "boolean"},
+                                                "reason": {"type": "string"},
+                                            },
+                                            "required": ["relevant"],
+                                            "additionalProperties": True,
+                                        },
+                                    )
+                                except Exception:
+                                    structured = None
+                                if isinstance(structured, dict) and isinstance(structured.get("relevant"), bool):
+                                    is_relevant = bool(structured["relevant"])
+                                    raw_verdict = str(structured.get("reason") or "")
+                                else:
+                                    raw_verdict = llm.invoke(prompt).strip()
+                                    is_relevant = raw_verdict.upper().startswith("YES")
+                            else:
+                                raw_verdict = llm.invoke(prompt).strip()
+                                is_relevant = raw_verdict.upper().startswith("YES")
+                            usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "grade_docs"))
+                            usage_recorded = True
+                            trace_llm_call(
+                                trace_id=trace_id,
+                                node_name="grade_docs",
+                                prompt=prompt,
+                                response=raw_verdict,
+                                model=model,
+                                duration_ms=(time.monotonic() - t0) * 1000,
+                                tool_calls=state.get("tool_calls") or None,
+                            )
+                        except Exception as exc:
+                            logger.warning("[grade_docs] LLM error: %s", exc, extra={"trace_id": trace_id})
+                            is_relevant = True
+                        if is_relevant:
+                            graded.append(doc)
+                        else:
+                            filtered_count += 1
                 if graded and all(doc is not context_docs[0] for doc in graded):
                     graded.insert(0, context_docs[0])
                     filtered_count = max(0, filtered_count - 1)

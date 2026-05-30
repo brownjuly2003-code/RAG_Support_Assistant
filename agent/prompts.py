@@ -176,6 +176,23 @@ Return ONLY 3 questions, one per line. No numbering. No bullets.""",
 Ответь ОДНИМ словом: YES или NO.
 """,
     },
+    "doc_grade_batch": {
+        "prompt_id": "DOC_GRADE_BATCH_PROMPT_V1",
+        "text": """Ты — эксперт по оценке релевантности документов.
+
+Для каждого документа определи, содержит ли он информацию, полезную для ответа
+на вопрос пользователя. Учитывай: частичная релевантность тоже считается.
+
+ВОПРОС:
+{question}
+
+ДОКУМЕНТЫ:
+{documents}
+
+Верни только JSON без Markdown:
+{{"grades":[{{"index":1,"relevant":true,"reason":"коротко"}}]}}
+""",
+    },
     "query_rewrite": {
         "prompt_id": "QUERY_REWRITE_PROMPT_V1",
         "text": """Ты — специалист по улучшению поисковых запросов.
@@ -357,6 +374,23 @@ def build_doc_grade_prompt(
         question=question,
         source=source,
         text=text,
+    )
+
+
+def build_doc_grade_batch_prompt(
+    question: str,
+    documents: List[Dict[str, Any]],
+    experiment: Any | None = None,
+) -> str:
+    parts = []
+    for idx, document in enumerate(documents, start=1):
+        text = str(document.get("page_content", ""))
+        metadata = document.get("metadata") or {}
+        source = metadata.get("source") or metadata.get("file_name") or f"doc_{idx}"
+        parts.append(f"[{idx}] source={source}\n{text}")
+    return _resolve_prompt("doc_grade_batch", experiment).format(
+        question=question,
+        documents="\n\n".join(parts),
     )
 
 
