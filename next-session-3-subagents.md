@@ -209,3 +209,6 @@ opts into planning or running a live benchmark.
 - [x] Focused ahead-series verification passed after `db61488`: 95 pytest
       cases, Ruff, py_compile, mypy with `vectordb/manager.py`, and
       `git diff --check`.
+- [x] Docs/config ahead gate passed after `8c70cf9`: `tests/test_docs_quality.py`,
+      `tests/test_quickstart_docs.py`, `tests/test_backlog_docs.py`, Ruff on
+      those tests, and `git diff --check origin/master..HEAD`.
