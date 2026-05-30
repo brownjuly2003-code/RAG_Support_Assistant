@@ -6,7 +6,7 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
-from typing import Any, Dict, List, Sequence
+from typing import TYPE_CHECKING, Any, Dict, List, Sequence
 
 from vectordb import _base_manager
 
@@ -14,7 +14,10 @@ from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
-Document = _base_manager.Document
+if TYPE_CHECKING:
+    from langchain_core.documents import Document
+else:
+    Document = _base_manager.Document
 Chroma = getattr(_base_manager, "Chroma", None)
 
 _retriever_cache: dict[str, Any] = {}
