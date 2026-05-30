@@ -20,7 +20,6 @@ TABLE_PAGES = [
     PROJECT_ROOT / "static" / "admin.html",
     PROJECT_ROOT / "templates" / "index.html",
     PROJECT_ROOT / "templates" / "escalations.html",
-    PROJECT_ROOT / "templates" / "traces.html",
 ]
 MAIN_LANDMARK_PAGES = [
     PROJECT_ROOT / "static" / "chat.html",
@@ -30,8 +29,6 @@ MAIN_LANDMARK_PAGES = [
     PROJECT_ROOT / "templates" / "index.html",
     PROJECT_ROOT / "templates" / "ask_result.html",
     PROJECT_ROOT / "templates" / "escalations.html",
-    PROJECT_ROOT / "templates" / "traces.html",
-    PROJECT_ROOT / "templates" / "trace_detail.html",
 ]
 STATIC_A11Y_PATHS = [
     "/static/chat.html",
@@ -80,39 +77,10 @@ TEMPLATE_A11Y_CONTEXTS = {
             }
         ],
     },
-    "traces.html": {
-        "traces": [
-            {
-                "trace_id": "trace-001",
-                "started_at": "2026-04-21T08:00:00Z",
-                "finished_at": "2026-04-21T08:00:03Z",
-                "final_route": "auto",
-                "final_quality": 90,
-                "final_relevance": 92,
-            }
-        ],
-    },
-    "trace_detail.html": {
-        "trace": {
-            "trace_id": "trace-001",
-            "started_at": "2026-04-21T08:00:00Z",
-            "finished_at": "2026-04-21T08:00:03Z",
-            "final_route": "auto",
-            "final_quality": 90,
-            "final_relevance": 92,
-        },
-        "steps": [
-            {
-                "step_order": 1,
-                "node_name": "retrieve",
-                "ts": "2026-04-21T08:00:01Z",
-                "state_pretty": '{"docs": 3}',
-            }
-        ],
-    },
 }
 TEMPLATE_A11Y_PATHS = [f"/{name}" for name in TEMPLATE_A11Y_CONTEXTS]
 ALL_A11Y_PATHS = STATIC_A11Y_PATHS + TEMPLATE_A11Y_PATHS
+REMOVED_TRACE_UI_TEMPLATES = {"traces.html", "trace_detail.html"}
 AXE_SUBPROCESS_TIMEOUT_SEC = 180
 AXE_PYTEST_TIMEOUT_SEC = AXE_SUBPROCESS_TIMEOUT_SEC + 60
 
@@ -199,6 +167,17 @@ def test_widget_page_is_covered_by_a11y_landmark_checks() -> None:
 
     assert widget_path in MAIN_LANDMARK_PAGES
     assert "/static/widget.html" in STATIC_A11Y_PATHS
+
+
+def test_removed_trace_ui_templates_are_not_a11y_targets() -> None:
+    table_page_names = {path.name for path in TABLE_PAGES}
+    landmark_page_names = {path.name for path in MAIN_LANDMARK_PAGES}
+
+    assert REMOVED_TRACE_UI_TEMPLATES.isdisjoint(table_page_names)
+    assert REMOVED_TRACE_UI_TEMPLATES.isdisjoint(landmark_page_names)
+    assert REMOVED_TRACE_UI_TEMPLATES.isdisjoint(TEMPLATE_A11Y_CONTEXTS)
+    assert not any(path.endswith("/traces.html") for path in ALL_A11Y_PATHS)
+    assert not any(path.endswith("/trace_detail.html") for path in ALL_A11Y_PATHS)
 
 
 def test_chat_main_landmark_wraps_primary_chat_shell() -> None:

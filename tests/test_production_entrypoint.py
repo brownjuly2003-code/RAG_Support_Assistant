@@ -35,7 +35,17 @@ def test_production_app_has_full_middleware_stack():
     )
 
 
-@pytest.mark.parametrize("legacy_path", ["/ask", "/escalations", "/traces"])
+@pytest.mark.parametrize(
+    "legacy_path",
+    [
+        "/ask",
+        "/escalations",
+        "/traces",
+        "/escalations-ui",
+        "/traces-ui",
+        "/traces-ui/{trace_id}",
+    ],
+)
 def test_no_legacy_unauthenticated_endpoints(legacy_path: str):
     from api.app import app as api_app
 

@@ -119,13 +119,17 @@ jobs:
 
   test-unit:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
           cache: "pip"
           cache-dependency-path: |
             requirements-dev.lock
@@ -143,6 +147,10 @@ jobs:
     # If a Postgres/Redis-backed test fails, the PR should turn red.
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
     services:
       postgres:
         image: postgres:16
@@ -176,7 +184,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
           cache: "pip"
           cache-dependency-path: |
             requirements-dev.lock
@@ -235,7 +243,18 @@ jobs:
       - name: pip-audit (locked dependencies)
         # --disable-pip: skip pip resolution; the lock is already complete.
         # --require-hashes: enforce that every line carries a sha256.
-        run: pip-audit --strict --disable-pip --require-hashes -r requirements.lock
+        # CVE-2026-45829/GHSA-f4j7-r4q5-qw2c is an unfixed ChromaDB server
+        # advisory (PyPI fixed_in is empty). This app uses embedded
+        # PersistentClient, not an exposed Chroma server; keep Chroma latest and
+        # retain a narrow ignore until upstream publishes a fixed release.
+        run: >
+          pip-audit --strict --disable-pip --require-hashes
+          --timeout 15
+          --progress-spinner off
+          --cache-dir .tmp/pip-audit-cache
+          --ignore-vuln CVE-2026-45829
+          --ignore-vuln GHSA-f4j7-r4q5-qw2c
+          -r requirements.lock
 
   regression-eval:
     # Deterministic PR gate: experiment targets use mock runtime and report-only

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from auth.jwt_handler import create_access_token
 
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ADMIN_HEADERS = {"Authorization": f"Bearer {create_access_token('admin', 'admin')}"}
 AGENT_HEADERS = {"Authorization": f"Bearer {create_access_token('op1', 'agent')}"}
 VIEWER_HEADERS = {"Authorization": f"Bearer {create_access_token('v1', 'viewer')}"}
@@ -150,3 +153,10 @@ def test_trace_detail_returns_steps(monkeypatch, client_with_key: TestClient) ->
 
     assert response.status_code == 200
     assert response.json() == trace
+
+
+def test_review_queue_trace_action_uses_authenticated_api_fetch() -> None:
+    html = (PROJECT_ROOT / "static" / "admin.html").read_text(encoding="utf-8")
+
+    assert 'fetch("/api/admin/traces/" + encodeURIComponent(item.trace_id || ""), {' in html
+    assert 'traceLink.target = "_blank";' not in html

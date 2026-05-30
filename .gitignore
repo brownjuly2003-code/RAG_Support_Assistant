@@ -29,6 +29,7 @@ review_batch_*.jsonl
 
 # Pytest project-local basetemp (was breaking ruff/bandit scans)
 .tmp/
+.pytest-tmp*/
 tests/pytest-cache-files-*
 
 # Regression eval artefacts (runtime output, не должны попадать в repo)

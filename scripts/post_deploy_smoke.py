@@ -169,8 +169,9 @@ def render_report(report: SmokeReport) -> str:
     ]
     for result in report.results:
         status = "PASS" if result.passed else "FAIL"
+        detail = result.detail.replace("|", r"\|")
         lines.append(
-            f"| {result.name} | {status} | {result.latency_ms:.1f} | {result.detail.replace('|', '\\|')} |"
+            f"| {result.name} | {status} | {result.latency_ms:.1f} | {detail} |"
         )
     return "\n".join(lines)
 

@@ -61,9 +61,45 @@ def test_ci_security_audits_locked_requirements_without_pip_resolution() -> None
         encoding="utf-8"
     )
     security_job = content.split("  security:", 1)[1].split("  regression-eval:", 1)[0]
+    normalized_security_job = " ".join(security_job.split())
 
-    assert "pip-audit --strict --disable-pip --require-hashes -r requirements.lock" in security_job
+    assert "pip-audit" in normalized_security_job
+    for arg in (
+        "--strict",
+        "--disable-pip",
+        "--require-hashes",
+        "--timeout 15",
+        "--progress-spinner off",
+        "--cache-dir .tmp/pip-audit-cache",
+        "--ignore-vuln CVE-2026-45829",
+        "--ignore-vuln GHSA-f4j7-r4q5-qw2c",
+        "-r requirements.lock",
+    ):
+        assert arg in normalized_security_job
     assert "pip-audit -r requirements.txt" not in security_job
+
+
+def test_ci_tests_cover_docker_python_target_and_current_python() -> None:
+    ci = yaml.safe_load(
+        (PROJECT_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    )
+    unit_job = ci["jobs"]["test-unit"]
+    integration_job = ci["jobs"]["test-integration"]
+    dockerfile = (PROJECT_ROOT / "Dockerfile").read_text(encoding="utf-8")
+    runtime_lock = (PROJECT_ROOT / "requirements.lock").read_text(encoding="utf-8")
+    dev_lock = (PROJECT_ROOT / "requirements-dev.lock").read_text(encoding="utf-8")
+
+    assert dockerfile.startswith("FROM python:3.11-slim")
+    assert "--python-version 3.11" in runtime_lock
+    assert "--python-version 3.11" in dev_lock
+    for job in (unit_job, integration_job):
+        assert job["strategy"]["matrix"]["python-version"] == ["3.11", "3.13"]
+        setup_step = next(
+            step
+            for step in job["steps"]
+            if step.get("uses", "").startswith("actions/setup-python")
+        )
+        assert setup_step["with"]["python-version"] == "${{ matrix.python-version }}"
 
 
 def test_runtime_session_dependency_is_locked() -> None:

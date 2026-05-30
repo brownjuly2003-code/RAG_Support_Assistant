@@ -84,6 +84,14 @@ def test_readme_web_ui_points_to_current_chat_route() -> None:
     assert "`/` - main chat UI" not in web_ui
 
 
+def test_runbook_uses_api_trace_detail_endpoint() -> None:
+    content = (PROJECT_ROOT / "docs" / "runbook.md").read_text(encoding="utf-8")
+
+    assert "/api/admin/traces/{trace_id}" in content
+    assert "/api/admin/traces/<trace_id>" in content
+    assert "/traces-ui" not in content
+
+
 def test_readme_provider_profiles_include_gracekelly_mixed() -> None:
     content = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
     providers = content.split("## Providers", 1)[1].split("## Regression eval", 1)[0]
