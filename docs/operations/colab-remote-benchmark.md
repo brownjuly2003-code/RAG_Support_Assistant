@@ -17,7 +17,7 @@ benchmark path.
 
 1. Open Google Colab interactively.
 2. Upload `notebooks/rag_support_colab_remote_benchmark.ipynb`, or open it from
-   GitHub after the `colab-remote-benchmark` branch is pushed.
+   GitHub on `master`.
 3. Run the runtime probe cell and confirm memory/GPU are Colab resources.
 4. Run the clone and dependency cells.
 5. Run the mock provider benchmark cell first. This must not call providers and

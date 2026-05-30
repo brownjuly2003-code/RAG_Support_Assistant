@@ -4,14 +4,16 @@
 
 - Project: RAG Support Assistant.
 - Stack: Python 3.13, FastAPI, LangGraph, ChromaDB, Postgres, Redis, static HTML UI, Helm/Docker deploy artifacts.
-- Branch: `colab-remote-benchmark`, tracking `origin/colab-remote-benchmark`.
+- Branch source: `origin/master` after PR #1 merge; local refresh branch
+  `post-merge-handoff` was created from `origin/master`.
 - Snapshot date: 2026-05-30 (Europe/Bucharest).
-- Baseline HEAD before this state refresh: `69d8e9589e4e230274627811d7d0c42fe6c955ac`.
+- Baseline HEAD before this state refresh: `415d4c88baf52d4696987d5e2546dd7ce3ce576c`.
 - Baseline file count: 697 tracked files from `git ls-files`.
 - Baseline JS bundle size: not applicable; no frontend bundler config was found.
 - Baseline i18n key count: not applicable; no i18n JSON catalog was found.
 - Git status at snapshot time: clean before this `AGENT_STATE.md` refresh.
-- Origin sync at baseline: `colab-remote-benchmark` was current with `origin/colab-remote-benchmark` at `69d8e95`. PR #1 is open and mergeable; CI passed on this code head after the Claude audit fixes and Python 3.11 smoke-report fix. Merge/deploy/release remain explicit boundaries.
+- Origin sync at baseline: PR #1 was merged into `origin/master` at merge
+  commit `415d4c8`. Master CI and Pages deploy passed on the merge commit.
 
 ## Runtime
 
@@ -23,12 +25,12 @@
 
 ## Last Verified Gates
 
-- `git status --short --branch`: clean on `colab-remote-benchmark...origin/colab-remote-benchmark` before this `AGENT_STATE.md` refresh.
-- `git rev-parse HEAD`: `69d8e9589e4e230274627811d7d0c42fe6c955ac`.
+- `git status --short --branch`: clean on `post-merge-handoff...origin/master` before this `AGENT_STATE.md` refresh.
+- `git rev-parse HEAD`: `415d4c88baf52d4696987d5e2546dd7ce3ce576c`.
 - `git ls-files | Measure-Object`: 697 tracked files.
 - `python -c "import json, pathlib; json.loads(pathlib.Path(r'notebooks\\rag_support_colab_remote_benchmark.ipynb').read_text(encoding='utf-8')); print('notebook json ok')"`: passed before commit `a461fba`.
 - `git diff --check`: passed before commit `a461fba`.
-- `git ls-remote --heads origin colab-remote-benchmark`: `a461fbae52b56a9356215e3185469f22ca41a24a`.
+- `git fetch origin master`: updated `origin/master` to `415d4c8` after PR #1 merge.
 - `Get-Command pi`: available.
 - `Get-Command codex`: available.
 - `pi --version`: `0.72.1`.
@@ -51,7 +53,10 @@
 - `python -m ruff check .`: All checks passed (verified 2026-05-30 before `6755403`; later code/test changes were checked with targeted Ruff entries above).
 - `python -m bandit -r . -ll -c pyproject.toml -x ./tests,./.venv,./reports,./data,./archive-legacy,./.tmp`: 0 medium / 0 high (39 low informational), verified 2026-05-07.
 - `pip-audit --strict --disable-pip --require-hashes --timeout 15 --progress-spinner off --cache-dir .tmp/pip-audit-cache --ignore-vuln CVE-2026-45829 --ignore-vuln GHSA-f4j7-r4q5-qw2c -r requirements.lock`: no known vulnerabilities found, 1 ignored (verified 2026-05-30 after the ChromaDB lock update).
-- `gh pr checks 1`: all non-skipped CI jobs passed on PR #1 code head `69d8e95` after the Python 3.11 smoke-report fix (helm, lint, migrations, pre-commit, regression-eval, security, test-integration 3.11/3.13, test-unit 3.11/3.13, type-check). Duplicate push/PR jobs are expected for this branch.
+- `gh pr checks 1`: all non-skipped CI jobs passed on PR #1 code head `11add63` before merge (helm, lint, migrations, pre-commit, regression-eval, security, test-integration 3.11/3.13, test-unit 3.11/3.13, type-check). Duplicate push/PR jobs were expected for that branch.
+- `gh pr merge 1 --merge`: merged PR #1 into `master` at `415d4c8`.
+- `gh run watch 26670103203 --exit-status`: master CI passed on `415d4c8` (migrations, type-check, integration 3.11/3.13, unit 3.11/3.13, lint, pre-commit, security, helm; regression-eval skipped because inputs did not change).
+- `gh run watch 26670103209 --exit-status`: Pages docs build and deploy passed on `415d4c8`.
 
 ## Operating Mode
 
@@ -62,8 +67,8 @@
 
 ## Next Step
 
-All `docs/plans/2026-05-01-backlog.md` items remain closed. The current WIP is
-the Colab remote benchmark PR:
+All `docs/plans/2026-05-01-backlog.md` items remain closed. The Colab remote
+benchmark PR is merged into `master`:
 
 - `905a65e` adds `docs/operations/colab-remote-benchmark.md` and
   `notebooks/rag_support_colab_remote_benchmark.ipynb`.
@@ -80,16 +85,16 @@ the Colab remote benchmark PR:
   3.11/3.13 CI coverage for unit/integration tests.
 - `69d8e95` fixes the Python 3.11-only smoke-report f-string syntax failure
   found by the new CI matrix and adds a local source guard.
+- `11add63` refreshes durable handoff/status docs before merge.
+- `415d4c8` is the merge commit on `master`.
 
-The explicitly allowed branch push was completed:
-`git push origin colab-remote-benchmark:colab-remote-benchmark`. PR #1
-(`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is open,
-mergeable, and has green CI on code head `69d8e95`. Do not merge, deploy,
-release, delete branches, or enable
-auto-merge without a new explicit instruction.
+PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
+merged. Master CI and Pages deploy passed on `415d4c8`. No non-live local
+backlog item remains open; live GraceKelly/Mistral benchmark work remains
+explicit opt-in only.
 
 Notebook URL for manual Colab use:
-`https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/colab-remote-benchmark/notebooks/rag_support_colab_remote_benchmark.ipynb`
+`https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`
 
 To run another dry-run of the autopilot guardrails:
 
