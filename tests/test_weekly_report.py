@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
+import os
+from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -160,6 +164,23 @@ def test_gather_analytics_handles_empty_data_and_document_errors(
     assert analytics["total_cost"] == 0
     assert analytics["top_topics"] == []
     assert analytics["stale_docs"] == []
+
+
+def test_weekly_report_cli_help_runs_without_pythonpath() -> None:
+    project_root = Path(__file__).resolve().parent.parent
+    env = {key: value for key, value in os.environ.items() if key.upper() != "PYTHONPATH"}
+
+    result = subprocess.run(
+        [sys.executable, "scripts/weekly_report.py", "--help"],
+        cwd=project_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "--dry-run" in result.stdout
 
 
 def test_weekly_report_run_once_sends_slack_and_email(

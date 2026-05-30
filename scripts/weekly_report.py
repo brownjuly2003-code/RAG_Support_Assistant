@@ -4,14 +4,20 @@ from __future__ import annotations
 import argparse
 import asyncio
 import smtplib
+import sys
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
+from pathlib import Path
 from typing import Any
 
 import httpx
 
-from config.settings import get_settings
-from reports.renderer import generate_report
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from config.settings import get_settings  # noqa: E402
+from reports.renderer import generate_report  # noqa: E402
 
 
 def get_target_tenants(tenant: str | None = None) -> list[dict[str, Any]]:
