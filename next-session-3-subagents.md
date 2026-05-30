@@ -221,3 +221,7 @@ opts into planning or running a live benchmark.
       `PRE_COMMIT_HOME=.tmp/pre-commit-cache pre-commit run --from-ref origin/master --to-ref HEAD`.
       The default global pre-commit cache hit a Windows `PermissionError`
       before hooks ran; use the isolated ignored cache for repeat checks.
+- [x] Settings/env ahead gate passed after `0f2a2be`:
+      `tests/test_provider_settings.py`, `tests/test_settings_production_secrets.py`,
+      `tests/test_production_entrypoint.py`, `tests/test_magic_numbers_settings.py`,
+      `tests/test_experiment_registry.py`, Ruff, and py_compile.

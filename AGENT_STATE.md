@@ -243,6 +243,13 @@
   trailing-whitespace, end-of-file, large-file, merge-conflict, private-key,
   and Bandit hooks passed; YAML/TOML/pip-audit hooks were skipped because no
   relevant files were in the ahead diff.
+- Ahead-series settings/env verification:
+  `python -m pytest tests/test_provider_settings.py tests/test_settings_production_secrets.py tests/test_production_entrypoint.py tests/test_magic_numbers_settings.py tests/test_experiment_registry.py -q -p no:schemathesis -p no:cacheprovider --basetemp=.tmp/pytest-settings-ahead`:
+  47 passed, 2 warnings after commit `0f2a2be`.
+- `ruff check tests/test_provider_settings.py tests/test_settings_production_secrets.py tests/test_production_entrypoint.py tests/test_magic_numbers_settings.py tests/test_experiment_registry.py config/settings.py`:
+  All checks passed after `0f2a2be`.
+- `python -m py_compile config/settings.py tests/test_provider_settings.py tests/test_settings_production_secrets.py tests/test_production_entrypoint.py tests/test_magic_numbers_settings.py tests/test_experiment_registry.py`:
+  passed after `0f2a2be`.
 
 ## Operating Mode
 
@@ -314,6 +321,7 @@ benchmark PR is merged into `master`:
 - Pre-commit over `origin/master..HEAD` passed when using an isolated ignored
   `PRE_COMMIT_HOME=.tmp/pre-commit-cache`; the default global pre-commit cache
   is not currently reliable on this Windows user profile.
+- Settings/env guard tests passed for the ahead series after `0f2a2be`.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
