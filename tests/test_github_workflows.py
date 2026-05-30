@@ -87,6 +87,15 @@ def test_docs_site_workflow_audits_npm_dependencies_before_build() -> None:
     assert audit_step["run"] == "npm audit --audit-level=moderate"
 
 
+def test_regression_eval_filter_tracks_curated_dataset_changes() -> None:
+    workflow = _workflow("ci.yml")
+    steps = workflow["jobs"]["regression-eval"]["steps"]
+    filter_step = next(step for step in steps if "dorny/paths-filter" in str(step.get("uses", "")))
+    filters = str(filter_step["with"]["filters"])
+
+    assert "evaluation/curated_cases.jsonl" in filters
+
+
 def test_weekly_report_schedule_delivers_and_manual_dispatch_dry_runs_by_default() -> None:
     workflow = _workflow("weekly-report.yml")
     trigger = workflow[True]

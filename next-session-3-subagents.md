@@ -58,6 +58,12 @@ that session.
     and per-claim verification calls now emit trace events with durations
     (`verify_facts.extract_claims`, `verify_facts.verify_claim`). Master CI run
     `26680293620` and Pages run `26680293609` passed.
+    R7 local seed coverage was raised by `c964211`: the checked-in curated
+    dataset now has 35 unique RU cases over the tracked warranty/returns/error
+    KB docs, with a guard test preventing regression below that floor. Local
+    mock regression passed 35/35 cases; master CI run `26680554552` passed.
+    The final CI guard also updates the PR `regression-eval` paths-filter to
+    include `evaluation/curated_cases.jsonl`.
   - 2026-05-30 Claude CLI follow-up: read-only full-project `claude -p`
     review prompts were blocked by Anthropic cyber safeguards, and
     `claude ultrareview --timeout 30` returned "Ultrareview is currently
@@ -110,6 +116,12 @@ that session.
       `26679982808` and Pages run `26679982810` passed on `master`.
 - [x] Fact-verification LLM trace coverage: closed 2026-05-30 by `c0b6d24`;
       CI run `26680293620` and Pages run `26680293609` passed on `master`.
+- [x] Curated RU seed expansion: closed 2026-05-30 by `c964211`; dataset is
+      now 35 cases, local mock regression passed 35/35, and master CI run
+      `26680554552` passed.
+- [x] Regression-eval dataset path guard: final local change adds
+      `evaluation/curated_cases.jsonl` to the PR paths-filter and covers it in
+      `tests/test_github_workflows.py`.
 
 ## Compact Resume Plan
 - Close current dirty WIP first, if still dirty.
@@ -171,3 +183,6 @@ opts into planning or running a live benchmark.
       (`71367a7`, CI `26679982808`).
 - [x] `verify_facts` extract/claim LLM calls now have trace events for R4
       latency analysis (`c0b6d24`, CI `26680293620`).
+- [x] R7 local curated seed set expanded to 35 RU cases (`c964211`, CI
+      `26680554552`); full R7 still requires a larger 100-150 case/RAGAS live
+      baseline when explicitly staged.

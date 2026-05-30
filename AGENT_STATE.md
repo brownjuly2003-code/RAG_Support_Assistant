@@ -165,6 +165,24 @@
   `c0b6d24`.
 - `gh run view 26680293609 --json status,conclusion,name,headSha,url`: Pages
   deploy passed on pushed commit `c0b6d24`.
+- R7 curated seed expansion:
+  `python -m pytest tests/test_curated_dataset.py tests/test_regression_runner.py tests/test_detect_stale_curated_cases.py -q -p no:schemathesis -p no:cacheprovider`:
+  38 passed, 1 warning after commit `c964211` expanded
+  `evaluation/curated_cases.jsonl` from 20 to 35 checked-in RU cases.
+- `python scripts/regression_eval.py --baseline current --candidate current --dataset evaluation/curated_cases.jsonl --tenant all --max-cases 100 --seed 42 --mock-experiment-runtime --no-persist`:
+  passed the local mock gate on 35/35 cases with 0 regressions, 0
+  infrastructure failures, and 100%/100% baseline/candidate pass rate.
+- `ruff check .`: All checks passed after commit `c964211`.
+- `python -m py_compile tests/test_curated_dataset.py scripts/regression_eval.py`:
+  passed after commit `c964211`.
+- `gh run watch 26680554552 --exit-status`: master CI passed on pushed commit
+  `c964211`; the `regression-eval` job is PR-only and was skipped on this
+  push.
+- Final CI guard follow-up: `.github/workflows/ci.yml` now includes
+  `evaluation/curated_cases.jsonl` in the `regression-eval` paths-filter, with
+  `tests/test_github_workflows.py::test_regression_eval_filter_tracks_curated_dataset_changes`
+  covering the guard. The red test failed before the workflow update and passed
+  after it.
 
 ## Operating Mode
 
@@ -215,6 +233,10 @@ benchmark PR is merged into `master`:
   claim checks (`verify_facts.extract_claims`, `verify_facts.verify_claim`),
   so R4 latency/cost analysis can see that fan-out explicitly. Master CI run
   `26680293620` and Pages run `26680293609` passed.
+- `c964211` expands the checked-in curated RAG seed set from 20 to 35 RU cases
+  over the tracked warranty/returns/error KB docs and adds a guard test for the
+  minimum local seed coverage. Master CI run `26680554552` passed; local mock
+  regression on all 35 cases passed 35/35.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
@@ -279,6 +301,14 @@ commit `f8ffb0f` is on `origin/master`.
   trace events with durations for `verify_facts` claim extraction and each
   claim verification call. The audit's fan-out can now be measured from traces;
   it does not change factuality behavior.
+- 2026-05-30 R7 seed expansion follow-up: commit `c964211` grows the
+  checked-in curated dataset from 20 to 35 RU cases and adds a guard against
+  shrinking it below 35 unique case IDs. This is not the full 100-150 case
+  RAGAS baseline from the audit, but it raises the local regression floor and
+  keeps the next full R7 run grounded in tracked KB content.
+- 2026-05-30 final CI guard: the regression-eval PR paths-filter now tracks
+  `evaluation/curated_cases.jsonl`, so future dataset edits trigger the mock
+  regression gate on PRs.
 - 2026-05-30 Claude CLI follow-up: `claude -p` read-only full-project review
   prompts were blocked by Anthropic cyber safeguards, and
   `claude ultrareview --timeout 30` returned "Ultrareview is currently

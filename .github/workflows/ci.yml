@@ -278,6 +278,7 @@ jobs:
             regression:
               - 'agent/prompts.py'
               - 'config/settings.py'
+              - 'evaluation/curated_cases.jsonl'
               - 'evaluation/experiments/*.yaml'
 
       - name: Skip when regression inputs did not change

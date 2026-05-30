@@ -23,6 +23,10 @@
 > 2026-05-30 R4 observability note: commit `c0b6d24` adds trace events for
 > `verify_facts` extract-claims and per-claim LLM calls. Master CI and Pages
 > passed on that commit.
+> 2026-05-30 R7 note: commit `c964211` expands the checked-in RU curated seed
+> set from 20 to 35 cases and adds a guard test. Local mock regression passed
+> 35/35; master CI passed. A final CI guard also makes PR `regression-eval`
+> track `evaluation/curated_cases.jsonl` changes.
 
 ## Historical Safe Tasks
 
