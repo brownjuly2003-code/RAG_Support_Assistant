@@ -1250,9 +1250,21 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
 
             usage = _new_llm_usage("verify_facts")
             usage_recorded = False
-            raw_claims = llm.invoke(build_extract_claims_prompt(answer)).strip()
+            model = _get_llm_model_name(llm) or ""
+            extract_prompt = build_extract_claims_prompt(answer)
+            t0 = time.monotonic()
+            raw_claims = llm.invoke(extract_prompt).strip()
             usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "verify_facts"))
             usage_recorded = True
+            trace_llm_call(
+                trace_id=trace_id,
+                node_name="verify_facts.extract_claims",
+                prompt=extract_prompt,
+                response=raw_claims,
+                model=model,
+                duration_ms=(time.monotonic() - t0) * 1000,
+                tool_calls=state.get("tool_calls") or None,
+            )
             if raw_claims.upper().startswith("NONE"):
                 new_state = {
                     **state,
@@ -1279,10 +1291,12 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
 
             claims_result: list[dict] = []
             for claim in claim_lines:
+                verify_prompt = build_verify_claim_prompt(claim, context_text)
                 if consensus_enabled and _llm_supports_structured_output(llm):
+                    t0 = time.monotonic()
                     structured = _invoke_with_schema(
                         llm,
-                        build_verify_claim_prompt(claim, context_text),
+                        verify_prompt,
                         {
                             "type": "object",
                             "properties": {
@@ -1296,6 +1310,15 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                     )
                     usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "verify_facts"))
                     if isinstance(structured, dict):
+                        trace_llm_call(
+                            trace_id=trace_id,
+                            node_name="verify_facts.verify_claim",
+                            prompt=verify_prompt,
+                            response=str(structured),
+                            model=model,
+                            duration_ms=(time.monotonic() - t0) * 1000,
+                            tool_calls=state.get("tool_calls") or None,
+                        )
                         supported = bool(structured.get("supported"))
                         evidence = str(structured.get("evidence") or "").strip()[:200]
                         claims_result.append(
@@ -1311,8 +1334,18 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                         except Exception:
                             pass
                         continue
-                verdict = llm.invoke(build_verify_claim_prompt(claim, context_text)).strip()
+                t0 = time.monotonic()
+                verdict = llm.invoke(verify_prompt).strip()
                 usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "verify_facts"))
+                trace_llm_call(
+                    trace_id=trace_id,
+                    node_name="verify_facts.verify_claim",
+                    prompt=verify_prompt,
+                    response=verdict,
+                    model=model,
+                    duration_ms=(time.monotonic() - t0) * 1000,
+                    tool_calls=state.get("tool_calls") or None,
+                )
                 supported = verdict.upper().startswith("SUPPORTED")
                 evidence = ""
                 if supported and ":" in verdict:

@@ -1,6 +1,7 @@
 """Тесты узла verify_facts."""
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 
@@ -99,3 +100,45 @@ def test_llm_error_produces_error_state() -> None:
     out = node(state)
 
     assert out.get("error") is not None
+
+
+def test_verify_facts_records_trace_calls(monkeypatch) -> None:
+    import agent.graph as graph
+    import config.settings as settings_module
+    from agent.graph import make_verify_facts_node
+    from agent.state import create_initial_state
+
+    monkeypatch.setattr(
+        settings_module,
+        "get_settings",
+        lambda: SimpleNamespace(
+            fact_verification_enabled=True,
+            fact_verify_consensus_enabled=False,
+            fact_verify_reliability_level="standard",
+        ),
+    )
+    captured: list[dict] = []
+    monkeypatch.setattr(graph, "trace_llm_call", lambda **kwargs: captured.append(kwargs))
+
+    llm = MagicMock()
+    llm.provider_id = "mistral"
+    llm.model_name = "mistral-small-latest"
+    llm.invoke.side_effect = [
+        "- Возврат доступен 14 дней.\n- Чек не требуется.",
+        "SUPPORTED: 14 days",
+        "UNSUPPORTED",
+    ]
+    node = make_verify_facts_node(llm)
+    state = create_initial_state(question="?", trace_id="trace-facts")
+    state["answer"] = "Возврат доступен 14 дней, чек не требуется."
+    state["graded_docs"] = [{"page_content": "Возврат доступен 14 дней при наличии чека."}]
+
+    out = node(state)
+
+    assert out["factuality_score"] == 50
+    assert [item["node_name"] for item in captured] == [
+        "verify_facts.extract_claims",
+        "verify_facts.verify_claim",
+        "verify_facts.verify_claim",
+    ]
+    assert all(item["trace_id"] == "trace-facts" for item in captured)
