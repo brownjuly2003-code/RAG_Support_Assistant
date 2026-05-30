@@ -54,6 +54,10 @@ that session.
     JSON/text parsing fallback and the old per-doc path retained when batch
     grading is unavailable. Master CI run `26679982808` and Pages run
     `26679982810` passed.
+    R4 fact-verification observability is closed by `c0b6d24`: extract-claims
+    and per-claim verification calls now emit trace events with durations
+    (`verify_facts.extract_claims`, `verify_facts.verify_claim`). Master CI run
+    `26680293620` and Pages run `26680293609` passed.
   - 2026-05-30 Claude CLI follow-up: read-only full-project `claude -p`
     review prompts were blocked by Anthropic cyber safeguards, and
     `claude ultrareview --timeout 30` returned "Ultrareview is currently
@@ -104,6 +108,8 @@ that session.
       CI run `26679564874` passed on `master`.
 - [x] Batch document grading: closed 2026-05-30 by `71367a7`; CI run
       `26679982808` and Pages run `26679982810` passed on `master`.
+- [x] Fact-verification LLM trace coverage: closed 2026-05-30 by `c0b6d24`;
+      CI run `26680293620` and Pages run `26680293609` passed on `master`.
 
 ## Compact Resume Plan
 - Close current dirty WIP first, if still dirty.
@@ -163,3 +169,5 @@ opts into planning or running a live benchmark.
       non-zero baseline/candidate latency in the report.
 - [x] Batch `grade_docs` fan-out reduction committed and verified on CI
       (`71367a7`, CI `26679982808`).
+- [x] `verify_facts` extract/claim LLM calls now have trace events for R4
+      latency analysis (`c0b6d24`, CI `26680293620`).

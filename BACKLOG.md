@@ -20,6 +20,9 @@
 > 2026-05-30 R3/R4 note: commit `71367a7` batches multi-document
 > `grade_docs` into one structured LLM call with fallback to the old per-doc
 > path. Master CI and Pages passed on that commit.
+> 2026-05-30 R4 observability note: commit `c0b6d24` adds trace events for
+> `verify_facts` extract-claims and per-claim LLM calls. Master CI and Pages
+> passed on that commit.
 
 ## Historical Safe Tasks
 

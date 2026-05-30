@@ -151,6 +151,20 @@
   completed successfully on the pushed commit.
 - `gh run list --branch master --limit 5`: CI run `26679982808` and Pages run
   `26679982810` passed on pushed commit `71367a7`.
+- R4 fact-verification tracing follow-up:
+  `python -m pytest tests/test_grade_docs.py tests/test_fact_verification.py tests/test_provider_graph_integration.py tests/test_graph_error_handling.py tests/test_langfuse_trace.py tests/test_otel.py -q -p no:schemathesis -p no:cacheprovider`:
+  31 passed, 1 warning after commit `c0b6d24` added `trace_llm_call`
+  instrumentation for `verify_facts.extract_claims` and
+  `verify_facts.verify_claim`.
+- `ruff check .`: All checks passed after commit `c0b6d24`.
+- `python -m py_compile agent/graph.py tests/test_fact_verification.py`: passed
+  after commit `c0b6d24`.
+- `python -m mypy agent/graph.py tests/test_fact_verification.py --no-incremental --show-error-codes --follow-imports=skip`:
+  passed after commit `c0b6d24`.
+- `gh run watch 26680293620 --exit-status`: master CI passed on pushed commit
+  `c0b6d24`.
+- `gh run view 26680293609 --json status,conclusion,name,headSha,url`: Pages
+  deploy passed on pushed commit `c0b6d24`.
 
 ## Operating Mode
 
@@ -197,6 +211,10 @@ benchmark PR is merged into `master`:
   `grade_docs` into one structured call, while preserving the old per-doc
   fallback and top-ranked-doc preservation guard. Master CI run `26679982808`
   and Pages run `26679982810` passed.
+- `c0b6d24` records per-call trace events for fact verification extraction and
+  claim checks (`verify_facts.extract_claims`, `verify_facts.verify_claim`),
+  so R4 latency/cost analysis can see that fan-out explicitly. Master CI run
+  `26680293620` and Pages run `26680293609` passed.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
@@ -257,6 +275,10 @@ commit `f8ffb0f` is on `origin/master`.
   per-document path retained when batch grading is unavailable. This addresses
   the per-doc grade fan-out locally; follow-up latency proof should use the
   larger R7 eval set rather than another tiny smoke.
+- 2026-05-30 R4 observability follow-up: commit `c0b6d24` adds Langfuse/SQLite
+  trace events with durations for `verify_facts` claim extraction and each
+  claim verification call. The audit's fan-out can now be measured from traces;
+  it does not change factuality behavior.
 - 2026-05-30 Claude CLI follow-up: `claude -p` read-only full-project review
   prompts were blocked by Anthropic cyber safeguards, and
   `claude ultrareview --timeout 30` returned "Ultrareview is currently
