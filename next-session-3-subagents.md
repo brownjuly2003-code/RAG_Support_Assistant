@@ -34,9 +34,10 @@ that session.
     and docs-site 404 route warning cleanup.
   - 2026-05-30 Claude audit is recorded in `audit_claude_30_05_26.md`. It
     focuses on RAG implementation quality and flags R7/R1/R2/R3/R4/R5:
-    unmeasured RAG quality, English default reranker on RU content, RRF dedup
-    collisions with contextual headers, LLM fan-out, naive RU BM25 tokenization,
-    and deferred deprecation/security follow-up.
+    unmeasured RAG quality, English default reranker on RU content, LLM fan-out,
+    naive RU BM25 tokenization, and deferred deprecation/security follow-up.
+    R2 is closed by `5c7f3b1`: RRF no longer deduplicates solely by a
+    200-character content prefix and has shared-context-prefix regression tests.
   - 2026-05-30 Claude CLI follow-up: read-only full-project `claude -p`
     review prompts were blocked by Anthropic cyber safeguards, and
     `claude ultrareview --timeout 30` returned "Ultrareview is currently
