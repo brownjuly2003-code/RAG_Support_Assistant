@@ -18,9 +18,9 @@ paths unless the user explicitly opts in during that session.
   - `.pytest-tmp*/` local pytest basetemp directories are ignored.
   - PR #1 is open and mergeable:
     `https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`.
-  - CI passed on PR code head `6755403` after the notebook lint fix, ChromaDB
-    locked-audit update, and CI security config test alignment, before this
-    docs-only handoff refresh.
+  - CI passed on PR code head `69d8e95` after the notebook lint fix, ChromaDB
+    locked-audit update, CI security config test alignment, Claude trace audit
+    fixes, and the Python 3.11 smoke-report compatibility fix.
   - Agent Copilot semantic context UI and zero-overlap similar-ticket filtering.
   - Mock-safe benchmark Quickstart example and guardrail test.
   - `static/widget.html` a11y landmark coverage and color-contrast fix.
@@ -46,7 +46,7 @@ paths unless the user explicitly opts in during that session.
 - [x] Colab remote benchmark setup: notebook and runbook are committed and the
       notebook branch was pushed for manual Colab use.
 - [x] Colab remote benchmark PR: PR #1 is open and mergeable. CI was green at
-      code head `6755403` before this docs-only handoff refresh. Merge remains
+      code head `69d8e95` after the audit and Python 3.11 CI fixes. Merge remains
       an explicit boundary.
 
 ## Suggested Subagents
@@ -78,5 +78,5 @@ opts into planning or running a live benchmark.
       not the closed Batch N lane.
 - [x] `git status --short --branch` was reviewed before this docs-only handoff
       refresh; branch was clean against `origin/colab-remote-benchmark` at
-      `6755403`.
-- [x] PR #1 CI passed on code head `6755403`.
+      `69d8e95`.
+- [x] PR #1 CI passed on code head `69d8e95`.
