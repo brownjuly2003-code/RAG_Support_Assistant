@@ -183,6 +183,22 @@
   `tests/test_github_workflows.py::test_regression_eval_filter_tracks_curated_dataset_changes`
   covering the guard. The red test failed before the workflow update and passed
   after it.
+- Adaptive retrieval routing seam:
+  `python -m pytest tests/test_model_routing.py tests/test_base_manager.py tests/test_provider_graph_integration.py tests/test_graph_error_handling.py tests/test_magic_numbers_settings.py tests/test_new_features.py tests/test_structural_chunking.py tests/test_experiment_registry.py -q -p no:schemathesis -p no:cacheprovider`:
+  66 passed, 2 warnings after commit `676b3e0` added `RAG_RETRIEVAL_STRATEGY`,
+  `global` query classification, vector-only simple-query retrieval, and
+  simple-query graph bypass for `grade_docs`/`verify_facts`.
+- `ruff check agent/graph.py agent/state.py agent/prompts.py config/settings.py vectordb/_base_manager.py tests/test_model_routing.py tests/test_base_manager.py`:
+  All checks passed before `676b3e0`.
+- `python -m mypy agent/graph.py agent/state.py config/settings.py vectordb/_base_manager.py --no-incremental --show-error-codes --follow-imports=skip`:
+  passed before `676b3e0`.
+- Aircargo curated seed expansion:
+  `python -m pytest tests/test_curated_dataset.py -q -p no:schemathesis -p no:cacheprovider`:
+  12 passed, 1 warning after commit `32e841f` expanded
+  `evaluation/curated_cases_aircargo.jsonl` from 31 to 54 checked-in RU cases.
+- `python scripts/regression_eval.py --baseline current --candidate current --dataset evaluation/curated_cases_aircargo.jsonl --tenant aircargo --max-cases 100 --seed 42 --mock-experiment-runtime --no-persist`:
+  passed the mock gate on 54/54 aircargo cases with 0 regressions and 0
+  infrastructure failures.
 
 ## Operating Mode
 
@@ -237,6 +253,11 @@ benchmark PR is merged into `master`:
   over the tracked warranty/returns/error KB docs and adds a guard test for the
   minimum local seed coverage. Master CI run `26680554552` passed; local mock
   regression on all 35 cases passed 35/35.
+- `676b3e0` adds the local adaptive retrieval seam: `RAG_RETRIEVAL_STRATEGY`,
+  `GLOBAL` classification, vector-only retrieval for simple routed questions,
+  and graph bypass of `grade_docs`/`verify_facts` on simple questions.
+- `32e841f` expands the aircargo checked-in eval seed from 31 to 54 RU cases
+  over HR/legal/logistics/compliance docs; local mock regression passed 54/54.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
@@ -309,6 +330,15 @@ commit `f8ffb0f` is on `origin/master`.
 - 2026-05-30 final CI guard: the regression-eval PR paths-filter now tracks
   `evaluation/curated_cases.jsonl`, so future dataset edits trigger the mock
   regression gate on PRs.
+- 2026-05-30 local routing follow-up: commit `676b3e0` implements the ADR 0001
+  retrieval seam locally without enabling heavy graph retrieval. Simple routed
+  queries use vector-only retrieval when available and skip per-doc grading and
+  fact verification; `global` classification is recognized but falls back to
+  hybrid unless a graph retriever is configured.
+- 2026-05-30 aircargo R7 seed follow-up: commit `32e841f` grows
+  `evaluation/curated_cases_aircargo.jsonl` from 31 to 54 grounded RU cases and
+  raises the guard to 50 unique RU queries. Mock regression on the aircargo set
+  passed 54/54 with no live APIs.
 - 2026-05-30 Claude CLI follow-up: `claude -p` read-only full-project review
   prompts were blocked by Anthropic cyber safeguards, and
   `claude ultrareview --timeout 30` returned "Ultrareview is currently

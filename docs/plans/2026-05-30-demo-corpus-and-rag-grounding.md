@@ -18,6 +18,13 @@
   **медиана ~21 200 символов** (min 13 925, max 30 225). Однородные структурированные
   markdown-документы (заголовки/секции/пункты).
 - Написан ADR по GraphRAG (см. `docs/adr/0001`).
+- Локальный opt-in markdown-structural splitter реализован в `bcac4ce`
+  (`RAG_STRUCTURAL_CHUNKING`, единый selector в `vectordb/_base_manager.py`).
+- Локальный query-routing шов реализован в `676b3e0`: `RAG_RETRIEVAL_STRATEGY`,
+  `GLOBAL` classification, vector-only path для `simple` и bypass
+  `grade_docs`/`verify_facts` для простых запросов.
+- Aircargo RU seed расширен в `32e841f` с 31 до **54 grounded cases**;
+  mock regression на `evaluation/curated_cases_aircargo.jsonl` прошёл 54/54.
 
 Тенант `aircargo` выбран намеренно отдельным от дефолтного consumer-support KB
 (warranty/returns/errors) — это **не разрушает** существующее демо и заодно демонстрирует
@@ -166,10 +173,10 @@ Windows** (RAM-лимит, thin-client boundary).
    Раздельным процессом (build → eval → report), кэшировать Chroma-коллекцию (см. memory:
    `feedback_rogii_split_python_runs`).
 2. **Построить RU eval-набор (R7).** Стартовый набор **уже создан**:
-   `evaluation/curated_cases_aircargo.jsonl` — **31 грунтованный RU-кейс** (`tenant_id=aircargo`),
-   keywords взяты дословно из ответов `07_faq_*` корпуса, покрытие HR/legal/logistics/compliance.
+   `evaluation/curated_cases_aircargo.jsonl` — **54 грунтованных RU-кейса** (`tenant_id=aircargo`),
+   keywords взяты дословно из корпуса, покрытие HR/legal/logistics/compliance.
    Отдельный файл (не трогает дефолтный CI-gate `curated_cases.jsonl`); guard-тест
-   `tests/test_curated_dataset.py::test_aircargo_curated_cases_parse_and_cover_domains` (≥30, unique,
+   `tests/test_curated_dataset.py::test_aircargo_curated_cases_parse_and_cover_domains` (≥50, unique,
    все RU) — зелёный. На Colab расширить до 100–150 (генерация Q/A по остальным разделам +
    confirmed-good трейсы через `build_curated_dataset.py`). Запуск eval:
    `python scripts/regression_eval.py --dataset evaluation/curated_cases_aircargo.jsonl --tenant aircargo ...`.
@@ -187,11 +194,11 @@ Windows** (RAM-лимит, thin-client boundary).
 
 ## 6. Что можно делать локально на Windows (без нарушения RAM-лимита)
 
-- Код-шов §3.5 (query routing) и `RAG_RETRIEVAL_STRATEGY` (ADR 0001 §1) — пишется и
-  юнит-тестируется без загрузки моделей (мокать retriever/LLM).
-- Markdown-structural splitter (§3.1) — чистая функция разбиения, тестируется на тексте
-  без эмбеддера.
-- Расширение `curated_cases.jsonl` (составление кейсов — текст, не вычисление).
+- Код-шов §3.5 (query routing) и `RAG_RETRIEVAL_STRATEGY` (ADR 0001 §1) — реализован
+  локально в `676b3e0`; дальше нужна Colab/live eval-дельта.
+- Markdown-structural splitter (§3.1) — реализован локально как opt-in в `bcac4ce`;
+  дальше нужна Colab chunking A/B.
+- Расширение `curated_cases_aircargo.jsonl` (составление кейсов — текст, не вычисление).
 - Доки/ADR/README.
 
 Не делать локально: любой `reindex`/ingest реального корпуса, RAGAS, загрузку BGE-M3 или
@@ -201,9 +208,9 @@ Windows** (RAM-лимит, thin-client boundary).
 
 1. **R1 reranker `bge-reranker-v2-m3`** (Colab) — теперь №1: R1 доказан (§0bis), это
    подтверждённый крупнейший скачок precision. A/B на 3 руки: OFF / ms-marco / bge-v2-m3.
-2. R7 baseline на полном корпусе (Colab) — расширить 31→100–150 кейсов, RAGAS.
+2. R7 baseline на полном корпусе (Colab) — расширить 54→100–150 кейсов, RAGAS.
 3. chunk-size A/B + structural/late chunking (Colab) — ответ на «800 по привычке».
 4. BGE-M3 sparse вместо наивного BM25 (§3.3) — закрывает R5, модель уже загружена.
-5. query routing (§3.5, локально код + Colab eval) — срезает fan-out R3/R4.
+5. query routing (§3.5) — локальный код-шов готов (`676b3e0`); нужна Colab eval-дельта.
 6. contextual retrieval (§3.4) — чинит R2 (подтверждён §0bis), после baseline + caching.
 7. GraphRAG-шов (ADR 0001) — код локально; включение реализации — при достижении trigger.

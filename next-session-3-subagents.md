@@ -64,6 +64,12 @@ that session.
     mock regression passed 35/35 cases; master CI run `26680554552` passed.
     The final CI guard also updates the PR `regression-eval` paths-filter to
     include `evaluation/curated_cases.jsonl`.
+    Local follow-up `676b3e0` adds the ADR 0001 adaptive retrieval seam:
+    `RAG_RETRIEVAL_STRATEGY`, `GLOBAL` classification, vector-only retrieval
+    for simple routed queries, and simple-query bypass of `grade_docs` and
+    `verify_facts`. Local focused graph/retriever/settings tests passed.
+    Local follow-up `32e841f` expands `evaluation/curated_cases_aircargo.jsonl`
+    from 31 to 54 grounded RU aircargo cases; mock regression passed 54/54.
   - 2026-05-30 Claude CLI follow-up: read-only full-project `claude -p`
     review prompts were blocked by Anthropic cyber safeguards, and
     `claude ultrareview --timeout 30` returned "Ultrareview is currently
@@ -122,6 +128,11 @@ that session.
 - [x] Regression-eval dataset path guard: final local change adds
       `evaluation/curated_cases.jsonl` to the PR paths-filter and covers it in
       `tests/test_github_workflows.py`.
+- [x] Adaptive retrieval seam: closed locally by `676b3e0`; simple routed
+      queries use vector-only retrieval when available and skip grade/verify,
+      while `GLOBAL` classification is ready for a future graph retriever.
+- [x] Aircargo curated seed expansion: closed locally by `32e841f`; dataset is
+      now 54 cases and local mock regression passed 54/54.
 
 ## Compact Resume Plan
 - Close current dirty WIP first, if still dirty.
@@ -186,3 +197,8 @@ opts into planning or running a live benchmark.
 - [x] R7 local curated seed set expanded to 35 RU cases (`c964211`, CI
       `26680554552`); full R7 still requires a larger 100-150 case/RAGAS live
       baseline when explicitly staged.
+- [x] Local adaptive retrieval seam committed as `676b3e0`; focused pytest,
+      Ruff, py_compile, `mypy --follow-imports=skip`, and `git diff --check`
+      passed.
+- [x] Local aircargo seed set expanded to 54 RU cases (`32e841f`); full
+      `tests/test_curated_dataset.py` passed and mock regression passed 54/54.
