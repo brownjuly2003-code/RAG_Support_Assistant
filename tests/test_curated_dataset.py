@@ -15,6 +15,9 @@ from fastapi.testclient import TestClient
 from auth.jwt_handler import create_access_token
 
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
 def _token(tenant: str = "default", role: str = "admin", user_id: str | None = None) -> dict[str, str]:
     subject = user_id or str(uuid.uuid4())
     return {"Authorization": f"Bearer {create_access_token(subject, role, tenant)}"}
@@ -364,6 +367,17 @@ def test_load_curated_cases_parses_jsonl_models(tmp_path: Path) -> None:
     assert isinstance(cases[0], CuratedCase)
     assert cases[0].tags == ["billing"]
     assert cases[0].created_at == datetime(2026, 4, 21, 10, 0, tzinfo=timezone.utc)
+
+
+def test_checked_in_curated_cases_have_expanded_ru_seed_coverage() -> None:
+    from scripts.regression_eval import load_curated_cases
+
+    cases = load_curated_cases(PROJECT_ROOT / "evaluation" / "curated_cases.jsonl")
+    case_ids = [case.case_id for case in cases]
+
+    assert len(cases) >= 35
+    assert len(case_ids) == len(set(case_ids))
+    assert sum(any("а" <= char.lower() <= "я" or char.lower() == "ё" for char in case.query) for case in cases) >= 30
 
 
 def test_split_cases_is_deterministic() -> None:
