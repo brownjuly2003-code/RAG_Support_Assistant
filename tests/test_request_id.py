@@ -33,6 +33,15 @@ def test_too_long_request_id_is_replaced(client: TestClient) -> None:
     assert resp.headers["X-Request-Id"] != bad
 
 
+def test_browser_security_headers_are_set(client: TestClient) -> None:
+    resp = client.get("/api/health/live")
+
+    assert resp.headers["X-Content-Type-Options"] == "nosniff"
+    assert resp.headers["X-Frame-Options"] == "DENY"
+    assert resp.headers["Referrer-Policy"] == "no-referrer"
+    assert resp.headers["Permissions-Policy"] == "camera=(), microphone=(), geolocation=()"
+
+
 def test_request_id_appears_in_log_line(client: TestClient, caplog) -> None:
     caplog.set_level(logging.INFO, logger="api.app")
     incoming = "corr-0001"

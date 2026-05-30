@@ -8,6 +8,8 @@ Locks invariants exposed by Codex audit 2026-04-27 P0:
 
 from __future__ import annotations
 
+import importlib
+
 import pytest
 
 
@@ -33,6 +35,32 @@ def test_production_app_has_full_middleware_stack():
         "expected the full request-id/body-size/cors/sessions/metrics/"
         "logger/tenant stack."
     )
+
+
+def test_production_import_disables_fastapi_docs(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RAG_ENV", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "https://app.example.com")
+
+    import config.settings as settings_module
+    import api.app as app_module
+
+    settings_module = importlib.reload(settings_module)
+    settings_module._settings = None
+    app_module = importlib.reload(app_module)
+    try:
+        assert app_module.app.docs_url is None
+        assert app_module.app.redoc_url is None
+        assert app_module.app.openapi_url is None
+        paths = {getattr(route, "path", None) for route in app_module.app.routes}
+        assert "/docs" not in paths
+        assert "/redoc" not in paths
+        assert "/openapi.json" not in paths
+    finally:
+        monkeypatch.setenv("RAG_ENV", "development")
+        monkeypatch.setenv("CORS_ORIGINS", "*")
+        settings_module = importlib.reload(settings_module)
+        settings_module._settings = None
+        importlib.reload(app_module)
 
 
 @pytest.mark.parametrize(

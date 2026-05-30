@@ -1717,10 +1717,18 @@ router.include_router(_upload_router)
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="RAG Support Assistant API", version="0.3.0", lifespan=_lifespan)
+_app_settings = get_settings()
+_docs_enabled = getattr(_app_settings, "rag_env", "development") != "production"
+app = FastAPI(
+    title="RAG Support Assistant API",
+    version="0.3.0",
+    lifespan=_lifespan,
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
+)
 
 # Session + CORS
-_app_settings = get_settings()
 app.add_middleware(
     SessionMiddleware,
     secret_key=getattr(_app_settings, "session_secret_key", "dev-secret-change-in-production!"),
@@ -1748,6 +1756,27 @@ app.add_middleware(
     expose_headers=["X-Request-Id"],
     max_age=_cors_settings.cors_max_age_sec,
 )
+
+
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+}
+
+
+@app.middleware("http")
+async def _security_headers(request: Request, call_next: Any) -> Any:
+    response = await call_next(request)
+    for name, value in _SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+    if getattr(get_settings(), "rag_env", "development") == "production":
+        response.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains",
+        )
+    return response
 
 
 @app.middleware("http")
