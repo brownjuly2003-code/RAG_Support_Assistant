@@ -24,6 +24,17 @@ that session.
   - Post-merge handoff commit `f8ffb0f` is on `origin/master`.
   - GitHub Actions action-major refresh `52d16c4` and Weekly Report import
     fix `a86b44c` are on `origin/master`.
+  - 2026-05-30 Codex audit and remediation series is recorded in
+    `audit_codex_30_05_26.md` and `AGENT_STATE.md`. Completed local fixes:
+    Agent UI API-data XSS hardening, docs-site `devalue` lock update, docs-site
+    npm audit workflow guard, production security headers and production-only
+    FastAPI docs/OpenAPI disabling, local-dev-only default Compose bindings,
+    production auto-migration fail-closed behavior with explicit fail-open
+    override, safe `tar.extractall(..., filter="data")` restore extraction,
+    and docs-site 404 route warning cleanup.
+  - Claude audit/ultrareview was requested after local fixes, but no
+    Claude-specific audit tool was available in this tool session; local
+    focused verification was used instead.
   - 2026-05-30 non-local check: the stale scheduled Weekly Report failures
     were caused by `ModuleNotFoundError: No module named 'config'` when Actions
     ran `python scripts/weekly_report.py --dry-run`. Commit `a86b44c` keeps
@@ -68,7 +79,9 @@ that session.
 - If `master` is clean at `a86b44c` or later, do not repeat the Weekly Report
   fix or the action-major refresh merely to update handoff prose.
 - With no new failing remote run, open PR/issue, or explicit live opt-in, the
-  only default non-destructive local work is branch hygiene.
+  only default non-destructive local work is branch hygiene or focused follow-up
+  from a new failing check. Do not repeat the audit-remediation family merely
+  to refresh timestamps or handoff prose.
 
 ## Suggested Subagents
 None for default non-live work. Use subagents only if the session explicitly
@@ -82,7 +95,7 @@ opts into planning or running a live benchmark.
 - If opening the notebook manually, use:
   `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`
 - If no explicit live opt-in is given, keep work read-only or docs-only and do
-  not reopen closed AP housekeeping tasks.
+  not reopen closed AP housekeeping tasks or already-closed Codex audit fixes.
 - Do not create new deployment/release/scheduler work without an explicit
   instruction.
 - If making changes, keep scope to docs/tests unless a focused failing test
@@ -105,3 +118,5 @@ opts into planning or running a live benchmark.
 - [x] Weekly Report workflow import failure fixed by `a86b44c`.
 - [x] Master CI passed on `a86b44c` (`26671830370`).
 - [x] Manual Weekly Report dispatch passed on `a86b44c` (`26671836799`).
+- [x] Codex audit remediation focused local checks passed; see `AGENT_STATE.md`
+      for command-level evidence.

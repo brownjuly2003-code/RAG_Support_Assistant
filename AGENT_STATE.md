@@ -4,17 +4,19 @@
 
 - Project: RAG Support Assistant.
 - Stack: Python 3.13, FastAPI, LangGraph, ChromaDB, Postgres, Redis, static HTML UI, Helm/Docker deploy artifacts.
-- Branch source: `master` tracks `origin/master`; weekly-report fix
-  `a86b44c46859bde474e3d92a65379efbd4adb27d` is on `origin/master`.
+- Branch source: `master` tracks `origin/master`; current history includes the
+  2026-05-30 Codex audit remediation series after the weekly-report fixes.
 - Snapshot date: 2026-05-30 (Europe/Bucharest).
-- Baseline HEAD before this state refresh: `415d4c88baf52d4696987d5e2546dd7ce3ce576c`.
-- Baseline file count: 697 tracked files from `git ls-files`.
+- Baseline HEAD before the 2026-05-30 audit/remediation run:
+  `4d60479` (`ci: clarify weekly report delivery workflow`).
+- Baseline file count: 698 tracked files from `git ls-files`.
 - Baseline JS bundle size: not applicable; no frontend bundler config was found.
 - Baseline i18n key count: not applicable; no i18n JSON catalog was found.
-- Git status at snapshot time: clean before this `AGENT_STATE.md` refresh.
-- Origin sync at baseline: PR #1 was merged into `origin/master` at merge
-  commit `415d4c8`; post-merge handoff commit `f8ffb0f`, action refresh
-  commit `52d16c4`, and weekly-report fix `a86b44c` are on `origin/master`.
+- Baseline generated bundle/artifact size: 0 bytes for searched bundle-like
+  artifacts outside ignored dependency/cache directories.
+- Git status before this durable-state refresh: clean, with local remediation
+  commits ahead of the initial `origin/master` baseline.
+- Origin sync at audit start: `origin/master` was at `4d60479`.
 
 ## Runtime
 
@@ -36,6 +38,29 @@
 - `Get-Command codex`: available.
 - `pi --version`: `0.72.1`.
 - `codex --version`: `codex-cli 0.128.0`.
+- `python -m pytest tests/test_agent_endpoints.py -q -p no:schemathesis -p no:cacheprovider`:
+  9 passed, 1 warning after the Agent UI text-rendering XSS fix.
+- `node -e "... new Function(agent inline script) ..."`: agent inline script
+  syntax OK after the XSS fix.
+- `npm --prefix docs-site audit --audit-level=moderate`: found 0
+  vulnerabilities after the `devalue` lock update and again after the CI audit
+  workflow guard was added.
+- `npm --prefix docs-site run astro -- build`: passed after the docs-site lock
+  update and again after marking `docs/404` as draft; the earlier `/404`
+  catch-all conflict warning no longer appears.
+- `python -m pytest tests/test_request_id.py tests/test_production_entrypoint.py tests/test_cors_hardening.py -q -p no:schemathesis -p no:cacheprovider`:
+  21 passed, 1 warning after browser security headers and production
+  docs/OpenAPI controls.
+- `python -m pytest tests/test_docker_compose_hardening.py -q -p no:schemathesis -p no:cacheprovider`:
+  3 passed, 1 warning after scoping default Compose to local development.
+- `python -m pytest tests/test_production_entrypoint.py tests/test_settings_production_secrets.py tests/test_docs_quality.py -q -p no:schemathesis -p no:cacheprovider`:
+  29 passed, 1 warning after the production auto-migration fail-closed change.
+- `python -m pytest tests/test_github_workflows.py -q -p no:schemathesis -p no:cacheprovider`:
+  5 passed, 1 warning after adding the docs-site npm audit workflow guard.
+- `python -m pytest tests/test_restore_verify.py -q -p no:schemathesis -p no:cacheprovider`:
+  7 passed, 1 warning after switching restore tar extraction to `filter="data"`.
+- Targeted `ruff check` entries for changed Python test/source files passed
+  during the 2026-05-30 audit remediation series.
 - `powershell -ExecutionPolicy Bypass -File scripts/autopilot.ps1 -DryRun`: not rerun on 2026-05-30 because the current WIP is docs/notebook-only and local resource constraints forbid unnecessary heavy gates.
 - PAUSE protocol dry-run simulation: passed (last verified 2026-05-04).
 - BLOCKED protocol dry-run simulation: passed (last verified 2026-05-04).
@@ -131,6 +156,15 @@ commit `f8ffb0f` is on `origin/master`.
   GitHub Actions ran `python scripts/weekly_report.py --dry-run`. Commit
   `a86b44c` adds `PYTHONPATH: ${{ github.workspace }}` and a regression guard;
   manual dispatch run `26671836799` passed.
+- 2026-05-30 Codex audit remediation follow-up: `audit_codex_30_05_26.md`
+  records the audit. Closed local items include Agent UI API-data text
+  rendering, docs-site `devalue` audit fix plus CI audit guard, production
+  security headers/docs route controls, local-dev-only default Compose
+  bindings, production auto-migration fail-closed behavior with explicit
+  fail-open override, safe tar extraction in restore verification, and the
+  docs-site 404 route warning. Claude audit/ultrareview tooling was requested
+  but no Claude-specific audit tool was available in this session; local
+  focused checks were used instead.
 
 Notebook URL for manual Colab use:
 `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`
