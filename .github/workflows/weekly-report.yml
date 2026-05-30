@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: "0 9 * * 1"
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Render without Slack/email delivery"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
 
 jobs:
   weekly-report:
@@ -18,4 +27,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Run weekly report
-        run: python scripts/weekly_report.py --dry-run
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            python scripts/weekly_report.py
+          elif [ "${{ inputs.dry_run }}" = "false" ]; then
+            python scripts/weekly_report.py
+          else
+            python scripts/weekly_report.py --dry-run
+          fi
