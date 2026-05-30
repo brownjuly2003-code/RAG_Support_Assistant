@@ -196,9 +196,10 @@ opts into planning or running a live benchmark.
       (`71367a7`, CI `26679982808`).
 - [x] `verify_facts` extract/claim LLM calls now have trace events for R4
       latency analysis (`c0b6d24`, CI `26680293620`).
-- [x] R7 local curated seed set expanded to 35 RU cases (`c964211`, CI
-      `26680554552`); full R7 still requires a larger 100-150 case/RAGAS live
-      baseline when explicitly staged.
+- [x] R7 local default curated seed set expanded to 35 RU cases (`c964211`, CI
+      `26680554552`), and the separate aircargo seed now has 100 grounded RU
+      cases (`325d63c`). Full R7 now requires a staged Colab/RAGAS baseline,
+      not another default local seed refresh.
 - [x] Local adaptive retrieval seam committed as `676b3e0`; focused pytest,
       Ruff, py_compile, `mypy --follow-imports=skip`, and `git diff --check`
       passed.

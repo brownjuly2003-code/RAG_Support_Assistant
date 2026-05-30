@@ -199,7 +199,9 @@ Windows** (RAM-лимит, thin-client boundary).
   локально в `676b3e0`; дальше нужна Colab/live eval-дельта.
 - Markdown-structural splitter (§3.1) — реализован локально как opt-in в `bcac4ce`;
   дальше нужна Colab chunking A/B.
-- Расширение `curated_cases_aircargo.jsonl` (составление кейсов — текст, не вычисление).
+- Дополнительное расширение `curated_cases_aircargo.jsonl` сверх 100 кейсов
+  (текстовая работа без вычислений) — только если Colab/RAGAS или
+  confirmed-good трейсы покажут, что текущего покрытия мало.
 - Доки/ADR/README.
 
 Не делать локально: любой `reindex`/ingest реального корпуса, RAGAS, загрузку BGE-M3 или
