@@ -2,7 +2,7 @@
 // files) into Starlight's content collection at src/content/docs/guides/.
 // Adds front-matter when missing so Starlight can index the page.
 
-import { readdir, readFile, writeFile, mkdir, rm, stat } from 'node:fs/promises';
+import { readdir, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, extname, join, relative, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';

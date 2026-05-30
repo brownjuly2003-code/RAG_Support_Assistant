@@ -34,6 +34,7 @@ const projectLd = {
   image: OG_IMAGE,
 };
 
+/** @type {Array<{ tag: 'meta' | 'script'; attrs?: Record<string, string>; content?: string }>} */
 const headTags = [
   { tag: 'meta', attrs: { property: 'og:type', content: 'website' } },
   { tag: 'meta', attrs: { property: 'og:site_name', content: 'RAG Support Assistant' } },
