@@ -13,7 +13,8 @@
 - Baseline i18n key count: not applicable; no i18n JSON catalog was found.
 - Git status at snapshot time: clean before this `AGENT_STATE.md` refresh.
 - Origin sync at baseline: PR #1 was merged into `origin/master` at merge
-  commit `415d4c8`. Master CI and Pages deploy passed on the merge commit.
+  commit `415d4c8`; post-merge handoff commit `f8ffb0f` is also on
+  `origin/master`. Master CI and Pages deploy passed on the merge commit.
 
 ## Runtime
 
@@ -63,7 +64,8 @@
 - Applicability status: READY_WITH_GUARDRAILS.
 - Scheduler status: not installed by this setup; scheduler installation is opt-in only.
 - Allowed default safe work: `docs/plans/2026-05-01-backlog.md`, bounded local tasks with exact allowed paths, and local verification.
-- Default forbidden work: secrets, deploy, push, production data, live external services, paid API calls, destructive commands.
+- Default forbidden work: secrets, deploy, push, production data, live external
+  services, live external-provider/API benchmark calls, destructive commands.
 
 ## Next Step
 
@@ -89,9 +91,24 @@ benchmark PR is merged into `master`:
 - `415d4c8` is the merge commit on `master`.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
-merged. Master CI and Pages deploy passed on `415d4c8`. No non-live local
-backlog item remains open; live GraceKelly/Mistral benchmark work remains
-explicit opt-in only.
+merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
+commit `f8ffb0f` is on `origin/master`.
+
+2026-05-30 compact-resume note:
+
+- This compact refresh is intentionally limited to GitHub Actions action-major
+  refresh, docs wording, and the pre-commit config guard test.
+- `MISTRAL_API_KEY` is present in local `.env` and Mistral `/v1/models`
+  returned `200`; no secret value was printed or copied. `D:\TXT\GMAIL.txt`
+  had no relevant Mistral key names.
+- GraceKelly was not reachable at `http://127.0.0.1:8011/healthz/ready`; no
+  local GraceKelly, Docker, Ollama, or model process was started because of
+  the current resource boundary.
+- No non-live local backlog item remains open. A live GraceKelly/Mistral run
+  is a staged/manual runtime experiment only, not an active backlog item.
+- If these refresh files are already clean in `git status`, do not repeat this
+  family of checks just to refresh handoff prose. The next safe local action is
+  non-destructive branch hygiene only if stale local branches still exist.
 
 Notebook URL for manual Colab use:
 `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`

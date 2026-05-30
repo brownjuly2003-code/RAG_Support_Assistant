@@ -6,6 +6,11 @@ This script is intentionally not wired into CI.
 > **Live warning.** Run this smoke only after explicit user opt-in. It targets
 > live GraceKelly runtime behavior and may exercise browser-backed or API-backed
 > upstream paths depending on the active GraceKelly configuration.
+>
+> 2026-05-30 readiness note: Mistral key presence was validated without
+> printing the value, but local GraceKelly was not reachable on
+> `http://127.0.0.1:8011/healthz/ready`. This runbook still requires a staged
+> runtime; do not start it in constrained local sessions.
 
 ## Preconditions
 

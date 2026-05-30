@@ -160,7 +160,7 @@ Import-DotEnv (Join-Path $ProjectRoot ".env")
 if (-not $AllowLive) {
     Write-Fatal @"
 This wrapper runs live GraceKelly/Mistral regression work and passes --allow-paid-apis.
-Re-run with -AllowLive only after explicit user opt-in for live service/API cost.
+Re-run with -AllowLive only after explicit user opt-in for live external-provider runtime/quota.
 "@
 }
 

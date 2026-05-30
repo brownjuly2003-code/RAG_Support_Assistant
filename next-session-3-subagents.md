@@ -2,10 +2,10 @@
 
 ## Goal
 Continue from the merged Colab remote benchmark handoff. No non-live
-autopilot-safe product backlog remains; do not run live GraceKelly, Mistral,
-Docker, Ollama, GraceKelly browser orchestration, local model downloads, or
-paid/API benchmark paths unless the user explicitly opts in during that
-session.
+autopilot-safe product backlog remains; do not start GraceKelly, Docker,
+Ollama, GraceKelly browser orchestration, local model downloads, or live
+external-provider benchmark paths unless the user explicitly opts in during
+that session.
 
 ## Current Baseline
 - Latest completed work:
@@ -21,13 +21,18 @@ session.
     notebook lint fix, ChromaDB locked-audit update, CI security config test
     alignment, Claude trace audit fixes, and the Python 3.11 smoke-report
     compatibility fix.
+  - Post-merge handoff commit `f8ffb0f` is on `origin/master`.
+  - 2026-05-30 readiness note: local `.env` contains `MISTRAL_API_KEY` and
+    Mistral `/v1/models` returned `200`; GraceKelly was not reachable on
+    `http://127.0.0.1:8011/healthz/ready`. No secret value was printed or
+    copied, and no local GraceKelly/Docker/Ollama/model process was started.
   - Agent Copilot semantic context UI and zero-overlap similar-ticket filtering.
   - Mock-safe benchmark Quickstart example and guardrail test.
   - `static/widget.html` a11y landmark coverage and color-contrast fix.
   - Axe/Lighthouse verification: `tests/test_a11y.py` with axe CLI `38 passed`;
     Lighthouse mobile `/static/chat.html` scored performance 99.
   - Local gate and Windows pytest workflow docs.
-  - Provider API-key guard tests for missing/placeholder paid-provider keys.
+  - Provider API-key guard tests for missing/placeholder direct-provider keys.
   - Autopilot runner protocol tests for PAUSE, BLOCKED, and allowed-path
     enforcement without invoking real `pi` or `codex`.
   - Active benchmark-doc guardrail: any `--allow-paid-apis` example in active
@@ -48,6 +53,17 @@ session.
 - [x] Colab remote benchmark PR: PR #1 merged to `master` as `415d4c8`.
       Master CI and Pages deploy passed.
 
+## Compact Resume Plan
+- Close current dirty WIP first, if still dirty: GitHub Actions action-major
+  refresh, docs wording, and the pre-commit config guard test.
+- Verify focused pytest, workflow YAML parsing, Ruff for touched tests, and
+  `git diff --check`.
+- Commit with explicit pathspecs. Push to `master` only if current user/project
+  rules still authorize ordinary push.
+- After the push, do only non-destructive local branch hygiene.
+- If `git status` is already clean after this refresh, do not repeat the same
+  checks merely to update handoff prose.
+
 ## Suggested Subagents
 None for default non-live work. Use subagents only if the session explicitly
 opts into planning or running a live benchmark.
@@ -65,14 +81,14 @@ opts into planning or running a live benchmark.
   instruction.
 - If making changes, keep scope to docs/tests unless a focused failing test
   proves runtime code needs a small fix.
-- Do not run GraceKelly, Mistral, paid/API benchmarks, scheduler installation,
+- Do not run GraceKelly, Mistral benchmark calls, scheduler installation,
   deploy, or production data commands without explicit user opt-in in that
   session.
 - Verify with focused tests first, then `git diff --check`; run full pytest if
   source or test files changed.
 
 ## Current Session Checks
-- [x] No live paid/API benchmark has run without explicit opt-in.
+- [x] No live external-provider benchmark has run without explicit opt-in.
 - [x] Active handoff docs point future sessions at the Colab runbook on
       `master`, not the closed Batch N lane.
 - [x] `git status --short --branch` was reviewed before this post-merge

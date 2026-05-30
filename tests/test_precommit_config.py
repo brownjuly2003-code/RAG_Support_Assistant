@@ -183,3 +183,27 @@ def test_ci_integration_tests_are_bounded_without_nested_testcontainers() -> Non
     assert "pytest tests/integration -q --timeout=120 --timeout-method=thread" in integration_job
     assert "GITHUB_ACTIONS" in regression_test
     assert "RAG_RUN_TESTCONTAINERS_IN_CI" in regression_test
+
+
+def test_github_actions_use_node24_compatible_majors() -> None:
+    workflow_sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((PROJECT_ROOT / ".github" / "workflows").glob("*.yml"))
+    )
+
+    assert "actions/checkout@v4" not in workflow_sources
+    assert "actions/setup-python@v5" not in workflow_sources
+    assert "actions/setup-node@v4" not in workflow_sources
+    assert "actions/upload-pages-artifact@v3" not in workflow_sources
+    assert "actions/deploy-pages@v4" not in workflow_sources
+    assert "dorny/paths-filter@v3" not in workflow_sources
+
+    for action in (
+        "actions/checkout@v6",
+        "actions/setup-python@v6",
+        "actions/setup-node@v6",
+        "actions/upload-pages-artifact@v5",
+        "actions/deploy-pages@v5",
+        "dorny/paths-filter@v4",
+    ):
+        assert action in workflow_sources

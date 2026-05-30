@@ -5,8 +5,9 @@
 > No active non-live autopilot-safe tasks remain in this fallback queue.
 > `AP-1` (`test: guard historical backlog pointers`) is closed by `d3f8eb7`.
 > `AP-2` (`docs: refresh autopilot state snapshot`) is closed by `cd6e7ba`.
-> Use `docs/plans/2026-05-01-backlog.md` for context; the remaining live
-> GraceKelly/Mistral benchmark lane requires explicit opt-in only.
+> Use `docs/plans/2026-05-01-backlog.md` for context; the live
+> GraceKelly/Mistral benchmark lane requires staged runtime and explicit
+> opt-in only, and is not an active local backlog item.
 > 2026-05-30 branch note: Colab remote benchmark setup is merged to `master`
 > through PR #1 at `415d4c8`; current state is in `AGENT_STATE.md` and
 > `next-session-3-subagents.md`. Master CI and Pages deploy passed. No
@@ -17,6 +18,7 @@
 > Historical safe-task snapshot. The tasks below are closed in current history;
 > use `docs/plans/2026-05-01-backlog.md` as the active backlog source. The only
 > remaining benchmark lane is live GraceKelly/Mistral work: explicit opt-in only.
+> It requires staged runtime and is not an active local backlog item.
 
 ## Safe Task 1: Add a Local Gate Wrapper
 
@@ -35,7 +37,7 @@
 ## Safe Task 3: Tighten Provider Settings Tests
 
 - Allowed files/directories: `tests/test_provider_settings.py`, `tests/test_mistral_provider.py`, `config/providers.yml`
-- Acceptance criteria: tests cover placeholder or missing paid-provider API keys without making network calls.
+- Acceptance criteria: tests cover placeholder or missing direct-provider API keys without making network calls.
 - Required verification: `python -m pytest tests/test_provider_settings.py tests/test_mistral_provider.py -q -p no:schemathesis --basetemp=.tmp/pytest` and `ruff check tests/test_provider_settings.py tests/test_mistral_provider.py config/providers.yml`.
 - Forbidden scope: `.env`, real API keys, live provider calls, production config, deploy files.
 

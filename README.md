@@ -217,14 +217,14 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `LANGFUSE_SECRET_KEY` | `-` | Optional Langfuse secret key |
 | `LANGFUSE_HOST` | `https://cloud.langfuse.com` | Langfuse host for LLM observability |
 
-### Provider profiles and paid APIs
+### Provider profiles and live external APIs
 
 | Variable | Default | Description |
 |---|---|---|
 | `PROVIDER_REGISTRY_PATH` | `config/providers.yml` | YAML registry with providers, pricing, capabilities, and routing profiles |
 | `LLM_PROVIDER_PROFILE` | `gracekelly-primary` | Active routing profile; defaults to the local GraceKelly orchestrator |
-| `LLM_BENCHMARK_ALLOW_PAID_APIS` | `false` | Allow live paid-provider calls in provider benchmarks |
-| `DAILY_COST_LIMIT_USD` | `5.0` | Fail fast when paid-provider spend for the current UTC day reaches this limit |
+| `LLM_BENCHMARK_ALLOW_PAID_APIS` | `false` | Backward-compatible flag that allows live external-provider calls in provider benchmarks |
+| `DAILY_COST_LIMIT_USD` | `5.0` | Fail fast when tracked direct-provider spend for the current UTC day reaches this limit |
 | `MISTRAL_API_KEY` | `changeme` | Direct Mistral API key; placeholder values are treated as missing |
 | `GRACEKELLY_BASE_URL` | `http://127.0.0.1:8011` | Base URL for the local GraceKelly orchestrator |
 | `GRACEKELLY_API_KEY` | `-` | Optional GraceKelly bearer token for non-public endpoints |
@@ -568,7 +568,7 @@ Runtime behavior:
 
 ### Mistral provider
 
-- `external-mistral` is the direct paid fallback for deployments where GraceKelly is unavailable.
+- `external-mistral` is the direct Mistral fallback for deployments where GraceKelly is unavailable.
 - The provider uses `POST https://api.mistral.ai/v1/chat/completions` with OpenAI-compatible chat payloads and reads token usage from `usage.prompt_tokens` / `usage.completion_tokens`.
 - Placeholder `MISTRAL_API_KEY=changeme` is treated as missing both in startup validation and in the provider constructor.
 - `DAILY_COST_LIMIT_USD` applies to the direct Mistral profile and blocks new runtime creation after the current UTC-day spend is exhausted.
@@ -621,13 +621,13 @@ python scripts/regression_eval.py \
   belongs to the GraceKelly profile.
 - Default mode is `mock-provider-benchmark`: answers are derived from the
   curated dataset and pricing/latency/refusal metrics are simulated so CI does
-  not spend paid API budget accidentally.
+  not call live external providers accidentally.
 - Live calls require explicit opt-in via `--allow-paid-apis` or
   `LLM_BENCHMARK_ALLOW_PAID_APIS=true`.
 - Reports compare pass rate, latency, total cost, and refusal rate for the
   baseline and candidate provider targets.
-- Paid profiles are blocked when `DAILY_COST_LIMIT_USD` is already exhausted
-  for the current UTC day.
+- Direct-provider profiles are blocked when `DAILY_COST_LIMIT_USD` is already
+  exhausted for the current UTC day.
 
 ## Online evaluators
 

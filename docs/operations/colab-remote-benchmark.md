@@ -22,9 +22,9 @@ benchmark path.
 4. Run the clone and dependency cells.
 5. Run the mock provider benchmark cell first. This must not call providers and
    uses `--no-persist`.
-6. For a paid live signal, set `RUN_LIVE = True` in the live cell, enter
-   `MISTRAL_API_KEY` through `getpass`, and keep `--max-cases 3` for the first
-   run.
+6. For a live external Mistral signal, set `RUN_LIVE = True` in the live cell,
+   enter `MISTRAL_API_KEY` through `getpass`, and keep `--max-cases 3` for the
+   first run.
 7. Download the generated report files from the Colab file browser.
 
 ## Boundaries
