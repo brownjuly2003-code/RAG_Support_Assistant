@@ -229,3 +229,8 @@ opts into planning or running a live benchmark.
       `tests/test_ragas_eval.py`, `tests/test_online_evaluators.py`,
       `tests/test_regression_eval_profile_target.py`, `tests/test_experiment_comparison.py`,
       Ruff, and py_compile.
+- [x] JavaScript/docs-site gate added and verified in `d09405c`: `astro check`
+      is now backed by checked-in dev dependencies, `npm audit` reports 0
+      vulnerabilities, `node --check` covers static/admin/widget and docs-site
+      scripts, Astro build produces 33 pages, and pre-commit passes with the
+      isolated `.tmp/pre-commit-cache`.

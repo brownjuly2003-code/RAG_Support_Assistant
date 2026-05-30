@@ -331,6 +331,19 @@ benchmark PR is merged into `master`:
 - Settings/env guard tests passed for the ahead series after `0f2a2be`.
 - Eval-tooling unit tests for RAGAS/online-evaluator/profile/comparison code
   passed after `e24d270`; no heavy baseline, ingest, or live API was run.
+- JavaScript/docs-site follow-up: commit `d09405c` adds the missing
+  `@astrojs/check` and `typescript` dev dependencies so `astro check` is a real
+  local gate, annotates the Starlight head-tag config for type checking,
+  removes an unused `sync-docs.mjs` import, and uses an npm override so
+  `yaml-language-server` resolves to non-vulnerable `yaml`.
+- JS/docs-site verification after `d09405c`:
+  `node --check` passed for `static/admin.js`, `static/widget.js`,
+  `docs-site/astro.config.mjs`, and all `docs-site/scripts/*.mjs`;
+  `npm --prefix docs-site audit --audit-level=moderate` found 0
+  vulnerabilities; `npm --prefix docs-site run astro -- check` returned 0
+  errors / 0 warnings / 0 hints; `npm --prefix docs-site run build` built 33
+  pages; `PRE_COMMIT_HOME=.tmp/pre-commit-cache pre-commit run --from-ref origin/master --to-ref HEAD`
+  passed.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
