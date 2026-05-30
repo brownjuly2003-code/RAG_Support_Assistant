@@ -177,6 +177,29 @@ def test_hybrid_retriever_vector_paths_and_reranker_fallback(
     assert no_similarity.get_relevant_documents("question") == [beta]
 
 
+def test_hybrid_retriever_rrf_keeps_chunks_with_shared_context_prefix() -> None:
+    shared_context = "Политика возврата и гарантийного обслуживания. " * 8
+    first = manager.Document(
+        page_content=f"{shared_context}\nПервый чанк: сроки возврата товара.",
+        metadata={"source": "returns.md"},
+    )
+    second = manager.Document(
+        page_content=f"{shared_context}\nВторой чанк: условия гарантийного ремонта.",
+        metadata={"source": "returns.md"},
+    )
+
+    retriever = manager.HybridRetriever(
+        SimpleNamespace(),
+        chunks=[first, second],
+        use_bm25=False,
+        doc_key_chars=200,
+    )
+
+    merged = retriever._rrf_merge([first], [second])
+
+    assert [doc.page_content for doc in merged] == [first.page_content, second.page_content]
+
+
 def test_qdrant_stub_store_search_and_retriever() -> None:
     docs = [
         manager.Document(page_content="alpha content", metadata={}),
@@ -220,6 +243,30 @@ def test_multi_query_retriever_generates_filters_and_merges(
     assert base.queries == ["alpha query", "skip query", "beta query"]
     assert [doc.page_content for doc in docs] == ["alpha query result", "beta query result"]
     assert manager.MultiQueryRetriever(base, None).invoke("plain query")
+
+
+def test_multi_query_rrf_keeps_chunks_with_shared_context_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        settings_module,
+        "get_settings",
+        lambda: SimpleNamespace(rrf_doc_key_chars=200, rrf_k=60),
+    )
+    shared_context = "Раздел базы знаний о доставке и возвратах. " * 8
+    first = manager.Document(
+        page_content=f"{shared_context}\nПервый чанк: доставка по регионам.",
+        metadata={"source": "shipping.md"},
+    )
+    second = manager.Document(
+        page_content=f"{shared_context}\nВторой чанк: возврат после доставки.",
+        metadata={"source": "shipping.md"},
+    )
+    retriever = manager.MultiQueryRetriever(SimpleNamespace(), None)
+
+    merged = retriever._rrf_merge_multiple([[first], [second]])
+
+    assert [doc.page_content for doc in merged] == [first.page_content, second.page_content]
 
 
 def test_build_helpers_handle_backends_and_simple_retriever(

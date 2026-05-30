@@ -23,6 +23,7 @@ Level 3: Contextual Retrieval, Parent Document Retrieval, Multi-Query
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import time
@@ -160,6 +161,19 @@ def get_reranker(model_name: str | None = None) -> Any | None:
 # Hybrid Retriever: BM25 + Vector + Reranker
 # ---------------------------------------------------------------------------
 
+def _rrf_document_key(doc: Document, prefix_chars: int = 200) -> str:
+    metadata = doc.metadata or {}
+    doc_id = metadata.get("doc_id") or metadata.get("source") or metadata.get("file_path")
+    chunk_id = metadata.get("chunk_id") or metadata.get("chunk_index")
+
+    if doc_id is not None and chunk_id is not None:
+        return f"metadata:{doc_id}:{chunk_id}"
+
+    digest = hashlib.sha256(doc.page_content.encode("utf-8")).hexdigest()
+    prefix = doc.page_content[:prefix_chars]
+    return f"content:{prefix}:{digest}"
+
+
 class HybridRetriever:
     """Гибридный ретривер: BM25 (keyword) + Vector (semantic) + Reranker.
 
@@ -245,12 +259,12 @@ class HybridRetriever:
         doc_map: Dict[str, Document] = {}
 
         for rank, doc in enumerate(list_a):
-            key = doc.page_content[:self._doc_key_chars]  # Уникальность по содержимому
+            key = _rrf_document_key(doc, self._doc_key_chars)
             scores[key] = scores.get(key, 0) + 1.0 / (self._rrf_k + rank)
             doc_map[key] = doc
 
         for rank, doc in enumerate(list_b):
-            key = doc.page_content[:self._doc_key_chars]
+            key = _rrf_document_key(doc, self._doc_key_chars)
             scores[key] = scores.get(key, 0) + 1.0 / (self._rrf_k + rank)
             doc_map[key] = doc
 
@@ -587,7 +601,7 @@ class MultiQueryRetriever:
 
         for result_list in result_lists:
             for rank, doc in enumerate(result_list):
-                key = doc.page_content[:key_chars]
+                key = _rrf_document_key(doc, key_chars)
                 scores[key] = scores.get(key, 0) + 1.0 / (rrf_k + rank)
                 doc_map[key] = doc
 
