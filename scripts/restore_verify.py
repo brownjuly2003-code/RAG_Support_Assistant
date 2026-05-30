@@ -200,7 +200,7 @@ def _restore_tarball(
     extract_to.mkdir(parents=True, exist_ok=True)
     try:
         with tarfile.open(source, "r:gz") as tar:
-            tar.extractall(extract_to)
+            tar.extractall(extract_to, filter="data")
     except Exception as exc:
         return StepResult(label, passed=False, detail=f"tar extract failed: {exc}")
     return StepResult(label, passed=True, detail=f"restored to {extract_to}")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 import sys
+import tarfile
 from pathlib import Path
 
 
@@ -79,6 +80,29 @@ def test_verify_fails_when_tarball_is_corrupted(tmp_path: Path) -> None:
     uploads_step = next(s for s in report.steps if s.name == "uploads")
     assert uploads_step.passed is False
     assert "tar extract failed" in uploads_step.detail
+
+
+def test_restore_tarball_uses_data_filter(tmp_path: Path, monkeypatch) -> None:
+    tarball = tmp_path / "uploads.tar.gz"
+    with tarfile.open(tarball, "w:gz"):
+        pass
+    captured: dict[str, object] = {}
+
+    def _extractall(self, path, *, filter=None):  # noqa: A002, ANN001, ANN202
+        captured["path"] = path
+        captured["filter"] = filter
+
+    monkeypatch.setattr(tarfile.TarFile, "extractall", _extractall)
+
+    result = restore_verify._restore_tarball(
+        tarball,
+        tmp_path / "restore",
+        relative_target=Path("data/uploads"),
+        label="uploads",
+    )
+
+    assert result.passed is True
+    assert captured["filter"] == "data"
 
 
 def test_verify_cleans_up_auto_temp_root_even_on_failure(tmp_path: Path) -> None:
