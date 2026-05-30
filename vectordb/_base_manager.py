@@ -357,6 +357,85 @@ def semantic_split(
 
 
 # ---------------------------------------------------------------------------
+# Markdown-structural chunking (opt-in)
+# ---------------------------------------------------------------------------
+
+def structural_split(
+    docs: List[Document],
+    max_chunk_size: int,
+    chunk_overlap: int,
+) -> List[Document]:
+    """Split markdown by headers, then cap each section to ``max_chunk_size``.
+
+    A chunk becomes a logical section (under its heading) instead of N raw chars.
+    Pure text transform — no embeddings, so it is unit-testable without models.
+    Falls back to the fixed splitter if a markdown header splitter is unavailable.
+    """
+    headers_to_split_on = [("#", "h1"), ("##", "h2"), ("###", "h3"), ("####", "h4")]
+    try:
+        from langchain_text_splitters import MarkdownHeaderTextSplitter  # type: ignore
+    except ImportError:
+        try:
+            from langchain.text_splitter import MarkdownHeaderTextSplitter  # type: ignore
+        except ImportError:
+            logger.warning(
+                "MarkdownHeaderTextSplitter unavailable, fallback to RecursiveCharacterTextSplitter",
+            )
+            return _build_text_splitter(max_chunk_size, chunk_overlap).split_documents(list(docs))
+
+    md_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on, strip_headers=False)
+    char_splitter = _build_text_splitter(max_chunk_size, chunk_overlap)
+
+    out: List[Document] = []
+    for doc in docs:
+        try:
+            sections = md_splitter.split_text(doc.page_content)
+        except Exception as exc:
+            logger.warning("MarkdownHeaderTextSplitter failed for one doc, fallback: %s", exc)
+            sections = char_splitter.split_documents([doc])
+        for section in sections:
+            meta = dict(doc.metadata or {})
+            meta.update(getattr(section, "metadata", {}) or {})
+            content = section.page_content
+            if len(content) > max_chunk_size:
+                for piece in char_splitter.split_text(content):
+                    out.append(Document(page_content=piece, metadata=dict(meta)))
+            else:
+                out.append(Document(page_content=content, metadata=dict(meta)))
+    return out
+
+
+def select_chunks(
+    docs: List[Document],
+    embeddings: Any,
+    chunk_size: int,
+    chunk_overlap: int,
+    *,
+    settings: Any = None,
+    use_semantic: bool = False,
+) -> List[Document]:
+    """Single chunking-strategy selector shared by all build sites.
+
+    Precedence: structural (opt-in flag) > semantic > fixed. With the structural
+    flag off the result is identical to the previous semantic/fixed branch, so the
+    default ingestion path is unchanged. Callers pass their already-resolved
+    ``settings`` so the same settings instance drives the decision.
+    """
+    if settings is None:
+        from config.settings import get_settings
+        settings = get_settings()
+    if getattr(settings, "structural_chunking", False):
+        logger.info("Using markdown-structural chunking (opt-in)")
+        return structural_split(list(docs), max_chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    if settings.semantic_chunking or use_semantic:
+        logger.info("Using semantic chunking (Level 2)")
+        return semantic_split(
+            list(docs), embeddings, min_chunk_size=chunk_overlap, max_chunk_size=chunk_size,
+        )
+    return _build_text_splitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap).split_documents(list(docs))
+
+
+# ---------------------------------------------------------------------------
 # Level 3: Contextual Retrieval
 # ---------------------------------------------------------------------------
 
@@ -742,21 +821,18 @@ def build_vector_store(
 
     chunk_size = int(chunk_config.get("chunk_size", getattr(settings, "chunk_size", 800)))
     chunk_overlap = int(chunk_config.get("chunk_overlap", getattr(settings, "chunk_overlap", 200)))
-    semantic_chunking_enabled = settings.semantic_chunking or use_semantic_chunking
-
-    if semantic_chunking_enabled:
-        logger.info("Using semantic chunking (Level 2)")
-        chunks = semantic_split(
-            list(docs), embeddings,
-            min_chunk_size=chunk_overlap,
-            max_chunk_size=chunk_size,
-        )
-    else:
-        splitter = _build_text_splitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-        chunks = splitter.split_documents(list(docs))
+    chunks = select_chunks(
+        list(docs), embeddings, chunk_size, chunk_overlap,
+        settings=settings, use_semantic=use_semantic_chunking,
+    )
 
     backend = _get_backend()
-    mode = "semantic" if semantic_chunking_enabled else f"fixed(size={chunk_size}, overlap={chunk_overlap})"
+    if getattr(settings, "structural_chunking", False):
+        mode = "structural"
+    elif settings.semantic_chunking or use_semantic_chunking:
+        mode = "semantic"
+    else:
+        mode = f"fixed(size={chunk_size}, overlap={chunk_overlap})"
     logger.info("Backend: %s, chunks: %d, mode: %s", backend.upper(), len(chunks), mode)
 
     if backend == "qdrant":
@@ -807,19 +883,7 @@ def build_retriever(
     chunk_overlap = getattr(settings, "chunk_overlap", 200)
 
     if vector_store is None or chunks is None:
-        if settings.semantic_chunking:
-            chunks = semantic_split(
-                list(docs),
-                embeddings,
-                min_chunk_size=chunk_overlap,
-                max_chunk_size=chunk_size,
-            )
-        else:
-            splitter = _build_text_splitter(
-                chunk_size=chunk_size,
-                chunk_overlap=chunk_overlap,
-            )
-            chunks = splitter.split_documents(list(docs))
+        chunks = select_chunks(list(docs), embeddings, chunk_size, chunk_overlap, settings=settings)
         vector_store = QdrantStubStore(chunks, embeddings)
 
     use_bm25 = settings.hybrid_search and chunks is not None

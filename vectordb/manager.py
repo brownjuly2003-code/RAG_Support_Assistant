@@ -111,21 +111,10 @@ def build_vector_store(
     backend = getattr(settings, "vector_backend", "chroma")
     chunk_size = int(chunk_config.get("chunk_size", getattr(settings, "chunk_size", 800)))
     chunk_overlap = int(chunk_config.get("chunk_overlap", getattr(settings, "chunk_overlap", 200)))
-    semantic_chunking_enabled = settings.semantic_chunking or use_semantic_chunking
-
-    if semantic_chunking_enabled:
-        chunks = _base_manager.semantic_split(
-            list(docs),
-            embeddings,
-            min_chunk_size=chunk_overlap,
-            max_chunk_size=chunk_size,
-        )
-    else:
-        splitter = _base_manager._build_text_splitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-        )
-        chunks = splitter.split_documents(list(docs))
+    chunks = _base_manager.select_chunks(
+        list(docs), embeddings, chunk_size, chunk_overlap,
+        settings=settings, use_semantic=use_semantic_chunking,
+    )
 
     if getattr(settings, "contextual_headers", False):
         chunks = add_contextual_headers(

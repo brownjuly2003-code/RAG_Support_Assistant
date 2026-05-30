@@ -54,6 +54,7 @@ EXPERIMENT_SETTINGS_KEYS = (
     "rrf_k",
     "quality_threshold",
     "semantic_chunking",
+    "structural_chunking",
     "contextual_headers",
     "agentic_mode",
     "hyde",
@@ -80,6 +81,7 @@ _EXPERIMENT_SETTING_ENV_VARS: dict[str, tuple[str, ...]] = {
     "rrf_k": ("RRF_K",),
     "quality_threshold": ("QUALITY_THRESHOLD",),
     "semantic_chunking": ("RAG_SEMANTIC_CHUNKING",),
+    "structural_chunking": ("RAG_STRUCTURAL_CHUNKING",),
     "contextual_headers": ("RAG_CONTEXTUAL_HEADERS",),
     "agentic_mode": ("RAG_AGENTIC_MODE",),
     "hyde": ("RAG_HYDE",),
@@ -306,6 +308,8 @@ class Settings:
 
     # --- Level 2: Semantic Chunking ---
     semantic_chunking: bool = os.getenv("RAG_SEMANTIC_CHUNKING", "true").strip().lower() in ("1", "true", "yes")
+    # --- Markdown-structural chunking (opt-in, default off): split by markdown headers, cap to chunk_size ---
+    structural_chunking: bool = os.getenv("RAG_STRUCTURAL_CHUNKING", "false").strip().lower() in ("1", "true", "yes")
     contextual_headers: bool = field(
         default_factory=lambda: os.getenv(
             "RAG_CONTEXTUAL_HEADERS", "true"
