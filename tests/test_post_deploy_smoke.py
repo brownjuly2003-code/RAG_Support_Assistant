@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import sys
 from pathlib import Path
 
@@ -8,6 +9,20 @@ import httpx
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts import post_deploy_smoke
+
+
+def test_smoke_script_keeps_python_311_compatible_fstrings() -> None:
+    source = Path(post_deploy_smoke.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+
+    incompatible_segments = [
+        ast.get_source_segment(source, node)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FormattedValue)
+        and "\\" in (ast.get_source_segment(source, node) or "")
+    ]
+
+    assert incompatible_segments == []
 
 
 def _transport_router(response_map: dict[tuple[str, str], tuple[int, dict | str]]) -> httpx.MockTransport:
