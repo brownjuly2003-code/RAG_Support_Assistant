@@ -310,7 +310,7 @@ Resilience layers apply in this order:
 | `MAX_REQUEST_BODY_BYTES` | `1048576` | 1 MiB request-body limit for non-upload endpoints |
 | `MAX_UPLOAD_BYTES` | `52428800` | 50 MiB upload limit for `/api/upload` |
 | `ALLOW_ANONYMOUS_ADMIN` | `-` | Opt-in escape hatch when `API_KEY` is empty: set to `1`/`true` to permit anonymous admin (otherwise endpoints return HTTP 503). Local-dev only. Added 2026-04-26 audit. |
-| `HOST` | `127.0.0.1` (bare run) | Used only when launching via `python main.py`. Docker compose binds 0.0.0.0 explicitly. |
+| `HOST` | `127.0.0.1` (bare run) | Used only when launching via `python main.py`. Default Docker Compose is local-dev only and binds host ports to `127.0.0.1`. |
 | `PORT` | `8000` | Same — bare run only. |
 | `AUTO_MIGRATE` | `true` | Run `alembic upgrade head` in startup lifespan. On error logs warning, does not abort. |
 
@@ -925,6 +925,11 @@ Run `pre-commit run --all-files`, `pytest tests/ -q --ignore=tests/integration -
 Workflow history and logs are available on the repository `Actions -> CI` page.
 
 ## Docker
+
+The default `docker-compose.yml` is a local development stack, not a
+production deployment manifest. Published host ports are bound to `127.0.0.1`
+and the app container sets `RAG_ENV=development`; use the Helm chart or a
+separate production manifest for reachable deployments.
 
 ```bash
 cp .env.example .env
