@@ -35,6 +35,10 @@ that session.
   - Claude audit/ultrareview was requested after local fixes, but no
     Claude-specific audit tool was available in this tool session; local
     focused verification was used instead.
+  - 2026-05-30 Claude CLI follow-up: read-only full-project `claude -p`
+    review prompts were blocked by Anthropic cyber safeguards, and
+    `claude ultrareview --timeout 30` returned "Ultrareview is currently
+    unavailable." No Claude audit findings were produced.
   - 2026-05-30 non-local check: the stale scheduled Weekly Report failures
     were caused by `ModuleNotFoundError: No module named 'config'` when Actions
     ran `python scripts/weekly_report.py --dry-run`. Commit `a86b44c` keeps

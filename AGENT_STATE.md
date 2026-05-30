@@ -165,6 +165,11 @@ commit `f8ffb0f` is on `origin/master`.
   docs-site 404 route warning. Claude audit/ultrareview tooling was requested
   but no Claude-specific audit tool was available in this session; local
   focused checks were used instead.
+- 2026-05-30 Claude CLI follow-up: `claude -p` read-only full-project review
+  prompts were blocked by Anthropic cyber safeguards, and
+  `claude ultrareview --timeout 30` returned "Ultrareview is currently
+  unavailable." No Claude audit findings were produced, and no token or
+  safeguard adjustment URL from the CLI error was copied into project files.
 
 Notebook URL for manual Colab use:
 `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`
