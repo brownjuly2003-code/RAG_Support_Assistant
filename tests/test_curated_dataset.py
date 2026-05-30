@@ -380,6 +380,18 @@ def test_checked_in_curated_cases_have_expanded_ru_seed_coverage() -> None:
     assert sum(any("а" <= char.lower() <= "я" or char.lower() == "ё" for char in case.query) for case in cases) >= 30
 
 
+def test_aircargo_curated_cases_parse_and_cover_domains() -> None:
+    from scripts.regression_eval import load_curated_cases
+
+    cases = load_curated_cases(PROJECT_ROOT / "evaluation" / "curated_cases_aircargo.jsonl")
+    case_ids = [case.case_id for case in cases]
+
+    assert len(cases) >= 30
+    assert len(case_ids) == len(set(case_ids))
+    assert all(case.tenant_id == "aircargo" for case in cases)
+    assert sum(any("а" <= char.lower() <= "я" or char.lower() == "ё" for char in case.query) for case in cases) >= 30
+
+
 def test_split_cases_is_deterministic() -> None:
     from evaluation.dataset import CuratedCase, split_cases
 
