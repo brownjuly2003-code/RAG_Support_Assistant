@@ -225,3 +225,7 @@ opts into planning or running a live benchmark.
       `tests/test_provider_settings.py`, `tests/test_settings_production_secrets.py`,
       `tests/test_production_entrypoint.py`, `tests/test_magic_numbers_settings.py`,
       `tests/test_experiment_registry.py`, Ruff, and py_compile.
+- [x] Eval-tooling ahead gate passed after `e24d270`:
+      `tests/test_ragas_eval.py`, `tests/test_online_evaluators.py`,
+      `tests/test_regression_eval_profile_target.py`, `tests/test_experiment_comparison.py`,
+      Ruff, and py_compile.

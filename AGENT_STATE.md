@@ -250,6 +250,13 @@
   All checks passed after `0f2a2be`.
 - `python -m py_compile config/settings.py tests/test_provider_settings.py tests/test_settings_production_secrets.py tests/test_production_entrypoint.py tests/test_magic_numbers_settings.py tests/test_experiment_registry.py`:
   passed after `0f2a2be`.
+- Ahead-series eval-tooling verification:
+  `python -m pytest tests/test_ragas_eval.py tests/test_online_evaluators.py tests/test_regression_eval_profile_target.py tests/test_experiment_comparison.py -q -p no:schemathesis -p no:cacheprovider --basetemp=.tmp/pytest-eval-tooling-ahead`:
+  36 passed, 1 warning after commit `e24d270`.
+- `ruff check tests/test_ragas_eval.py tests/test_online_evaluators.py tests/test_regression_eval_profile_target.py tests/test_experiment_comparison.py evaluation/ragas_eval.py`:
+  All checks passed after `e24d270`.
+- `python -m py_compile evaluation/ragas_eval.py tests/test_ragas_eval.py tests/test_online_evaluators.py tests/test_regression_eval_profile_target.py tests/test_experiment_comparison.py`:
+  passed after `e24d270`.
 
 ## Operating Mode
 
@@ -322,6 +329,8 @@ benchmark PR is merged into `master`:
   `PRE_COMMIT_HOME=.tmp/pre-commit-cache`; the default global pre-commit cache
   is not currently reliable on this Windows user profile.
 - Settings/env guard tests passed for the ahead series after `0f2a2be`.
+- Eval-tooling unit tests for RAGAS/online-evaluator/profile/comparison code
+  passed after `e24d270`; no heavy baseline, ingest, or live API was run.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
