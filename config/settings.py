@@ -49,6 +49,7 @@ EXPERIMENT_SETTINGS_KEYS = (
     "embedding_model",
     "reranker_model",
     "hybrid_search",
+    "retrieval_strategy",
     "retrieval_top_k",
     "rerank_top_k",
     "rrf_k",
@@ -76,6 +77,7 @@ _EXPERIMENT_SETTING_ENV_VARS: dict[str, tuple[str, ...]] = {
     "embedding_model": ("RAG_EMBEDDING_MODEL",),
     "reranker_model": ("RAG_RERANKER_MODEL",),
     "hybrid_search": ("RAG_HYBRID_SEARCH",),
+    "retrieval_strategy": ("RAG_RETRIEVAL_STRATEGY",),
     "retrieval_top_k": ("RAG_RETRIEVAL_TOP_K",),
     "rerank_top_k": ("RAG_RERANK_TOP_K",),
     "rrf_k": ("RRF_K",),
@@ -293,6 +295,10 @@ class Settings:
     # --- Hybrid Search ---
     # Включить BM25 + vector hybrid search (Reciprocal Rank Fusion)
     hybrid_search: bool = os.getenv("RAG_HYBRID_SEARCH", "true").strip().lower() in ("1", "true", "yes")
+    retrieval_strategy: str = field(
+        default_factory=lambda: os.getenv("RAG_RETRIEVAL_STRATEGY", "hybrid").strip().lower()
+        or "hybrid"
+    )
 
     # Retrieval parameters
     retrieval_top_k: int = int(os.getenv("RAG_RETRIEVAL_TOP_K", "20"))   # candidates before reranking

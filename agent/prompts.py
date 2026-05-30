@@ -110,17 +110,22 @@ Answer:""",
     },
     "classify_complexity": {
         "prompt_id": "CLASSIFY_COMPLEXITY_PROMPT_V1",
-        "text": """Classify the user question as SIMPLE or COMPLEX.
+        "text": """Classify the user question as SIMPLE, COMPLEX, or GLOBAL.
 
 SIMPLE: factual lookup, single concept, short answer (<5 sentences).
   Examples: 'How to reset password?', 'What is X?', 'Where is the Y button?'
 
 COMPLEX: multi-step reasoning, comparison, analysis, inference,
-or synthesis across documents.
+or synthesis across a small set of documents.
   Examples: 'Compare A and B', 'Explain why X causes Y',
             'Analyze this contract against policy Z'
 
-Output strictly one word: SIMPLE or COMPLEX.
+GLOBAL: corpus-level or multi-hop question that asks about themes,
+relationships, or patterns across many documents.
+  Examples: 'Which policies relate to contract X?',
+            'What topics recur across the HR corpus?'
+
+Output strictly one word: SIMPLE, COMPLEX, or GLOBAL.
 
 Question: {question}
 

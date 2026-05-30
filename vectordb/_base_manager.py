@@ -220,18 +220,25 @@ class HybridRetriever:
             self._bm25 = BM25Okapi(tokenized)
             logger.debug("BM25 index built: %d chunks", len(chunks))
 
+    def _vector_search(self, query: str) -> List[Document]:
+        try:
+            if hasattr(self._vector_store, "similarity_search"):
+                return self._vector_store.similarity_search(query, k=self._retrieval_k)
+            else:
+                retriever = self._vector_store.as_retriever(search_kwargs={"k": self._retrieval_k})
+                return retriever.get_relevant_documents(query)
+        except Exception as e:
+            logger.warning("[HybridRetriever] Vector search error: %s", e)
+            return []
+
+    def get_vector_documents(self, query: str) -> List[Document]:
+        """Vector-only retrieval path for cheap simple-query routing."""
+        return self._vector_search(query)[:self._rerank_k]
+
     def get_relevant_documents(self, query: str) -> List[Document]:
         """Гибридный поиск с RRF и reranking."""
         # Step 1: Vector search
-        try:
-            if hasattr(self._vector_store, "similarity_search"):
-                vector_results = self._vector_store.similarity_search(query, k=self._retrieval_k)
-            else:
-                retriever = self._vector_store.as_retriever(search_kwargs={"k": self._retrieval_k})
-                vector_results = retriever.get_relevant_documents(query)
-        except Exception as e:
-            logger.warning("[HybridRetriever] Vector search error: %s", e)
-            vector_results = []
+        vector_results = self._vector_search(query)
 
         # Step 2: BM25 search
         bm25_results: List[Document] = []
@@ -298,6 +305,13 @@ class HybridRetriever:
 # ---------------------------------------------------------------------------
 # Path/backend helpers
 # ---------------------------------------------------------------------------
+
+def _normalize_retrieval_strategy(settings: Any) -> str:
+    strategy = str(getattr(settings, "retrieval_strategy", "hybrid") or "hybrid").strip().lower()
+    if strategy in {"vector", "hybrid", "graph"}:
+        return strategy
+    return "hybrid"
+
 
 def _project_root() -> Path:
     return Path(__file__).resolve().parent
@@ -886,8 +900,10 @@ def build_retriever(
         chunks = select_chunks(list(docs), embeddings, chunk_size, chunk_overlap, settings=settings)
         vector_store = QdrantStubStore(chunks, embeddings)
 
-    use_bm25 = settings.hybrid_search and chunks is not None
-    reranker = get_reranker() if settings.reranker_model else None
+    retrieval_strategy = _normalize_retrieval_strategy(settings)
+    use_hybrid_components = retrieval_strategy != "vector"
+    use_bm25 = use_hybrid_components and settings.hybrid_search and chunks is not None
+    reranker = get_reranker() if use_hybrid_components and settings.reranker_model else None
     logger.info("Retriever: HybridRetriever (parent_child=false)")
 
     if use_bm25 or reranker:
@@ -956,8 +972,10 @@ def get_retriever(
     rerank_k = settings.rerank_top_k
 
     # Try to build hybrid retriever
-    use_bm25 = settings.hybrid_search and chunks is not None
-    reranker = get_reranker() if settings.reranker_model else None
+    retrieval_strategy = _normalize_retrieval_strategy(settings)
+    use_hybrid_components = retrieval_strategy != "vector"
+    use_bm25 = use_hybrid_components and settings.hybrid_search and chunks is not None
+    reranker = get_reranker() if use_hybrid_components and settings.reranker_model else None
 
     if use_bm25 or reranker:
         return HybridRetriever(

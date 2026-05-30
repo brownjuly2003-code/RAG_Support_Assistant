@@ -177,6 +177,32 @@ def test_hybrid_retriever_vector_paths_and_reranker_fallback(
     assert no_similarity.get_relevant_documents("question") == [beta]
 
 
+def test_hybrid_retriever_vector_fast_path_skips_reranker() -> None:
+    alpha = manager.Document(page_content="alpha doc", metadata={})
+    beta = manager.Document(page_content="beta doc", metadata={})
+
+    class _VectorStore:
+        def similarity_search(self, query: str, k: int) -> list[manager.Document]:
+            assert query == "question"
+            assert k == 20
+            return [alpha, beta]
+
+    class _UnexpectedReranker:
+        def predict(self, pairs: list[tuple[str, str]]) -> list[float]:
+            _ = pairs
+            raise AssertionError("vector fast path must not rerank")
+
+    retriever = manager.HybridRetriever(
+        _VectorStore(),
+        chunks=[alpha, beta],
+        reranker=_UnexpectedReranker(),
+        use_bm25=True,
+        rerank_k=1,
+    )
+
+    assert retriever.get_vector_documents("question") == [alpha]
+
+
 def test_hybrid_retriever_rrf_keeps_chunks_with_shared_context_prefix() -> None:
     shared_context = "Политика возврата и гарантийного обслуживания. " * 8
     first = manager.Document(

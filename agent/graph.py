@@ -758,7 +758,7 @@ def make_classify_complexity_node(
                         "properties": {
                             "complexity": {
                                 "type": "string",
-                                "enum": ["simple", "complex"],
+                                "enum": ["simple", "complex", "global"],
                             }
                         },
                         "required": ["complexity"],
@@ -782,9 +782,11 @@ def make_classify_complexity_node(
                 duration_ms=0.0,
                 tool_calls=state.get("tool_calls") or None,
             )
-            complexity: Literal["simple", "complex", "unknown"]
+            complexity: Literal["simple", "complex", "global", "unknown"]
             if raw.startswith("SIMPLE"):
                 complexity = "simple"
+            elif raw.startswith("GLOBAL") or raw.startswith("MULTI_HOP") or raw.startswith("MULTIHOP"):
+                complexity = "global"
             elif raw.startswith("COMPLEX"):
                 complexity = "complex"
             else:
@@ -905,6 +907,35 @@ def make_transform_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Gra
 # ---------------------------------------------------------------------------
 
 
+_RETRIEVAL_STRATEGIES = {"vector", "hybrid", "graph"}
+
+
+def _normalize_retrieval_strategy(value: object) -> Literal["vector", "hybrid", "graph"]:
+    raw = str(value or "hybrid").strip().lower()
+    if raw in _RETRIEVAL_STRATEGIES:
+        return cast(Literal["vector", "hybrid", "graph"], raw)
+    return "hybrid"
+
+
+def _select_retrieval_strategy(state: GraphState) -> Literal["vector", "hybrid", "graph"]:
+    if get_settings is not None:
+        settings = get_settings()
+        configured = _normalize_retrieval_strategy(
+            getattr(settings, "retrieval_strategy", "hybrid")
+        )
+    else:
+        configured = "hybrid"
+
+    complexity = state.get("complexity", "unknown")
+    if configured == "vector":
+        return "vector"
+    if complexity == "simple":
+        return "vector"
+    if configured == "graph" and complexity == "global":
+        return "graph"
+    return "hybrid"
+
+
 def make_retrieve_node(retriever: Any) -> Callable[[GraphState], GraphState]:
     """Узел retrieve: ищет документы по search_query (или question как fallback)."""
 
@@ -914,19 +945,34 @@ def make_retrieve_node(retriever: Any) -> Callable[[GraphState], GraphState]:
         trace_id = state.get("trace_id", "unknown-trace-id")
         try:
             query = state.get("hyde_query") or state.get("search_query") or state.get("question", "")
+            requested_strategy = _select_retrieval_strategy(state)
+            effective_strategy = requested_strategy
             tracer = get_otel_tracer()
             with tracer.start_as_current_span("rag.retrieve") as span:
                 span.set_attribute("rag.question_length", len(str(state.get("question", "") or "")))
                 span.set_attribute("rag.query_length", len(str(query or "")))
                 span.set_attribute("rag.tenant_id", str(state.get("tenant_id", "default")))
+                span.set_attribute("rag.retrieval_strategy", requested_strategy)
                 try:
-                    docs = retriever.get_relevant_documents(query)
+                    if requested_strategy == "vector" and hasattr(retriever, "get_vector_documents"):
+                        docs = retriever.get_vector_documents(query)
+                    elif requested_strategy == "graph" and hasattr(retriever, "get_graph_documents"):
+                        docs = retriever.get_graph_documents(query)
+                    else:
+                        if requested_strategy == "graph":
+                            effective_strategy = "hybrid"
+                        docs = retriever.get_relevant_documents(query)
                 except Exception as exc:
                     logger.warning("[retrieve] Retriever error: %s", exc, extra={"trace_id": trace_id})
                     docs = []
                 span.set_attribute("rag.num_docs", len(docs))
+                span.set_attribute("rag.retrieval_strategy_effective", effective_strategy)
             plain_docs = _docs_to_plain_dicts(docs)
-            new_state: GraphState = {**state, "context_docs": plain_docs}
+            new_state: GraphState = {
+                **state,
+                "context_docs": plain_docs,
+                "retrieval_strategy": effective_strategy,
+            }
             log_step(trace_id, "retrieve", new_state)
             return new_state
         except Exception as exc:
@@ -1185,6 +1231,10 @@ def make_generate_node(
                 )
 
             new_state: GraphState = {**state, "answer": answer, "citations": citations}
+            if complexity == "simple":
+                new_state["claims"] = []
+                new_state["fact_verification_skipped"] = True
+                new_state["factuality_score"] = 100
             if usage_recorded:
                 new_state = _apply_llm_usage(new_state, usage)
             log_step(trace_id, "generate", new_state)
@@ -1673,6 +1723,22 @@ def _should_retry(state: GraphState) -> str:
     return "end"
 
 
+def _route_after_retrieve(state: GraphState) -> str:
+    if state.get("error"):
+        return "error"
+    if state.get("complexity") == "simple":
+        return "generate"
+    return "grade"
+
+
+def _route_after_generate(state: GraphState) -> str:
+    if state.get("error"):
+        return "error"
+    if state.get("complexity") == "simple":
+        return "evaluate"
+    return "verify"
+
+
 # ---------------------------------------------------------------------------
 # Сборка графа (Level 2: Corrective & Self-RAG)
 # ---------------------------------------------------------------------------
@@ -1687,7 +1753,7 @@ def build_support_graph(
     """Собирает и компилирует граф LangGraph Level 2.
 
     Граф:
-        classify_complexity → transform_query → retrieve → grade_docs → generate
+        classify_complexity → transform_query → retrieve → grade_docs? → generate
             → verify_facts → evaluate → route_or_retry
                 ├─ (retry) → rewrite_query → retrieve → ...
                 └─ (end)   → log → END
@@ -1735,9 +1801,25 @@ def build_support_graph(
     workflow.set_entry_point("classify_complexity")
     workflow.add_edge("classify_complexity", "transform_query")
     workflow.add_edge("transform_query", "retrieve")
-    workflow.add_edge("retrieve", "grade_docs")
+    workflow.add_conditional_edges(
+        "retrieve",
+        _route_after_retrieve,
+        {
+            "error": "handle_error",
+            "grade": "grade_docs",
+            "generate": "generate",
+        },
+    )
     workflow.add_edge("grade_docs", "generate")
-    workflow.add_edge("generate", "verify_facts")
+    workflow.add_conditional_edges(
+        "generate",
+        _route_after_generate,
+        {
+            "error": "handle_error",
+            "verify": "verify_facts",
+            "evaluate": "evaluate",
+        },
+    )
     workflow.add_edge("verify_facts", "evaluate")
     workflow.add_edge("evaluate", "route_or_retry")
 

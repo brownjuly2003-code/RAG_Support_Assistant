@@ -210,7 +210,7 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Base URL for explicit `local-first` Ollama mode or GraceKelly fallback |
 | `OLLAMA_MODEL_NAME` | `qwen2.5:7b` | Primary Ollama model when `LLM_PROVIDER_PROFILE=local-first` |
 | `OLLAMA_FAST_MODEL_NAME` | `llama3.2:3b` | Faster Ollama model for explicit local helper/tool flows |
-| `MODEL_ROUTING_ENABLED` | `false` | Enable simple/complex model routing |
+| `MODEL_ROUTING_ENABLED` | `false` | Enable simple/complex/global model routing |
 | `OLLAMA_REQUEST_TIMEOUT_SEC` | `60` | Timeout for a single Ollama HTTP request |
 | `REQUIRE_OLLAMA` | `false` | Fail fast at startup if explicit Ollama mode/fallback validation requires Ollama |
 | `LANGFUSE_PUBLIC_KEY` | `-` | Optional Langfuse public key |
@@ -241,6 +241,7 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `RAG_EMBEDDING_MODEL` | `BAAI/bge-m3` | Embedding model used for documents and queries |
 | `RAG_RERANKER_MODEL` | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Cross-encoder reranker |
 | `RAG_HYBRID_SEARCH` | `true` | Combine BM25 with vector retrieval |
+| `RAG_RETRIEVAL_STRATEGY` | `hybrid` | Retrieval strategy: `vector`, `hybrid`, or `graph`; graph falls back to hybrid until a graph retriever is configured |
 | `RAG_RETRIEVAL_TOP_K` | `20` | Candidate documents fetched before reranking |
 | `RAG_RERANK_TOP_K` | `5` | Final document count after reranking |
 | `RRF_K` | `60` | Reciprocal Rank Fusion smoothing constant |
