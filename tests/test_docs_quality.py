@@ -46,6 +46,14 @@ def test_accessibility_docs_record_completed_tooling_verification() -> None:
     assert "moderate landmark/region cleanup can be handled as polish" not in backlog
 
 
+def test_docs_site_404_content_is_not_published_as_docs_route() -> None:
+    content_404 = PROJECT_ROOT / "docs-site" / "src" / "content" / "docs" / "404.md"
+
+    content = content_404.read_text(encoding="utf-8")
+
+    assert "\ndraft: true\n" in content
+
+
 def test_roadmap_does_not_reopen_closed_lighthouse_work() -> None:
     roadmap = (PROJECT_ROOT / "codex-tasks" / "ROADMAP.md").read_text(
         encoding="utf-8"
