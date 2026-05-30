@@ -68,8 +68,9 @@ that session.
     `RAG_RETRIEVAL_STRATEGY`, `GLOBAL` classification, vector-only retrieval
     for simple routed queries, and simple-query bypass of `grade_docs` and
     `verify_facts`. Local focused graph/retriever/settings tests passed.
-    Local follow-up `32e841f` expands `evaluation/curated_cases_aircargo.jsonl`
-    from 31 to 54 grounded RU aircargo cases; mock regression passed 54/54.
+    Local follow-ups `32e841f`, `6b7417d`, and `325d63c` expand
+    `evaluation/curated_cases_aircargo.jsonl` from 31 to 100 grounded RU
+    aircargo cases; mock regression passed 100/100.
   - 2026-05-30 Claude CLI follow-up: read-only full-project `claude -p`
     review prompts were blocked by Anthropic cyber safeguards, and
     `claude ultrareview --timeout 30` returned "Ultrareview is currently
@@ -131,8 +132,9 @@ that session.
 - [x] Adaptive retrieval seam: closed locally by `676b3e0`; simple routed
       queries use vector-only retrieval when available and skip grade/verify,
       while `GLOBAL` classification is ready for a future graph retriever.
-- [x] Aircargo curated seed expansion: closed locally by `32e841f`; dataset is
-      now 54 cases and local mock regression passed 54/54.
+- [x] Aircargo curated seed expansion: closed locally by `32e841f`, `6b7417d`,
+      and `325d63c`; dataset is now 100 cases and local mock regression passed
+      100/100.
 
 ## Compact Resume Plan
 - Close current dirty WIP first, if still dirty.
@@ -200,5 +202,6 @@ opts into planning or running a live benchmark.
 - [x] Local adaptive retrieval seam committed as `676b3e0`; focused pytest,
       Ruff, py_compile, `mypy --follow-imports=skip`, and `git diff --check`
       passed.
-- [x] Local aircargo seed set expanded to 54 RU cases (`32e841f`); full
-      `tests/test_curated_dataset.py` passed and mock regression passed 54/54.
+- [x] Local aircargo seed set expanded to 100 RU cases (`32e841f`, `6b7417d`,
+      `325d63c`); full `tests/test_curated_dataset.py` passed and mock
+      regression passed 100/100.

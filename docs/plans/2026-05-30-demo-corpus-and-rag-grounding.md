@@ -23,8 +23,9 @@
 - Локальный query-routing шов реализован в `676b3e0`: `RAG_RETRIEVAL_STRATEGY`,
   `GLOBAL` classification, vector-only path для `simple` и bypass
   `grade_docs`/`verify_facts` для простых запросов.
-- Aircargo RU seed расширен в `32e841f` с 31 до **54 grounded cases**;
-  mock regression на `evaluation/curated_cases_aircargo.jsonl` прошёл 54/54.
+- Aircargo RU seed расширен в `32e841f`, `6b7417d` и `325d63c` с 31 до
+  **100 grounded cases**; mock regression на
+  `evaluation/curated_cases_aircargo.jsonl` прошёл 100/100.
 
 Тенант `aircargo` выбран намеренно отдельным от дефолтного consumer-support KB
 (warranty/returns/errors) — это **не разрушает** существующее демо и заодно демонстрирует
@@ -173,12 +174,12 @@ Windows** (RAM-лимит, thin-client boundary).
    Раздельным процессом (build → eval → report), кэшировать Chroma-коллекцию (см. memory:
    `feedback_rogii_split_python_runs`).
 2. **Построить RU eval-набор (R7).** Стартовый набор **уже создан**:
-   `evaluation/curated_cases_aircargo.jsonl` — **54 грунтованных RU-кейса** (`tenant_id=aircargo`),
+   `evaluation/curated_cases_aircargo.jsonl` — **100 грунтованных RU-кейсов** (`tenant_id=aircargo`),
    keywords взяты дословно из корпуса, покрытие HR/legal/logistics/compliance.
    Отдельный файл (не трогает дефолтный CI-gate `curated_cases.jsonl`); guard-тест
-   `tests/test_curated_dataset.py::test_aircargo_curated_cases_parse_and_cover_domains` (≥50, unique,
-   все RU) — зелёный. На Colab расширить до 100–150 (генерация Q/A по остальным разделам +
-   confirmed-good трейсы через `build_curated_dataset.py`). Запуск eval:
+   `tests/test_curated_dataset.py::test_aircargo_curated_cases_parse_and_cover_domains` (≥100, unique,
+   все RU) — зелёный. На Colab расширять дальше до ~150 только если RAGAS/confirmed-good
+   трейсы покажут недостаточное покрытие. Запуск eval:
    `python scripts/regression_eval.py --dataset evaluation/curated_cases_aircargo.jsonl --tenant aircargo ...`.
 3. **RAGAS baseline.** `scripts/nightly_eval.py` + `evaluation/ragas_eval.py` на текущей
    конфигурации (800/200, ms-marco reranker) → зафиксировать faithfulness / context-precision /
@@ -208,7 +209,8 @@ Windows** (RAM-лимит, thin-client boundary).
 
 1. **R1 reranker `bge-reranker-v2-m3`** (Colab) — теперь №1: R1 доказан (§0bis), это
    подтверждённый крупнейший скачок precision. A/B на 3 руки: OFF / ms-marco / bge-v2-m3.
-2. R7 baseline на полном корпусе (Colab) — расширить 54→100–150 кейсов, RAGAS.
+2. R7 baseline на полном корпусе (Colab) — 100-case seed готов; дальше RAGAS
+   baseline и, при необходимости, расширение к 150 кейсам.
 3. chunk-size A/B + structural/late chunking (Colab) — ответ на «800 по привычке».
 4. BGE-M3 sparse вместо наивного BM25 (§3.3) — закрывает R5, модель уже загружена.
 5. query routing (§3.5) — локальный код-шов готов (`676b3e0`); нужна Colab eval-дельта.
