@@ -207,3 +207,21 @@ def test_github_actions_use_node24_compatible_majors() -> None:
         "dorny/paths-filter@v4",
     ):
         assert action in workflow_sources
+
+
+def test_weekly_report_workflow_keeps_project_root_on_pythonpath() -> None:
+    workflow = yaml.safe_load(
+        (PROJECT_ROOT / ".github" / "workflows" / "weekly-report.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    job = workflow["jobs"]["weekly-report"]
+    run_step = next(
+        step for step in job["steps"] if step.get("name") == "Run weekly report"
+    )
+    pythonpath = run_step.get("env", {}).get("PYTHONPATH") or job.get("env", {}).get(
+        "PYTHONPATH"
+    )
+
+    assert run_step["run"] == "python scripts/weekly_report.py --dry-run"
+    assert pythonpath in {".", "${{ github.workspace }}"}
