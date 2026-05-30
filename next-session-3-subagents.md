@@ -217,3 +217,7 @@ opts into planning or running a live benchmark.
 - [x] Regression-tooling ahead gate passed after `f6efe4f`:
       `tests/test_regression_runner.py`, `tests/test_provider_benchmark.py`,
       `tests/test_detect_stale_curated_cases.py`, Ruff, and py_compile.
+- [x] Pre-commit ahead gate passed with
+      `PRE_COMMIT_HOME=.tmp/pre-commit-cache pre-commit run --from-ref origin/master --to-ref HEAD`.
+      The default global pre-commit cache hit a Windows `PermissionError`
+      before hooks ran; use the isolated ignored cache for repeat checks.

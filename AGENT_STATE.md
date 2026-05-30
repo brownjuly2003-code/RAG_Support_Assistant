@@ -234,6 +234,15 @@
   All checks passed after `f6efe4f`.
 - `python -m py_compile scripts/regression_eval.py tests/test_regression_runner.py tests/test_provider_benchmark.py tests/test_detect_stale_curated_cases.py`:
   passed after `f6efe4f`.
+- Ahead-series pre-commit verification:
+  the first `pre-commit run --from-ref origin/master --to-ref HEAD` failed
+  before hooks ran because the global cache file
+  `C:\Users\uedom\.cache\pre-commit\repo8mdvhro7\.pre-commit-hooks.yaml`
+  returned `PermissionError: [Errno 13] Permission denied`. Rerunning with
+  `PRE_COMMIT_HOME` pointed at ignored `.tmp/pre-commit-cache` passed: Ruff,
+  trailing-whitespace, end-of-file, large-file, merge-conflict, private-key,
+  and Bandit hooks passed; YAML/TOML/pip-audit hooks were skipped because no
+  relevant files were in the ahead diff.
 
 ## Operating Mode
 
@@ -302,6 +311,9 @@ benchmark PR is merged into `master`:
   `tests/test_quickstart_docs.py`, and `tests/test_backlog_docs.py`.
 - `f6efe4f` records that docs/config gate; subsequent local meta and regression
   tooling gates also passed without live APIs.
+- Pre-commit over `origin/master..HEAD` passed when using an isolated ignored
+  `PRE_COMMIT_HOME=.tmp/pre-commit-cache`; the default global pre-commit cache
+  is not currently reliable on this Windows user profile.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
