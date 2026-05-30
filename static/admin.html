@@ -614,10 +614,19 @@
         var confirmBad = document.createElement("button");
         var dismiss = document.createElement("button");
 
-        traceLink.href = item.trace_url || ("/admin/traces/" + encodeURIComponent(item.trace_id || ""));
+        traceLink.href = "#";
         traceLink.textContent = item.trace_id || "";
-        traceLink.target = "_blank";
-        traceLink.rel = "noopener";
+        traceLink.onclick = async function (event) {
+          var traceResponse;
+          var traceData;
+          event.preventDefault();
+          traceResponse = await fetch("/api/admin/traces/" + encodeURIComponent(item.trace_id || ""), {
+            method: "GET",
+            headers: headers()
+          });
+          traceData = await traceResponse.json().catch(function () { return {}; });
+          output.textContent = JSON.stringify({ status: traceResponse.status, body: traceData }, null, 2);
+        };
         traceCell.appendChild(traceLink);
 
         reasonCell.textContent = item.reason || "";

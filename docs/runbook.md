@@ -36,7 +36,7 @@ Get-Content data/alerts.log -Tail 40
 1. Сначала проверь `/api/health`. Если активный LLM provider (`gracekelly` для default `gracekelly-primary`, `ollama` только для explicit `local-first`) или `chromadb` в статусе `error`, сначала чини инфраструктуру.
 2. Потом открой `/api/metrics` и сравни, какая метрика красная.
 3. Затем смотри конкретные trace_id через SQL и `/api/admin/traces/{trace_id}`
-   (admin auth). Legacy unauthenticated `/traces-ui` удалён 2026-04-27 (Codex P0).
+   (admin auth). Legacy unauthenticated trace UI удалён 2026-04-27 (Codex P0).
 
 ## Алерты и действия
 
@@ -68,7 +68,7 @@ Invoke-RestMethod -Uri http://localhost:8000/api/admin/traces/<trace_id> -Header
 1. Если `/api/health` показывает проблему с `ollama`, восстанови Ollama и повтори dry-run.
 2. Если проблема в `chromadb`, проверь наличие и целостность векторной базы, затем переиндексируй документы через `POST /api/upload`.
 3. Если инфраструктура здорова, но `final_quality` у проблемных трасс низкий, обнови базу знаний и проверь последние загруженные документы.
-4. Если эскалации растут без явных инфраструктурных ошибок, посмотри шаги `retrieve`, `grade_docs` и `evaluate` в `/traces-ui/{trace_id}`.
+4. Если эскалации растут без явных инфраструктурных ошибок, посмотри шаги `retrieve`, `grade_docs` и `evaluate` через `/api/admin/traces/{trace_id}`.
 
 ### `avg_quality < 65` за 7 дней
 
@@ -99,7 +99,7 @@ LIMIT 20;
 
 Что делать:
 
-1. Открой худшие trace_id в `/traces-ui/{trace_id}` и проверь, что было найдено на шаге `retrieve`.
+1. Открой худшие trace_id через `/api/admin/traces/{trace_id}` и проверь, что было найдено на шаге `retrieve`.
 2. Если контекст нерелевантен, обнови документы и повторно загрузи их через `POST /api/upload`.
 3. Если контекст нормальный, но ответы всё равно слабые, прогони `python evaluation/benchmark_runner.py`.
 4. Если деградация совпала с изменением retrieval-настроек, пересмотри `RAG_RETRIEVAL_TOP_K` и `RAG_RERANK_TOP_K`.
@@ -138,7 +138,7 @@ LIMIT 20;
 
 Что делать:
 
-1. Найди повторяющиеся типы неудачных вопросов по trace_id и шагам в `/traces-ui/{trace_id}`.
+1. Найди повторяющиеся типы неудачных вопросов по trace_id и шагам через `/api/admin/traces/{trace_id}`.
 2. Если низкое качество связано с пробелами в базе знаний, добавь недостающие документы.
 3. Если много вопросов вне домена, проверь пользовательские инструкции и эскалационный маршрут.
 4. Если почти все плохие ответы идут через `auto`, пересмотри порог качества для автоответа и логику оценки.

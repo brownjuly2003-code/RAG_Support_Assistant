@@ -24,10 +24,13 @@ async def agent_dashboard(
 
 
 @router.get("/admin/traces/{trace_id}")
-async def admin_trace_detail_redirect(trace_id: str) -> RedirectResponse:
+async def admin_trace_detail_redirect(
+    trace_id: str,
+    _user: dict = Depends(require_role("agent", "admin")),
+) -> RedirectResponse:
     if not re.fullmatch(r"[A-Za-z0-9\-]{8,64}", trace_id):
         raise HTTPException(status_code=400, detail="invalid trace_id format")
-    return RedirectResponse(url=f"/traces-ui/{trace_id}", status_code=307)
+    return RedirectResponse(url=f"/api/admin/traces/{trace_id}", status_code=307)
 
 
 @router.get("/metrics")
