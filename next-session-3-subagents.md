@@ -206,3 +206,6 @@ opts into planning or running a live benchmark.
 - [x] Local aircargo seed set expanded to 100 RU cases (`32e841f`, `6b7417d`,
       `325d63c`); full `tests/test_curated_dataset.py` passed and mock
       regression passed 100/100.
+- [x] Focused ahead-series verification passed after `db61488`: 95 pytest
+      cases, Ruff, py_compile, mypy with `vectordb/manager.py`, and
+      `git diff --check`.

@@ -206,6 +206,16 @@
   `325d63c`.
 - `python -m py_compile tests/test_curated_dataset.py`: passed after
   `325d63c`.
+- Ahead-series focused verification after commit `db61488`:
+  `python -m pytest tests/test_model_routing.py tests/test_base_manager.py tests/test_provider_graph_integration.py tests/test_graph_error_handling.py tests/test_magic_numbers_settings.py tests/test_new_features.py tests/test_structural_chunking.py tests/test_experiment_registry.py tests/test_curated_dataset.py tests/test_manager_semantic_chunking.py tests/test_ingestion_contextual.py tests/test_per_tenant_vectorstore.py -q -p no:schemathesis -p no:cacheprovider --basetemp=.tmp/pytest-ahead-focused-2`:
+  95 passed, 2 warnings.
+- `python -m mypy agent/graph.py agent/state.py config/settings.py vectordb/_base_manager.py vectordb/manager.py --no-incremental --show-error-codes --follow-imports=skip`:
+  passed after commit `db61488` fixed the tenant-aware manager's `Document`
+  type alias for mypy while keeping runtime `manager.Document` compatibility.
+- `ruff check agent/graph.py agent/prompts.py agent/state.py config/settings.py vectordb/_base_manager.py vectordb/manager.py tests/test_base_manager.py tests/test_curated_dataset.py tests/test_model_routing.py tests/test_structural_chunking.py tests/test_manager_semantic_chunking.py tests/test_ingestion_contextual.py tests/test_per_tenant_vectorstore.py`:
+  All checks passed after `db61488`.
+- `python -m py_compile agent/graph.py agent/prompts.py agent/state.py config/settings.py vectordb/_base_manager.py vectordb/manager.py tests/test_base_manager.py tests/test_curated_dataset.py tests/test_model_routing.py tests/test_structural_chunking.py tests/test_manager_semantic_chunking.py tests/test_ingestion_contextual.py tests/test_per_tenant_vectorstore.py`:
+  passed after `db61488`.
 
 ## Operating Mode
 
@@ -266,6 +276,9 @@ benchmark PR is merged into `master`:
 - `32e841f`, `6b7417d`, and `325d63c` expand the aircargo checked-in eval seed
   from 31 to 100 RU cases over HR/legal/logistics/compliance docs; local mock
   regression passed 100/100.
+- `db61488` fixes the tenant-aware vector manager's `Document` typing so the
+  full ahead-series focused mypy command passes with `vectordb/manager.py`
+  included.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
