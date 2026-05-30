@@ -124,6 +124,19 @@
   `$0.000042`, candidate cost `$0.000228`.
 - `gh run list --branch master --limit 5`: CI run `26679263174` and Pages run
   `26679263187` passed on pushed commit `7b0d9ee`.
+- `python -m pytest tests/test_regression_runner.py tests/test_provider_benchmark.py -q -p no:schemathesis -p no:cacheprovider`:
+  22 passed, 1 warning after commit `517ec57` added live regression wall-clock
+  latency fallback.
+- `ruff check scripts/regression_eval.py tests/test_regression_runner.py tests/test_provider_benchmark.py`:
+  All checks passed after commit `517ec57`.
+- `python -m py_compile scripts/regression_eval.py`: passed after commit
+  `517ec57`.
+- Live latency verification with the eval collection:
+  `VECTORDB_COLLECTION_PREFIX=rag_eval_20260530t0835 ONLINE_EVALUATORS_ENABLED=false python scripts/regression_eval.py --baseline ministral-3b-latest --candidate mistral-small-latest --dataset evaluation/curated_cases.jsonl --tenant all --max-cases 1 --seed 43 --allow-paid-apis --no-persist`
+  passed the gate and reported non-zero latency: baseline avg latency
+  `59015.0 ms`, candidate avg latency `29661.0 ms`.
+- `gh run watch 26679564874 --exit-status`: master CI passed on pushed commit
+  `517ec57`.
 
 ## Operating Mode
 
@@ -163,6 +176,9 @@ benchmark PR is merged into `master`:
 - `7b0d9ee` fails closed when a persisted Chroma collection is incompatible
   with the active embedding model, with a regression test for dimension
   mismatch.
+- `517ec57` records wall-clock case latency in live regression reports when
+  trace storage has no duration, so live benchmark summaries no longer show
+  `0.0 ms` latency.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
@@ -213,8 +229,10 @@ commit `f8ffb0f` is on `origin/master`.
   `rag_docs_default` collection remains stale/incompatible until rebuilt. A
   separate ignored eval collection `rag_eval_20260530t0835_default` was built
   from the three tracked demo KB docs and produced a passing 3-case live
-  Mistral baseline. This is only a partial R7 signal; full R7 still requires a
-  larger RU eval set and a larger live run.
+  Mistral baseline. Commit `517ec57` also fixed live regression latency
+  accounting; a follow-up 1-case live report showed non-zero baseline/candidate
+  latency. This is only a partial R7 signal; full R7 still requires a larger RU
+  eval set and a larger live run.
 - 2026-05-30 Claude CLI follow-up: `claude -p` read-only full-project review
   prompts were blocked by Anthropic cyber safeguards, and
   `claude ultrareview --timeout 30` returned "Ultrareview is currently
