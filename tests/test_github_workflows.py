@@ -72,6 +72,21 @@ def test_weekly_report_workflow_keeps_project_root_on_pythonpath() -> None:
     assert pythonpath in {".", "${{ github.workspace }}"}
 
 
+def test_docs_site_workflow_audits_npm_dependencies_before_build() -> None:
+    workflow = _workflow("docs-site.yml")
+    steps = workflow["jobs"]["build"]["steps"]
+    step_names = [step.get("name") for step in steps]
+
+    install_index = step_names.index("Install")
+    audit_index = step_names.index("Audit npm dependencies")
+    build_index = step_names.index("Build")
+    audit_step = steps[audit_index]
+
+    assert install_index < audit_index < build_index
+    assert audit_step["working-directory"] == "docs-site"
+    assert audit_step["run"] == "npm audit --audit-level=moderate"
+
+
 def test_weekly_report_schedule_delivers_and_manual_dispatch_dry_runs_by_default() -> None:
     workflow = _workflow("weekly-report.yml")
     trigger = workflow[True]
