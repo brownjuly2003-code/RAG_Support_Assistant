@@ -22,6 +22,13 @@ that session.
     alignment, Claude trace audit fixes, and the Python 3.11 smoke-report
     compatibility fix.
   - Post-merge handoff commit `f8ffb0f` is on `origin/master`.
+  - GitHub Actions action-major refresh `52d16c4` and Weekly Report import
+    fix `a86b44c` are on `origin/master`.
+  - 2026-05-30 non-local check: the stale scheduled Weekly Report failures
+    were caused by `ModuleNotFoundError: No module named 'config'` when Actions
+    ran `python scripts/weekly_report.py --dry-run`. Commit `a86b44c` keeps
+    the repository root on `PYTHONPATH`; master CI run `26671830370` and
+    manual Weekly Report dispatch `26671836799` both passed.
   - 2026-05-30 readiness note: local `.env` contains `MISTRAL_API_KEY` and
     Mistral `/v1/models` returned `200`; GraceKelly was not reachable on
     `http://127.0.0.1:8011/healthz/ready`. No secret value was printed or
@@ -52,17 +59,16 @@ that session.
       `master` for manual Colab use.
 - [x] Colab remote benchmark PR: PR #1 merged to `master` as `415d4c8`.
       Master CI and Pages deploy passed.
+- [x] Weekly Report scheduled workflow import failure: closed 2026-05-30 by
+      `a86b44c`; manual workflow_dispatch run `26671836799` passed on
+      `master`.
 
 ## Compact Resume Plan
-- Close current dirty WIP first, if still dirty: GitHub Actions action-major
-  refresh, docs wording, and the pre-commit config guard test.
-- Verify focused pytest, workflow YAML parsing, Ruff for touched tests, and
-  `git diff --check`.
-- Commit with explicit pathspecs. Push to `master` only if current user/project
-  rules still authorize ordinary push.
-- After the push, do only non-destructive local branch hygiene.
-- If `git status` is already clean after this refresh, do not repeat the same
-  checks merely to update handoff prose.
+- Close current dirty WIP first, if still dirty.
+- If `master` is clean at `a86b44c` or later, do not repeat the Weekly Report
+  fix or the action-major refresh merely to update handoff prose.
+- With no new failing remote run, open PR/issue, or explicit live opt-in, the
+  only default non-destructive local work is branch hygiene.
 
 ## Suggested Subagents
 None for default non-live work. Use subagents only if the session explicitly
@@ -96,3 +102,6 @@ opts into planning or running a live benchmark.
 - [x] PR #1 merged to `master` as `415d4c8`.
 - [x] Master CI passed on `415d4c8`.
 - [x] Pages docs build and deploy passed on `415d4c8`.
+- [x] Weekly Report workflow import failure fixed by `a86b44c`.
+- [x] Master CI passed on `a86b44c` (`26671830370`).
+- [x] Manual Weekly Report dispatch passed on `a86b44c` (`26671836799`).

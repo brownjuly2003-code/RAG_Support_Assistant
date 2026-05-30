@@ -4,8 +4,8 @@
 
 - Project: RAG Support Assistant.
 - Stack: Python 3.13, FastAPI, LangGraph, ChromaDB, Postgres, Redis, static HTML UI, Helm/Docker deploy artifacts.
-- Branch source: `origin/master` after PR #1 merge; local refresh branch
-  `post-merge-handoff` was created from `origin/master`.
+- Branch source: `master` tracks `origin/master`; latest pushed head is
+  `a86b44c46859bde474e3d92a65379efbd4adb27d`.
 - Snapshot date: 2026-05-30 (Europe/Bucharest).
 - Baseline HEAD before this state refresh: `415d4c88baf52d4696987d5e2546dd7ce3ce576c`.
 - Baseline file count: 697 tracked files from `git ls-files`.
@@ -13,8 +13,8 @@
 - Baseline i18n key count: not applicable; no i18n JSON catalog was found.
 - Git status at snapshot time: clean before this `AGENT_STATE.md` refresh.
 - Origin sync at baseline: PR #1 was merged into `origin/master` at merge
-  commit `415d4c8`; post-merge handoff commit `f8ffb0f` is also on
-  `origin/master`. Master CI and Pages deploy passed on the merge commit.
+  commit `415d4c8`; post-merge handoff commit `f8ffb0f`, action refresh
+  commit `52d16c4`, and weekly-report fix `a86b44c` are on `origin/master`.
 
 ## Runtime
 
@@ -51,6 +51,13 @@
 - `python -m pytest tests/test_post_deploy_smoke.py -q -p no:schemathesis -p no:cacheprovider`: 7 passed, 1 warning (verified 2026-05-30 before `69d8e95`).
 - `ruff check scripts/post_deploy_smoke.py tests/test_post_deploy_smoke.py`: All checks passed (verified 2026-05-30 before `69d8e95`).
 - `python -m py_compile scripts/post_deploy_smoke.py`: passed (verified 2026-05-30 before `69d8e95`).
+- `python scripts\weekly_report.py --help` with `PYTHONPATH` set to the
+  repository root: passed after commit `a86b44c`.
+- `python -m pytest tests/test_precommit_config.py tests/test_weekly_report.py -q -p no:schemathesis -p no:cacheprovider`: 17 passed, 1 warning (verified 2026-05-30 before `a86b44c`).
+- `ruff check tests/test_precommit_config.py`: All checks passed (verified
+  2026-05-30 before `a86b44c`).
+- `python -c "import yaml, pathlib; yaml.safe_load(pathlib.Path(r'.github\\workflows\\weekly-report.yml').read_text(encoding='utf-8')); print('weekly workflow yaml ok')"`:
+  passed before `a86b44c`.
 - `python -m ruff check .`: All checks passed (verified 2026-05-30 before `6755403`; later code/test changes were checked with targeted Ruff entries above).
 - `python -m bandit -r . -ll -c pyproject.toml -x ./tests,./.venv,./reports,./data,./archive-legacy,./.tmp`: 0 medium / 0 high (39 low informational), verified 2026-05-07.
 - `pip-audit --strict --disable-pip --require-hashes --timeout 15 --progress-spinner off --cache-dir .tmp/pip-audit-cache --ignore-vuln CVE-2026-45829 --ignore-vuln GHSA-f4j7-r4q5-qw2c -r requirements.lock`: no known vulnerabilities found, 1 ignored (verified 2026-05-30 after the ChromaDB lock update).
@@ -58,6 +65,11 @@
 - `gh pr merge 1 --merge`: merged PR #1 into `master` at `415d4c8`.
 - `gh run watch 26670103203 --exit-status`: master CI passed on `415d4c8` (migrations, type-check, integration 3.11/3.13, unit 3.11/3.13, lint, pre-commit, security, helm; regression-eval skipped because inputs did not change).
 - `gh run watch 26670103209 --exit-status`: Pages docs build and deploy passed on `415d4c8`.
+- `gh run watch 26671830370 --exit-status`: master CI passed on
+  `a86b44c` (regression-eval skipped because inputs did not change).
+- `gh workflow run weekly-report.yml --ref master` followed by
+  `gh run watch 26671836799 --exit-status`: manual Weekly Report dispatch
+  passed on `a86b44c`.
 
 ## Operating Mode
 
@@ -89,6 +101,11 @@ benchmark PR is merged into `master`:
   found by the new CI matrix and adds a local source guard.
 - `11add63` refreshes durable handoff/status docs before merge.
 - `415d4c8` is the merge commit on `master`.
+- `52d16c4` refreshes GitHub Actions action majors, docs wording, and the
+  pre-commit config guard test.
+- `a86b44c` fixes the scheduled Weekly Report workflow import path by keeping
+  the repository root on `PYTHONPATH`; master CI and a manual Weekly Report
+  dispatch passed on that commit.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
@@ -109,6 +126,11 @@ commit `f8ffb0f` is on `origin/master`.
 - If these refresh files are already clean in `git status`, do not repeat this
   family of checks just to refresh handoff prose. The next safe local action is
   non-destructive branch hygiene only if stale local branches still exist.
+- 2026-05-30 non-local follow-up: stale scheduled Weekly Report failures from
+  May 2026 were traced to `ModuleNotFoundError: No module named 'config'` when
+  GitHub Actions ran `python scripts/weekly_report.py --dry-run`. Commit
+  `a86b44c` adds `PYTHONPATH: ${{ github.workspace }}` and a regression guard;
+  manual dispatch run `26671836799` passed.
 
 Notebook URL for manual Colab use:
 `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`
