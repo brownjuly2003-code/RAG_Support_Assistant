@@ -32,13 +32,15 @@ that session.
     production auto-migration fail-closed behavior with explicit fail-open
     override, safe `tar.extractall(..., filter="data")` restore extraction,
     and docs-site 404 route warning cleanup.
-  - Claude audit/ultrareview was requested after local fixes, but no
-    Claude-specific audit tool was available in this tool session; local
-    focused verification was used instead.
+  - 2026-05-30 Claude audit is recorded in `audit_claude_30_05_26.md`. It
+    focuses on RAG implementation quality and flags R7/R1/R2/R3/R4/R5:
+    unmeasured RAG quality, English default reranker on RU content, RRF dedup
+    collisions with contextual headers, LLM fan-out, naive RU BM25 tokenization,
+    and deferred deprecation/security follow-up.
   - 2026-05-30 Claude CLI follow-up: read-only full-project `claude -p`
     review prompts were blocked by Anthropic cyber safeguards, and
     `claude ultrareview --timeout 30` returned "Ultrareview is currently
-    unavailable." No Claude audit findings were produced.
+    unavailable." The actual Claude audit file above was supplied separately.
   - 2026-05-30 non-local check: the stale scheduled Weekly Report failures
     were caused by `ModuleNotFoundError: No module named 'config'` when Actions
     ran `python scripts/weekly_report.py --dry-run`. Commit `a86b44c` keeps

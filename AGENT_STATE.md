@@ -162,14 +162,19 @@ commit `f8ffb0f` is on `origin/master`.
   security headers/docs route controls, local-dev-only default Compose
   bindings, production auto-migration fail-closed behavior with explicit
   fail-open override, safe tar extraction in restore verification, and the
-  docs-site 404 route warning. Claude audit/ultrareview tooling was requested
-  but no Claude-specific audit tool was available in this session; local
-  focused checks were used instead.
+  docs-site 404 route warning.
+- 2026-05-30 Claude audit follow-up: `audit_claude_30_05_26.md` records a
+  Claude Opus 4.8 audit focused on the RAG pipeline and current
+  implementation. It identifies R7/R1/R2/R3/R4/R5 follow-up work: measure RAG
+  quality on a larger RU eval set, switch the default reranker after A/B,
+  fix RRF deduplication with contextual headers, reduce LLM fan-out, improve
+  RU BM25 tokenization, and address deferred deprecations/security hardening.
 - 2026-05-30 Claude CLI follow-up: `claude -p` read-only full-project review
   prompts were blocked by Anthropic cyber safeguards, and
   `claude ultrareview --timeout 30` returned "Ultrareview is currently
-  unavailable." No Claude audit findings were produced, and no token or
-  safeguard adjustment URL from the CLI error was copied into project files.
+  unavailable." No token or safeguard adjustment URL from the CLI error was
+  copied into project files. The actual Claude audit exists in
+  `audit_claude_30_05_26.md`.
 
 Notebook URL for manual Colab use:
 `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`
