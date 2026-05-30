@@ -167,10 +167,13 @@ commit `f8ffb0f` is on `origin/master`.
   Claude Opus 4.8 audit focused on the RAG pipeline and current
   implementation. It identifies R7/R1/R2/R3/R4/R5 follow-up work: measure RAG
   quality on a larger RU eval set, switch the default reranker after A/B,
-  reduce LLM fan-out, improve RU BM25 tokenization, and address deferred
+  reduce LLM fan-out, and address deferred
   deprecations/security hardening. R2 is closed by `5c7f3b1`: RRF now keys by
   stable metadata ids when available and otherwise includes a full content hash,
-  with regression tests for shared contextual-header prefixes.
+  with regression tests for shared contextual-header prefixes. R5's baseline
+  tokenizer fix is closed by `e91c1f1`: BM25 now uses Unicode word tokens plus
+  `casefold()` for index and query tokenization; deeper RU lemmatization remains
+  optional future tuning.
 - 2026-05-30 Claude CLI follow-up: `claude -p` read-only full-project review
   prompts were blocked by Anthropic cyber safeguards, and
   `claude ultrareview --timeout 30` returned "Ultrareview is currently

@@ -35,9 +35,12 @@ that session.
   - 2026-05-30 Claude audit is recorded in `audit_claude_30_05_26.md`. It
     focuses on RAG implementation quality and flags R7/R1/R2/R3/R4/R5:
     unmeasured RAG quality, English default reranker on RU content, LLM fan-out,
-    naive RU BM25 tokenization, and deferred deprecation/security follow-up.
+    and deferred deprecation/security follow-up.
     R2 is closed by `5c7f3b1`: RRF no longer deduplicates solely by a
     200-character content prefix and has shared-context-prefix regression tests.
+    R5's baseline tokenizer fix is closed by `e91c1f1`: BM25 uses Unicode word
+    tokens plus `casefold()` for both index and query tokenization; deeper RU
+    lemmatization remains optional future tuning.
   - 2026-05-30 Claude CLI follow-up: read-only full-project `claude -p`
     review prompts were blocked by Anthropic cyber safeguards, and
     `claude ultrareview --timeout 30` returned "Ultrareview is currently
