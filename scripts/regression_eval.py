@@ -11,6 +11,7 @@ import random
 import sqlite3
 import sys
 import tempfile
+import time
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -884,6 +885,13 @@ def _normalize_result(payload: dict[str, Any]) -> CaseRunResult:
     )
 
 
+def _with_wall_clock_duration(result: CaseRunResult, started_at: float) -> CaseRunResult:
+    if result.duration_ms is not None:
+        return result
+    elapsed_ms = int(max((time.perf_counter() - started_at) * 1000, 0))
+    return result.model_copy(update={"duration_ms": elapsed_ms})
+
+
 def execute_case_with_runtime(
     case: CuratedCase,
     experiment_id: str,
@@ -894,6 +902,7 @@ def execute_case_with_runtime(
     from config.settings import get_settings
 
     with _experiment_runtime(experiment_id, project_root=project_root), _force_ollama_temperature_zero():
+        started_at = time.perf_counter()
         retriever = _resolve_retriever(case.tenant_id)
         result = run_qa_pipeline(
             question=case.query,
@@ -903,7 +912,7 @@ def execute_case_with_runtime(
             trace_id=f"regression-{uuid.uuid4()}",
             tenant_id=case.tenant_id,
         )
-    return _normalize_result(result)
+    return _with_wall_clock_duration(_normalize_result(result), started_at)
 
 
 def execute_case_with_provider_target(
@@ -916,6 +925,7 @@ def execute_case_with_provider_target(
     from config.settings import get_settings
 
     with _provider_target_runtime(target, project_root=project_root), _force_ollama_temperature_zero():
+        started_at = time.perf_counter()
         retriever = _resolve_retriever(case.tenant_id)
         result = run_qa_pipeline(
             question=case.query,
@@ -925,7 +935,7 @@ def execute_case_with_provider_target(
             trace_id=f"provider-benchmark-{uuid.uuid4()}",
             tenant_id=case.tenant_id,
         )
-    return _normalize_result(result)
+    return _with_wall_clock_duration(_normalize_result(result), started_at)
 
 
 def run_regression(

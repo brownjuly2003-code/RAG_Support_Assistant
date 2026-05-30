@@ -343,6 +343,29 @@ def test_sample_cases_is_deterministic_for_seed() -> None:
     assert [item.case_id for item in first] == [item.case_id for item in second]
 
 
+def test_wall_clock_duration_fills_missing_trace_duration(monkeypatch) -> None:
+    from scripts import regression_eval
+
+    monkeypatch.setattr(regression_eval.time, "perf_counter", lambda: 12.345)
+
+    result = regression_eval.CaseRunResult(answer="ok", duration_ms=None)
+    measured = regression_eval._with_wall_clock_duration(result, started_at=10.0)
+
+    assert measured.duration_ms == 2345
+    assert result.duration_ms is None
+
+
+def test_wall_clock_duration_preserves_trace_duration(monkeypatch) -> None:
+    from scripts import regression_eval
+
+    monkeypatch.setattr(regression_eval.time, "perf_counter", lambda: 99.0)
+
+    result = regression_eval.CaseRunResult(answer="ok", duration_ms=1234)
+    measured = regression_eval._with_wall_clock_duration(result, started_at=10.0)
+
+    assert measured.duration_ms == 1234
+
+
 def test_write_report_files_emits_valid_json_sidecar(tmp_path: Path) -> None:
     from scripts import regression_eval
 
