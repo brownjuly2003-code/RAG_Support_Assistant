@@ -49,6 +49,11 @@ that session.
     stale/incompatible until rebuilt. Commit `517ec57` fixed live regression
     latency accounting; a 1-case live follow-up reported non-zero latency
     instead of `0.0 ms`.
+    R3/R4 per-doc grade fan-out is partially closed by `71367a7`:
+    multi-document `grade_docs` now uses one structured batch LLM call with
+    JSON/text parsing fallback and the old per-doc path retained when batch
+    grading is unavailable. Master CI run `26679982808` and Pages run
+    `26679982810` passed.
   - 2026-05-30 Claude CLI follow-up: read-only full-project `claude -p`
     review prompts were blocked by Anthropic cyber safeguards, and
     `claude ultrareview --timeout 30` returned "Ultrareview is currently
@@ -97,6 +102,8 @@ that session.
       CI run `26679263174` and Pages run `26679263187` passed on `master`.
 - [x] Live regression latency accounting: closed 2026-05-30 by `517ec57`;
       CI run `26679564874` passed on `master`.
+- [x] Batch document grading: closed 2026-05-30 by `71367a7`; CI run
+      `26679982808` and Pages run `26679982810` passed on `master`.
 
 ## Compact Resume Plan
 - Close current dirty WIP first, if still dirty.
@@ -154,3 +161,5 @@ opts into planning or running a live benchmark.
       3/3 cases with 0 regressions.
 - [x] Live latency verification passed on the same eval collection with
       non-zero baseline/candidate latency in the report.
+- [x] Batch `grade_docs` fan-out reduction committed and verified on CI
+      (`71367a7`, CI `26679982808`).

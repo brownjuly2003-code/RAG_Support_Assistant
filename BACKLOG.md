@@ -17,6 +17,9 @@
 > separate ignored eval collection passed a 3-case live Mistral regression; the
 > default local `rag_docs_default` collection still needs a deliberate rebuild
 > before it should be used for full RAG quality measurement.
+> 2026-05-30 R3/R4 note: commit `71367a7` batches multi-document
+> `grade_docs` into one structured LLM call with fallback to the old per-doc
+> path. Master CI and Pages passed on that commit.
 
 ## Historical Safe Tasks
 

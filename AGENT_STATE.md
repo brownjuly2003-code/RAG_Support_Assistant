@@ -137,6 +137,20 @@
   `59015.0 ms`, candidate avg latency `29661.0 ms`.
 - `gh run watch 26679564874 --exit-status`: master CI passed on pushed commit
   `517ec57`.
+- R3/R4 batch grading follow-up:
+  `python -m pytest tests/test_grade_docs.py tests/test_provider_graph_integration.py tests/test_graph_error_handling.py tests/test_prompt_registry_integration.py tests/test_otel.py tests/test_langfuse_trace.py -q -p no:schemathesis -p no:cacheprovider`:
+  29 passed, 1 warning after commit `71367a7` batched multi-document
+  `grade_docs` into one structured LLM call with fallback to the old per-doc
+  path.
+- `ruff check .`: All checks passed after commit `71367a7`.
+- `python -m py_compile agent/graph.py agent/prompts.py`: passed after commit
+  `71367a7`.
+- `python -m mypy agent/prompts.py agent/graph.py --no-incremental --show-error-codes --follow-imports=skip`:
+  passed after commit `71367a7`. The same local two-file command without
+  `--follow-imports=skip` timed out at 180s; GitHub CI run `26679982808`
+  completed successfully on the pushed commit.
+- `gh run list --branch master --limit 5`: CI run `26679982808` and Pages run
+  `26679982810` passed on pushed commit `71367a7`.
 
 ## Operating Mode
 
@@ -179,6 +193,10 @@ benchmark PR is merged into `master`:
 - `517ec57` records wall-clock case latency in live regression reports when
   trace storage has no duration, so live benchmark summaries no longer show
   `0.0 ms` latency.
+- `71367a7` reduces R3/R4 LLM fan-out by batching multi-document
+  `grade_docs` into one structured call, while preserving the old per-doc
+  fallback and top-ranked-doc preservation guard. Master CI run `26679982808`
+  and Pages run `26679982810` passed.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
@@ -233,6 +251,12 @@ commit `f8ffb0f` is on `origin/master`.
   accounting; a follow-up 1-case live report showed non-zero baseline/candidate
   latency. This is only a partial R7 signal; full R7 still requires a larger RU
   eval set and a larger live run.
+- 2026-05-30 R3/R4 fan-out follow-up: commit `71367a7` changes
+  multi-document `grade_docs` from one LLM call per document to one batch
+  structured LLM call, with JSON/text parsing fallback and the previous
+  per-document path retained when batch grading is unavailable. This addresses
+  the per-doc grade fan-out locally; follow-up latency proof should use the
+  larger R7 eval set rather than another tiny smoke.
 - 2026-05-30 Claude CLI follow-up: `claude -p` read-only full-project review
   prompts were blocked by Anthropic cyber safeguards, and
   `claude ultrareview --timeout 30` returned "Ultrareview is currently
