@@ -200,6 +200,41 @@ def test_hybrid_retriever_rrf_keeps_chunks_with_shared_context_prefix() -> None:
     assert [doc.page_content for doc in merged] == [first.page_content, second.page_content]
 
 
+def test_hybrid_retriever_bm25_tokenizes_russian_words(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, list[list[str]] | list[str]] = {}
+
+    class _BM25:
+        def __init__(self, tokenized_docs: list[list[str]]) -> None:
+            captured["docs"] = tokenized_docs
+
+        def get_scores(self, tokenized_query: list[str]) -> list[float]:
+            captured["query"] = tokenized_query
+            return [1.0, 0.0]
+
+    class _VectorStore:
+        def similarity_search(self, query: str, k: int) -> list[manager.Document]:
+            _ = query, k
+            return []
+
+    monkeypatch.setattr(manager, "HAS_BM25", True)
+    monkeypatch.setattr(manager, "BM25Okapi", _BM25)
+    docs = [
+        manager.Document(page_content="Возврат, товара! Заказ №123.", metadata={}),
+        manager.Document(page_content="График доставки.", metadata={}),
+    ]
+
+    retriever = manager.HybridRetriever(_VectorStore(), chunks=docs, use_bm25=True)
+    retriever.get_relevant_documents("ВОЗВРАТ?")
+
+    assert captured["docs"] == [
+        ["возврат", "товара", "заказ", "123"],
+        ["график", "доставки"],
+    ]
+    assert captured["query"] == ["возврат"]
+
+
 def test_qdrant_stub_store_search_and_retriever() -> None:
     docs = [
         manager.Document(page_content="alpha content", metadata={}),

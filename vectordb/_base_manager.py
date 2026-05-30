@@ -26,11 +26,13 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Sequence, Optional
 
 logger = logging.getLogger(__name__)
+_BM25_TOKEN_RE = re.compile(r"[^\W_]+", re.UNICODE)
 
 try:
     from langchain_core.documents import Document  # type: ignore
@@ -161,6 +163,10 @@ def get_reranker(model_name: str | None = None) -> Any | None:
 # Hybrid Retriever: BM25 + Vector + Reranker
 # ---------------------------------------------------------------------------
 
+def _tokenize_for_bm25(text: str) -> List[str]:
+    return _BM25_TOKEN_RE.findall(text.casefold())
+
+
 def _rrf_document_key(doc: Document, prefix_chars: int = 200) -> str:
     metadata = doc.metadata or {}
     doc_id = metadata.get("doc_id") or metadata.get("source") or metadata.get("file_path")
@@ -210,7 +216,7 @@ class HybridRetriever:
         # Build BM25 index
         self._bm25 = None
         if use_bm25 and HAS_BM25 and chunks:
-            tokenized = [doc.page_content.lower().split() for doc in chunks]
+            tokenized = [_tokenize_for_bm25(doc.page_content) for doc in chunks]
             self._bm25 = BM25Okapi(tokenized)
             logger.debug("BM25 index built: %d chunks", len(chunks))
 
@@ -230,7 +236,7 @@ class HybridRetriever:
         # Step 2: BM25 search
         bm25_results: List[Document] = []
         if self._bm25 is not None:
-            tokenized_query = query.lower().split()
+            tokenized_query = _tokenize_for_bm25(query)
             scores = self._bm25.get_scores(tokenized_query)
             top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:self._retrieval_k]
             bm25_results = [self._chunks[i] for i in top_indices if scores[i] > 0]
