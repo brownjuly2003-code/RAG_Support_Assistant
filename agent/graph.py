@@ -204,6 +204,20 @@ class SupportsInvoke(Protocol):
 _USE_DEFAULT_BREAKER = object()
 
 
+def _create_local_ollama_llm(model_name: str, timeout_sec: float) -> Any:
+    try:
+        from langchain_ollama import OllamaLLM  # type: ignore[import-not-found]
+
+        return OllamaLLM(model=model_name, timeout=timeout_sec)
+    except ImportError:
+        from langchain_community.llms import Ollama
+
+        try:
+            return Ollama(model=model_name, timeout=timeout_sec)
+        except TypeError:
+            return Ollama(model=model_name, request_timeout=timeout_sec)
+
+
 class LocalOllamaLLM:
     """Обёртка над локальной моделью Ollama."""
 
@@ -212,16 +226,12 @@ class LocalOllamaLLM:
         model_name: str = "mistral",
         breaker: CircuitBreaker | None | object = _USE_DEFAULT_BREAKER,
     ):
-        from langchain_community.llms import Ollama
         from config.settings import get_settings
         from utils.retry import retry_with_backoff
 
         settings = get_settings()
         timeout_sec = getattr(settings, "ollama_request_timeout_sec", 60.0)
-        try:
-            self._llm = Ollama(model=model_name, timeout=timeout_sec)
-        except TypeError:
-            self._llm = Ollama(model=model_name, request_timeout=timeout_sec)
+        self._llm = _create_local_ollama_llm(model_name, timeout_sec)
         self._breaker = get_default_breaker() if breaker is _USE_DEFAULT_BREAKER else breaker
 
         def _retry_prom_hook(event: str) -> None:
