@@ -20,6 +20,14 @@ CLIENT_SETTINGS_OVERRIDES = {
 }
 
 
+class _SecretValue:
+    def __init__(self, value: str) -> None:
+        self._value = value
+
+    def get_secret_value(self) -> str:
+        return self._value
+
+
 def test_oidc_module_import_does_not_emit_authlib_deprecation_warning() -> None:
     result = subprocess.run(
         [sys.executable, "-c", "import auth.oidc"],
@@ -31,6 +39,61 @@ def test_oidc_module_import_does_not_emit_authlib_deprecation_warning() -> None:
 
     assert result.returncode == 0, result.stderr
     assert "AuthlibDeprecationWarning" not in result.stderr
+
+
+def test_list_sso_providers_accepts_secret_value_objects() -> None:
+    from auth.oidc import list_sso_providers
+
+    settings = SimpleNamespace(
+        google_oidc_client_id="google-client-id",
+        google_oidc_client_secret=_SecretValue("google-secret"),
+        azure_oidc_tenant="tenant-123",
+        azure_oidc_client_id="azure-client-id",
+        azure_oidc_client_secret=_SecretValue("azure-secret"),
+    )
+
+    assert list_sso_providers(settings) == [
+        {"name": "google", "label": "Google"},
+        {"name": "azure", "label": "Microsoft"},
+    ]
+
+
+def test_get_oauth_client_registers_enabled_providers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import auth.oidc as oidc
+
+    registrations: list[dict[str, object]] = []
+
+    class _FakeOAuth:
+        def register(self, **kwargs):
+            registrations.append(dict(kwargs))
+
+        def create_client(self, provider: str) -> dict[str, str]:
+            return {"provider": provider}
+
+    settings = SimpleNamespace(
+        google_oidc_client_id="google-client-id",
+        google_oidc_client_secret=_SecretValue("google-secret"),
+        azure_oidc_tenant="tenant-123",
+        azure_oidc_client_id="azure-client-id",
+        azure_oidc_client_secret=_SecretValue("azure-secret"),
+    )
+
+    monkeypatch.setattr(oidc, "_load_oauth_class", lambda: _FakeOAuth)
+
+    client = oidc.get_oauth_client("azure", settings)
+
+    assert client == {"provider": "azure"}
+    assert [item["name"] for item in registrations] == ["google", "azure"]
+    assert registrations[0]["client_secret"] == "google-secret"
+    assert registrations[0]["server_metadata_url"] == (
+        "https://accounts.google.com/.well-known/openid-configuration"
+    )
+    assert registrations[1]["client_secret"] == "azure-secret"
+    assert registrations[1]["server_metadata_url"] == (
+        "https://login.microsoftonline.com/tenant-123/v2.0/.well-known/openid-configuration"
+    )
 
 
 def test_sso_providers_endpoint_lists_enabled_providers(client: TestClient) -> None:
