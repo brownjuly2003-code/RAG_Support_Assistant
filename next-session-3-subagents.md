@@ -242,3 +242,7 @@ opts into planning or running a live benchmark.
 - [x] Ripgrep search hygiene committed as `bd4c25a`: repo-local `.ignore`
       skips `pytest-cache-files-*`, and the broad JavaScript/docs-site `rg`
       search now avoids Windows `Access is denied` noise from pytest temp dirs.
+- [x] Widget static assets now have FastAPI smoke coverage (`6a0469d`) for
+      `/static/widget.js` and `/static/widget.html`; focused pytest passed with
+      `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` because local global `schemathesis`
+      plugin autoload fails before collection on missing `_pytest.subtests`.

@@ -447,6 +447,12 @@ commit `f8ffb0f` is on `origin/master`.
   paths skip pytest temp directories before Windows denies access. The broad
   JavaScript/docs-site search that previously emitted `Access is denied`
   completed without those errors after adding the basename ignore pattern.
+- Widget static asset follow-up: commit `6a0469d` extends the admin UI smoke
+  tests to cover `/static/widget.js` and `/static/widget.html`, including the
+  embed marker and iframe target used by the checked-in widget script. Focused
+  verification passed with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`; the unscoped
+  local pytest plugin autoload path fails before collection because a globally
+  installed `schemathesis` plugin imports missing `_pytest.subtests`.
 
 Notebook URL for manual Colab use:
 `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`
