@@ -19,6 +19,11 @@ Close all currently open RAG Support Assistant questions today, including the Gr
 
 ## Results
 - RAG repo `master` was pushed at `c1bccc9`; GitHub CI run `26699926418` and Pages run `26699926414` passed.
+- Final follow-up head is `315603e`, synced to `origin/master`. CI run
+  `26725747231` passed on that head after commits `304273a` and `315603e`
+  closed the import-time `sentence_transformers` and Ollama typing blockers.
+  The relevant Pages run for the preceding docs-affecting head was
+  `26725616231`, and it passed.
 - GraceKelly direct runtime was healthy and direct `claude-sonnet-4-6` orchestrate returned `OK`.
 - Mistral API credentials are valid: model-list request returned 200 with 74 models.
 - RAG `gracekelly-mixed` acceptance passed: one `/api/ask` trace used both Mistral (`ministral-3b-latest`) and GraceKelly (`claude-sonnet-4-6`).

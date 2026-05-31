@@ -23,6 +23,15 @@
 - At project closure, `master` was synced with `origin/master` at pushed commit
   `c1bccc9`; GitHub CI run `26699926418` and Pages deploy run `26699926414`
   completed successfully.
+- Final follow-up closure on 2026-06-01 synced `master` and `origin/master` at
+  `315603e` after pushing the GraceKelly live revalidation note and two CI
+  fixes. `304273a` restored lazy vector backend imports and made Ollama wrapper
+  construction compatible with the locked LangChain surface; `315603e` also
+  lazy-loads `RecursiveCharacterTextSplitter` so importing
+  `vectordb._base_manager` no longer pulls `sentence_transformers` in CI. Final
+  GitHub CI run `26725747231` passed on `315603e`. The relevant Pages run on
+  the preceding docs-affecting head, `26725616231`, also passed; the final
+  `315603e` vector-only change did not trigger the docs-site path filter.
 - GraceKelly runtime check on `http://127.0.0.1:8011`: `/healthz/ready`
   returned 200, `/api/v1/models` returned 10 models, and a minimal
   `claude-sonnet-4-6` orchestrate request returned `OK`.
