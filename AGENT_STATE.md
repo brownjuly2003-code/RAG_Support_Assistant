@@ -46,6 +46,20 @@
   `tests/test_browser_selectors.py` passed (`143 passed`), Ruff passed, and
   live `sonar-2` orchestrate returned 200 with `status=completed` in
   `14070 ms`.
+- Follow-up live work on 2026-05-31 found a second GraceKelly browser-adapter
+  defect: Perplexity's Computer onboarding card was being extracted as model
+  output, could block prompt submission, and response extraction could return a
+  partial first draft before the DOM text stabilized. Local GraceKelly commits
+  `fd6c51e fix: reject perplexity computer onboarding output` and
+  `c35c626 fix: stabilize perplexity browser submissions` add regression
+  coverage and the browser fixes. Verification in `D:\GraceKelly`:
+  `tests/test_playwright_driver.py`, `tests/test_browser_adapter.py`, and
+  `tests/test_browser_selectors.py` passed together (`108 passed`), Ruff
+  passed for the changed browser driver/test files, direct
+  `claude-sonnet-4-6` browser smoke returned a full warranty answer, and the
+  RAG `/api/ask` smoke returned 200 in `53861 ms` with trace
+  `580a0c0c336940ddb0a5997662666f4e`, quality `95`, and `warranty.md`
+  citations using collection prefix `rag_live_20260531t0756`.
 - Larger R7/RAGAS/local full-corpus jobs were not started on this Windows host
   because project rules forbid local processes expected to exceed 1 GiB RAM.
   They are not required for today's GraceKelly/Mistral runtime closure; if the

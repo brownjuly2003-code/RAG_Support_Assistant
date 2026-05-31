@@ -23,6 +23,14 @@ Close all currently open RAG Support Assistant questions today, including the Gr
 - Mistral API credentials are valid: model-list request returned 200 with 74 models.
 - RAG `gracekelly-mixed` acceptance passed: one `/api/ask` trace used both Mistral (`ministral-3b-latest`) and GraceKelly (`claude-sonnet-4-6`).
 - Separate GraceKelly bug fixed locally in `D:\GraceKelly` commit `311fa6a`: `Sonar 2` is now non-reasoning, no Thinking toggle failure; targeted GraceKelly tests and live `sonar-2` orchestrate passed.
+- Follow-up live revalidation replaced the earlier ambiguous browser-output path:
+  GraceKelly commits `fd6c51e` and `c35c626` reject Perplexity Computer
+  onboarding text, dismiss the pre-submit Computer popover, and require stable
+  response text before extraction. Verification: targeted GraceKelly browser
+  tests passed, Ruff passed, direct `claude-sonnet-4-6` browser smoke returned
+  a full warranty answer, and RAG `/api/ask` returned 200 in `53861 ms` with
+  trace `580a0c0c336940ddb0a5997662666f4e`, quality `95`, and citations from
+  `warranty.md` using collection prefix `rag_live_20260531t0756`.
 
 ## Notes
 - Treat this file as the active plan until all boxes are closed or a hard blocker is recorded.
