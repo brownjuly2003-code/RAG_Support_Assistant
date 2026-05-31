@@ -509,6 +509,19 @@ commit `f8ffb0f` is on `origin/master`.
   tests passed `11 passed`; vector manager semantic/base/structural tests
   passed `20 passed`; targeted Ruff, py_compile, mypy, and `git diff --check`
   passed for the changed files.
+- M4/import-time coverage follow-up: commit `d0357e4` adds focused pure-helper
+  tests for `agent.graph` batch grade parsing, knowledge-gap detection, and LLM
+  usage accounting. Commit `127d025` lazy-loads `sentence_transformers.CrossEncoder`
+  so importing `vectordb._base_manager` and `api.app` no longer instantiates the
+  heavy reranker stack; `api.app` import was measured at about `5.039 s` with
+  `sentence_transformers` absent from `sys.modules` after the fix. New focused
+  API helper coverage lives in `tests/test_api_app_helpers.py`.
+- M4 verification after those commits: `tests/test_graph_helpers.py` passed
+  `5 passed`; the related graph set passed `19 passed`; focused reranker lazy
+  tests passed `2 passed`; `tests/test_api_app_helpers.py` passed `8 passed`;
+  the related API/vector/middleware set passed `43 passed`; targeted Ruff,
+  py_compile, mypy for `vectordb/_base_manager.py`, and `git diff --check`
+  passed.
 
 Notebook URL for manual Colab use:
 `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`
