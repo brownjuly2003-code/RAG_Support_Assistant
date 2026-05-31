@@ -6,7 +6,7 @@
 - Stack: Python 3.13, FastAPI, LangGraph, ChromaDB, Postgres, Redis, static HTML UI, Helm/Docker deploy artifacts.
 - Branch source: `master` tracks `origin/master`; current history includes the
   2026-05-30 Codex audit remediation series after the weekly-report fixes.
-- Snapshot date: 2026-05-30 (Europe/Bucharest).
+- Snapshot baseline date: 2026-05-30 (Europe/Bucharest).
 - Baseline HEAD before the 2026-05-30 audit/remediation run:
   `4d60479` (`ci: clarify weekly report delivery workflow`).
 - Baseline file count: 698 tracked files from `git ls-files`.
@@ -14,14 +14,15 @@
 - Baseline i18n key count: not applicable; no i18n JSON catalog was found.
 - Baseline generated bundle/artifact size: 0 bytes for searched bundle-like
   artifacts outside ignored dependency/cache directories.
-- Git status before this durable-state refresh: clean, with local remediation
-  commits ahead of the initial `origin/master` baseline.
+- Git status at the 2026-05-30 durable-state refresh was clean, with local
+  remediation commits ahead of the initial `origin/master` baseline.
 - Origin sync at audit start: `origin/master` was at `4d60479`.
 
 ## 2026-05-31 Project Closure Update
 
-- `master` is synced with `origin/master` at pushed commit `c1bccc9`; GitHub CI
-  run `26699926418` and Pages deploy run `26699926414` completed successfully.
+- At project closure, `master` was synced with `origin/master` at pushed commit
+  `c1bccc9`; GitHub CI run `26699926418` and Pages deploy run `26699926414`
+  completed successfully.
 - GraceKelly runtime check on `http://127.0.0.1:8011`: `/healthz/ready`
   returned 200, `/api/v1/models` returned 10 models, and a minimal
   `claude-sonnet-4-6` orchestrate request returned `OK`.
@@ -60,9 +61,15 @@
 
 ## Last Verified Gates
 
-- `git status --short --branch`: clean on `post-merge-handoff...origin/master` before this `AGENT_STATE.md` refresh.
-- `git rev-parse HEAD`: `415d4c88baf52d4696987d5e2546dd7ce3ce576c`.
-- `git ls-files | Measure-Object`: 697 tracked files.
+This section is a historical verification ledger. Do not treat branch names,
+HEAD hashes, file counts, or ahead/behind counts below as current state; rerun
+`git status --short --branch`, `git rev-parse HEAD`, or the named gate command
+when current evidence is needed.
+
+- Historical `git status --short --branch`: clean on
+  `post-merge-handoff...origin/master` before that `AGENT_STATE.md` refresh.
+- Historical `git rev-parse HEAD`: `415d4c88baf52d4696987d5e2546dd7ce3ce576c`.
+- Historical `git ls-files | Measure-Object`: 697 tracked files.
 - `python -c "import json, pathlib; json.loads(pathlib.Path(r'notebooks\\rag_support_colab_remote_benchmark.ipynb').read_text(encoding='utf-8')); print('notebook json ok')"`: passed before commit `a461fba`.
 - `git diff --check`: passed before commit `a461fba`.
 - `git fetch origin master`: updated `origin/master` to `415d4c8` after PR #1 merge.
