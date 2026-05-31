@@ -1,8 +1,33 @@
+import subprocess
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 from vectordb import _base_manager as manager
 from config import settings as settings_module
+
+
+def test_base_manager_import_does_not_eagerly_import_semantic_chunker() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; "
+                "import vectordb._base_manager; "
+                "print('semantic_loaded=' + "
+                "str('langchain_experimental.text_splitter' in sys.modules))"
+            ),
+        ],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "semantic_loaded=False" in result.stdout
 
 
 def test_build_vector_store_uses_semantic_chunker_from_settings(

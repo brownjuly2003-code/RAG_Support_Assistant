@@ -44,11 +44,8 @@ try:
 except ImportError:
     from langchain.text_splitter import RecursiveCharacterTextSplitter  # type: ignore
 
-try:
-    from langchain_experimental.text_splitter import SemanticChunker  # type: ignore
-    HAS_SEMANTIC_CHUNKER = True
-except ImportError:
-    HAS_SEMANTIC_CHUNKER = False
+SemanticChunker: Any | None = None
+HAS_SEMANTIC_CHUNKER: bool | None = None
 
 # Chroma
 try:
@@ -339,6 +336,25 @@ def _build_text_splitter(chunk_size: int, chunk_overlap: int) -> RecursiveCharac
 # Level 2: Semantic Chunking
 # ---------------------------------------------------------------------------
 
+def _load_semantic_chunker() -> Any | None:
+    global HAS_SEMANTIC_CHUNKER, SemanticChunker
+    if HAS_SEMANTIC_CHUNKER is False:
+        return None
+    if SemanticChunker is not None:
+        HAS_SEMANTIC_CHUNKER = True
+        return SemanticChunker
+
+    try:
+        from langchain_experimental.text_splitter import SemanticChunker as semantic_chunker_cls  # type: ignore
+    except ImportError:
+        HAS_SEMANTIC_CHUNKER = False
+        return None
+
+    SemanticChunker = semantic_chunker_cls
+    HAS_SEMANTIC_CHUNKER = True
+    return semantic_chunker_cls
+
+
 def semantic_split(
     docs: List[Document],
     embeddings: Any,
@@ -356,9 +372,10 @@ def semantic_split(
         splitter = _build_text_splitter(max_chunk_size, min_chunk_size // 2)
         return splitter.split_documents(list(docs))
 
-    if HAS_SEMANTIC_CHUNKER:
+    semantic_chunker_cls = _load_semantic_chunker()
+    if semantic_chunker_cls is not None:
         try:
-            splitter = SemanticChunker(embeddings)
+            splitter = semantic_chunker_cls(embeddings)
             return splitter.split_documents(list(docs))
         except Exception as exc:
             logger.warning(
