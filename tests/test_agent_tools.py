@@ -34,6 +34,41 @@ def test_check_order_status_returns_mock_status() -> None:
     assert "статус" in result.lower()
 
 
+def test_check_order_status_normalizes_ids_and_uses_tenant_fallback() -> None:
+    assert "Заказ #7" in agent_tools.check_order_status("order-7", "acme")
+
+    fallback = agent_tools.check_order_status("A-900", "tenant-beta")
+
+    assert "Заказ #900" in fallback
+    assert "tenant tenant-beta" in fallback
+
+
+def test_search_kb_formats_top_three_docs_from_callable_retriever() -> None:
+    docs = [
+        {"page_content": "Первый документ про возврат."},
+        SimpleNamespace(page_content="Второй документ про гарантию."),
+        {"page_content": "Третий документ про доставку."},
+        {"page_content": "Четвертый документ не должен попасть в ответ."},
+    ]
+
+    result = agent_tools.search_kb(
+        "возврат",
+        "acme",
+        retriever=lambda query: docs,
+    )
+
+    assert "[1] Первый документ про возврат." in result
+    assert "[2] Второй документ про гарантию." in result
+    assert "[3] Третий документ про доставку." in result
+    assert "Четвертый" not in result
+
+
+def test_search_kb_reports_empty_result() -> None:
+    result = agent_tools.search_kb("unknown", "acme", retriever=lambda query: [])
+
+    assert result == "По базе знаний ничего не найдено."
+
+
 def test_agentic_multi_step_flow_combines_kb_and_order_status(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -41,6 +76,7 @@ def test_agentic_multi_step_flow_combines_kb_and_order_status(
         "config.settings.get_settings",
         lambda: SimpleNamespace(agentic_mode=True),
     )
+    monkeypatch.setattr(agent_graph, "build_provider_runtime", None)
     monkeypatch.setattr(
         agent_tools,
         "search_kb",
@@ -75,6 +111,7 @@ def test_agentic_ticket_flow_requires_confirmation(
         "config.settings.get_settings",
         lambda: SimpleNamespace(agentic_mode=True),
     )
+    monkeypatch.setattr(agent_graph, "build_provider_runtime", None)
 
     def _fake_create_ticket(summary, priority, tenant_id, user_id, session_id=""):
         created["summary"] = summary
