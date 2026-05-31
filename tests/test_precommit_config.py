@@ -79,6 +79,31 @@ def test_ci_security_audits_locked_requirements_without_pip_resolution() -> None
     assert "pip-audit -r requirements.txt" not in security_job
 
 
+def test_local_dependency_gates_match_ci_pip_audit_exception_policy() -> None:
+    for relative_path in ("scripts/local-gate.ps1", "scripts/autopilot.ps1"):
+        normalized_script = " ".join(
+            (PROJECT_ROOT / relative_path).read_text(encoding="utf-8").split()
+        )
+
+        for arg in (
+            "--strict",
+            "--disable-pip",
+            "--require-hashes",
+            "--timeout",
+            "15",
+            "--progress-spinner",
+            "off",
+            "--cache-dir",
+            ".tmp/pip-audit-cache",
+            "--ignore-vuln",
+            "CVE-2026-45829",
+            "GHSA-f4j7-r4q5-qw2c",
+            "-r",
+            "requirements.lock",
+        ):
+            assert arg in normalized_script
+
+
 def test_ci_tests_cover_docker_python_target_and_current_python() -> None:
     ci = yaml.safe_load(
         (PROJECT_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
