@@ -79,12 +79,16 @@ def test_docs_site_workflow_audits_npm_dependencies_before_build() -> None:
 
     install_index = step_names.index("Install")
     audit_index = step_names.index("Audit npm dependencies")
+    type_check_index = step_names.index("Type-check docs site")
     build_index = step_names.index("Build")
     audit_step = steps[audit_index]
+    type_check_step = steps[type_check_index]
 
-    assert install_index < audit_index < build_index
+    assert install_index < audit_index < type_check_index < build_index
     assert audit_step["working-directory"] == "docs-site"
     assert audit_step["run"] == "npm audit --audit-level=moderate"
+    assert type_check_step["working-directory"] == "docs-site"
+    assert type_check_step["run"] == "npm run check"
 
 
 def test_regression_eval_filter_tracks_curated_dataset_changes() -> None:

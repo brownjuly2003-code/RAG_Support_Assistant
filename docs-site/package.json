@@ -8,6 +8,7 @@
     "prebuild": "node scripts/sync-docs.mjs && node scripts/gen-routes.mjs && node scripts/gen-graph.mjs && node scripts/gen-providers.mjs",
     "dev": "astro dev --port 8010",
     "start": "astro dev --port 8010",
+    "check": "astro check",
     "build": "astro build",
     "preview": "astro preview --port 8010",
     "astro": "astro"
