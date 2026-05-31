@@ -522,6 +522,15 @@ commit `f8ffb0f` is on `origin/master`.
   the related API/vector/middleware set passed `43 passed`; targeted Ruff,
   py_compile, mypy for `vectordb/_base_manager.py`, and `git diff --check`
   passed.
+- M4 targeted coverage follow-up: commits `debb828`, `c6d0f3a`, and `33ac0be`
+  add the audit-requested narrow tests for `agent/tools.py`, `auth/oidc.py`,
+  and `admin_review`: direct tool formatting/status branches, OIDC provider
+  registration with SecretStr-like values and fake OAuth, and review-queue
+  stats aggregation by tenant. Verification passed with `tests/test_agent_tools.py`
+  (`10 passed`), the related agent/graph set (`20 passed`), OIDC/JWT tests
+  (`13 passed`), `tests/test_review_queue.py` (`10 passed`), the related
+  admin/router set (`19 passed`), plus targeted Ruff, py_compile, and
+  `git diff --check`.
 
 Notebook URL for manual Colab use:
 `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`
