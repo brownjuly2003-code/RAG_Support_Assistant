@@ -39,11 +39,7 @@ try:
 except ImportError:
     from langchain.schema import Document  # type: ignore
 
-try:
-    from langchain_text_splitters import RecursiveCharacterTextSplitter  # type: ignore
-except ImportError:
-    from langchain.text_splitter import RecursiveCharacterTextSplitter  # type: ignore
-
+RecursiveCharacterTextSplitter: Any | None = None
 SemanticChunker: Any | None = None
 HAS_SEMANTIC_CHUNKER: bool | None = None
 
@@ -112,6 +108,20 @@ def _load_qdrant() -> tuple[Any, Any] | None:
     QdrantClient = qdrant_client_cls
     HAS_QDRANT = True
     return qdrant_store_cls, qdrant_client_cls
+
+
+def _load_recursive_text_splitter() -> Any:
+    global RecursiveCharacterTextSplitter
+    if RecursiveCharacterTextSplitter is not None:
+        return RecursiveCharacterTextSplitter
+
+    try:
+        from langchain_text_splitters import RecursiveCharacterTextSplitter as splitter_cls  # type: ignore
+    except ImportError:
+        from langchain.text_splitter import RecursiveCharacterTextSplitter as splitter_cls  # type: ignore
+
+    RecursiveCharacterTextSplitter = splitter_cls
+    return splitter_cls
 
 
 def get_embeddings(model_name: str | None = None) -> Any:
@@ -375,8 +385,9 @@ def _get_backend() -> str:
         backend = "chroma"
     return backend
 
-def _build_text_splitter(chunk_size: int, chunk_overlap: int) -> RecursiveCharacterTextSplitter:
-    return RecursiveCharacterTextSplitter(
+def _build_text_splitter(chunk_size: int, chunk_overlap: int) -> Any:
+    splitter_cls = _load_recursive_text_splitter()
+    return splitter_cls(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
     )
@@ -617,14 +628,14 @@ class ParentDocumentStore:
         self._embeddings = embeddings
 
         # Создаём parent chunks
-        parent_splitter = RecursiveCharacterTextSplitter(
+        parent_splitter = _build_text_splitter(
             chunk_size=parent_chunk_size,
             chunk_overlap=parent_overlap,
         )
         self._parents: List[Document] = parent_splitter.split_documents(docs)
 
         # Создаём child chunks с привязкой к parent
-        child_splitter = RecursiveCharacterTextSplitter(
+        child_splitter = _build_text_splitter(
             chunk_size=child_chunk_size,
             chunk_overlap=child_overlap,
         )
