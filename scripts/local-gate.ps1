@@ -135,7 +135,7 @@ if ($List -or $DryRun) {
         Write-Host "- helm lint deploy/helm/ --strict (skipped: deploy/helm/ unchanged)"
     }
     if (-not $requirementsTouched) {
-        Write-Host "- pip-audit --strict --disable-pip --require-hashes --timeout 15 --progress-spinner off --cache-dir .tmp/pip-audit-cache --ignore-vuln CVE-2026-45829 --ignore-vuln GHSA-f4j7-r4q5-qw2c -r requirements.lock (skipped: lock files unchanged)"
+        Write-Host "- pip-audit --strict --disable-pip --require-hashes --timeout 15 --progress-spinner off --cache-dir .tmp/pip-audit-cache --ignore-vuln CVE-2026-45829 --ignore-vuln GHSA-f4j7-r4q5-qw2c -r requirements.lock (skipped: dependency files unchanged)"
     }
     if ($DryRun) {
         foreach ($tool in @("git", "python", "ruff", "mypy", "pytest")) {

@@ -93,6 +93,10 @@ def test_local_dependency_gates_match_ci_pip_audit_exception_policy() -> None:
         ):
             assert dependency_file in normalized_script
 
+        if relative_path == "scripts/local-gate.ps1":
+            assert "dependency files unchanged" in normalized_script
+            assert "lock files unchanged" not in normalized_script
+
         for arg in (
             "--strict",
             "--disable-pip",
