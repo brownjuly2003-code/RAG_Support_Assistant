@@ -25,7 +25,16 @@ benchmark path.
 6. For a live external Mistral signal, set `RUN_LIVE = True` in the live cell,
    enter `MISTRAL_API_KEY` through `getpass`, and keep `--max-cases 3` for the
    first run.
-7. Download the generated report files from the Colab file browser.
+7. For the aircargo/RAGAS-style path, provide the gitignored corpus as
+   `aircargo_uploads.zip` / `aircargo_uploads.tar.gz` or set
+   `AIRCARGO_ARCHIVE_URL`, run the Colab-only `scripts/reindex.py --tenant
+   aircargo` cell, then run the mock `scripts/aircargo_ragas_eval.py` smoke.
+8. For the paid aircargo live baseline, set `RUN_AIRCARGO_LIVE_RAGAS = True`,
+   enter `MISTRAL_API_KEY` through `getpass`, and keep `--max-cases 3` for the
+   first run.
+9. Download the generated report files from the Colab file browser. Regression
+   reports are under `reports/regression/`; aircargo RAGAS-style reports are
+   under `reports/ragas/`.
 
 ## Boundaries
 
@@ -36,6 +45,8 @@ benchmark path.
 - Do not print or commit `MISTRAL_API_KEY`.
 - Do not use the iMac as compute. Its documented role is only SSH/browser
   access, and it already hosts the DV2 Lima VM when that demo is active.
+- Do not commit the aircargo corpus archive. `data/uploads/aircargo/` remains
+  an external runtime input because `data/*` is gitignored.
 
 ## iMac Thin-Client Check
 
