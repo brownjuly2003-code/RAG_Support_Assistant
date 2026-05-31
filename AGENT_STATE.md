@@ -18,6 +18,38 @@
   commits ahead of the initial `origin/master` baseline.
 - Origin sync at audit start: `origin/master` was at `4d60479`.
 
+## 2026-05-31 Project Closure Update
+
+- `master` is synced with `origin/master` at pushed commit `c1bccc9`; GitHub CI
+  run `26699926418` and Pages deploy run `26699926414` completed successfully.
+- GraceKelly runtime check on `http://127.0.0.1:8011`: `/healthz/ready`
+  returned 200, `/api/v1/models` returned 10 models, and a minimal
+  `claude-sonnet-4-6` orchestrate request returned `OK`.
+- Mistral credential/provider check: `MISTRAL_API_KEY` was present and
+  `GET https://api.mistral.ai/v1/models` returned 200 with 74 models. The key
+  value was not printed or written to tracked files.
+- Windows-safe RAG acceptance ran with `LLM_PROVIDER_PROFILE=gracekelly-mixed`,
+  `RAG_EMBEDDING_MODEL=all-MiniLM-L6-v2`, vector-only retrieval,
+  `REQUEST_TIMEOUT_SEC=120`, and collection prefix `rag_closure_20260531`.
+  `/api/ask` returned 200 in `72491 ms`, trace
+  `578325c0c7be405d9ec5aacb5c4f6927`, with providers `mistral` and
+  `gracekelly` and models `ministral-3b-latest` and `claude-sonnet-4-6`.
+  The RAG process stayed under the local resource cap at about `594.6 MB`.
+- A separate GraceKelly defect was found and fixed locally in `D:\GraceKelly`:
+  live `Sonar 2` was incorrectly marked reasoning-capable, so the browser
+  adapter treated a missing Thinking toggle as fatal. Local commit
+  `311fa6a fix(browser): treat Sonar 2 as non-reasoning` updates the model
+  registry and tests. Verification: the new red tests failed before the fix,
+  then `tests/test_model_registry.py`, `tests/test_models.py`,
+  `tests/test_models_extra.py`, `tests/test_browser_adapter.py`, and
+  `tests/test_browser_selectors.py` passed (`143 passed`), Ruff passed, and
+  live `sonar-2` orchestrate returned 200 with `status=completed` in
+  `14070 ms`.
+- Larger R7/RAGAS/local full-corpus jobs were not started on this Windows host
+  because project rules forbid local processes expected to exceed 1 GiB RAM.
+  They are not required for today's GraceKelly/Mistral runtime closure; if the
+  acceptance target changes to full RAGAS, run it on Colab/Mac/remote.
+
 ## Runtime
 
 - Shell context: Windows PowerShell 5.1 in `D:\RAG_Support_Assistant`.
