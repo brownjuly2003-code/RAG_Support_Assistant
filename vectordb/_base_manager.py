@@ -70,11 +70,8 @@ except ImportError:
     HAS_BM25 = False
 
 # Cross-encoder reranker
-try:
-    from sentence_transformers import CrossEncoder  # type: ignore
-    HAS_CROSS_ENCODER = True
-except ImportError:
-    HAS_CROSS_ENCODER = False
+CrossEncoder: Any | None = None
+HAS_CROSS_ENCODER: bool | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -130,6 +127,25 @@ def get_embeddings(model_name: str | None = None) -> Any:
 _cached_reranker: Any = None
 
 
+def _load_cross_encoder() -> Any | None:
+    global CrossEncoder, HAS_CROSS_ENCODER
+    if HAS_CROSS_ENCODER is False:
+        return None
+    if CrossEncoder is not None:
+        HAS_CROSS_ENCODER = True
+        return CrossEncoder
+
+    try:
+        from sentence_transformers import CrossEncoder as cross_encoder_cls  # type: ignore
+    except ImportError:
+        HAS_CROSS_ENCODER = False
+        return None
+
+    CrossEncoder = cross_encoder_cls
+    HAS_CROSS_ENCODER = True
+    return cross_encoder_cls
+
+
 def get_reranker(model_name: str | None = None) -> Any | None:
     """Создаёт CrossEncoder reranker. Возвращает None если отключён или недоступен."""
     global _cached_reranker
@@ -143,13 +159,14 @@ def get_reranker(model_name: str | None = None) -> Any | None:
     if not model_name:
         return None
 
-    if not HAS_CROSS_ENCODER:
+    cross_encoder_cls = _load_cross_encoder()
+    if cross_encoder_cls is None:
         logger.warning("sentence-transformers not installed — reranker disabled")
         return None
 
     logger.info("Loading reranker: %s", model_name)
     start = time.time()
-    reranker = CrossEncoder(model_name, device="cpu")
+    reranker = cross_encoder_cls(model_name, device="cpu")
     elapsed = time.time() - start
     logger.info("Reranker loaded in %.1fs", elapsed)
     _cached_reranker = reranker
