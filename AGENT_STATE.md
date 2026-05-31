@@ -453,6 +453,11 @@ commit `f8ffb0f` is on `origin/master`.
   verification passed with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`; the unscoped
   local pytest plugin autoload path fails before collection because a globally
   installed `schemathesis` plugin imports missing `_pytest.subtests`.
+- Static HTML entrypoint follow-up: commit `31996d1` parameterizes the FastAPI
+  static-page smoke coverage across the checked-in UI entrypoints:
+  admin/agent/analytics/chat/help/login/metrics/widget. Focused UI/static JS
+  verification passed 12 tests with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`, plus
+  Ruff, py_compile, and `git diff --check`.
 
 Notebook URL for manual Colab use:
 `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`

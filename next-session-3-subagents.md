@@ -246,3 +246,7 @@ opts into planning or running a live benchmark.
       `/static/widget.js` and `/static/widget.html`; focused pytest passed with
       `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` because local global `schemathesis`
       plugin autoload fails before collection on missing `_pytest.subtests`.
+- [x] Static HTML entrypoints now have FastAPI smoke coverage (`31996d1`) for
+      admin/agent/analytics/chat/help/login/metrics/widget pages; focused
+      UI/static JS verification passed 12 tests, Ruff, py_compile, and
+      `git diff --check`.
