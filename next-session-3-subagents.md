@@ -234,3 +234,5 @@ opts into planning or running a live benchmark.
       vulnerabilities, `node --check` covers static/admin/widget and docs-site
       scripts, Astro build produces 33 pages, and pre-commit passes with the
       isolated `.tmp/pre-commit-cache`.
+- [x] Docs-site CI now runs `npm run check` before build (`67a067f`), with a
+      red/green guard in `tests/test_github_workflows.py`.

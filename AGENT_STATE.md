@@ -344,6 +344,10 @@ benchmark PR is merged into `master`:
   errors / 0 warnings / 0 hints; `npm --prefix docs-site run build` built 33
   pages; `PRE_COMMIT_HOME=.tmp/pre-commit-cache pre-commit run --from-ref origin/master --to-ref HEAD`
   passed.
+- JavaScript/docs-site CI follow-up: commit `67a067f` adds a `check` npm script
+  and runs `npm run check` in `.github/workflows/docs-site.yml` after npm audit
+  and before the Pages build. The guard test first failed because the workflow
+  had no `Type-check docs site` step, then passed after the workflow update.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff
