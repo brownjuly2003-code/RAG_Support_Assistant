@@ -17,3 +17,15 @@ def test_admin_js_served(client: TestClient) -> None:
     assert response.status_code == 200
     assert "localStorage" in response.text
     assert "fetch(" in response.text
+
+
+def test_widget_assets_served(client: TestClient) -> None:
+    script_response = client.get("/static/widget.js")
+    html_response = client.get("/static/widget.html")
+
+    assert script_response.status_code == 200
+    assert "rag-widget-toggle" in script_response.text
+    assert "/static/widget.html" in script_response.text
+
+    assert html_response.status_code == 200
+    assert "rag-widget-ready" in html_response.text
