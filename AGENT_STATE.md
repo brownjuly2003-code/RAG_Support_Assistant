@@ -496,6 +496,19 @@ commit `f8ffb0f` is on `origin/master`.
   fails on unpinned jsDelivr npm scripts or missing integrity. The guard failed
   before the HTML fix, then focused UI/static JS tests and lightweight a11y
   passed with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`.
+- L1 deprecation follow-up: commits `477ef2b`, `3ee6a16`, and `2e46215`
+  reduce import-time deprecated surfaces without dependency lock changes.
+  `agent.graph` now prefers `langchain_ollama.OllamaLLM` when available and
+  keeps the existing `langchain_community` fallback; `auth.oidc` lazy-loads the
+  Authlib OAuth client only when SSO is used; `vectordb._base_manager`
+  lazy-loads `SemanticChunker` only when semantic chunking runs. Remaining
+  `langchain_community` and Authlib references are compatibility fallback/lazy
+  paths; full removal is a separate dependency/SSO migration.
+- L1 verification after those commits: focused Ollama/circuit-breaker tests
+  passed `14 passed`; provider/graph/Ollama tests passed `12 passed`; OIDC/JWT
+  tests passed `11 passed`; vector manager semantic/base/structural tests
+  passed `20 passed`; targeted Ruff, py_compile, mypy, and `git diff --check`
+  passed for the changed files.
 
 Notebook URL for manual Colab use:
 `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`
