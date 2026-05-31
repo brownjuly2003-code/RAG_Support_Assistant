@@ -614,31 +614,42 @@ def _reset_settings_cache() -> None:
 
 @contextmanager
 def _force_ollama_temperature_zero():
+    patches: list[tuple[Any, str, Any]] = []
+
+    def _patch_constructor(module: Any, attr: str) -> None:
+        original = getattr(module, attr, None)
+        if not isinstance(original, type):
+            return
+
+        class _DeterministicOllama(original):
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                kwargs.setdefault("temperature", 0)
+                super().__init__(*args, **kwargs)
+
+        setattr(module, attr, _DeterministicOllama)
+        patches.append((module, attr, original))
+
+    try:
+        import langchain_ollama as modern_ollama_module  # type: ignore[import-not-found]
+    except ImportError:
+        pass
+    else:
+        _patch_constructor(modern_ollama_module, "OllamaLLM")
+
     try:
         import langchain_community.llms as llm_module
         from langchain_community.llms import ollama as ollama_module
     except ImportError:
-        yield
-        return
+        pass
+    else:
+        _patch_constructor(llm_module, "Ollama")
+        _patch_constructor(ollama_module, "Ollama")
 
-    original_package_ollama = getattr(llm_module, "Ollama", None)
-    original_module_ollama = getattr(ollama_module, "Ollama", None)
-    if original_package_ollama is None or original_module_ollama is None:
-        yield
-        return
-
-    class _DeterministicOllama(original_module_ollama):
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            kwargs.setdefault("temperature", 0)
-            super().__init__(*args, **kwargs)
-
-    llm_module.Ollama = _DeterministicOllama
-    ollama_module.Ollama = _DeterministicOllama
     try:
         yield
     finally:
-        llm_module.Ollama = original_package_ollama
-        ollama_module.Ollama = original_module_ollama
+        for module, attr, original in reversed(patches):
+            setattr(module, attr, original)
 
 
 @contextmanager

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
+import types
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -221,6 +223,32 @@ def test_run_regression_cases_detects_new_passes() -> None:
     )
 
     assert [item["case_id"] for item in report["new_passes"]] == ["case-warranty"]
+
+
+def test_force_ollama_temperature_zero_patches_modern_langchain_ollama(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from scripts import regression_eval
+
+    captured: list[dict[str, object]] = []
+
+    class FakeOllamaLLM:
+        def __init__(self, **kwargs: object) -> None:
+            captured.append(dict(kwargs))
+
+    fake_module = types.ModuleType("langchain_ollama")
+    fake_module.OllamaLLM = FakeOllamaLLM
+    monkeypatch.setitem(sys.modules, "langchain_ollama", fake_module)
+
+    with regression_eval._force_ollama_temperature_zero():
+        fake_module.OllamaLLM(model="qwen2.5:7b")
+        fake_module.OllamaLLM(model="qwen2.5:7b", temperature=0.2)
+
+    assert captured == [
+        {"model": "qwen2.5:7b", "temperature": 0},
+        {"model": "qwen2.5:7b", "temperature": 0.2},
+    ]
+    assert fake_module.OllamaLLM is FakeOllamaLLM
 
 
 def test_run_regression_cases_sets_exit_code_one_when_regressions_exceed_gate() -> None:
