@@ -119,3 +119,79 @@ def test_capture_and_merge_llm_usage_accumulates_tokens_and_cost() -> None:
         "output_tokens": 7,
         "total_tokens": 22,
     }
+
+
+def test_normalize_tool_call_accepts_direct_and_openai_function_shapes() -> None:
+    import agent.graph as graph
+
+    assert graph._normalize_tool_call(
+        {"name": " search_kb ", "arguments": {"query": "returns"}}
+    ) == ("search_kb", {"query": "returns"})
+    assert graph._normalize_tool_call(
+        {
+            "function": {
+                "name": "check_order_status",
+                "arguments": '{"order_id": "42"}',
+            }
+        }
+    ) == ("check_order_status", {"order_id": "42"})
+
+
+def test_normalize_tool_call_rejects_missing_name_and_non_object_arguments() -> None:
+    import agent.graph as graph
+
+    assert graph._normalize_tool_call({"arguments": '["not", "an", "object"]'}) == (
+        None,
+        {},
+    )
+    assert graph._normalize_tool_call(
+        {"function": {"name": "   ", "arguments": "{bad json"}}
+    ) == (None, {})
+
+
+def test_agentic_tool_definitions_keep_expected_contracts() -> None:
+    import agent.graph as graph
+
+    tools = graph._agentic_tool_definitions()
+    by_name = {item["function"]["name"]: item["function"] for item in tools}
+
+    assert set(by_name) == {"search_kb", "check_order_status", "create_ticket"}
+    assert by_name["search_kb"]["parameters"]["required"] == ["query"]
+    assert by_name["check_order_status"]["parameters"]["required"] == ["order_id"]
+    assert by_name["create_ticket"]["parameters"]["required"] == [
+        "summary",
+        "priority",
+    ]
+    assert all(
+        item["parameters"]["additionalProperties"] is False
+        for item in by_name.values()
+    )
+
+
+def test_llm_capability_detection_uses_flags_and_static_methods() -> None:
+    import agent.graph as graph
+
+    class ToolMethodLLM:
+        def generate_with_tools(self, messages, tools, **kwargs):
+            raise AssertionError("capability detection must not call the method")
+
+    class SchemaMethodLLM:
+        def generate_with_schema(self, messages, schema, **kwargs):
+            raise AssertionError("capability detection must not call the method")
+
+    class DynamicOnlyLLM:
+        def __getattr__(self, name):
+            if name == "generate_with_tools":
+                return lambda *args, **kwargs: None
+            raise AttributeError(name)
+
+    assert graph._llm_supports_tool_use(SimpleNamespace(supports_tool_use=True)) is True
+    assert graph._llm_supports_tool_use(ToolMethodLLM()) is True
+    assert graph._llm_supports_tool_use(DynamicOnlyLLM()) is False
+    assert (
+        graph._llm_supports_structured_output(
+            SimpleNamespace(supports_structured_output=True)
+        )
+        is True
+    )
+    assert graph._llm_supports_structured_output(SchemaMethodLLM()) is True
