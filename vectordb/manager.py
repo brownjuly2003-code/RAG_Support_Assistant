@@ -30,6 +30,19 @@ def get_embeddings(model_name: str | None = None) -> Any:
     return _base_manager.get_embeddings(model_name)
 
 
+def _get_chroma() -> Any:
+    global Chroma
+    if Chroma is not None:
+        return Chroma
+    load_chroma = getattr(_base_manager, "_load_chroma", None)
+    if load_chroma is None:
+        raise ImportError("Chroma is not available")
+    Chroma = load_chroma()
+    if Chroma is None:
+        raise ImportError("Chroma is not available")
+    return Chroma
+
+
 def _sanitize_tenant(tenant_id: str) -> str:
     prefix = getattr(get_settings(), "vectordb_collection_prefix", "rag_docs")
     sanitized = re.sub(r"[^a-zA-Z0-9._-]", "_", tenant_id or "default")
@@ -132,13 +145,12 @@ def build_vector_store(
             raise ImportError("Qdrant backend is not available")
         store = build_qdrant(chunks, embeddings)
     else:
-        if Chroma is None:
-            raise ImportError("Chroma is not available")
+        chroma_cls = _get_chroma()
         persist_directory = str(getattr(settings, "vectordb_chroma_dir"))
         collection_name = _collection_name(tenant)
 
         try:
-            existing = Chroma(
+            existing = chroma_cls(
                 persist_directory=persist_directory,
                 embedding_function=embeddings,
                 collection_name=collection_name,
@@ -149,7 +161,7 @@ def build_vector_store(
         except Exception:
             pass
 
-        store = Chroma.from_documents(
+        store = chroma_cls.from_documents(
             documents=list(chunks),
             embedding=embeddings,
             persist_directory=persist_directory,
@@ -215,9 +227,8 @@ def get_retriever(
     settings = get_settings()
     backend = getattr(settings, "vector_backend", "chroma")
     if vector_store is None and backend != "qdrant":
-        if Chroma is None:
-            raise ImportError("Chroma is not available")
-        vector_store = Chroma(
+        chroma_cls = _get_chroma()
+        vector_store = chroma_cls(
             persist_directory=str(persist_directory or getattr(settings, "vectordb_chroma_dir")),
             embedding_function=embeddings,
             collection_name=_collection_name(tenant),

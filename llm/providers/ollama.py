@@ -14,6 +14,27 @@ from llm.providers.base import (
 )
 
 
+def _with_timeout_kwargs(kwargs: dict[str, Any], timeout_sec: float) -> list[dict[str, Any]]:
+    return [
+        {**kwargs, "timeout": timeout_sec},
+        {**kwargs, "request_timeout": timeout_sec},
+        {**kwargs, "client_kwargs": {"timeout": timeout_sec}},
+        kwargs,
+    ]
+
+
+def _instantiate_with_timeout(cls: Any, *, timeout_sec: float, **kwargs: Any) -> Any:
+    last_type_error: TypeError | None = None
+    for candidate in _with_timeout_kwargs(kwargs, timeout_sec):
+        try:
+            return cls(**candidate)
+        except TypeError as exc:
+            last_type_error = exc
+    if last_type_error is not None:
+        raise last_type_error
+    return cls(**kwargs)
+
+
 class OllamaProvider:
     def __init__(
         self,
@@ -46,28 +67,23 @@ class OllamaProvider:
         started = time.perf_counter()
 
         try:
-            from langchain_ollama import OllamaLLM  # type: ignore[import-not-found]
+            from langchain_ollama import OllamaLLM as ollama_llm_cls  # type: ignore[import-not-found]
 
-            llm = OllamaLLM(
+            llm = _instantiate_with_timeout(
+                ollama_llm_cls,
+                timeout_sec=self._timeout_sec,
                 model=self.model_name,
                 base_url=self._base_url,
-                timeout=self._timeout_sec,
             )
         except ImportError:
-            from langchain_community.llms import Ollama
+            from langchain_community.llms import Ollama as community_ollama_cls
 
-            try:
-                llm = Ollama(
-                    model=self.model_name,
-                    base_url=self._base_url,
-                    timeout=self._timeout_sec,
-                )
-            except TypeError:
-                llm = Ollama(
-                    model=self.model_name,
-                    base_url=self._base_url,
-                    request_timeout=self._timeout_sec,
-                )
+            llm = _instantiate_with_timeout(
+                community_ollama_cls,
+                timeout_sec=self._timeout_sec,
+                model=self.model_name,
+                base_url=self._base_url,
+            )
 
         text = str(llm.invoke(prompt))
         input_tokens = estimate_tokens(prompt)
@@ -100,28 +116,23 @@ class OllamaProvider:
         started = time.perf_counter()
 
         try:
-            from langchain_ollama import ChatOllama  # type: ignore[import-not-found]
+            from langchain_ollama import ChatOllama as chat_ollama_cls  # type: ignore[import-not-found]
 
-            chat = ChatOllama(
+            chat = _instantiate_with_timeout(
+                chat_ollama_cls,
+                timeout_sec=self._timeout_sec,
                 model=self.model_name,
                 base_url=self._base_url,
-                timeout=self._timeout_sec,
             )
         except ImportError:
-            from langchain_community.chat_models import ChatOllama
+            from langchain_community.chat_models import ChatOllama as community_chat_cls
 
-            try:
-                chat = ChatOllama(
-                    model=self.model_name,
-                    base_url=self._base_url,
-                    timeout=self._timeout_sec,
-                )
-            except TypeError:
-                chat = ChatOllama(
-                    model=self.model_name,
-                    base_url=self._base_url,
-                    request_timeout=self._timeout_sec,
-                )
+            chat = _instantiate_with_timeout(
+                community_chat_cls,
+                timeout_sec=self._timeout_sec,
+                model=self.model_name,
+                base_url=self._base_url,
+            )
 
         response = chat.bind_tools(tools).invoke(prompt)
         content = getattr(response, "content", "")
@@ -195,28 +206,23 @@ class OllamaProvider:
         prompt = flatten_messages(messages)
 
         try:
-            from langchain_ollama import OllamaLLM  # type: ignore[import-not-found]
+            from langchain_ollama import OllamaLLM as ollama_llm_cls  # type: ignore[import-not-found]
 
-            llm = OllamaLLM(
+            llm = _instantiate_with_timeout(
+                ollama_llm_cls,
+                timeout_sec=self._timeout_sec,
                 model=self.model_name,
                 base_url=self._base_url,
-                timeout=self._timeout_sec,
             )
         except ImportError:
-            from langchain_community.llms import Ollama
+            from langchain_community.llms import Ollama as community_ollama_cls
 
-            try:
-                llm = Ollama(
-                    model=self.model_name,
-                    base_url=self._base_url,
-                    timeout=self._timeout_sec,
-                )
-            except TypeError:
-                llm = Ollama(
-                    model=self.model_name,
-                    base_url=self._base_url,
-                    request_timeout=self._timeout_sec,
-                )
+            llm = _instantiate_with_timeout(
+                community_ollama_cls,
+                timeout_sec=self._timeout_sec,
+                model=self.model_name,
+                base_url=self._base_url,
+            )
 
         async for chunk in llm.astream(prompt):
             if isinstance(chunk, str):

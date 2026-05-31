@@ -47,20 +47,13 @@ except ImportError:
 SemanticChunker: Any | None = None
 HAS_SEMANTIC_CHUNKER: bool | None = None
 
-# Chroma
-try:
-    from langchain_chroma import Chroma  # type: ignore
-    HAS_CHROMA = True
-except ImportError:
-    HAS_CHROMA = False
-
-# Qdrant
-try:
-    from langchain_qdrant import QdrantVectorStore  # type: ignore
-    from qdrant_client import QdrantClient  # type: ignore
-    HAS_QDRANT = True
-except ImportError:
-    HAS_QDRANT = False
+# Vector-store backends are lazy-loaded so importing this module does not pull
+# optional embedding/reranker stacks into sys.modules.
+Chroma: Any | None = None
+QdrantVectorStore: Any | None = None
+QdrantClient: Any | None = None
+HAS_CHROMA: bool | None = None
+HAS_QDRANT: bool | None = None
 
 # BM25
 try:
@@ -79,6 +72,46 @@ HAS_CROSS_ENCODER: bool | None = None
 # ---------------------------------------------------------------------------
 
 _cached_embeddings: Any = None
+
+
+def _load_chroma() -> Any | None:
+    global Chroma, HAS_CHROMA
+    if HAS_CHROMA is False:
+        return None
+    if Chroma is not None:
+        HAS_CHROMA = True
+        return Chroma
+
+    try:
+        from langchain_chroma import Chroma as chroma_cls  # type: ignore
+    except ImportError:
+        HAS_CHROMA = False
+        return None
+
+    Chroma = chroma_cls
+    HAS_CHROMA = True
+    return chroma_cls
+
+
+def _load_qdrant() -> tuple[Any, Any] | None:
+    global QdrantClient, QdrantVectorStore, HAS_QDRANT
+    if HAS_QDRANT is False:
+        return None
+    if QdrantClient is not None and QdrantVectorStore is not None:
+        HAS_QDRANT = True
+        return QdrantVectorStore, QdrantClient
+
+    try:
+        from langchain_qdrant import QdrantVectorStore as qdrant_store_cls  # type: ignore
+        from qdrant_client import QdrantClient as qdrant_client_cls  # type: ignore
+    except ImportError:
+        HAS_QDRANT = False
+        return None
+
+    QdrantVectorStore = qdrant_store_cls
+    QdrantClient = qdrant_client_cls
+    HAS_QDRANT = True
+    return qdrant_store_cls, qdrant_client_cls
 
 
 def get_embeddings(model_name: str | None = None) -> Any:
@@ -799,7 +832,8 @@ class QdrantStubRetriever:
 # ---------------------------------------------------------------------------
 
 def _build_chroma(docs: Sequence[Document], embeddings: Any) -> Any:
-    if not HAS_CHROMA:
+    chroma_cls = _load_chroma()
+    if chroma_cls is None:
         raise ImportError(
             "Chroma not installed. Install 'langchain-chroma' "
             "or switch backend (VECTOR_DB_TYPE) to 'qdrant'."
@@ -807,7 +841,7 @@ def _build_chroma(docs: Sequence[Document], embeddings: Any) -> Any:
     chroma_dir = _data_dir() / "chroma"
     chroma_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Building Chroma in %s", chroma_dir)
-    store = Chroma.from_documents(
+    store = chroma_cls.from_documents(
         documents=list(docs),
         embedding=embeddings,
         persist_directory=str(chroma_dir),
@@ -820,15 +854,17 @@ def _build_chroma(docs: Sequence[Document], embeddings: Any) -> Any:
 
 
 def _build_qdrant(docs: Sequence[Document], embeddings: Any) -> Any:
-    if not HAS_QDRANT:
+    qdrant_backend = _load_qdrant()
+    if qdrant_backend is None:
         logger.warning("Qdrant unavailable — using in-memory stub")
         return QdrantStubStore(docs, embeddings)
+    qdrant_store_cls, qdrant_client_cls = qdrant_backend
     qdrant_dir = _data_dir() / "qdrant"
     qdrant_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Building local Qdrant in %s", qdrant_dir)
     try:
-        client = QdrantClient(path=str(qdrant_dir))
-        store = QdrantVectorStore.from_documents(
+        client = qdrant_client_cls(path=str(qdrant_dir))
+        store = qdrant_store_cls.from_documents(
             documents=list(docs),
             embedding=embeddings,
             client=client,

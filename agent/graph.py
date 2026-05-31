@@ -204,18 +204,36 @@ class SupportsInvoke(Protocol):
 _USE_DEFAULT_BREAKER = object()
 
 
+def _with_ollama_timeout_kwargs(model_name: str, timeout_sec: float) -> list[dict[str, Any]]:
+    return [
+        {"model": model_name, "timeout": timeout_sec},
+        {"model": model_name, "request_timeout": timeout_sec},
+        {"model": model_name, "client_kwargs": {"timeout": timeout_sec}},
+        {"model": model_name},
+    ]
+
+
+def _instantiate_local_ollama(cls: Any, model_name: str, timeout_sec: float) -> Any:
+    last_type_error: TypeError | None = None
+    for kwargs in _with_ollama_timeout_kwargs(model_name, timeout_sec):
+        try:
+            return cls(**kwargs)
+        except TypeError as exc:
+            last_type_error = exc
+    if last_type_error is not None:
+        raise last_type_error
+    return cls(model=model_name)
+
+
 def _create_local_ollama_llm(model_name: str, timeout_sec: float) -> Any:
     try:
-        from langchain_ollama import OllamaLLM  # type: ignore[import-not-found]
+        from langchain_ollama import OllamaLLM as ollama_llm_cls  # type: ignore[import-not-found]
 
-        return OllamaLLM(model=model_name, timeout=timeout_sec)
+        return _instantiate_local_ollama(ollama_llm_cls, model_name, timeout_sec)
     except ImportError:
-        from langchain_community.llms import Ollama
+        from langchain_community.llms import Ollama as community_ollama_cls
 
-        try:
-            return Ollama(model=model_name, timeout=timeout_sec)
-        except TypeError:
-            return Ollama(model=model_name, request_timeout=timeout_sec)
+        return _instantiate_local_ollama(community_ollama_cls, model_name, timeout_sec)
 
 
 class LocalOllamaLLM:
