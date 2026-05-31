@@ -86,6 +86,13 @@ that session.
     `/healthz/ready` returned `ok`, `/api/v1/models` returned a model catalog,
     and a minimal `/api/v1/orchestrate` smoke succeeded. No secret value was
     printed or copied.
+  - 2026-05-31 local autonomous audit follow-ups are recorded in
+    `AGENT_STATE.md`: L1 import-time deprecation reduction, lazy
+    `SemanticChunker`/`CrossEncoder` loading, M4 focused tests for graph/API
+    helpers, `agent/tools.py`, `auth/oidc.py`, and `admin_review`, plus L2
+    wording that marks old gate hashes/counts as historical ledger evidence.
+    These are local commits only; no push, deploy, live benchmark, model
+    download, or cache deletion was performed.
   - Agent Copilot semantic context UI and zero-overlap similar-ticket filtering.
   - Mock-safe benchmark Quickstart example and guardrail test.
   - `static/widget.html` a11y landmark coverage and color-contrast fix.
@@ -253,3 +260,8 @@ opts into planning or running a live benchmark.
 - [x] Analytics Chart.js CDN dependency is pinned and SRI-protected
       (`d9227e2`); a red/green JS quality guard now fails on unversioned
       jsDelivr npm scripts or missing integrity/crossorigin.
+- [x] 2026-05-31 local autonomous audit follow-ups are committed locally:
+      L1 lazy imports/deprecation reduction, M4 focused helper and router
+      tests, and L2 historical-ledger wording in durable state docs. Focused
+      pytest/Ruff/py_compile/mypy gates and `git diff --check` passed for the
+      changed files; see `AGENT_STATE.md` for command-level evidence.
