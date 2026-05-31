@@ -529,6 +529,12 @@ commit `f8ffb0f` is on `origin/master`.
   the related API/vector/middleware set passed `43 passed`; targeted Ruff,
   py_compile, mypy for `vectordb/_base_manager.py`, and `git diff --check`
   passed.
+- M4 graph helper follow-up: commit `30cae93` covers agentic tool-call
+  normalization, agentic tool-definition contracts, and static capability
+  detection for tool/schema-capable LLMs. Verification passed with
+  `tests/test_graph_helpers.py`, `tests/test_agent_tools.py`, and
+  `tests/test_provider_graph_integration.py` (`24 passed`), plus targeted
+  Ruff, py_compile, and `git diff --check`.
 - M4 targeted coverage follow-up: commits `debb828`, `c6d0f3a`, and `33ac0be`
   add the audit-requested narrow tests for `agent/tools.py`, `auth/oidc.py`,
   and `admin_review`: direct tool formatting/status branches, OIDC provider
