@@ -96,6 +96,28 @@ def test_get_oauth_client_registers_enabled_providers(
     )
 
 
+def test_get_oauth_client_skips_authlib_for_unconfigured_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import auth.oidc as oidc
+
+    settings = SimpleNamespace(
+        google_oidc_client_id=None,
+        google_oidc_client_secret=None,
+        azure_oidc_tenant=None,
+        azure_oidc_client_id=None,
+        azure_oidc_client_secret=None,
+    )
+
+    monkeypatch.setattr(
+        oidc,
+        "_load_oauth_class",
+        lambda: (_ for _ in ()).throw(AssertionError("authlib should not load")),
+    )
+
+    assert oidc.get_oauth_client("google", settings) is None
+
+
 def test_sso_providers_endpoint_lists_enabled_providers(client: TestClient) -> None:
     response = client.get("/api/auth/sso/providers")
 

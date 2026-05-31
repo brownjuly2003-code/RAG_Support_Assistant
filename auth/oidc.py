@@ -67,6 +67,12 @@ def _load_oauth_class() -> Any:
 
 def get_oauth_client(provider: str, settings: Any | None = None) -> Any:
     settings = settings or get_settings()
+    enabled_provider_names = {
+        item["name"] for item in list_sso_providers(settings)
+    }
+    if provider not in enabled_provider_names:
+        return None
+
     oauth = _load_oauth_class()()
     google_secret = _secret_value(getattr(settings, "google_oidc_client_secret", None))
     azure_secret = _secret_value(getattr(settings, "azure_oidc_client_secret", None))
