@@ -4,12 +4,11 @@ import ast
 from pathlib import Path
 
 
-ROUTER_FILES = [
+APP_MODULE_ROUTER_FILES = [
     Path("api/routers/auth_sso.py"),
     Path("api/routers/feedback.py"),
     Path("api/routers/agent.py"),
     Path("api/routers/analytics.py"),
-    Path("api/routers/admin_review.py"),
     Path("api/routers/misc.py"),
     Path("api/routers/admin_experiments.py"),
     Path("api/routers/admin_evaluations.py"),
@@ -23,7 +22,7 @@ ROUTER_FILES = [
 
 
 def test_selected_routers_use_shared_app_module() -> None:
-    for router_file in ROUTER_FILES:
+    for router_file in APP_MODULE_ROUTER_FILES:
         tree = ast.parse(router_file.read_text(encoding="utf-8"))
 
         assert not any(
@@ -36,3 +35,26 @@ def test_selected_routers_use_shared_app_module() -> None:
             and any(alias.name == "app_module" and alias.asname == "_app_module" for alias in node.names)
             for node in tree.body
         ), router_file
+
+
+def test_admin_review_uses_shared_review_helpers_directly() -> None:
+    router_file = Path("api/routers/admin_review.py")
+    tree = ast.parse(router_file.read_text(encoding="utf-8"))
+
+    imported_helpers = {
+        alias.name
+        for node in tree.body
+        if isinstance(node, ast.ImportFrom) and node.module == "api._shared"
+        for alias in node.names
+    }
+
+    assert "app_module" not in imported_helpers
+    assert {
+        "_REVIEW_QUEUE_REASONS",
+        "_REVIEW_QUEUE_STATUSES",
+        "_load_review_queue_trace_details",
+        "_refresh_review_queue_metrics",
+        "_review_queue_enabled",
+        "_reviewed_by_uuid",
+        "_serialize_timestamp",
+    } <= imported_helpers

@@ -473,7 +473,9 @@ def test_admin_review_queue_endpoint_filters_by_tenant(
     client_with_key: TestClient,
     tmp_path: Path,
 ) -> None:
+    import api._shared as api_shared
     import api.app as api_app
+    from api.routers import admin_review
 
     db_path = tmp_path / "traces.db"
     _init_trace_db(db_path)
@@ -509,8 +511,9 @@ def test_admin_review_queue_endpoint_filters_by_tenant(
         },
     ]
 
+    monkeypatch.setattr(api_shared, "get_settings", lambda: settings)
     monkeypatch.setattr("db.engine.async_session", lambda: _ApiSession(rows))
-    monkeypatch.setattr(api_app, "_refresh_review_queue_metrics", lambda tenant: asyncio.sleep(0), raising=False)
+    monkeypatch.setattr(admin_review, "_refresh_review_queue_metrics", lambda tenant: asyncio.sleep(0))
 
     response = client_with_key.get(
         "/api/admin/review-queue?status=pending&limit=10",
@@ -530,7 +533,9 @@ def test_admin_review_queue_post_updates_status_and_reviewer(
     monkeypatch: pytest.MonkeyPatch,
     client_with_key: TestClient,
 ) -> None:
+    import api._shared as api_shared
     import api.app as api_app
+    from api.routers import admin_review
 
     settings = api_app.get_settings()
     settings.review_queue_enabled = True
@@ -550,8 +555,9 @@ def test_admin_review_queue_post_updates_status_and_reviewer(
         }
     ]
 
+    monkeypatch.setattr(api_shared, "get_settings", lambda: settings)
     monkeypatch.setattr("db.engine.async_session", lambda: _ApiSession(rows))
-    monkeypatch.setattr(api_app, "_refresh_review_queue_metrics", lambda tenant: asyncio.sleep(0), raising=False)
+    monkeypatch.setattr(admin_review, "_refresh_review_queue_metrics", lambda tenant: asyncio.sleep(0))
 
     response = client_with_key.post(
         "/api/admin/review-queue/7",

@@ -1,14 +1,7 @@
 """Admin review queue endpoints — list, update, stats.
 
-Extracted from api.app on 2026-04-26 (Phase 2e). The three endpoints depend
-on several private helpers in api.app (_review_queue_enabled,
-_load_review_queue_trace_details, _refresh_review_queue_metrics,
-_serialize_timestamp, _reviewed_by_uuid, _REVIEW_QUEUE_*). These are
-accessed lazily inside each handler to avoid a circular import with
-api.app at module load time.
-
-This is intentional: the helpers will move to api._shared in a follow-up
-PR; once they do, the lazy imports here can become top-level.
+Extracted from api.app on 2026-04-26 (Phase 2e). Review-queue helpers live in
+api._shared so this router can avoid lazy private access back into api.app.
 """
 from __future__ import annotations
 
@@ -20,7 +13,15 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
-from api._shared import app_module as _app_module
+from api._shared import (
+    _REVIEW_QUEUE_REASONS,
+    _REVIEW_QUEUE_STATUSES,
+    _load_review_queue_trace_details,
+    _refresh_review_queue_metrics,
+    _review_queue_enabled,
+    _reviewed_by_uuid,
+    _serialize_timestamp,
+)
 from api.correlation import get_current_tenant
 from auth.dependencies import require_role
 from db import engine as _db_engine
@@ -50,16 +51,14 @@ async def admin_list_review_queue(
     offset: int = 0,
     _user: dict = Depends(require_role("admin", "reviewer")),
 ) -> JSONResponse:
-    _app = _app_module()
-
-    if not _app._review_queue_enabled():
+    if not _review_queue_enabled():
         raise HTTPException(status_code=404, detail="review queue disabled")
 
     normalized_status = None if status in ("", "*") else status
     normalized_reason = None if reason in ("", "*") else reason
-    if normalized_status is not None and normalized_status not in _app._REVIEW_QUEUE_STATUSES:
+    if normalized_status is not None and normalized_status not in _REVIEW_QUEUE_STATUSES:
         raise HTTPException(status_code=422, detail="invalid review queue status")
-    if normalized_reason is not None and normalized_reason not in _app._REVIEW_QUEUE_REASONS:
+    if normalized_reason is not None and normalized_reason not in _REVIEW_QUEUE_REASONS:
         raise HTTPException(status_code=422, detail="invalid review queue reason")
 
     safe_limit = max(1, min(500, limit))
@@ -87,8 +86,8 @@ async def admin_list_review_queue(
     async with _async_session() as db:
         rows = (await db.execute(text(query), params)).mappings().all()
 
-    trace_details = _app._load_review_queue_trace_details([str(row["trace_id"]) for row in rows])
-    await _app._refresh_review_queue_metrics(tenant)
+    trace_details = _load_review_queue_trace_details([str(row["trace_id"]) for row in rows])
+    await _refresh_review_queue_metrics(tenant)
     return JSONResponse(
         content={
             "items": [
@@ -99,8 +98,8 @@ async def admin_list_review_queue(
                     "reason": row["reason"],
                     "status": row["status"],
                     "reviewer_notes": row["reviewer_notes"] or "",
-                    "created_at": _app._serialize_timestamp(row["created_at"]),
-                    "reviewed_at": _app._serialize_timestamp(row["reviewed_at"]),
+                    "created_at": _serialize_timestamp(row["created_at"]),
+                    "reviewed_at": _serialize_timestamp(row["reviewed_at"]),
                     "reviewed_by": str(row["reviewed_by"]) if row["reviewed_by"] is not None else None,
                     "quality": trace_details.get(str(row["trace_id"]), {}).get("quality"),
                     "fact_score": trace_details.get(str(row["trace_id"]), {}).get("fact_score"),
@@ -125,13 +124,11 @@ async def admin_update_review_queue(
     body: ReviewQueueUpdateRequest,
     _user: dict = Depends(require_role("admin", "reviewer")),
 ) -> JSONResponse:
-    _app = _app_module()
-
-    if not _app._review_queue_enabled():
+    if not _review_queue_enabled():
         raise HTTPException(status_code=404, detail="review queue disabled")
 
     tenant = _user.get("tenant") or get_current_tenant() or "default"
-    reviewer_id = _app._reviewed_by_uuid(body.reviewed_by or _user.get("sub"))
+    reviewer_id = _reviewed_by_uuid(body.reviewed_by or _user.get("sub"))
     reviewed_at = datetime.now(timezone.utc) if body.status != "pending" else None
 
     async with _async_session() as db:
@@ -160,7 +157,7 @@ async def admin_update_review_queue(
     if int(getattr(result, "rowcount", 0) or 0) == 0:
         raise HTTPException(status_code=404, detail="review item not found")
 
-    await _app._refresh_review_queue_metrics(tenant)
+    await _refresh_review_queue_metrics(tenant)
     return JSONResponse(content={"status": "ok"})
 
 
@@ -168,14 +165,12 @@ async def admin_update_review_queue(
 async def admin_review_queue_stats(
     _user: dict = Depends(require_role("admin", "reviewer")),
 ) -> JSONResponse:
-    _app = _app_module()
-
-    if not _app._review_queue_enabled():
+    if not _review_queue_enabled():
         raise HTTPException(status_code=404, detail="review queue disabled")
 
     tenant = _user.get("tenant") or get_current_tenant() or "default"
-    status_counts = {item: 0 for item in _app._REVIEW_QUEUE_STATUSES}
-    reason_counts = {item: 0 for item in _app._REVIEW_QUEUE_REASONS}
+    status_counts = {item: 0 for item in _REVIEW_QUEUE_STATUSES}
+    reason_counts = {item: 0 for item in _REVIEW_QUEUE_REASONS}
     oldest_pending_seconds = 0.0
 
     async with _async_session() as db:
@@ -238,7 +233,7 @@ async def admin_review_queue_stats(
                 (datetime.now(timezone.utc) - oldest_pending).total_seconds(),
             )
 
-    await _app._refresh_review_queue_metrics(tenant)
+    await _refresh_review_queue_metrics(tenant)
     return JSONResponse(
         content={
             "status_counts": status_counts,
