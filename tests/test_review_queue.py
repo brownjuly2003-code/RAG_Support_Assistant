@@ -201,6 +201,40 @@ class _ApiSession:
                     row["reviewed_at"] = data["reviewed_at"]
                     return _Result(rowcount=1)
             return _Result(rowcount=0)
+        if "SELECT status, COUNT(*) AS total" in sql:
+            tenant_id = str(data["tenant_id"])
+            counts: dict[str, int] = {}
+            for row in self.rows:
+                if row["tenant_id"] == tenant_id:
+                    status = str(row["status"])
+                    counts[status] = counts.get(status, 0) + 1
+            return _Result(
+                rows=[
+                    {"status": status, "total": total}
+                    for status, total in counts.items()
+                ]
+            )
+        if "SELECT reason, COUNT(*) AS total" in sql:
+            tenant_id = str(data["tenant_id"])
+            counts: dict[str, int] = {}
+            for row in self.rows:
+                if row["tenant_id"] == tenant_id:
+                    reason = str(row["reason"])
+                    counts[reason] = counts.get(reason, 0) + 1
+            return _Result(
+                rows=[
+                    {"reason": reason, "total": total}
+                    for reason, total in counts.items()
+                ]
+            )
+        if "SELECT MIN(created_at) AS oldest_pending" in sql:
+            tenant_id = str(data["tenant_id"])
+            pending_dates = [
+                row["created_at"]
+                for row in self.rows
+                if row["tenant_id"] == tenant_id and row["status"] == "pending"
+            ]
+            return _Result(rows=[{"oldest_pending": min(pending_dates) if pending_dates else None}])
         raise AssertionError(f"Unexpected SQL: {sql}")
 
     async def commit(self) -> None:
@@ -574,3 +608,67 @@ def test_admin_review_queue_post_updates_status_and_reviewer(
     assert rows[0]["reviewer_notes"] == "hallucinated refund policy"
     assert rows[0]["reviewed_by"] == reviewer_id
     assert rows[0]["reviewed_at"] is not None
+
+
+def test_admin_review_queue_stats_counts_current_tenant(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+) -> None:
+    import api._shared as api_shared
+    import api.app as api_app
+    from api.routers import admin_review
+
+    settings = api_app.get_settings()
+    settings.review_queue_enabled = True
+    rows = [
+        {
+            "id": 1,
+            "trace_id": "trace-pending",
+            "tenant_id": "acme",
+            "reason": "low_quality",
+            "status": "pending",
+            "reviewer_notes": "",
+            "created_at": (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat(),
+            "reviewed_at": None,
+            "reviewed_by": None,
+        },
+        {
+            "id": 2,
+            "trace_id": "trace-reviewed",
+            "tenant_id": "acme",
+            "reason": "slow_trace",
+            "status": "confirmed_bad",
+            "reviewer_notes": "too slow",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "reviewed_at": datetime.now(timezone.utc).isoformat(),
+            "reviewed_by": str(uuid.uuid4()),
+        },
+        {
+            "id": 3,
+            "trace_id": "trace-beta",
+            "tenant_id": "beta",
+            "reason": "low_quality",
+            "status": "pending",
+            "reviewer_notes": "",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "reviewed_at": None,
+            "reviewed_by": None,
+        },
+    ]
+
+    monkeypatch.setattr(api_shared, "get_settings", lambda: settings)
+    monkeypatch.setattr("db.engine.async_session", lambda: _ApiSession(rows))
+    monkeypatch.setattr(admin_review, "_refresh_review_queue_metrics", lambda tenant: asyncio.sleep(0))
+
+    response = client_with_key.get(
+        "/api/admin/review-queue/stats",
+        headers=_token("acme", "admin"),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status_counts"]["pending"] == 1
+    assert body["status_counts"]["confirmed_bad"] == 1
+    assert body["reason_counts"]["low_quality"] == 1
+    assert body["reason_counts"]["slow_trace"] == 1
+    assert body["oldest_pending_seconds"] > 0
