@@ -239,3 +239,6 @@ opts into planning or running a live benchmark.
 - [x] Checked-in JS/MJS syntax is guarded by `tests/test_static_js_quality.py`
       (`fd6c864`), covering `static/admin.js`, `static/widget.js`,
       `docs-site/astro.config.mjs`, and `docs-site/scripts/*.mjs`.
+- [x] Ripgrep search hygiene committed as `bd4c25a`: repo-local `.ignore`
+      skips `pytest-cache-files-*`, and the broad JavaScript/docs-site `rg`
+      search now avoids Windows `Access is denied` noise from pytest temp dirs.

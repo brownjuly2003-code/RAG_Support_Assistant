@@ -442,6 +442,11 @@ commit `f8ffb0f` is on `origin/master`.
   unavailable." No token or safeguard adjustment URL from the CLI error was
   copied into project files. The actual Claude audit exists in
   `audit_claude_30_05_26.md`.
+- Ripgrep search hygiene follow-up: commit `bd4c25a` adds a repo-local
+  `.ignore` for `pytest-cache-files-*` so broad `rg` searches over explicit
+  paths skip pytest temp directories before Windows denies access. The broad
+  JavaScript/docs-site search that previously emitted `Access is denied`
+  completed without those errors after adding the basename ignore pattern.
 
 Notebook URL for manual Colab use:
 `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`
