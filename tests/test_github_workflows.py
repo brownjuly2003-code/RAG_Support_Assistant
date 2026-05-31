@@ -72,6 +72,18 @@ def test_weekly_report_workflow_keeps_project_root_on_pythonpath() -> None:
     assert pythonpath in {".", "${{ github.workspace }}"}
 
 
+def test_weekly_report_workflow_installs_locked_runtime_dependencies() -> None:
+    workflow = _workflow("weekly-report.yml")
+    steps = workflow["jobs"]["weekly-report"]["steps"]
+    setup_python = next(
+        step for step in steps if step.get("uses", "").startswith("actions/setup-python")
+    )
+    install_step = next(step for step in steps if step.get("name") == "Install dependencies")
+
+    assert setup_python["with"]["python-version"] == "3.11"
+    assert install_step["run"] == "pip install --require-hashes -r requirements.lock"
+
+
 def test_docs_site_workflow_audits_npm_dependencies_before_build() -> None:
     workflow = _workflow("docs-site.yml")
     steps = workflow["jobs"]["build"]["steps"]
