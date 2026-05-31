@@ -250,3 +250,6 @@ opts into planning or running a live benchmark.
       admin/agent/analytics/chat/help/login/metrics/widget pages; focused
       UI/static JS verification passed 12 tests, Ruff, py_compile, and
       `git diff --check`.
+- [x] Analytics Chart.js CDN dependency is pinned and SRI-protected
+      (`d9227e2`); a red/green JS quality guard now fails on unversioned
+      jsDelivr npm scripts or missing integrity/crossorigin.

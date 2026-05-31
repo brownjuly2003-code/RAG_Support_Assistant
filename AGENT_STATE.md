@@ -458,6 +458,12 @@ commit `f8ffb0f` is on `origin/master`.
   admin/agent/analytics/chat/help/login/metrics/widget. Focused UI/static JS
   verification passed 12 tests with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`, plus
   Ruff, py_compile, and `git diff --check`.
+- Analytics CDN hardening follow-up: commit `d9227e2` pins the analytics page
+  Chart.js dependency to `chart.js@4.5.1/dist/chart.umd.min.js`, adds
+  SHA-384 SRI plus `crossorigin="anonymous"`, and adds a JS quality guard that
+  fails on unpinned jsDelivr npm scripts or missing integrity. The guard failed
+  before the HTML fix, then focused UI/static JS tests and lightweight a11y
+  passed with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`.
 
 Notebook URL for manual Colab use:
 `https://colab.research.google.com/github/brownjuly2003-code/RAG_Support_Assistant/blob/master/notebooks/rag_support_colab_remote_benchmark.ipynb`
