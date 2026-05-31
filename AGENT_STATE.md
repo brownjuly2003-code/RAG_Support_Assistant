@@ -348,6 +348,10 @@ benchmark PR is merged into `master`:
   and runs `npm run check` in `.github/workflows/docs-site.yml` after npm audit
   and before the Pages build. The guard test first failed because the workflow
   had no `Type-check docs site` step, then passed after the workflow update.
+- JavaScript static syntax guard: commit `fd6c864` adds
+  `tests/test_static_js_quality.py`, which runs `node --check` over
+  `static/admin.js`, `static/widget.js`, `docs-site/astro.config.mjs`, and all
+  checked-in `docs-site/scripts/*.mjs` when Node is available.
 
 PR #1 (`https://github.com/brownjuly2003-code/RAG_Support_Assistant/pull/1`) is
 merged. Master CI and Pages deploy passed on `415d4c8`; post-merge handoff

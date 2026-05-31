@@ -236,3 +236,6 @@ opts into planning or running a live benchmark.
       isolated `.tmp/pre-commit-cache`.
 - [x] Docs-site CI now runs `npm run check` before build (`67a067f`), with a
       red/green guard in `tests/test_github_workflows.py`.
+- [x] Checked-in JS/MJS syntax is guarded by `tests/test_static_js_quality.py`
+      (`fd6c864`), covering `static/admin.js`, `static/widget.js`,
+      `docs-site/astro.config.mjs`, and `docs-site/scripts/*.mjs`.
