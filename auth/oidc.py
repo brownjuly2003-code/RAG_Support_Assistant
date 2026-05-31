@@ -9,11 +9,6 @@ from config.settings import get_settings
 from db.engine import async_session
 from db.models import User
 
-try:
-    from authlib.integrations.starlette_client import OAuth
-except ImportError:  # pragma: no cover - exercised only when dependency missing
-    OAuth = None
-
 
 def _secret_value(value: Any) -> str | None:
     if value is None:
@@ -62,12 +57,17 @@ def list_sso_providers(settings: Any | None = None) -> list[dict[str, str]]:
     return providers
 
 
+def _load_oauth_class() -> Any:
+    try:
+        from authlib.integrations.starlette_client import OAuth
+    except ImportError as exc:  # pragma: no cover - exercised only when dependency missing
+        raise RuntimeError("authlib is not installed") from exc
+    return OAuth
+
+
 def get_oauth_client(provider: str, settings: Any | None = None) -> Any:
     settings = settings or get_settings()
-    if OAuth is None:
-        raise RuntimeError("authlib is not installed")
-
-    oauth = OAuth()
+    oauth = _load_oauth_class()()
     google_secret = _secret_value(getattr(settings, "google_oidc_client_secret", None))
     azure_secret = _secret_value(getattr(settings, "azure_oidc_client_secret", None))
 

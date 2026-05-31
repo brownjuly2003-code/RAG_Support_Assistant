@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import subprocess
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -15,6 +18,19 @@ CLIENT_SETTINGS_OVERRIDES = {
     "tenant_email_domains": "acme.com:tenant-acme,beta.io:tenant-beta",
     "session_secret_key": "test-session-secret",
 }
+
+
+def test_oidc_module_import_does_not_emit_authlib_deprecation_warning() -> None:
+    result = subprocess.run(
+        [sys.executable, "-c", "import auth.oidc"],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "AuthlibDeprecationWarning" not in result.stderr
 
 
 def test_sso_providers_endpoint_lists_enabled_providers(client: TestClient) -> None:
