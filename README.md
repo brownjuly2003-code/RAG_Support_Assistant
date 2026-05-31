@@ -922,7 +922,7 @@ Playwright dependencies are not installed.
 
 GitHub Actions runs `lint`, `test-unit`, `test-integration`, and `pre-commit`
 on every push and pull request.
-Install local tooling with `pip install -r requirements-dev.txt`.
+Install local tooling with `pip install --require-hashes -r requirements-dev.lock`.
 Run `pre-commit run --all-files`, `pytest tests/ -q --ignore=tests/integration -p no:cacheprovider`, and `pytest tests/integration -q`.
 Workflow history and logs are available on the repository `Actions -> CI` page.
 

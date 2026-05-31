@@ -19,7 +19,7 @@ Per selected profile:
 cd D:\RAG_Support_Assistant
 python -m venv .venv
 . .venv/Scripts/activate          # Windows PowerShell: . .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install --require-hashes -r requirements.lock
 ```
 
 ## 2. Configuration

@@ -119,7 +119,7 @@ file. Without a recent verified snapshot, RTO doubles and RPO degrades.
    Engine on Linux, Ollama).
 2. Clone the repo at the same commit as the snapshot's
    `alembic_revision`.
-3. Re-install dependencies: `pip install -r requirements.txt`.
+3. Re-install dependencies: `pip install --require-hashes -r requirements.lock`.
 4. Inject secrets into `.env` from offline vault; do **not** paste secrets
    into chat history or logs.
 5. Start Postgres and Redis (via `docker compose up -d postgres redis`).

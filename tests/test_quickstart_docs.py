@@ -33,3 +33,15 @@ def test_active_benchmark_docs_label_paid_api_examples_as_live_opt_in() -> None:
             assert (
                 "opt-in" in context or "manual" in context
             ), f"{path}:{index + 1} must require explicit opt-in/manual context"
+
+
+def test_active_runtime_docs_install_from_hashed_locks() -> None:
+    for path in (
+        PROJECT_ROOT / "README.md",
+        PROJECT_ROOT / "docs" / "QUICKSTART.md",
+        PROJECT_ROOT / "docs" / "disaster-recovery.md",
+    ):
+        content = path.read_text(encoding="utf-8")
+
+        assert "pip install -r requirements.txt" not in content
+        assert "pip install -r requirements-dev.txt" not in content
