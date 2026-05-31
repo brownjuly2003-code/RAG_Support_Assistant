@@ -85,6 +85,14 @@ def test_local_dependency_gates_match_ci_pip_audit_exception_policy() -> None:
             (PROJECT_ROOT / relative_path).read_text(encoding="utf-8").split()
         )
 
+        for dependency_file in (
+            "requirements.txt",
+            "requirements-dev.txt",
+            "requirements.lock",
+            "requirements-dev.lock",
+        ):
+            assert dependency_file in normalized_script
+
         for arg in (
             "--strict",
             "--disable-pip",

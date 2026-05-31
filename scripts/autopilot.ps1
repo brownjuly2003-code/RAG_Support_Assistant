@@ -434,8 +434,9 @@ function Invoke-Gates {
     }
 
     $requirementsTouched = $false
+    $dependencyFiles = @("requirements.txt", "requirements-dev.txt", "requirements.lock", "requirements-dev.lock")
     foreach ($path in $changed) {
-        if ($path -eq "requirements.lock" -or $path -eq "requirements-dev.lock") {
+        if ($dependencyFiles -contains $path) {
             $requirementsTouched = $true
         }
     }
