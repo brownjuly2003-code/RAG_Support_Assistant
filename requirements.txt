@@ -6,6 +6,8 @@ langchain>=0.2.0
 # langchain-core: pinned >=1.3.3 to clear CVE-2026-44843 (was resolving to 1.3.2).
 langchain-core>=1.3.3
 langchain-community>=0.2.0
+# Primary Ollama integration; avoids deprecated langchain_community fallback.
+langchain-ollama>=1.0.0
 langgraph>=0.1.0
 # langsmith: pinned >=0.8.0 to clear CVE-2026-45134 (transitive via langchain).
 langsmith>=0.8.0

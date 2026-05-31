@@ -1148,6 +1148,7 @@ httpx==0.28.1 \
     #   langfuse
     #   langgraph-sdk
     #   langsmith
+    #   ollama
     #   python-telegram-bot
 httpx-sse==0.4.3 \
     --hash=sha256:0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc \
@@ -1247,6 +1248,7 @@ langchain-core==1.4.0 \
     #   langchain-classic
     #   langchain-community
     #   langchain-experimental
+    #   langchain-ollama
     #   langchain-text-splitters
     #   langgraph
     #   langgraph-checkpoint
@@ -1254,6 +1256,10 @@ langchain-core==1.4.0 \
 langchain-experimental==0.4.1 \
     --hash=sha256:ab6b19a0b98fbc15225fbfcf096176fec339b7e3e930bcf328bb717985fc1da5 \
     --hash=sha256:b6ee2f42b50aaadb45e581439ecf5ee50f3a6a0986d52e74d1e64721309e387d
+    # via -r requirements.txt
+langchain-ollama==1.1.0 \
+    --hash=sha256:43ac83a6eacb0f43855810739794dd55019e0d9b17bdcf3ecb3b1991ac3b59dd \
+    --hash=sha256:f776f56f6782ae4da7692579b94a6575906118318d1023b455d7207f9d059811
     # via -r requirements.txt
 langchain-protocol==0.0.15 \
     --hash=sha256:461eb794358f83d5e42635a5797799ffec7b4702314e34edf73ac21e75d3ef79 \
@@ -1989,6 +1995,10 @@ oauthlib==3.3.1 \
     --hash=sha256:0f0f8aa759826a193cf66c12ea1af1637f87b9b4622d46e866952bb022e538c9 \
     --hash=sha256:88119c938d2b8fb88561af5f6ee0eec8cc8d552b7bb1f712743136eb7523b7a1
     # via requests-oauthlib
+ollama==0.6.2 \
+    --hash=sha256:3ad7daab28e5a973445c36a73882a3ef698c2ebb00e21e308652741577509f7d \
+    --hash=sha256:936d55daa684f474364c098611c933626f8d6c7d67065c5b7ae0c477b508b07f
+    # via langchain-ollama
 onnxruntime==1.25.0 \
     --hash=sha256:00548a16e8f0d52cb1c67ef50177e5e2be848ccffc6db60010ee37faaccbbb6f \
     --hash=sha256:15f220ed2ac4a549c97a31e57f21311add9f13d381f13ed1a52be5b25275038c \
@@ -2723,6 +2733,7 @@ pydantic==2.13.3 \
     #   langfuse
     #   langgraph
     #   langsmith
+    #   ollama
     #   pydantic-settings
 pydantic-core==2.46.3 \
     --hash=sha256:0087084960f209a9a4af50ecd1fb063d9ad3658c07bb81a7a53f452dacbfb2ba \
