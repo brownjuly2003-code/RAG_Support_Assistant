@@ -287,10 +287,12 @@ class Settings:
     embedding_model: str = os.getenv("RAG_EMBEDDING_MODEL", "BAAI/bge-m3")
 
     # --- Reranker (Cross-Encoder) ---
-    # "cross-encoder/ms-marco-MiniLM-L-6-v2"  — быстрый на CPU (22M, English)
-    # "BAAI/bge-reranker-v2-m3"               — multilingual (pairs с BGE-M3)
+    # "BAAI/bge-reranker-v2-m3"               — multilingual (pairs с дефолтным BGE-M3); дефолт
+    # "cross-encoder/ms-marco-MiniLM-L-6-v2"  — быстрый на CPU (22M), но English-only:
+    #                                           на RU-корпусе портит retrieval (Mac A/B: 100%→61%
+    #                                           top-5 coverage, см. docs/operations/2026-05-30-mac-rag-retrieval-baseline.md)
     # ""                                      — отключить reranker
-    reranker_model: str = os.getenv("RAG_RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+    reranker_model: str = os.getenv("RAG_RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
 
     # --- Hybrid Search ---
     # Включить BM25 + vector hybrid search (Reciprocal Rank Fusion)

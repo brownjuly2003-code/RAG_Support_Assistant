@@ -239,7 +239,7 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | Variable | Default | Description |
 |---|---|---|
 | `RAG_EMBEDDING_MODEL` | `BAAI/bge-m3` | Embedding model used for documents and queries |
-| `RAG_RERANKER_MODEL` | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Cross-encoder reranker |
+| `RAG_RERANKER_MODEL` | `BAAI/bge-reranker-v2-m3` | Multilingual cross-encoder reranker (pairs with BGE-M3) |
 | `RAG_HYBRID_SEARCH` | `true` | Combine BM25 with vector retrieval |
 | `RAG_RETRIEVAL_STRATEGY` | `hybrid` | Retrieval strategy: `vector`, `hybrid`, or `graph`; graph falls back to hybrid until a graph retriever is configured |
 | `RAG_RETRIEVAL_TOP_K` | `20` | Candidate documents fetched before reranking |
