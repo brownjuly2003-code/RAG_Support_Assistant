@@ -66,12 +66,35 @@ precision-фильтр, обученный на англ. MS MARCO, на RU **а
   18:11→19:46, Phase B 19:46→21:22 MSK. Подтверждает: full-corpus reranker A/B на 8 GB
   **выполним** two-phase'ом, хоть и медленно (~3.5 ч). Для частых прогонов — Colab GPU.
 
-## Дальше (не вкатывать вслепую — сначала замер)
+## Chunking A/B (structural vs fixed) — recall-нейтрально, дефолт не менять
+
+Гипотеза: 17 RRF-MISS (нужный чанк не дошёл до RRF top-20) — следствие нарезки fixed 800/200
+посреди логических секций; markdown-structural chunking (флаг `RAG_STRUCTURAL_CHUNKING`, уже в коде,
+default off) должен их восстановить. Проверено тем же RRF-only top-5 замером (реранкер OFF —
+изолирует эффект чанкинга), 100 кейсов, полный корпус, iMac:
+
+| Чанкинг (RRF-only top-5) | чанков | FULL | PART | MISS |
+|---|---|---|---|---|
+| fixed `RecursiveCharacterTextSplitter` 800/200 (дефолт) | 5077 | **74%** | 9 | 17 |
+| markdown-structural (`RAG_STRUCTURAL_CHUNKING=true`) | 5589 | **73%** | 8 | 19 |
+
+**Вывод: structural chunking recall-нейтрален (−1 пп, в пределах шума, даже чуть больше MISS).
+Он НЕ закрывает recall-провалы. Дефолт остаётся fixed 800/200, флаг `RAG_STRUCTURAL_CHUNKING` — off.**
+19 MISS у structural — преимущественно `*-required-fields` / escalation-запросы, где ожидается
+список конкретных полей: нужный фрагмент либо не доходит до RRF top-20 (recall ретривера, не чанкинг),
+либо метрика keyword-coverage (точное вхождение всех keyword'ов) занижает по своей природе.
+
+Сопутствующе (обе нарезки): в логе ingest массовый `Contextual header exceeded chunk_size;
+truncating chunk` — статичный doc-header длиннее `chunk_size=800`, чанк режется. По аудиту
+`audit_claude_03_06_26.md` §10 это **качественный долг, не баг** (отложено), а не приоритетный фикс.
+
+## Дальше (по `audit_claude_03_06_26.md` §11, не вкатывать вслепую)
 
 1. ~~Full-corpus reranker A/B~~ — **СДЕЛАНО**, дефолт `bge-reranker-v2-m3` подтверждён (80% > 74% OFF > 42% англ.).
-2. RAGAS (faithfulness / context precision / recall) с Mistral на 100 кейсах — Colab (ключ в `.env`/`D:\TXT\`).
-3. chunk-size / structural A/B (флаг `RAG_STRUCTURAL_CHUNKING` уже в коде) — адресует 12–17 MISS, что не лечит реранк.
-4. R5 — BGE-M3 native sparse вместо `.split()` BM25.
+2. ~~chunk-size / structural A/B~~ — **СДЕЛАНО**, recall-нейтрально, дефолт не меняем.
+3. **R7 (HIGH):** RAGAS faithfulness/precision/recall на 100 кейсах — Colab + live Mistral (gated: интерактивно/квота).
+4. **F1 (MEDIUM):** удержание ссылок на 3 fire-and-forget `asyncio.create_task` — локально, тестируемо.
+5. R5 — BGE-M3 native sparse вместо `.split()` BM25 (модель уже загружена).
 
 ## Воспроизведение
 
