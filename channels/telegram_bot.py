@@ -23,6 +23,11 @@ _sessions: dict[int, Any] = {}
 _init_lock = asyncio.Lock()
 
 
+def _store_has_documents(chroma_dir: Path) -> bool:
+    """Blocking probe for a populated Chroma dir; call via to_thread (ASYNC240)."""
+    return chroma_dir.exists() and any(chroma_dir.iterdir())
+
+
 async def _ensure_pipeline() -> None:
     global _session_class, _retriever, _llm
 
@@ -44,7 +49,7 @@ async def _ensure_pipeline() -> None:
 
         settings = get_settings()
         chroma_dir = Path(settings.vectordb_chroma_dir)
-        if not chroma_dir.exists() or not any(chroma_dir.iterdir()):
+        if not await asyncio.to_thread(_store_has_documents, chroma_dir):
             raise RuntimeError(
                 f"Vector store not found at {chroma_dir}. Upload documents before using the bot."
             )

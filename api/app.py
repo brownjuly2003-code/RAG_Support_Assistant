@@ -918,6 +918,18 @@ def _cache_key(tenant: str, question: str) -> str:
     return f"llm_resp:{tenant or 'default'}:{question_hash}"
 
 
+def _has_persisted_store(chroma_dir: Optional[str]) -> bool:
+    """Blocking filesystem probe for a persisted Chroma store.
+
+    Kept sync and called via ``asyncio.to_thread`` from async request handlers so
+    the ``exists()``/``iterdir()`` syscalls do not block the event loop (ASYNC240).
+    """
+    if chroma_dir is None:
+        return False
+    path = Path(chroma_dir)
+    return path.exists() and any(path.iterdir())
+
+
 async def _get_or_create_session(
     session_id: Optional[str],
     tenant_id: str = "default",
@@ -977,11 +989,7 @@ async def _get_or_create_session(
     session_retriever = _retriever
     settings = get_settings()
     chroma_dir = getattr(settings, "vectordb_chroma_dir", None)
-    has_persisted_store = (
-        chroma_dir is not None
-        and Path(chroma_dir).exists()
-        and any(Path(chroma_dir).iterdir())
-    )
+    has_persisted_store = await asyncio.to_thread(_has_persisted_store, chroma_dir)
     if _get_retriever is not None and (_retriever is not None or _vector_store is not None or has_persisted_store):
         try:
             retriever_params = inspect.signature(_get_retriever).parameters
