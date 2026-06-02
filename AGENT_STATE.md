@@ -19,13 +19,17 @@
   a downgrade anomaly needing investigation, and a langchain change risks a
   compatibility regression. Bump when the PyPI service picks them up or on an
   explicit request.
-- Full-corpus R1 3-arm A/B (OFF / ms-marco / bge-v2-m3) is running on the iMac
-  detached + nohup (survives the controlling session closing): phase A (PID
-  96542) ingests all 201 aircargo docs and builds RRF candidates for the 100
-  curated cases; the chainer (PID 97247) then runs phase B and writes the result
-  to `~/RAG_Support_Assistant/.tmp/ab_result_20260602.txt`. Collect next session,
-  then write `docs/operations/2026-06-02-mac-fullcorpus-reranker-ab.md`. See the
-  RESUME block in `docs/operations/autonomous-session-kickoff.md`.
+- Full-corpus R1 3-arm A/B (OFF / ms-marco / bge-v2-m3) **COLLECTED 2026-06-02**.
+  Ran on the iMac detached + nohup: phase A ingested all 201 aircargo docs
+  (5077 chunks, ~91 min CPU) and built RRF candidates (avg 35/case) for the 100
+  curated cases; phase B scored each reranker arm in turn (8 GB-safe). Result on
+  full corpus, keyword-coverage @ top-5, 100 cases: **OFF 74% / ms-marco 42% /
+  bge-reranker-v2-m3 80%**. The multilingual default beats no-reranker by +6pp
+  (vs a ceiling-capped tie on the 10-FAQ subsample) and the English ms-marco
+  drops -32pp — so the `90891e5` default flip is validated and justified beyond
+  "restore to baseline". Report: `docs/operations/2026-06-02-mac-fullcorpus-reranker-ab.md`.
+  Next RAG step is RAGAS (Mistral, Colab) + chunk-size/structural A/B for the
+  remaining recall MISS (12-17 cases where the needed chunk never reaches RRF top-20).
 
 ## Current Project State
 
