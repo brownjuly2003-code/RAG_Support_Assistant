@@ -24,9 +24,12 @@ class _ScriptTagParser(HTMLParser):
 
 def _checked_js_files() -> list[Path]:
     docs_site_scripts = sorted((PROJECT_ROOT / "docs-site" / "scripts").glob("*.mjs"))
+    # Inline page scripts extracted out of static/*.html for CSP (script-src 'self').
+    inline_page_scripts = sorted((PROJECT_ROOT / "static").glob("*.inline*.js"))
     return [
         PROJECT_ROOT / "static" / "admin.js",
         PROJECT_ROOT / "static" / "widget.js",
+        *inline_page_scripts,
         PROJECT_ROOT / "docs-site" / "astro.config.mjs",
         *docs_site_scripts,
     ]

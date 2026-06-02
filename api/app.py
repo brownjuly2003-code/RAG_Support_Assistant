@@ -1626,6 +1626,22 @@ _SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    # CSP: scripts are external-only ('self' + the pinned Chart.js CDN), so an
+    # injected inline <script> cannot execute (defense-in-depth for the agent
+    # bearer token in localStorage). Inline blocks were moved to /static/*.js.
+    # style-src keeps 'unsafe-inline' for the per-page <style> blocks and a few
+    # style="" attributes; framing stays governed by X-Frame-Options above.
+    "Content-Security-Policy": (
+        "default-src 'self'; "
+        "script-src 'self' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "font-src 'self'; "
+        "connect-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    ),
 }
 
 

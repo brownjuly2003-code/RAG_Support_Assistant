@@ -41,7 +41,11 @@ def test_widget_assets_served(client: TestClient) -> None:
     assert "/static/widget.html" in script_response.text
 
     assert html_response.status_code == 200
-    assert "rag-widget-ready" in html_response.text
+    # Inline script extracted to /static/widget.inline.js for CSP (script-src 'self').
+    assert "/static/widget.inline.js" in html_response.text
+    inline_response = client.get("/static/widget.inline.js")
+    assert inline_response.status_code == 200
+    assert "rag-widget-ready" in inline_response.text
 
 
 @pytest.mark.parametrize("path", STATIC_HTML_PATHS)
