@@ -1,5 +1,38 @@
 # Agent State
 
+## 2026-06-03 Update — audit_claude_03_06_26 acted on: A/Bs collected, R7-free, F1/F2/F3
+
+**HEAD `c1b6168` (master), worktree clean, 7 commits AHEAD of origin (`a73687b`,
+`3f0f062` + this session's 5) — NOT pushed (push is gated; needs explicit go).**
+`audit_claude_03_06_26.md` is the fresh audit driving this work; it is **untracked**
+(commit on request — the repo tracks audits historically).
+
+This session's commits (newest first):
+- `c1b6168` **F3** — blocking `Path.exists()/iterdir()` in async (`_get_or_create_session`,
+  telegram bot init) → `asyncio.to_thread` + sync helpers. ASYNC240 clean.
+- `67dc286` **F2 (CSP)** — extracted every inline `<script>` from the 8 static pages to
+  `/static/*.inline*.js` (11 files, order preserved) + added Content-Security-Policy
+  (`script-src 'self' https://cdn.jsdelivr.net`, no `unsafe-inline`). Browser-verified
+  via Playwright: 0 CSP violations, chart.js CDN loads, scripts run. test_csp added.
+- `3c62ce5` **R7 (free, partial)** — `scripts/aircargo_ragas_free.py` + report
+  `docs/operations/2026-06-03-free-r7-retrieval-baseline.md`. Free retrieval baseline on
+  100 cached-context cases: **context_precision 0.488, context_recall 0.785** (74/100 full,
+  17/100 zero — systematic recall gap on `*-required-fields`/escalation queries).
+- `0d431a1` **F1** — fire-and-forget `asyncio.create_task` ×3 → `utils.background_tasks.spawn_tracked`.
+- `7ebe705` structural-chunking A/B (recall-neutral 73% vs 74%, default kept off).
+- `a73687b` full-corpus reranker A/B (bge-v2-m3 80% > OFF 74% > en 42%).
+
+**⚠ ENV BLOCKER — do NOT re-attempt blindly:** free hosted LLM APIs are unreachable from
+this RU IP — Groq=403 geo-block, OpenRouter free=429 upstream-throttle, Gemini free-tier=
+`limit:0` (needs billing; no card). So R7 **LLM-judged faithfulness/answer_relevancy** could
+not run for free. `scripts/aircargo_ragas_free.py` runs the full R7 in one command once a
+working VPN (Groq) or a billable/quota'd key is available — contexts already cached.
+
+**Next (audit §11, all free/local):** F5 (silent `except: pass` → logging, targeted only),
+F6 (widen ruff `I`/`B`/`RUF`, start with autofix `RUF100`/`I001` — large diff, month-tier),
+R6 (`device` from settings for reranker), app.py/graph.py decomposition. R7 LLM-judged =
+needs VPN/billing (gated). No money budget — paid Mistral/Colab are permanently out.
+
 ## 2026-06-02 Update — R1 shipped + full-corpus reranker A/B running on Mac
 
 - R1 reranker default fix merged to `master` and pushed: `90891e5` flips the

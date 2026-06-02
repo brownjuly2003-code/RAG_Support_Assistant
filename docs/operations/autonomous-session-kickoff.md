@@ -6,6 +6,29 @@
 
 ---
 
+## ⭐ RESUME (2026-06-03) — audit_03_06 отработан: R7-free + F1/F2/F3, free-LLM заблокирован
+
+**HEAD `c1b6168` (master), worktree чист, 7 коммитов ВПЕРЕДИ origin — НЕ запушены (push gated).**
+Свежий аудит `audit_claude_03_06_26.md` (untracked) — драйвер задач; самооценка 8.8/10, потолок = R7.
+
+Сделано этой сессией (по аудиту §11, всё бесплатно/локально, verified):
+- **F1** `0d431a1` — fire-and-forget `create_task`×3 → `utils.background_tasks.spawn_tracked`.
+- **F2 (CSP)** `67dc286` — inline-скрипты 8 страниц → `/static/*.inline*.js` + CSP (`script-src 'self'`
+  без unsafe-inline). Playwright: 0 CSP-violations, chart.js CDN ок.
+- **F3** `c1b6168` — блокирующий FS-probe в async → `asyncio.to_thread`.
+- **R7-free** `3c62ce5` — retrieval-baseline 100 кейсов: context_precision 0.488 / recall 0.785
+  (отчёт `docs/operations/2026-06-03-free-r7-retrieval-baseline.md`).
+
+**⚠ FREE-LLM ЗАБЛОКИРОВАН с РФ-IP (не пробовать вслепую снова):** Groq=403 гео, OpenRouter free=429
+throttle, Gemini free=`limit:0` (нужен billing). LLM-judged faithfulness/relevancy для R7 бесплатно
+отсюда НЕЛЬЗЯ. `scripts/aircargo_ragas_free.py` гоняет полный R7 одной командой при VPN(Groq)/рабочем
+ключе — контексты закэшированы (`.tmp/ab_candidates.json`, gitignored; копия на iMac `/tmp/`).
+
+**Следующее (free/local, бери верхнее):** F5 (тихие except→логи, точечно), F6 (ruff I/B/RUF, autofix
+RUF100/I001 — крупный diff), R6 (reranker device из настройки). Денег нет → платный Mistral/Colab совсем out.
+
+---
+
 ## ⭐ RESUME (2026-06-02) — R1 ЗАШИПЛЕН + full-corpus A/B СОБРАН
 
 **R1 закрыт в коде и запушен** (master `9b219fa` = origin/master, CI зелёный): дефолт reranker → `BAAI/bge-reranker-v2-m3` (`90891e5`); push поймал свежий pyjwt CVE → bump `2.13.0` (`9b219fa`). Бэклог §4 пункт 1 (reranker fix) — **DONE**. Гоча на будущее: CI `pip-audit` = PyPI advisory service (не osv); osv-only `authlib`/`langchain-classic` CVE CI не валят (отложены осознанно).
