@@ -1,5 +1,32 @@
 # Agent State
 
+## 2026-06-02 Update — R1 shipped + full-corpus reranker A/B running on Mac
+
+- R1 reranker default fix merged to `master` and pushed: `90891e5` flips the
+  default `reranker_model` to `BAAI/bge-reranker-v2-m3` (multilingual, pairs with
+  the BGE-M3 embedder; the ms-marco English reranker measured -39pp RU top-5
+  coverage on the iMac A/B). Verified before push: ruff clean, default loads, 30
+  covering tests pass. Reversible via `RAG_RERANKER_MODEL`.
+- The push surfaced 4 fresh `pyjwt 2.12.1` CVEs (PYSEC-2026-175/177/178/179) in
+  CI pip-audit — unrelated to R1, a newly published advisory. Fixed by `9b219fa`:
+  bumped pyjwt to 2.13.0 in both locks via `uv pip compile --upgrade-package
+  pyjwt` (diff limited to the pyjwt version + hashes). `master` = `9b219fa` =
+  `origin/master`; CI run `26826115741` fully green; docs-site deploy green.
+- pip-audit note: CI uses the PyPI advisory service, not osv. A local
+  `pip-audit --service osv` additionally flags `authlib 1.7.0` (CVE-2026-44681,
+  fix 1.6.12) and `langchain-classic 1.0.4` (CVE-2026-45134, fix 1.0.7); CI does
+  NOT enforce these. Deferred deliberately: authlib fix 1.6.12 < current 1.7.0 is
+  a downgrade anomaly needing investigation, and a langchain change risks a
+  compatibility regression. Bump when the PyPI service picks them up or on an
+  explicit request.
+- Full-corpus R1 3-arm A/B (OFF / ms-marco / bge-v2-m3) is running on the iMac
+  detached + nohup (survives the controlling session closing): phase A (PID
+  96542) ingests all 201 aircargo docs and builds RRF candidates for the 100
+  curated cases; the chainer (PID 97247) then runs phase B and writes the result
+  to `~/RAG_Support_Assistant/.tmp/ab_result_20260602.txt`. Collect next session,
+  then write `docs/operations/2026-06-02-mac-fullcorpus-reranker-ab.md`. See the
+  RESUME block in `docs/operations/autonomous-session-kickoff.md`.
+
 ## Current Project State
 
 - Project: RAG Support Assistant.

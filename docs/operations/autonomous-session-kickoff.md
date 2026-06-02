@@ -6,6 +6,23 @@
 
 ---
 
+## ⭐ RESUME (2026-06-02) — R1 ЗАШИПЛЕН, full-corpus A/B идёт на Mac
+
+**R1 закрыт в коде и запушен** (master `9b219fa` = origin/master, CI зелёный): дефолт reranker → `BAAI/bge-reranker-v2-m3` (`90891e5`); push поймал свежий pyjwt CVE → bump `2.13.0` (`9b219fa`). Бэклог §4 пункт 1 (reranker fix) — **DONE**. Гоча на будущее: CI `pip-audit` = PyPI advisory service (не osv); osv-only `authlib`/`langchain-classic` CVE CI не валят (отложены осознанно).
+
+**Сейчас на Mac (8GB Intel) считается full-corpus reranker A/B** — финальная валидация дефолта на всех 201 docs (не на 10-FAQ-подвыборке). Запущено detached+nohup, переживает закрытие управляющей сессии:
+- Phase A (PID 96542): ingest 201 docs (~7000 чанков, bge-m3 CPU) + RRF-кандидаты по 100 кейсам → `/tmp/ab_candidates.json`.
+- Chainer (PID 97247): ждёт Phase A → Phase B (3 руки **OFF / ms-marco / bge-v2-m3**, keyword-coverage @ top-5) → пишет результат в **`~/RAG_Support_Assistant/.tmp/ab_result_20260602.txt`**.
+- Скрипты: `.tmp/ab_twophase.py` (3-arm), `.tmp/ab_chain.sh`. Корпус залит (201), Mac-репо на `9b219fa`, все 3 модели в HF-кэше.
+
+**Подобрать результат в новой сессии:**
+```bash
+ssh julia@192.168.1.133 "grep -c '\[chain\] DONE' /tmp/abB.log; tail -40 ~/RAG_Support_Assistant/.tmp/ab_result_20260602.txt"
+```
+DONE есть → написать отчёт `docs/operations/2026-06-02-mac-fullcorpus-reranker-ab.md` (числа OFF/ms-marco/bge-v2-m3) + сверить с 10-FAQ-baseline (OFF 100% / ms-marco 61% / bge 100%) → вывод: подтверждает ли full-corpus дефолт bge-v2-m3. Дефолт обратим через `RAG_RERANKER_MODEL`, так что сюрприз = отдельное решение, не блокер. Если Mac уснул/ребутнулся и результата нет — перезапустить `nohup ... .tmp/ab_twophase.py a` затем `b` (рецепт §6).
+
+---
+
 ## 1. Миссия и проверенное состояние (на 2026-05-30)
 
 Продукт: универсальный гибкий RAG-ассистент поддержки (FastAPI + LangGraph + Chroma + BGE-M3).

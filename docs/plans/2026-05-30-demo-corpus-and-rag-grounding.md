@@ -209,8 +209,14 @@ Windows** (RAM-лимит, thin-client boundary).
 
 ## 7. Рекомендуемая последовательность (по ROI) — обновлено после §0bis
 
-1. **R1 reranker `bge-reranker-v2-m3`** (Colab) — теперь №1: R1 доказан (§0bis), это
-   подтверждённый крупнейший скачок precision. A/B на 3 руки: OFF / ms-marco / bge-v2-m3.
+1. **R1 reranker `bge-reranker-v2-m3`** — ✅ **КОД ЗАШИПЛЕН** 2026-06-02: дефолт
+   `reranker_model` сменён на `BAAI/bge-reranker-v2-m3` в коде, merged+pushed
+   (master `9b219fa`, CI зелёный; обоснование — §0bis Mac A/B + консистентность с
+   мультиязычным эмбеддером). **Full-corpus 3-arm A/B (OFF / ms-marco / bge-v2-m3)
+   на 201 docs / 100 кейсов сейчас считается на Mac** (не Colab — single-config влезает
+   в 8GB через two-phase), результат → `~/RAG_Support_Assistant/.tmp/ab_result_20260602.txt`,
+   отчёт будет `docs/operations/2026-06-02-mac-fullcorpus-reranker-ab.md`. См. RESUME-блок
+   в `docs/operations/autonomous-session-kickoff.md`.
 2. R7 baseline на полном корпусе (Colab) — 100-case seed готов; дальше RAGAS
    baseline и, при необходимости, расширение к 150 кейсам.
 3. chunk-size A/B + structural/late chunking (Colab) — ответ на «800 по привычке».
