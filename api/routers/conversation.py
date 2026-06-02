@@ -19,6 +19,7 @@ from api.correlation import get_current_tenant, get_request_id
 from api.rate_limit import limiter
 from auth.dependencies import get_current_user
 from monitoring import prometheus as prometheus_metrics
+from utils.background_tasks import spawn_tracked
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -403,7 +404,7 @@ async def ask(
         prometheus_metrics.ESCALATION_TOTAL.inc()
     prometheus_metrics.ACTIVE_SESSIONS.set(len(_app._sessions))
     if response.citations:
-        asyncio.create_task(_app._record_citation_stats(tenant, list(response.citations)))
+        spawn_tracked(_app._record_citation_stats(tenant, list(response.citations)))
     if cache_hit:
         return JSONResponse(
             content={**response.model_dump(), "cached": True},

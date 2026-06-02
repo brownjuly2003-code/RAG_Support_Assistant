@@ -5,7 +5,6 @@ runner logic remain in api.app because /admin/regression-runs still uses them.
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -19,6 +18,7 @@ from sqlalchemy import text as sql_text
 from api._shared import app_module as _app_module
 from auth.dependencies import require_role
 from db import engine as _db_engine
+from utils.background_tasks import spawn_tracked
 
 logger = logging.getLogger(__name__)
 
@@ -266,7 +266,7 @@ async def admin_run_experiment_regression(
         "candidate": experiment_id,
         "created_at": datetime.now(timezone.utc),
     }
-    asyncio.create_task(_app._run_regression_job(run_id, baseline, experiment_id))
+    spawn_tracked(_app._run_regression_job(run_id, baseline, experiment_id))
     return JSONResponse(
         status_code=202,
         content={"job_id": run_id, "status": "queued"},

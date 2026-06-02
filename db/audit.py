@@ -6,6 +6,8 @@ import json
 import logging
 from typing import Optional
 
+from utils.background_tasks import spawn_tracked
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,7 +45,7 @@ async def log_audit(
                 ip_address,
             )
 
-    asyncio.create_task(_write_entry())
+    spawn_tracked(_write_entry())
 
 
 async def purge_old_audit(
