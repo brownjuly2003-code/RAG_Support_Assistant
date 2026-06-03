@@ -25,12 +25,17 @@ answer_relevancy **0.838**, context_precision 0.488, context_recall 0.785
 **Key finding — the bottleneck is RETRIEVAL, not generation.** faithfulness on
 full-recall cases = **0.893** vs **0.624** on zero-recall (n=74 vs 17). Generation is
 reliable when retrieval hits. The 17 zero-recall cases concentrate on the
-`*-required-fields` query class (field-list lookups in tables/structural sections that
-RRF top-k misses; structural-chunking A/B did NOT close it). **Next RAG step (Lever 2,
-measure→fix→re-measure):** BGE-M3 native sparse (R5-cont) / query-expansion-HyDE on the
-`-fields` class / parent-child section-aware chunking / corpus-completeness check. Heavy
-ingest+rerank still Colab/iMac only (Windows host >1 GiB forbidden); LLM-judging itself
-is light (API calls on cached contexts).
+`*-required-fields` query class. **Diagnosed (commit `24c5168`):** the 17 split into
+**10 rerank-recoverable** (kws in the full RRF pool but below top-5 — the cached eval has
+NO production bge-v2-m3 reranker, so 0.785 is a LOWER bound; the 2026-06-02 A/B already
+showed 80% top-5 WITH the reranker) + **7 deep-miss** + 0 content-gap. Real target = **7**,
+not 17. All 7 share one root cause: NL RU queries vs snake_case field IDs inside markdown
+tables under `## Обязательные поля` — zero lexical overlap, so dense AND BM25 both fail.
+**This kills the earlier "BGE-M3 sparse" idea** (no shared terms); the right lever is
+**contextual-header / parent-child chunking** (chunk must carry the section/topic anchor).
+Next remote A/B (heavy → Colab/iMac, Windows >1 GiB forbidden): contextual-header chunking
+on `05_tlog_regulation_*`/`06_comp_policy_*` + recall/faithfulness re-run; separately confirm
+the 10 are already covered by a top-5-with-reranker run. LLM-judging itself is light (cached).
 
 **Re-run:** `set -a; . ./.env; set +a; python scripts/aircargo_ragas_free.py --provider mistral --min-interval 1.2`
 
