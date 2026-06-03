@@ -1,5 +1,32 @@
 # Agent State
 
+## 2026-06-03 Update (cont. 6) — F6 slice 5 (isort / ruff I) + I/RUF100 finding
+
+**HEAD `51ffd2f` (master), worktree clean apart from untracked
+`audit_claude_03_06_26.md`. 22 commits AHEAD of origin — NOT pushed (push gated).**
+
+- `51ffd2f` **F6 slice — `I` (isort)** — ruff autofix sorted imports across 118 files
+  (also tidies the typing/collections.abc ordering UP006/UP035 introduced); added `I`
+  to select. **`api/app.py` excluded via `per-file-ignores` `I001`** — its hand-tuned
+  layout (re-export `# noqa: F401`, late router block after `_lifespan` each
+  `# noqa: E402`) breaks under isort; left to the app.py decomposition. isort preserves
+  noqa, so re-export modules stay intact. Verified: ruff clean
+  (`E,F,W,B904,B905,RUF012,UP006,UP035,I`); collects 838; functional 36 pass; diff-check
+  clean.
+- **RUF100 NOT enabled — blanket autofix is unsafe here (tried+reverted, see below).**
+  Manual site-by-site only; month-tier. **This is now the only remaining ruff lint item.**
+
+**Lint-ratchet COMPLETE for clean automation: B904 · B905 · RUF012 · UP006/UP035 · I.**
+The ruff `select` is now `E,F,W,B904,B905,RUF012,UP006,UP035,I` and green. Plus R6, F5,
+2 F2 test-regression fixes.
+
+**⚠ RUF100 blanket autofix is unsafe here (tried 2026-06-03, reverted, no damage).**
+`ruff --select RUF100 --fix` strips `# noqa: E402` (legit module-imports-after-code in
+path scripts + `api/app.py`) and `# noqa: F401` (re-export `__init__.py`) → 84 NEW errors
+(E402/F401 are selected and DO fire there). NOT dead noqa. Needs manual work (convert
+re-exports to `x as x`/`__all__`, restructure E402 sites) = month-tier, NOT a one-pass
+sweep. The audit's "autofix RUF100/I001" optimism does not hold for this repo.
+
 ## 2026-06-03 Update (cont. 5) — F6 slice 4 (UP006/UP035 PEP 585)
 
 **HEAD `c62d28b` (master), worktree clean apart from untracked
