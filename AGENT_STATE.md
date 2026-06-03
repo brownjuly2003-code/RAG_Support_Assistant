@@ -1,8 +1,12 @@
 # Agent State
 
-## 2026-06-03 Update (cont. 10) — retrieval-fix barrier plan + Phase 0 done
+## 2026-06-03 Update (cont. 10) — retrieval-fix barrier plan + Phase 0 done + PUSHED
 
-**HEAD `fc4ad0e` (master), worktree clean. 35 commits AHEAD of origin — NOT pushed (push gated).**
+**PUSHED 2026-06-03: `9b219fa..2a4000e` → `origin/master`. CI run `26864082546` GREEN
+(migrations job hit a transient `docker pull postgres:16-alpine` Docker-Hub timeout, passed
+on `--failed` rerun — infra flake, not code), Pages `26864082575` GREEN. `origin/master` now
+synced at `2a4000e` + this handoff commit.** The 36-commit cont.1-10 series (R7 LLM-judged,
+diagnosis, barrier plan, Phase 0 contextual-header fix) is live on origin.
 
 Plan to overcome the heavy-compute barrier (BGE-M3+reranker >1 GiB, forbidden on Windows;
 OOMs 8GB iMac): `docs/plans/2026-06-03-overcome-retrieval-barrier.md`. Strategy = validate the
