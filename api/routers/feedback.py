@@ -91,7 +91,7 @@ async def escalate_to_human(
             f.write(_json.dumps(record, ensure_ascii=False) + "\n")
     except Exception as exc:
         logger.error("Failed to write escalation: %s", exc)
-        raise HTTPException(status_code=500, detail="Escalation failed")
+        raise HTTPException(status_code=500, detail="Escalation failed") from exc
 
     try:
         from db.engine import async_session  # noqa: PLC0415

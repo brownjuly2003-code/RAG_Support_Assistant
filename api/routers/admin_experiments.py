@@ -417,8 +417,8 @@ async def admin_upsert_experiment_assignment(
     rollout_percentage_raw = body.get("rollout_percentage", 0)
     try:
         rollout_percentage = int(rollout_percentage_raw)
-    except (TypeError, ValueError):
-        raise HTTPException(status_code=400, detail="rollout_percentage must be integer")
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="rollout_percentage must be integer") from exc
     if not 0 <= rollout_percentage <= 100:
         raise HTTPException(status_code=400, detail="rollout_percentage must be within [0, 100]")
 

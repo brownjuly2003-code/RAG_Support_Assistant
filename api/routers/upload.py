@@ -91,7 +91,7 @@ async def upload_document(
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {exc}")
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {exc}") from exc
 
     await _app.log_audit(
         actor=_user.get("sub", "anonymous"),
@@ -211,4 +211,4 @@ async def get_task_status(
             meta=meta_payload,
         )
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Task backend error: {exc}")
+        raise HTTPException(status_code=500, detail=f"Task backend error: {exc}") from exc

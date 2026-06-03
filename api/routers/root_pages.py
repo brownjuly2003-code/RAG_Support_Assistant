@@ -58,8 +58,8 @@ async def prometheus_metrics_endpoint(request: Request) -> Response:
             require_role("admin")(request)
         except HTTPException:
             raise
-        except Exception:
-            raise HTTPException(status_code=401, detail="Unauthorized")
+        except Exception as exc:
+            raise HTTPException(status_code=401, detail="Unauthorized") from exc
 
     _app = _app_module()
     if not getattr(_app.prometheus_metrics, "PROMETHEUS_AVAILABLE", False):

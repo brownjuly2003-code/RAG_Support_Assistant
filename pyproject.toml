@@ -13,7 +13,9 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "W"]
+# B904: exception chaining (`raise ... from`) — enforced after clearing all 15
+# sites (audit_claude_03_06_26.md §11 F6, incremental lint-ratchet step).
+select = ["E", "F", "W", "B904"]
 ignore = ["E501"]
 
 [tool.pytest.ini_options]

@@ -26,7 +26,7 @@ async def sso_login(provider: str, request: Request):
     try:
         client = _app.get_oidc_client(provider)
     except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     if client is None:
         raise HTTPException(status_code=404, detail="Provider not configured")
 
@@ -47,14 +47,14 @@ async def sso_callback(provider: str, request: Request):
     try:
         client = _app.get_oidc_client(provider)
     except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     if client is None:
         raise HTTPException(status_code=404, detail="Provider not configured")
 
     try:
         token = await client.authorize_access_token(request)
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"SSO callback failed: {exc}")
+        raise HTTPException(status_code=400, detail=f"SSO callback failed: {exc}") from exc
 
     userinfo = token.get("userinfo") if isinstance(token, dict) else None
     if userinfo is None and hasattr(client, "userinfo"):
@@ -65,7 +65,7 @@ async def sso_callback(provider: str, request: Request):
     try:
         user = await _app.resolve_oidc_user(provider, userinfo)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     access_token = create_access_token(str(user.id), user.role, user.tenant_id)
     refresh_token = create_refresh_token(str(user.id), user.role, user.tenant_id)

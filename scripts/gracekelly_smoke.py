@@ -411,10 +411,10 @@ class GraceKellySmoke:
     def _step_healthz(self) -> tuple[str, str]:
         try:
             response = self.gracekelly_client.get("/healthz/ready")
-        except httpx.HTTPError:
+        except httpx.HTTPError as exc:
             raise RuntimeError(
                 f"GraceKelly not reachable at {self.gracekelly_url}, start D:\\GraceKelly\\ first"
-            )
+            ) from exc
         if response.status_code != 200:
             raise RuntimeError(
                 f"GraceKelly not reachable at {self.gracekelly_url}, start D:\\GraceKelly\\ first"

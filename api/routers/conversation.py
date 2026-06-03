@@ -201,7 +201,7 @@ async def ask(
                 raise HTTPException(
                     status_code=503,
                     detail="Server is busy processing other requests - retry in a moment",
-                )
+                ) from None
             try:
                 prometheus_metrics.INFLIGHT_PIPELINES.inc()
                 try:
@@ -300,7 +300,7 @@ async def ask(
                     raise HTTPException(
                         status_code=504,
                         detail=f"Request exceeded {timeout:.0f}s wall-time limit",
-                    )
+                    ) from None
                 except Exception as exc:
                     logger.error("Pipeline error in /ask: %s", exc, exc_info=True)
                     answer = "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору."

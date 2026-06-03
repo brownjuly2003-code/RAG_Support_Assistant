@@ -250,8 +250,8 @@ async def agent_get_ticket(
     tenant = _user.get("tenant") or get_current_tenant() or "default"
     try:
         ticket_uuid = uuid.UUID(ticket_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="invalid ticket_id")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="invalid ticket_id") from exc
 
     async with _async_session() as db:
         ticket = await db.get(EscalatedTicket, ticket_uuid)
@@ -333,8 +333,8 @@ async def agent_respond_to_ticket(
     tenant = _user.get("tenant") or get_current_tenant() or "default"
     try:
         ticket_uuid = uuid.UUID(ticket_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="invalid ticket_id")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="invalid ticket_id") from exc
 
     async with _async_session() as db:
         ticket = await db.get(EscalatedTicket, ticket_uuid)
@@ -380,8 +380,8 @@ async def agent_similar_tickets(
     tenant = _user.get("tenant") or get_current_tenant() or "default"
     try:
         ticket_uuid = uuid.UUID(ticket_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="invalid ticket_id")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="invalid ticket_id") from exc
 
     async with _async_session() as db:
         ticket = await db.get(EscalatedTicket, ticket_uuid)
