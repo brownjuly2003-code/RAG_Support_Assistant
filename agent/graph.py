@@ -1982,7 +1982,10 @@ def run_qa_pipeline(
                             from db.engine import engine as _engine
                             await _engine.dispose()
                         except Exception:
-                            pass
+                            logger.debug(
+                                "engine.dispose() after online-eval persist failed",
+                                exc_info=True,
+                            )
 
                 asyncio.run(_persist_results())
             except Exception as exc:

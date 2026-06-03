@@ -1056,7 +1056,8 @@ def _validate_vector_store_embedding_compatibility(vector_store: Any, embeddings
             if int(collection.count()) == 0:
                 return
         except Exception:
-            pass
+            # count() probe failed — fall through to the live query probe below.
+            logger.debug("collection.count() probe failed; using query probe", exc_info=True)
 
     try:
         probe_vector = embeddings.embed_query("embedding compatibility probe")
@@ -1782,7 +1783,10 @@ async def _tenant_context(request: Request, call_next: Any) -> Any:
             if payload is not None:
                 tenant = payload.get("tenant", "default")
         except Exception:
-            pass
+            # Malformed/expired token → fall back to the default tenant, but do
+            # not silently mask why: an unexpected verify failure here can hide
+            # auth/tenant-isolation problems.
+            logger.debug("tenant token verification failed; using default tenant", exc_info=True)
 
     set_current_tenant(tenant)
     try:

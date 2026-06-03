@@ -970,7 +970,9 @@ def build_vector_store(
         setattr(store, "_source_docs", list(docs))
         setattr(store, "_source_embeddings", embeddings)
     except Exception:
-        pass
+        # Best-effort: these attrs back parent-doc/source-embedding retrieval;
+        # log so a silent loss of those features is diagnosable.
+        logger.debug("could not attach source docs/embeddings to store", exc_info=True)
 
     return store, chunks
 
