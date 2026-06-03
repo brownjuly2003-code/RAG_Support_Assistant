@@ -16,7 +16,8 @@ import logging
 import inspect
 import re
 import time
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Optional, Protocol, cast
+from typing import TYPE_CHECKING, Any, Literal, Optional, Protocol, cast
+from collections.abc import Callable
 
 from langgraph.graph import END, StateGraph
 from tracing.langfuse_trace import trace_llm_call
@@ -320,9 +321,9 @@ def get_default_breaker() -> CircuitBreaker | None:
 # ---------------------------------------------------------------------------
 
 
-def _docs_to_plain_dicts(docs: List[Any]) -> List[Dict[str, Any]]:
+def _docs_to_plain_dicts(docs: list[Any]) -> list[dict[str, Any]]:
     """Преобразует Document объекты в plain dicts для JSON/SQLite."""
-    plain_docs: List[Dict[str, Any]] = []
+    plain_docs: list[dict[str, Any]] = []
     for doc in docs:
         if hasattr(doc, "page_content"):
             text = getattr(doc, "page_content", "")
@@ -535,7 +536,7 @@ def _normalize_optional_float(value: Any) -> float | None:
         return None
 
 
-def _new_llm_usage(node_name: str) -> Dict[str, Any]:
+def _new_llm_usage(node_name: str) -> dict[str, Any]:
     return {
         "provider_name": None,
         "model_name": None,
@@ -547,7 +548,7 @@ def _new_llm_usage(node_name: str) -> Dict[str, Any]:
     }
 
 
-def _capture_llm_usage(llm: SupportsInvoke, node_name: str) -> Dict[str, Any]:
+def _capture_llm_usage(llm: SupportsInvoke, node_name: str) -> dict[str, Any]:
     usage = _new_llm_usage(node_name)
     usage["provider_name"] = _get_llm_provider_name(llm)
     usage["model_name"] = _get_llm_model_name(llm)
@@ -575,7 +576,7 @@ def _capture_llm_usage(llm: SupportsInvoke, node_name: str) -> Dict[str, Any]:
     return usage
 
 
-def _merge_llm_usage(total: Dict[str, Any], snapshot: Dict[str, Any]) -> Dict[str, Any]:
+def _merge_llm_usage(total: dict[str, Any], snapshot: dict[str, Any]) -> dict[str, Any]:
     if snapshot.get("provider_name"):
         total["provider_name"] = snapshot["provider_name"]
     if snapshot.get("model_name"):
@@ -621,7 +622,7 @@ def _merge_llm_usage(total: Dict[str, Any], snapshot: Dict[str, Any]) -> Dict[st
     return total
 
 
-def _apply_llm_usage(state: GraphState, usage: Dict[str, Any]) -> GraphState:
+def _apply_llm_usage(state: GraphState, usage: dict[str, Any]) -> GraphState:
     return {
         **state,
         "provider_name": usage.get("provider_name"),
@@ -1035,7 +1036,7 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
                 log_step(trace_id, "grade_docs", new_state)
                 return new_state
 
-            graded: List[Dict[str, Any]] = []
+            graded: list[dict[str, Any]] = []
             filtered_count = 0
             usage = _new_llm_usage("grade_docs")
             usage_recorded = False
@@ -1230,7 +1231,7 @@ def make_generate_node(
                     answer = "Извините, при обработке запроса произошла внутренняя ошибка."
                 span.set_attribute("rag.answer_length", len(str(answer or "")))
 
-            citations: List[Dict[str, Any]] = []
+            citations: list[dict[str, Any]] = []
             for idx, doc in enumerate(docs, start=1):
                 if isinstance(doc, dict):
                     metadata = doc.get("metadata", {}) or {}
@@ -1886,7 +1887,7 @@ def run_qa_pipeline(
     retriever: Any,
     llm: SupportsInvoke | None = None,
     max_iterations: int = 2,
-    chat_history: List[Dict[str, str]] | None = None,
+    chat_history: list[dict[str, str]] | None = None,
     trace_id: str | None = None,
     tenant_id: str = "default",
     user_id: str = "anonymous",
@@ -2033,11 +2034,11 @@ class ConversationSession:
         self._llm = llm
         self._max_iterations = max_iterations
         self._max_history = max_history
-        self._history: List[Dict[str, str]] = []
-        self._pending_action: Dict[str, str] | None = None
+        self._history: list[dict[str, str]] = []
+        self._pending_action: dict[str, str] | None = None
 
     @property
-    def history(self) -> List[Dict[str, str]]:
+    def history(self) -> list[dict[str, str]]:
         return list(self._history)
 
     def _append_history(self, question: str, answer: str) -> None:

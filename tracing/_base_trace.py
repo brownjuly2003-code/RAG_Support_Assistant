@@ -77,7 +77,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 
 def _get_project_root() -> Path:
@@ -258,7 +258,7 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _state_to_dict(state: Any) -> Dict[str, Any]:
+def _state_to_dict(state: Any) -> dict[str, Any]:
     """
     Приводит состояние к обычному словарю для JSON-сериализации.
 
@@ -744,7 +744,7 @@ def get_feedback_stats(days: int = 30, tenant_id: str | None = None) -> dict:
                 """,
                 (cutoff, tenant_id),
             )
-        by_route: Dict[str, Dict[str, int]] = {}
+        by_route: dict[str, dict[str, int]] = {}
         for route, rating, count in cur.fetchall():
             route_key = route or "unknown"
             if route_key not in by_route:

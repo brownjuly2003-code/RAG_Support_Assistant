@@ -7,7 +7,8 @@ import time
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
-from typing import Callable, Optional, TypeVar
+from typing import Optional, TypeVar
+from collections.abc import Callable
 
 T = TypeVar("T")
 

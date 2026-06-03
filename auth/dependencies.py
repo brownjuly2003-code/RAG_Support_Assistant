@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import hmac
 import os
-from typing import Callable
+from collections.abc import Callable
 
 from fastapi import HTTPException, Request
 

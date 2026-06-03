@@ -13,10 +13,11 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-# B904 (exception chaining) + B905 (zip strict=) + RUF012 (mutable class
-# default → ClassVar) — enforced after clearing all sites
-# (audit_claude_03_06_26.md §11 F6, incremental lint-ratchet).
-select = ["E", "F", "W", "B904", "B905", "RUF012"]
+# Incremental lint-ratchet (audit_claude_03_06_26.md §11 F6), each rule
+# enforced after clearing every site:
+#   B904 exception chaining · B905 zip strict= · RUF012 ClassVar
+#   UP006/UP035 PEP 585 builtins (typing.Dict/List → dict/list)
+select = ["E", "F", "W", "B904", "B905", "RUF012", "UP006", "UP035"]
 ignore = ["E501"]
 
 [tool.pytest.ini_options]

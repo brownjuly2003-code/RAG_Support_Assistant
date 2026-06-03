@@ -16,7 +16,7 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 try:
     from langchain_core.documents import Document
@@ -29,7 +29,7 @@ except ImportError:
         @_dc
         class Document:  # type: ignore[no-redef]
             page_content: str
-            metadata: Dict[str, Any]
+            metadata: dict[str, Any]
 
 from ingestion.loader import DocumentLoader
 from ingestion.categorizer import annotate_documents_with_categories
@@ -74,10 +74,10 @@ class IngestPipeline:
         self.loader = DocumentLoader(recursive=recursive)
 
         # Cached state from the last ingest/add_document call
-        self._documents: List[Document] = []
+        self._documents: list[Document] = []
         self._store: Any = None
-        self._chunks: List[Document] = []
-        self._last_batch_contextual_headers: Dict[str, Any] = {"mode": "disabled"}
+        self._chunks: list[Document] = []
+        self._last_batch_contextual_headers: dict[str, Any] = {"mode": "disabled"}
 
     # ------------------------------------------------------------------
     # Public API
@@ -86,11 +86,11 @@ class IngestPipeline:
     def ingest(
         self,
         docs_dir: str | Path,
-        chunk_config: Optional[Dict[str, int]] = None,
+        chunk_config: Optional[dict[str, int]] = None,
         embeddings: Any = None,
         use_semantic_chunking: bool = False,
         tenant_id: str = "default",
-    ) -> tuple[Any, List[Document]]:
+    ) -> tuple[Any, list[Document]]:
         """Run the full ingestion pipeline.
 
         Args:
@@ -224,11 +224,11 @@ class IngestPipeline:
     def add_document(
         self,
         file_path: str | Path,
-        chunk_config: Optional[Dict[str, int]] = None,
+        chunk_config: Optional[dict[str, int]] = None,
         embeddings: Any = None,
         use_semantic_chunking: bool = False,
         tenant_id: str = "default",
-    ) -> tuple[Any, List[Document]]:
+    ) -> tuple[Any, list[Document]]:
         """Add a single file without rebuilding the entire store.
 
         The new document's chunks are appended to the existing chunk list
@@ -301,7 +301,7 @@ class IngestPipeline:
     # ------------------------------------------------------------------
 
     @property
-    def documents(self) -> List[Document]:
+    def documents(self) -> list[Document]:
         """Documents loaded so far."""
         return list(self._documents)
 
@@ -311,7 +311,7 @@ class IngestPipeline:
         return self._store
 
     @property
-    def chunks(self) -> List[Document]:
+    def chunks(self) -> list[Document]:
         """Chunks produced by the last build."""
         return list(self._chunks)
 
@@ -321,10 +321,10 @@ class IngestPipeline:
 
     def _write_log(
         self,
-        docs: List[Document],
-        chunks: List[Document],
+        docs: list[Document],
+        chunks: list[Document],
         docs_dir: str | Path,
-        chunk_config: Dict[str, int],
+        chunk_config: dict[str, int],
     ) -> None:
         """Write (overwrite) the full ingestion log."""
         entry = self._build_log_entry(docs, chunks, str(docs_dir), chunk_config)
@@ -339,13 +339,13 @@ class IngestPipeline:
 
     def _append_log_entry(
         self,
-        new_docs: List[Document],
-        all_chunks: List[Document],
+        new_docs: list[Document],
+        all_chunks: list[Document],
         file_path: str | Path,
-        chunk_config: Dict[str, int],
+        chunk_config: dict[str, int],
     ) -> None:
         """Append an ``add_document`` event to the existing log."""
-        existing: Dict[str, Any] = {}
+        existing: dict[str, Any] = {}
         if self.log_path.exists():
             try:
                 existing = json.loads(
@@ -377,11 +377,11 @@ class IngestPipeline:
 
     @staticmethod
     def _build_log_entry(
-        docs: List[Document],
-        chunks: List[Document],
+        docs: list[Document],
+        chunks: list[Document],
         docs_dir: str,
-        chunk_config: Dict[str, int],
-    ) -> Dict[str, Any]:
+        chunk_config: dict[str, int],
+    ) -> dict[str, Any]:
         file_list = []
         for doc in docs:
             meta = doc.metadata or {}

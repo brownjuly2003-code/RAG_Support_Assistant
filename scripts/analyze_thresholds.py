@@ -10,7 +10,8 @@ import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any
+from collections.abc import Iterable, Sequence
 
 from sklearn.metrics import f1_score, precision_recall_curve
 from sqlalchemy import text

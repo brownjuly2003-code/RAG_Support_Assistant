@@ -48,7 +48,7 @@ agent/state.py
 
 from __future__ import annotations
 
-from typing import Any, List, Literal, Optional, TypedDict
+from typing import Any, Literal, Optional, TypedDict
 import uuid
 
 
@@ -74,13 +74,13 @@ class GraphState(TypedDict, total=False):
     question: str
     search_query: Optional[str]
     hyde_query: Optional[str]
-    context_docs: List[dict]
-    graded_docs: List[dict]
+    context_docs: list[dict]
+    graded_docs: list[dict]
     doc_grade_reason: Optional[str]
     answer: Optional[str]
     relevance_score: Optional[float]
     quality_score: Optional[int]
-    claims: List[dict]
+    claims: list[dict]
     factuality_score: int
     fact_verification_skipped: bool
     complexity: Literal["simple", "complex", "global", "unknown"]
@@ -94,10 +94,10 @@ class GraphState(TypedDict, total=False):
     knowledge_gap: bool
     iteration: int
     max_iterations: int
-    chat_history: List[dict]
-    sub_queries: List[str]
-    suggested_questions: List[str]
-    citations: List[dict]
+    chat_history: list[dict]
+    sub_queries: list[str]
+    suggested_questions: list[str]
+    citations: list[dict]
     provider_name: Optional[str]
     model_name: Optional[str]
     prompt_tokens: Optional[int]
@@ -108,7 +108,7 @@ class GraphState(TypedDict, total=False):
     # Tool-use / agentic flow (Batch K). Optional because most node paths
     # never set them; nodes that do (e.g. agentic generate) update via
     # state["..."] = ... rather than the constructor.
-    tool_calls: List[str] | List[dict[str, Any]]
+    tool_calls: list[str] | list[dict[str, Any]]
     requires_confirmation: bool
     action_summary: str
 

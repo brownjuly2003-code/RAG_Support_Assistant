@@ -11,7 +11,8 @@ import uuid
 from email.message import EmailMessage, Message
 from email.utils import parseaddr
 from html import unescape
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from config.settings import get_settings
 

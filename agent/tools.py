@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 import re
 import uuid
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
+from collections.abc import Callable
 
 from db.engine import async_session
 from db.models import EscalatedTicket

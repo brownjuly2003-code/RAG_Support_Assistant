@@ -25,7 +25,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 try:
     from langchain_core.documents import Document
@@ -38,7 +38,7 @@ except ImportError:
         @_dc
         class Document:  # type: ignore[no-redef]
             page_content: str
-            metadata: Dict[str, Any]
+            metadata: dict[str, Any]
 
 
 try:
@@ -75,8 +75,8 @@ class DocumentLoader:
     def load_documents(
         self,
         path: str | Path,
-        extensions: Optional[List[str]] = None,
-    ) -> List[Document]:
+        extensions: Optional[list[str]] = None,
+    ) -> list[Document]:
         """Load all supported files from *path* (directory) recursively.
 
         Args:
@@ -98,7 +98,7 @@ class DocumentLoader:
         else:
             exts = {("." + e.lstrip(".")).lower() for e in extensions}
 
-        documents: List[Document] = []
+        documents: list[Document] = []
         for file_path in self._iter_files(base, exts):
             try:
                 docs = self._load_file(file_path)
@@ -109,7 +109,7 @@ class DocumentLoader:
         print(f"[DocumentLoader] Loaded {len(documents)} document(s) from {base}")
         return documents
 
-    def load_single_file(self, path: str | Path) -> List[Document]:
+    def load_single_file(self, path: str | Path) -> list[Document]:
         """Load a single file and return a list of Documents.
 
         For PDFs each page becomes a separate Document.  For everything
@@ -134,8 +134,8 @@ class DocumentLoader:
     # Internal: file iteration
     # ------------------------------------------------------------------
 
-    def _iter_files(self, base: Path, exts: set[str]) -> List[Path]:
-        results: List[Path] = []
+    def _iter_files(self, base: Path, exts: set[str]) -> list[Path]:
+        results: list[Path] = []
         if self.recursive:
             for root, _dirs, files in os.walk(base):
                 for name in files:
@@ -152,7 +152,7 @@ class DocumentLoader:
     # Internal: load a single file into Document(s)
     # ------------------------------------------------------------------
 
-    def _load_file(self, path: Path) -> List[Document]:
+    def _load_file(self, path: Path) -> list[Document]:
         ext = path.suffix.lower()
 
         if ext in {".txt", ".md"}:
@@ -182,10 +182,10 @@ class DocumentLoader:
     # Format-specific readers
     # ------------------------------------------------------------------
 
-    def _read_pdf(self, path: Path) -> List[Document]:
+    def _read_pdf(self, path: Path) -> list[Document]:
         if pypdf is None:
             raise ImportError("pypdf is required for PDF files: pip install pypdf")
-        docs: List[Document] = []
+        docs: list[Document] = []
         with path.open("rb") as fh:
             reader = pypdf.PdfReader(fh)
             for page_num, page in enumerate(reader.pages, start=1):
@@ -200,7 +200,7 @@ class DocumentLoader:
                 )
         return docs
 
-    def _read_docx(self, path: Path) -> List[Document]:
+    def _read_docx(self, path: Path) -> list[Document]:
         if DocxDocument is None:
             raise ImportError(
                 "python-docx is required for DOCX files: pip install python-docx"
@@ -211,7 +211,7 @@ class DocumentLoader:
             return []
         return [self._make_doc(text, path, file_type="docx")]
 
-    def _read_json(self, path: Path) -> List[Document]:
+    def _read_json(self, path: Path) -> list[Document]:
         """Read a JSON file.
 
         If the JSON is a list of objects, each object becomes a Document
@@ -228,7 +228,7 @@ class DocumentLoader:
             return [self._make_doc(raw, path, file_type="json")]
 
         if isinstance(data, list):
-            docs: List[Document] = []
+            docs: list[Document] = []
             for idx, item in enumerate(data):
                 text = json.dumps(item, ensure_ascii=False, indent=2) if not isinstance(item, str) else item
                 if text.strip():
@@ -240,7 +240,7 @@ class DocumentLoader:
         # Single object / scalar
         return [self._make_doc(raw, path, file_type="json")]
 
-    def _read_csv(self, path: Path) -> List[Document]:
+    def _read_csv(self, path: Path) -> list[Document]:
         """Read a CSV file.
 
         Each row becomes a separate Document whose ``page_content`` is
@@ -257,7 +257,7 @@ class DocumentLoader:
         if not fieldnames:
             return [self._make_doc(raw, path, file_type="csv")]
 
-        docs: List[Document] = []
+        docs: list[Document] = []
         for row_num, row in enumerate(reader, start=1):
             lines = [f"{k}: {v}" for k, v in row.items() if v]
             text = "\n".join(lines)
@@ -268,13 +268,13 @@ class DocumentLoader:
 
         return docs if docs else [self._make_doc(raw, path, file_type="csv")]
 
-    def _read_html(self, path: Path) -> List[Document]:
+    def _read_html(self, path: Path) -> list[Document]:
         from html.parser import HTMLParser
 
         class TextExtractor(HTMLParser):
             def __init__(self) -> None:
                 super().__init__()
-                self._parts: List[str] = []
+                self._parts: list[str] = []
 
             def handle_data(self, data: str) -> None:
                 data = data.strip()
@@ -305,7 +305,7 @@ class DocumentLoader:
         page: Optional[int] = None,
     ) -> Document:
         stat = path.stat()
-        meta: Dict[str, Any] = {
+        meta: dict[str, Any] = {
             "source": path.name,
             "file_path": str(path.resolve()),
             "file_type": file_type,
@@ -327,8 +327,8 @@ class DocumentChangeTracker:
     """Save and compare document hashes between ingestion runs."""
 
     @staticmethod
-    def save_state(docs: List[Document], path: str | Path) -> None:
-        state: Dict[str, Any] = {}
+    def save_state(docs: list[Document], path: str | Path) -> None:
+        state: dict[str, Any] = {}
         for doc in docs:
             meta = doc.metadata
             key = meta.get("file_path") or meta.get("source")
@@ -345,7 +345,7 @@ class DocumentChangeTracker:
         out.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
 
     @staticmethod
-    def load_state(path: str | Path) -> Dict[str, Any]:
+    def load_state(path: str | Path) -> dict[str, Any]:
         p = Path(path)
         if not p.exists():
             return {}
@@ -353,10 +353,10 @@ class DocumentChangeTracker:
 
     @staticmethod
     def diff(
-        docs: List[Document],
-        previous_state: Dict[str, Any],
-    ) -> Dict[str, List[str]]:
-        current: Dict[str, str] = {}
+        docs: list[Document],
+        previous_state: dict[str, Any],
+    ) -> dict[str, list[str]]:
+        current: dict[str, str] = {}
         for doc in docs:
             meta = doc.metadata
             key = meta.get("file_path") or meta.get("source")

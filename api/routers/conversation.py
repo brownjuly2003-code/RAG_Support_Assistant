@@ -8,7 +8,8 @@ import logging
 import re
 import time
 import uuid
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, Optional
+from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -52,11 +53,11 @@ class AskResponse(BaseModel):
     answer: str
     quality_score: int = 50
     route: str = "auto"
-    sources: List[SourceInfo] = Field(default_factory=list)
-    citations: List[Citation] = Field(default_factory=list)
+    sources: list[SourceInfo] = Field(default_factory=list)
+    citations: list[Citation] = Field(default_factory=list)
     session_id: str = ""
     trace_id: str = ""
-    suggested_questions: List[str] = Field(default_factory=list)
+    suggested_questions: list[str] = Field(default_factory=list)
     requires_confirmation: bool = False
     action_summary: str = ""
 
@@ -474,8 +475,8 @@ async def ask_stream(
 
         try:
             prompt = ""
-            docs: List[Any] = []
-            chat_history: List[Dict[str, str]] = []
+            docs: list[Any] = []
+            chat_history: list[dict[str, str]] = []
             ask_params = inspect.signature(session.ask).parameters if hasattr(session, "ask") else {}
             ask_args = (
                 (question, get_request_id(), tenant)
@@ -637,7 +638,7 @@ async def ask_stream(
 
             quality = 70 if len(full_answer.strip()) > 20 or sources else 40
             route = "auto" if quality >= 70 else "human"
-            suggested_questions: List[str] = []
+            suggested_questions: list[str] = []
             if route == "auto":
                 try:
                     from agent.prompts import build_suggested_questions_prompt  # noqa: PLC0415
@@ -674,7 +675,7 @@ async def ask_stream(
                     )
             trace_id_value = ""
             graph_appended_history = False
-            graph_result: Dict[str, Any] | None = None
+            graph_result: dict[str, Any] | None = None
             if graph_task is not None:
                 try:
                     graph_result = await asyncio.wait_for(
@@ -777,7 +778,7 @@ async def ask_stream(
             try:
                 # If we already kicked off the parity graph in parallel, reuse
                 # its result instead of running session.ask twice.
-                result: Dict[str, Any] | None = None
+                result: dict[str, Any] | None = None
                 if graph_task is not None:
                     try:
                         result = await graph_task

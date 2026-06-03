@@ -23,7 +23,8 @@ import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class TestCase:
         category: optional category label (e.g. "error_codes", "warranty").
     """
     question: str
-    expected_keywords: List[str] = field(default_factory=list)
+    expected_keywords: list[str] = field(default_factory=list)
     expected_answer: Optional[str] = None
     category: Optional[str] = None
 
@@ -60,7 +61,7 @@ def _normalise(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _extract_sentences(text: str) -> List[str]:
+def _extract_sentences(text: str) -> list[str]:
     """Split text into sentences (handles Russian and English)."""
     parts = re.split(r"(?<=[.!?])\s+", text.strip())
     return [s.strip() for s in parts if s.strip()]
@@ -74,7 +75,7 @@ def _docs_to_text(context_docs: Any) -> str:
     - List[dict] with 'page_content' key
     - List[str]
     """
-    parts: List[str] = []
+    parts: list[str] = []
     if not context_docs:
         return ""
     for doc in context_docs:
@@ -87,7 +88,7 @@ def _docs_to_text(context_docs: Any) -> str:
     return "\n".join(parts)
 
 
-def _keyword_overlap(text: str, keywords: List[str]) -> float:
+def _keyword_overlap(text: str, keywords: list[str]) -> float:
     """Fraction of keywords found in text (case-insensitive)."""
     if not keywords:
         return 1.0
@@ -193,7 +194,7 @@ def answer_relevancy_embedding(
 def context_precision(
     question: str,
     context_docs: Any,
-    expected_keywords: Optional[List[str]] = None,
+    expected_keywords: Optional[list[str]] = None,
 ) -> float:
     """Measure whether retrieved documents are relevant to the question.
 
@@ -244,7 +245,7 @@ def context_precision(
 
 def context_recall(
     context_docs: Any,
-    expected_keywords: List[str],
+    expected_keywords: list[str],
 ) -> float:
     """Measure whether all needed facts are present in the retrieved context.
 
@@ -350,9 +351,9 @@ class RAGEvaluator:
         question: str,
         answer: str,
         context_docs: Any,
-        expected_keywords: Optional[List[str]] = None,
+        expected_keywords: Optional[list[str]] = None,
         use_embeddings: bool = False,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Evaluate a single question-answer pair.
 
         Returns a dict with keys:
@@ -396,10 +397,10 @@ class RAGEvaluator:
     def evaluate_batch(
         self,
         test_cases: Sequence[TestCase],
-        answers: Optional[List[str]] = None,
-        context_docs_list: Optional[List[Any]] = None,
+        answers: Optional[list[str]] = None,
+        context_docs_list: Optional[list[Any]] = None,
         use_embeddings: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Evaluate a batch of test cases.
 
         If ``answers`` and ``context_docs_list`` are provided, they are used
@@ -416,8 +417,8 @@ class RAGEvaluator:
                 "timestamp": str,
             }
         """
-        per_question: List[Dict[str, Any]] = []
-        totals: Dict[str, float] = {
+        per_question: list[dict[str, Any]] = []
+        totals: dict[str, float] = {
             "faithfulness": 0.0,
             "answer_relevancy": 0.0,
             "context_precision": 0.0,
@@ -474,7 +475,7 @@ class RAGEvaluator:
         test_cases: Sequence[TestCase],
         save: bool = True,
         use_embeddings: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run full RAG pipeline evaluation: retrieve + generate + evaluate.
 
         For each test case:
@@ -496,9 +497,9 @@ class RAGEvaluator:
             Same structure as evaluate_batch, plus per-question ``answer``
             and ``context_docs`` fields.
         """
-        answers: List[str] = []
-        context_docs_list: List[List[Any]] = []
-        timings: List[float] = []
+        answers: list[str] = []
+        context_docs_list: list[list[Any]] = []
+        timings: list[float] = []
 
         for tc in test_cases:
             start = time.time()
@@ -541,7 +542,7 @@ class RAGEvaluator:
 
             answers.append(answer)
             # Normalise docs to dicts for serialisation
-            normalised: List[Dict[str, Any]] = []
+            normalised: list[dict[str, Any]] = []
             for doc in docs:
                 if hasattr(doc, "page_content"):
                     normalised.append({
@@ -578,7 +579,7 @@ class RAGEvaluator:
     # Persistence
     # -----------------------------------------------------------------------
 
-    def _save_results(self, result: Dict[str, Any]) -> str:
+    def _save_results(self, result: dict[str, Any]) -> str:
         """Save benchmark results to JSON file. Returns the file path."""
         path = Path(self._results_dir) / "benchmark_results.json"
         path.parent.mkdir(parents=True, exist_ok=True)

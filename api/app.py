@@ -24,7 +24,8 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncGenerator, ClassVar, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from collections.abc import AsyncGenerator
 
 import httpx
 from fastapi import APIRouter, FastAPI, Request
@@ -242,14 +243,14 @@ from api.routers.system import ComponentStatus, HealthResponse  # noqa: E402,F40
 # Global state
 # ---------------------------------------------------------------------------
 
-_session_llm_state: Dict[str, Any] = {}
+_session_llm_state: dict[str, Any] = {}
 _sessions = _session_llm_state
 _shutting_down: bool = False
-_session_last_access: Dict[str, float] = {}
+_session_last_access: dict[str, float] = {}
 _db_retry_after: float = 0.0
 _vector_store: Any = None
 _retriever: Any = None
-_chunks: List[Any] = []
+_chunks: list[Any] = []
 _llm: Any = None
 _pipeline_semaphore: asyncio.Semaphore | None = None
 _vector_store_init_lock = threading.Lock()
@@ -260,7 +261,7 @@ _refresh_review_queue_metrics = _api_shared._refresh_review_queue_metrics
 _review_queue_enabled = _api_shared._review_queue_enabled
 _reviewed_by_uuid = _api_shared._reviewed_by_uuid
 _serialize_timestamp = _api_shared._serialize_timestamp
-_regression_jobs: Dict[str, Dict[str, Any]] = {}
+_regression_jobs: dict[str, dict[str, Any]] = {}
 
 
 def _get_pipeline_semaphore() -> asyncio.Semaphore:
@@ -944,7 +945,7 @@ async def _get_or_create_session(
         except (TypeError, ValueError, AttributeError):
             pass
 
-    db_history: List[Dict[str, str]] = []
+    db_history: list[dict[str, str]] = []
     if time.monotonic() >= _db_retry_after:
         try:
             from datetime import datetime, timezone
@@ -1136,7 +1137,7 @@ def initialize_vector_store() -> None:
 
 
 def _rebuild_vector_store_from_docs(
-    docs: List[Any],
+    docs: list[Any],
     tenant_id: str = "default",
 ) -> bool:
     global _vector_store, _retriever, _chunks

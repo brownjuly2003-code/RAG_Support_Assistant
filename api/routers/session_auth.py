@@ -12,7 +12,6 @@ import logging
 import os
 import time
 import uuid
-from typing import Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -53,7 +52,7 @@ class HistoryMessage(BaseModel):
 
 class HistoryResponse(BaseModel):
     session_id: str
-    messages: List[HistoryMessage]
+    messages: list[HistoryMessage]
     tenant_id: str = "default"
 
 
@@ -291,7 +290,7 @@ async def clear_session(
     request: Request,
     session_id: str,
     _user: dict = Depends(require_role("agent", "admin")),
-) -> Dict[str, str]:
+) -> dict[str, str]:
     _app = _app_module()
     user_tenant = (_user.get("tenant") or "default") or "default"
     session_uuid = _try_parse_uuid(session_id)

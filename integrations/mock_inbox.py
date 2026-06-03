@@ -48,7 +48,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from .bitrix import BitrixSupportSink, SupportSink
 
@@ -106,13 +106,13 @@ class LocalFileSupportSink(SupportSink):
         ts = datetime.now(timezone.utc).isoformat()
 
         try:
-            base: Dict[str, Any] = json.loads(message)
+            base: dict[str, Any] = json.loads(message)
             if not isinstance(base, dict):
                 base = {"raw_message": message}
         except Exception:
             base = {"question": message}
 
-        record: Dict[str, Any] = {
+        record: dict[str, Any] = {
             "entity_id": entity_id,
             "question": base.get("question"),
             "answer": base.get("answer"),

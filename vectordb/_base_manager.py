@@ -29,7 +29,8 @@ import os
 import re
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Sequence, Optional
+from typing import Any, Optional
+from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 _BM25_TOKEN_RE = re.compile(r"[^\W_]+", re.UNICODE)
@@ -176,10 +177,10 @@ def get_embeddings(model_name: str | None = None) -> Any:
         def __init__(self, st_model: SentenceTransformer):
             self._model = st_model
 
-        def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        def embed_documents(self, texts: list[str]) -> list[list[float]]:
             return self._model.encode(texts, normalize_embeddings=True).tolist()
 
-        def embed_query(self, text: str) -> List[float]:
+        def embed_query(self, text: str) -> list[float]:
             return self._model.encode([text], normalize_embeddings=True)[0].tolist()
 
     device = _resolve_device()
@@ -251,7 +252,7 @@ def get_reranker(model_name: str | None = None) -> Any | None:
 # Hybrid Retriever: BM25 + Vector + Reranker
 # ---------------------------------------------------------------------------
 
-def _tokenize_for_bm25(text: str) -> List[str]:
+def _tokenize_for_bm25(text: str) -> list[str]:
     return _BM25_TOKEN_RE.findall(text.casefold())
 
 
@@ -285,7 +286,7 @@ class HybridRetriever:
     def __init__(
         self,
         vector_store: Any,
-        chunks: List[Document],
+        chunks: list[Document],
         retrieval_k: int = 20,
         rerank_k: int = 5,
         rrf_k: int = 60,
@@ -308,7 +309,7 @@ class HybridRetriever:
             self._bm25 = BM25Okapi(tokenized)
             logger.debug("BM25 index built: %d chunks", len(chunks))
 
-    def _vector_search(self, query: str) -> List[Document]:
+    def _vector_search(self, query: str) -> list[Document]:
         try:
             if hasattr(self._vector_store, "similarity_search"):
                 return self._vector_store.similarity_search(query, k=self._retrieval_k)
@@ -319,17 +320,17 @@ class HybridRetriever:
             logger.warning("[HybridRetriever] Vector search error: %s", e)
             return []
 
-    def get_vector_documents(self, query: str) -> List[Document]:
+    def get_vector_documents(self, query: str) -> list[Document]:
         """Vector-only retrieval path for cheap simple-query routing."""
         return self._vector_search(query)[:self._rerank_k]
 
-    def get_relevant_documents(self, query: str) -> List[Document]:
+    def get_relevant_documents(self, query: str) -> list[Document]:
         """Гибридный поиск с RRF и reranking."""
         # Step 1: Vector search
         vector_results = self._vector_search(query)
 
         # Step 2: BM25 search
-        bm25_results: List[Document] = []
+        bm25_results: list[Document] = []
         if self._bm25 is not None:
             tokenized_query = _tokenize_for_bm25(query)
             scores = self._bm25.get_scores(tokenized_query)
@@ -350,14 +351,14 @@ class HybridRetriever:
 
         return merged
 
-    def _rrf_merge(self, list_a: List[Document], list_b: List[Document]) -> List[Document]:
+    def _rrf_merge(self, list_a: list[Document], list_b: list[Document]) -> list[Document]:
         """Reciprocal Rank Fusion: объединяет два ранжированных списка.
 
         score(doc) = sum( 1 / (k + rank_in_list) ) для каждого списка.
         k = 60 (стандарт) — сглаживает доминирование высоких рангов.
         """
-        scores: Dict[str, float] = {}
-        doc_map: Dict[str, Document] = {}
+        scores: dict[str, float] = {}
+        doc_map: dict[str, Document] = {}
 
         for rank, doc in enumerate(list_a):
             key = _rrf_document_key(doc, self._doc_key_chars)
@@ -372,7 +373,7 @@ class HybridRetriever:
         sorted_keys = sorted(scores, key=lambda k: scores[k], reverse=True)
         return [doc_map[k] for k in sorted_keys]
 
-    def _rerank(self, query: str, docs: List[Document]) -> List[Document]:
+    def _rerank(self, query: str, docs: list[Document]) -> list[Document]:
         """Cross-encoder reranking: пересчитывает релевантность каждого документа."""
         if not docs:
             return docs
@@ -387,7 +388,7 @@ class HybridRetriever:
             logger.warning("[HybridRetriever] Reranker error: %s", e)
             return docs[:self._rerank_k]
 
-    def invoke(self, query: str) -> List[Document]:
+    def invoke(self, query: str) -> list[Document]:
         return self.get_relevant_documents(query)
 
 
@@ -449,12 +450,12 @@ def _load_semantic_chunker() -> Any | None:
 
 
 def semantic_split(
-    docs: List[Document],
+    docs: list[Document],
     embeddings: Any,
     breakpoint_threshold: float = 0.3,
     min_chunk_size: int = 100,
     max_chunk_size: int = 2000,
-) -> List[Document]:
+) -> list[Document]:
     """Семантический сплиттер через langchain_experimental.SemanticChunker."""
     _ = breakpoint_threshold
 
@@ -485,10 +486,10 @@ def semantic_split(
 # ---------------------------------------------------------------------------
 
 def structural_split(
-    docs: List[Document],
+    docs: list[Document],
     max_chunk_size: int,
     chunk_overlap: int,
-) -> List[Document]:
+) -> list[Document]:
     """Split markdown by headers, then cap each section to ``max_chunk_size``.
 
     A chunk becomes a logical section (under its heading) instead of N raw chars.
@@ -510,7 +511,7 @@ def structural_split(
     md_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on, strip_headers=False)
     char_splitter = _build_text_splitter(max_chunk_size, chunk_overlap)
 
-    out: List[Document] = []
+    out: list[Document] = []
     for doc in docs:
         try:
             sections = md_splitter.split_text(doc.page_content)
@@ -530,14 +531,14 @@ def structural_split(
 
 
 def select_chunks(
-    docs: List[Document],
+    docs: list[Document],
     embeddings: Any,
     chunk_size: int,
     chunk_overlap: int,
     *,
     settings: Any = None,
     use_semantic: bool = False,
-) -> List[Document]:
+) -> list[Document]:
     """Single chunking-strategy selector shared by all build sites.
 
     Precedence: structural (opt-in flag) > semantic > fixed. With the structural
@@ -565,10 +566,10 @@ def select_chunks(
 
 
 def add_contextual_headers(
-    chunks: List[Document],
+    chunks: list[Document],
     llm: Any,
-    full_documents: Optional[List[Document]] = None,
-) -> List[Document]:
+    full_documents: Optional[list[Document]] = None,
+) -> list[Document]:
     """Добавляет контекстный заголовок к каждому чанку (Anthropic Contextual Retrieval).
 
     Идея: чанк сам по себе может быть непонятен ("Рекомендуемое масло: 5W-30").
@@ -579,10 +580,10 @@ def add_contextual_headers(
 
     Если LLM недоступна, генерирует заголовок из metadata (source, page).
     """
-    enriched: List[Document] = []
+    enriched: list[Document] = []
 
     # Группируем чанки по source документу для контекста
-    source_texts: Dict[str, str] = {}
+    source_texts: dict[str, str] = {}
     if full_documents:
         for doc in full_documents:
             src = (doc.metadata or {}).get("source", "unknown")
@@ -650,7 +651,7 @@ class ParentDocumentStore:
 
     def __init__(
         self,
-        docs: List[Document],
+        docs: list[Document],
         embeddings: Any,
         child_chunk_size: int = 300,
         child_overlap: int = 50,
@@ -664,15 +665,15 @@ class ParentDocumentStore:
             chunk_size=parent_chunk_size,
             chunk_overlap=parent_overlap,
         )
-        self._parents: List[Document] = parent_splitter.split_documents(docs)
+        self._parents: list[Document] = parent_splitter.split_documents(docs)
 
         # Создаём child chunks с привязкой к parent
         child_splitter = _build_text_splitter(
             chunk_size=child_chunk_size,
             chunk_overlap=child_overlap,
         )
-        self._children: List[Document] = []
-        self._child_to_parent: Dict[int, int] = {}
+        self._children: list[Document] = []
+        self._child_to_parent: dict[int, int] = {}
 
         for parent_idx, parent in enumerate(self._parents):
             child_docs = child_splitter.split_documents([parent])
@@ -692,7 +693,7 @@ class ParentDocumentStore:
         logger.debug("ParentDocumentStore: %d parents, %d children", len(self._parents), len(self._children))
 
     @staticmethod
-    def _cosine(a: List[float], b: List[float]) -> float:
+    def _cosine(a: list[float], b: list[float]) -> float:
         import math
         dot = sum(x * y for x, y in zip(a, b, strict=True))
         na = math.sqrt(sum(x * x for x in a))
@@ -701,14 +702,14 @@ class ParentDocumentStore:
             return 0.0
         return dot / (na * nb)
 
-    def similarity_search(self, query: str, k: int = 5) -> List[Document]:
+    def similarity_search(self, query: str, k: int = 5) -> list[Document]:
         """Ищет по child-чанкам, возвращает parent-чанки (дедуплицированные)."""
         q_vec = self._embeddings.embed_query(query)
         scores = [(i, self._cosine(q_vec, v)) for i, v in enumerate(self._vectors)]
         scores.sort(key=lambda x: x[1], reverse=True)
 
         seen_parents: set = set()
-        results: List[Document] = []
+        results: list[Document] = []
 
         for child_idx, score in scores:
             parent_idx = self._child_to_parent[child_idx]
@@ -720,12 +721,12 @@ class ParentDocumentStore:
 
         return results
 
-    def get_relevant_documents(self, query: str) -> List[Document]:
+    def get_relevant_documents(self, query: str) -> list[Document]:
         from config.settings import get_settings  # noqa: PLC0415
 
         return self.similarity_search(query, k=get_settings().rerank_top_k)
 
-    def get_children(self) -> List[Document]:
+    def get_children(self) -> list[Document]:
         """Возвращает child-чанки (для BM25 индекса)."""
         return self._children
 
@@ -756,14 +757,14 @@ class MultiQueryRetriever:
         self._llm = llm
         self._max_queries = max_queries
 
-    def get_relevant_documents(self, query: str) -> List[Document]:
+    def get_relevant_documents(self, query: str) -> list[Document]:
         """Multi-query retrieval."""
         sub_queries = self._generate_sub_queries(query)
         if not sub_queries:
             return self._retriever.get_relevant_documents(query)
 
         # Retrieve for each sub-query
-        all_results: List[List[Document]] = []
+        all_results: list[list[Document]] = []
         for sq in sub_queries:
             try:
                 docs = self._retriever.get_relevant_documents(sq)
@@ -777,7 +778,7 @@ class MultiQueryRetriever:
         # Merge all results via RRF
         return self._rrf_merge_multiple(all_results)
 
-    def _generate_sub_queries(self, query: str) -> List[str]:
+    def _generate_sub_queries(self, query: str) -> list[str]:
         """Генерирует подвопросы через LLM."""
         if self._llm is None:
             return [query]
@@ -798,15 +799,15 @@ class MultiQueryRetriever:
         except Exception:
             return [query]
 
-    def _rrf_merge_multiple(self, result_lists: List[List[Document]], k: int = 60) -> List[Document]:
+    def _rrf_merge_multiple(self, result_lists: list[list[Document]], k: int = 60) -> list[Document]:
         """RRF merge для нескольких списков."""
         from config.settings import get_settings
 
         settings = get_settings()
         key_chars = getattr(settings, "rrf_doc_key_chars", 200)
         rrf_k = getattr(settings, "rrf_k", k)
-        scores: Dict[str, float] = {}
-        doc_map: Dict[str, Document] = {}
+        scores: dict[str, float] = {}
+        doc_map: dict[str, Document] = {}
 
         for result_list in result_lists:
             for rank, doc in enumerate(result_list):
@@ -817,7 +818,7 @@ class MultiQueryRetriever:
         sorted_keys = sorted(scores, key=lambda x: scores[x], reverse=True)
         return [doc_map[k] for k in sorted_keys]
 
-    def invoke(self, query: str) -> List[Document]:
+    def invoke(self, query: str) -> list[Document]:
         return self.get_relevant_documents(query)
 
 
@@ -829,16 +830,16 @@ class QdrantStubStore:
     """In-memory stub for Qdrant when dependencies are missing."""
 
     def __init__(self, docs: Sequence[Document], embeddings: Any):
-        self._docs: List[Document] = list(docs)
+        self._docs: list[Document] = list(docs)
         self._embeddings = embeddings
-        self._vectors: List[List[float]] = self._embed_documents()
+        self._vectors: list[list[float]] = self._embed_documents()
 
-    def _embed_documents(self) -> List[List[float]]:
+    def _embed_documents(self) -> list[list[float]]:
         texts = [d.page_content for d in self._docs]
         return self._embeddings.embed_documents(texts)
 
     @staticmethod
-    def _cosine(a: List[float], b: List[float]) -> float:
+    def _cosine(a: list[float], b: list[float]) -> float:
         import math
         dot = sum(x * y for x, y in zip(a, b, strict=True))
         na = math.sqrt(sum(x * x for x in a))
@@ -847,26 +848,26 @@ class QdrantStubStore:
             return 0.0
         return dot / (na * nb)
 
-    def similarity_search(self, query: str, k: int = 6) -> List[Document]:
+    def similarity_search(self, query: str, k: int = 6) -> list[Document]:
         q = self._embeddings.embed_query(query)
         scores = [(idx, self._cosine(q, v)) for idx, v in enumerate(self._vectors)]
         scores.sort(key=lambda x: x[1], reverse=True)
         return [self._docs[idx] for idx, _ in scores[:k]]
 
-    def as_retriever(self, search_kwargs: Optional[Dict[str, Any]] = None) -> "QdrantStubRetriever":
+    def as_retriever(self, search_kwargs: Optional[dict[str, Any]] = None) -> "QdrantStubRetriever":
         search_kwargs = search_kwargs or {"k": 6}
         return QdrantStubRetriever(self, search_kwargs)
 
 
 class QdrantStubRetriever:
-    def __init__(self, store: QdrantStubStore, search_kwargs: Dict[str, Any]):
+    def __init__(self, store: QdrantStubStore, search_kwargs: dict[str, Any]):
         self._store = store
         self._k = int(search_kwargs.get("k", 6))
 
-    def get_relevant_documents(self, query: str) -> List[Document]:
+    def get_relevant_documents(self, query: str) -> list[Document]:
         return self._store.similarity_search(query, k=self._k)
 
-    def invoke(self, query: str) -> List[Document]:
+    def invoke(self, query: str) -> list[Document]:
         return self.get_relevant_documents(query)
 
 
@@ -922,10 +923,10 @@ def _build_qdrant(docs: Sequence[Document], embeddings: Any) -> Any:
 
 def build_vector_store(
     docs: Sequence[Document],
-    chunk_config: Dict[str, int],
+    chunk_config: dict[str, int],
     embeddings: Any | None = None,
     use_semantic_chunking: bool = False,
-) -> tuple[Any, List[Document]]:
+) -> tuple[Any, list[Document]]:
     """Строит векторное хранилище из документов.
 
     Args:
@@ -984,10 +985,10 @@ def build_vector_store(
 
 
 def build_retriever(
-    docs: List[Document],
+    docs: list[Document],
     embeddings: Any,
     vector_store: Any | None = None,
-    chunks: List[Document] | None = None,
+    chunks: list[Document] | None = None,
     k: int | None = None,
 ) -> Any:
     """Builds a retriever according to current settings."""
@@ -1041,10 +1042,10 @@ def build_retriever(
             self._store = store
             self._k = top_k
 
-        def get_relevant_documents(self, query: str) -> List[Document]:
+        def get_relevant_documents(self, query: str) -> list[Document]:
             return self._store.similarity_search(query, k=self._k)
 
-        def invoke(self, query: str) -> List[Document]:
+        def invoke(self, query: str) -> list[Document]:
             return self.get_relevant_documents(query)
 
     return _SimpleRetriever(vector_store, rerank_k)
@@ -1056,7 +1057,7 @@ def build_retriever(
 
 def get_retriever(
     vector_store: Any,
-    chunks: List[Document] | None = None,
+    chunks: list[Document] | None = None,
     k: int | None = None,
 ) -> Any:
     """Возвращает retriever с hybrid search и reranker.
@@ -1112,9 +1113,9 @@ def get_retriever(
         def __init__(self, store: Any, top_k: int):
             self._store = store
             self._k = top_k
-        def get_relevant_documents(self, query: str) -> List[Document]:
+        def get_relevant_documents(self, query: str) -> list[Document]:
             return self._store.similarity_search(query, k=self._k)
-        def invoke(self, query: str) -> List[Document]:
+        def invoke(self, query: str) -> list[Document]:
             return self.get_relevant_documents(query)
 
     return _SimpleRetriever(vector_store, rerank_k)

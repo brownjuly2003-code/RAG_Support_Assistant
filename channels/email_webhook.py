@@ -4,7 +4,8 @@ import hashlib
 import hmac
 from email.message import EmailMessage
 from email.parser import Parser
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from pydantic import SecretStr
 

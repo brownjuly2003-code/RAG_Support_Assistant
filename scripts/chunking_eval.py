@@ -33,7 +33,8 @@ import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Sequence
 
 try:
     from langchain_core.documents import Document  # type: ignore
@@ -56,7 +57,7 @@ class ChunkingConfig:
 @dataclass
 class TestQuestion:
     question: str
-    expected_keywords: List[str]
+    expected_keywords: list[str]
     category: str = "general"
 
 
@@ -69,7 +70,7 @@ class EvalResult:
     avg_precision: float
     composite_score: float
     total_chunks: int
-    per_question: List[Dict[str, Any]]
+    per_question: list[dict[str, Any]]
 
 
 class ChunkingEvaluator:
@@ -108,7 +109,7 @@ class ChunkingEvaluator:
             embeddings = get_embeddings()
         self._embeddings = embeddings
 
-    def _split_with_config(self, config: ChunkingConfig) -> List[Document]:
+    def _split_with_config(self, config: ChunkingConfig) -> list[Document]:
         """Режет документы на чанки."""
         try:
             from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -121,7 +122,7 @@ class ChunkingEvaluator:
             separators=["\n\n", "\n", ". ", " ", ""],
         )
 
-        chunks: List[Document] = []
+        chunks: list[Document] = []
         for doc_idx, doc in enumerate(self.documents):
             pieces = splitter.split_text(doc.page_content)
             for i, text in enumerate(pieces):
@@ -135,7 +136,7 @@ class ChunkingEvaluator:
 
     _eval_counter = 0
 
-    def _build_ephemeral_store(self, chunks: List[Document]) -> chromadb.Collection:
+    def _build_ephemeral_store(self, chunks: list[Document]) -> chromadb.Collection:
         """Строит in-memory Chroma коллекцию."""
         ChunkingEvaluator._eval_counter += 1
         client = chromadb.EphemeralClient()
@@ -156,7 +157,7 @@ class ChunkingEvaluator:
         return collection
 
     @staticmethod
-    def _recall(retrieved_texts: List[str], expected_keywords: List[str]) -> float:
+    def _recall(retrieved_texts: list[str], expected_keywords: list[str]) -> float:
         """Recall: доля ожидаемых keywords, найденных в retrieved текстах."""
         if not expected_keywords:
             return 1.0
@@ -166,7 +167,7 @@ class ChunkingEvaluator:
         return found / len(unique_kws)
 
     @staticmethod
-    def _mrr(retrieved_texts: List[str], expected_keywords: List[str]) -> float:
+    def _mrr(retrieved_texts: list[str], expected_keywords: list[str]) -> float:
         """MRR: 1/rank первого чанка, содержащего хотя бы одно keyword."""
         if not expected_keywords:
             return 1.0
@@ -178,7 +179,7 @@ class ChunkingEvaluator:
         return 0.0
 
     @staticmethod
-    def _precision(retrieved_texts: List[str], expected_keywords: List[str]) -> float:
+    def _precision(retrieved_texts: list[str], expected_keywords: list[str]) -> float:
         """Precision@k: доля retrieved чанков, содержащих хотя бы одно keyword."""
         if not retrieved_texts or not expected_keywords:
             return 0.0
@@ -200,7 +201,7 @@ class ChunkingEvaluator:
 
         collection = self._build_ephemeral_store(chunks)
 
-        per_question: List[Dict[str, Any]] = []
+        per_question: list[dict[str, Any]] = []
         recalls, mrrs, precisions = [], [], []
 
         for tq in self.test_questions:
@@ -278,7 +279,7 @@ class ChunkingEvaluator:
               f" + Precision ({self.precision_weight})")
         print("=" * 60)
 
-        results: List[EvalResult] = []
+        results: list[EvalResult] = []
         for cfg in configs:
             t0 = time.time()
             res = self._evaluate_config(cfg)
@@ -308,7 +309,7 @@ class ChunkingEvaluator:
     def _save_results(
         self,
         best: EvalResult,
-        all_results: List[EvalResult],
+        all_results: list[EvalResult],
     ) -> None:
         """Сохраняет результаты в JSON."""
         self.best_config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -349,7 +350,7 @@ class ChunkingEvaluator:
 
 def load_best_config(
     path: str | Path = "data/chunking/best_chunk_config.json",
-) -> Optional[Dict[str, int]]:
+) -> Optional[dict[str, int]]:
     """Загружает лучшую конфигурацию из JSON. Возвращает None если файл не найден."""
     p = Path(path)
     if not p.exists():
@@ -358,7 +359,7 @@ def load_best_config(
     return data.get("best_config")
 
 
-def _load_test_questions(path: str | Path) -> List[TestQuestion]:
+def _load_test_questions(path: str | Path) -> list[TestQuestion]:
     """Загружает тестовые вопросы из JSON."""
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     return [

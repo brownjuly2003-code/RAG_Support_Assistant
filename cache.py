@@ -21,7 +21,7 @@ import logging
 import time
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +31,9 @@ def _hash_key(text: str) -> str:
     return hashlib.sha256(text.strip().lower().encode("utf-8")).hexdigest()[:32]
 
 
-def _serialise_docs(docs: Any) -> List[Dict[str, Any]]:
+def _serialise_docs(docs: Any) -> list[dict[str, Any]]:
     """Convert documents to JSON-serialisable dicts."""
-    result: List[Dict[str, Any]] = []
+    result: list[dict[str, Any]] = []
     if not docs:
         return result
     for doc in docs:
@@ -87,8 +87,8 @@ class RAGCache:
         self._enable_disk = enable_disk
 
         # In-memory LRU caches (OrderedDict for LRU eviction)
-        self._response_cache: OrderedDict[str, Dict[str, Any]] = OrderedDict()
-        self._retrieval_cache: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+        self._response_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
+        self._retrieval_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
 
         # Disk persistence path
         if persist_path is None:
@@ -107,7 +107,7 @@ class RAGCache:
     # Response cache: get / put
     # -------------------------------------------------------------------
 
-    def get(self, question: str) -> Optional[Dict[str, Any]]:
+    def get(self, question: str) -> Optional[dict[str, Any]]:
         """Look up a cached response for the given question.
 
         Returns the cached result dict if found and not expired, else None.
@@ -182,7 +182,7 @@ class RAGCache:
         while len(self._retrieval_cache) > self._max_size:
             self._retrieval_cache.popitem(last=False)
 
-    def get_retrieval(self, query: str) -> Optional[List[Dict[str, Any]]]:
+    def get_retrieval(self, query: str) -> Optional[list[dict[str, Any]]]:
         """Look up cached retrieval results for a query.
 
         Returns a list of document dicts if found and not expired, else None.

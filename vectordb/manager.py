@@ -6,7 +6,8 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
-from typing import TYPE_CHECKING, Any, Dict, List, Sequence
+from typing import TYPE_CHECKING, Any
+from collections.abc import Sequence
 
 from vectordb import _base_manager
 
@@ -21,7 +22,7 @@ else:
 Chroma = getattr(_base_manager, "Chroma", None)
 
 _retriever_cache: dict[str, Any] = {}
-_chunks_cache: dict[str, List[Document]] = {}
+_chunks_cache: dict[str, list[Document]] = {}
 _store_cache: dict[str, Any] = {}
 _cache_lock = Lock()
 
@@ -58,16 +59,16 @@ def _collection_name(tenant_id: str) -> str:
 
 
 def add_contextual_headers(
-    chunks: List[Document],
+    chunks: list[Document],
     full_documents: Sequence[Document],
     chunk_size: int,
-) -> List[Document]:
+) -> list[Document]:
     enriched = _base_manager.add_contextual_headers(
         list(chunks),
         llm=None,
         full_documents=list(full_documents),
     )
-    prepared: List[Document] = []
+    prepared: list[Document] = []
     for chunk in enriched:
         page_content = chunk.page_content
         if len(page_content) > chunk_size:
@@ -110,11 +111,11 @@ def _ensure_document_metadata(docs: Sequence[Document]) -> None:
 
 def build_vector_store(
     docs: Sequence[Document],
-    chunk_config: Dict[str, int],
+    chunk_config: dict[str, int],
     embeddings: Any | None = None,
     use_semantic_chunking: bool = False,
     tenant_id: str = "default",
-) -> tuple[Any, List[Document]]:
+) -> tuple[Any, list[Document]]:
     if not docs:
         raise ValueError("Document list is empty.")
 
@@ -189,7 +190,7 @@ def retrieve(
     tenant_id: str = "default",
     categories: Sequence[str] | None = None,
     k: int | None = None,
-) -> List[Document]:
+) -> list[Document]:
     retriever = get_retriever(k=k, tenant_id=tenant_id)
     docs = list(retriever.get_relevant_documents(query))
     if not categories:
@@ -204,7 +205,7 @@ def retrieve(
 
 def get_retriever(
     vector_store: Any | None = None,
-    chunks: List[Document] | None = None,
+    chunks: list[Document] | None = None,
     k: int | None = None,
     tenant_id: str = "default",
     persist_directory: str | Path | None = None,

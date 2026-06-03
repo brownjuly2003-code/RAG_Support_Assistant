@@ -6,7 +6,7 @@ Prompt templates and builders for the RAG assistant.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 PROMPT_REGISTRY: dict[str, dict[str, str]] = {
     "qa": {
@@ -290,7 +290,7 @@ def _resolve_prompt(name: str, experiment: Any | None = None) -> str:
     return get_prompt(name, experiment)
 
 
-def _format_context_block(context_docs: List[Dict[str, Any]]) -> str:
+def _format_context_block(context_docs: list[dict[str, Any]]) -> str:
     if not context_docs:
         return "Контекст отсутствует. База знаний не вернула ни одного фрагмента."
 
@@ -305,7 +305,7 @@ def _format_context_block(context_docs: List[Dict[str, Any]]) -> str:
 
 def build_qa_prompt(
     question: str,
-    context_docs: List[Dict[str, Any]],
+    context_docs: list[dict[str, Any]],
     experiment: Any | None = None,
 ) -> str:
     context_block = _format_context_block(context_docs)
@@ -318,7 +318,7 @@ def build_qa_prompt(
 def build_self_eval_prompt(
     question: str,
     answer: str,
-    context_docs: List[Dict[str, Any]],
+    context_docs: list[dict[str, Any]],
     experiment: Any | None = None,
 ) -> str:
     context_block = _format_context_block(context_docs)
@@ -370,7 +370,7 @@ def build_query_transform_prompt(question: str, experiment: Any | None = None) -
 
 def build_doc_grade_prompt(
     question: str,
-    document: Dict[str, Any],
+    document: dict[str, Any],
     experiment: Any | None = None,
 ) -> str:
     text = str(document.get("page_content", ""))
@@ -384,7 +384,7 @@ def build_doc_grade_prompt(
 
 def build_doc_grade_batch_prompt(
     question: str,
-    documents: List[Dict[str, Any]],
+    documents: list[dict[str, Any]],
     experiment: Any | None = None,
 ) -> str:
     parts = []
@@ -414,8 +414,8 @@ def build_query_rewrite_prompt(
 
 def build_conversational_qa_prompt(
     question: str,
-    context_docs: List[Dict[str, Any]],
-    chat_history: List[Dict[str, str]],
+    context_docs: list[dict[str, Any]],
+    chat_history: list[dict[str, str]],
     experiment: Any | None = None,
 ) -> str:
     context_block = _format_context_block(context_docs)
@@ -440,7 +440,7 @@ def build_conversational_qa_prompt(
 
 def build_conversational_query_transform_prompt(
     question: str,
-    chat_history: List[Dict[str, str]],
+    chat_history: list[dict[str, str]],
     experiment: Any | None = None,
 ) -> str:
     if not chat_history:

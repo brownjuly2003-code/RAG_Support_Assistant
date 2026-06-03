@@ -4,7 +4,8 @@ import json
 import math
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
+from collections.abc import Callable
 
 
 Message = dict[str, Any]
