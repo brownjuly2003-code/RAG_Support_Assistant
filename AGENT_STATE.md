@@ -1,5 +1,30 @@
 # Agent State
 
+## 2026-06-03 Update (cont. 10) — retrieval-fix barrier plan + Phase 0 done
+
+**HEAD `fc4ad0e` (master), worktree clean. 35 commits AHEAD of origin — NOT pushed (push gated).**
+
+Plan to overcome the heavy-compute barrier (BGE-M3+reranker >1 GiB, forbidden on Windows;
+OOMs 8GB iMac): `docs/plans/2026-06-03-overcome-retrieval-barrier.md`. Strategy = validate the
+contextual-header fix DIRECTION with a sub-1GiB proxy embedder locally (the "does the section
+anchor lift the target chunk's rank" question is largely embedder-agnostic), keep BGE-M3/reranker
+for confirmation only. Phases 0-1 autonomous/barrier-free; Phase 2 (production numbers) gated.
+
+- `d3907b3` the plan. `fc4ad0e` **Phase 0 DONE**. Discovery while implementing: the
+  contextual-header fix is **already implemented + wired** (flag `RAG_CONTEXTUAL_HEADERS`,
+  `vectordb/manager.py:135`, default off) and `ParentDocumentStore` is wired
+  (`RAG_PARENT_CHILD`). The only real gap was the no-LLM fallback header emitting just
+  `Из документа {source}` with no section anchor. Fixed: it now prepends the markdown
+  heading-path (h1..h4 from `structural_split`) → e.g. `…dangerous_goods.md, раздел:
+  Регламент: опасные грузы (dangerous goods) › 2. Обязательные поля`. Behavior-preserving
+  (no-LLM branch only, LLM path + default-off unchanged), unit-tested (test_base_manager 16 pass).
+
+**Next = Phase 1 (autonomous, <1GiB):** proxy A/B — ingest 201 aircargo docs with `all-MiniLM-L6-v2`
+(windows-safe ~594MB), two arms (current vs `RAG_STRUCTURAL_CHUNKING`+`RAG_CONTEXTUAL_HEADERS`),
+measure target-chunk rank for the 12 cases (7 deep + 5 uncertain) → go/no-go before spending
+remote. Discipline: split ingest/eval into separate python processes, kill orphan python, monitor
+RAM, abort if >1GiB. Then Phase 2 (Colab/iMac) for production recall/faithfulness.
+
 ## 2026-06-03 Update (cont. 9) — R7 LLM-judged baseline UNBLOCKED via Mistral
 
 **HEAD `62cfddc` (master), worktree clean. 29 commits AHEAD of origin — NOT pushed
