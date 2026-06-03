@@ -1,5 +1,26 @@
 # Agent State
 
+## 2026-06-03 Update (cont. 4) — F6 slice 3 (RUF012 ClassVar)
+
+**HEAD `d7661ac` (master), worktree clean apart from untracked
+`audit_claude_03_06_26.md`. 17 commits AHEAD of origin — NOT pushed (push gated).**
+
+- `d7661ac` **F6 slice — RUF012** — annotated all 13 mutable class-attribute defaults
+  as `typing.ClassVar`, then added `RUF012` to ruff `select` (now
+  `E,F,W,B904,B905,RUF012`). 1 source site (`api/app.py` `_S` fallback-settings
+  `cors_origins`) + 12 test-double classes (FakeSession `_history`, FakeResult
+  `result`/`info`, curated stub list fields) across 8 test files. Behavior-preserving
+  (ClassVar is annotation-only; under `from __future__ import annotations` it never
+  evaluates at runtime). ruff clean; 36 affected tests pass; `git diff --check`
+  origin..HEAD clean.
+
+**Three lint rules now ratcheted this session: B904 + B905 + RUF012.** Next free/local
+(documented, not started — session-length stop): the wider ruff — `UP035` (38 sites,
+autofixable `typing.Dict/List`→`dict/list`, audit calls harmless), then `I` (isort,
+~135 I001) and the ~144 `RUF100` unused-noqa, ideally as the last lint step so RUF100
+doesn't strip noqa needed by rules enabled before it. Larger/gated unchanged:
+app.py/graph.py decomposition (quarter-tier), R7 LLM-RAGAS (env-gated).
+
 ## 2026-06-03 Update (cont. 3) — F6 slice 2 (B905 zip strict=)
 
 **HEAD `cb59f7e` (master), worktree clean apart from untracked
