@@ -1,5 +1,35 @@
 # Agent State
 
+## 2026-06-03 Update (cont. 8) — MiniMax audit acted on (F1 4/4, B009)
+
+**HEAD = handoff commit (master), worktree clean apart from untracked audits (now
+committed — see below). 26+ commits AHEAD of origin — NOT pushed (push gated).**
+
+`audit_mm_03_06_26.md` (MiniMax, dropped mid-session) reviewed and acted on:
+
+- `9ab9782` **F1 completed 4/4** — MiniMax §5.1 caught the site the original F1 commit
+  missed: `api/routers/admin_kb.py:68` curated-dataset rebuild used
+  `_app.asyncio.create_task(...)` → now `spawn_tracked`. Added a router-wide guard test
+  (no bare `create_task` in `api/routers/`). Real fix (GC could drop the rebuild job).
+- `ab1c7d7` **B009 ratchet** — MiniMax §5.3. ruff autofix 18 `getattr(x,"const")`→`x.const`
+  sites; `B009` added to select. Behavior-preserving. 32 tests pass.
+- ruff `select` now `E,F,W,B904,B905,B009,RUF012,UP006,UP035,I` — green.
+
+**MiniMax findings deliberately NOT acted on (with reason):**
+- **§1 "HEAD≠worktree, 119 dirty / AGENT_STATE lies"** — STALE. It was a snapshot taken
+  mid-session while the isort changes were uncommitted in the worktree; committed as
+  `51ffd2f`. Worktree is clean now. Not a real defect.
+- **§5.2 F5-continuation** (graph.py ~1417/1460, api/app.py ~1455/1717/1728/1764) — these
+  are the Prometheus `.inc()/.observe()/record_*` wrappers I intentionally left in F5.
+  Wrapping a metrics call in try/except is correct best-effort (a metrics hiccup must not
+  500 a request); `logger.debug` there is noise, not a bug fix. **Disagree on facts — left.**
+- **§10.5 coverage source** (add `integrations/`+`cache.py` to `[tool.coverage.run]`) —
+  could DROP coverage below `fail_under=70` and break CI; can't measure locally (env
+  divergent). Not shipping blind — deferred.
+
+Both audits (`audit_claude_03_06_26.md`, `audit_mm_03_06_26.md`) committed to the repo
+(it tracks audits historically).
+
 ## 2026-06-03 Update (cont. 7) — backlog floor reached; decomposition scoped
 
 **HEAD = handoff commit (master), worktree clean apart from untracked
