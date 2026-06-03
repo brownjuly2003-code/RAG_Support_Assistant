@@ -77,6 +77,7 @@ def test_get_embeddings_wraps_and_caches_sentence_transformer(
 
     monkeypatch.setitem(sys.modules, "sentence_transformers", module)
     monkeypatch.setattr(manager, "_cached_embeddings", None)
+    monkeypatch.setattr(settings_module, "get_settings", lambda: SimpleNamespace(rag_device="cpu"))
 
     embeddings = manager.get_embeddings("fake-model")
 
@@ -97,6 +98,7 @@ def test_get_reranker_handles_disabled_dependency_and_caches(
 
     monkeypatch.setattr(manager, "_cached_reranker", None)
     monkeypatch.setattr(manager, "HAS_CROSS_ENCODER", False)
+    monkeypatch.setattr(settings_module, "get_settings", lambda: SimpleNamespace(rag_device="cpu"))
     assert manager.get_reranker("reranker-a") is None
 
     monkeypatch.setattr(manager, "HAS_CROSS_ENCODER", True)
@@ -106,6 +108,44 @@ def test_get_reranker_handles_disabled_dependency_and_caches(
 
     assert created == ["reranker-b:cpu"]
     assert manager.get_reranker("reranker-c") is reranker
+
+
+def test_resolve_device_passthrough_and_setting(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Explicit values are used as-is (normalized to lowercase).
+    assert manager._resolve_device("cuda:0") == "cuda:0"
+    assert manager._resolve_device("CPU") == "cpu"
+    assert manager._resolve_device("mps") == "mps"
+
+    # None reads config.settings.get_settings().rag_device.
+    monkeypatch.setattr(settings_module, "get_settings", lambda: SimpleNamespace(rag_device="cuda"))
+    assert manager._resolve_device() == "cuda"
+
+
+def test_resolve_device_auto_detects_accelerator(monkeypatch: pytest.MonkeyPatch) -> None:
+    cuda_torch = types.ModuleType("torch")
+    cuda_torch.cuda = SimpleNamespace(is_available=lambda: True)
+    cuda_torch.backends = SimpleNamespace(mps=SimpleNamespace(is_available=lambda: False))
+    monkeypatch.setitem(sys.modules, "torch", cuda_torch)
+    assert manager._resolve_device("auto") == "cuda"
+
+    mps_torch = types.ModuleType("torch")
+    mps_torch.cuda = SimpleNamespace(is_available=lambda: False)
+    mps_torch.backends = SimpleNamespace(mps=SimpleNamespace(is_available=lambda: True))
+    monkeypatch.setitem(sys.modules, "torch", mps_torch)
+    assert manager._resolve_device("auto") == "mps"
+
+
+def test_resolve_device_auto_falls_back_to_cpu(monkeypatch: pytest.MonkeyPatch) -> None:
+    # No accelerator available → cpu.
+    cpu_torch = types.ModuleType("torch")
+    cpu_torch.cuda = SimpleNamespace(is_available=lambda: False)
+    cpu_torch.backends = SimpleNamespace(mps=SimpleNamespace(is_available=lambda: False))
+    monkeypatch.setitem(sys.modules, "torch", cpu_torch)
+    assert manager._resolve_device("auto") == "cpu"
+
+    # torch import failing → cpu (None in sys.modules forces ImportError).
+    monkeypatch.setitem(sys.modules, "torch", None)
+    assert manager._resolve_device("auto") == "cpu"
 
 
 def test_add_contextual_headers_uses_llm_truncates_and_falls_back() -> None:

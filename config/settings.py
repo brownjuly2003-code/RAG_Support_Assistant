@@ -294,6 +294,12 @@ class Settings:
     # ""                                      — отключить reranker
     reranker_model: str = os.getenv("RAG_RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
 
+    # --- Inference device for embedder + reranker (SentenceTransformers) ---
+    # "auto" — detect cuda → mps → cpu (safe fallback to cpu if torch is absent)
+    # "cpu" / "cuda" / "cuda:0" / "mps" — force a specific device
+    # Matters after the heavy multilingual bge-reranker-v2-m3 (568M): CPU rerank is slow.
+    rag_device: str = os.getenv("RAG_DEVICE", "auto")
+
     # --- Hybrid Search ---
     # Включить BM25 + vector hybrid search (Reciprocal Rank Fusion)
     hybrid_search: bool = os.getenv("RAG_HYBRID_SEARCH", "true").strip().lower() in ("1", "true", "yes")

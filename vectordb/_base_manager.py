@@ -70,6 +70,34 @@ HAS_CROSS_ENCODER: bool | None = None
 _cached_embeddings: Any = None
 
 
+def _resolve_device(device: str | None = None) -> str:
+    """Resolve the SentenceTransformers/CrossEncoder device.
+
+    ``None``/``"auto"``/empty → detect cuda → mps → cpu. Detection is guarded:
+    if torch is unavailable or probing raises, falls back to ``"cpu"``. Any
+    other value (``"cpu"``, ``"cuda"``, ``"cuda:0"``, ``"mps"``) is used as-is.
+    """
+    if device is None:
+        from config.settings import get_settings
+
+        device = get_settings().rag_device
+
+    normalized = (device or "").strip().lower()
+    if normalized and normalized != "auto":
+        return normalized
+
+    try:
+        import torch  # type: ignore
+
+        if torch.cuda.is_available():
+            return "cuda"
+        if getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+            return "mps"
+    except Exception:  # torch missing or probe failed — CPU is always safe
+        logger.debug("device auto-detection fell back to cpu", exc_info=True)
+    return "cpu"
+
+
 def _load_chroma() -> Any | None:
     global Chroma, HAS_CHROMA
     if HAS_CHROMA is False:
@@ -154,7 +182,9 @@ def get_embeddings(model_name: str | None = None) -> Any:
         def embed_query(self, text: str) -> List[float]:
             return self._model.encode([text], normalize_embeddings=True)[0].tolist()
 
-    model = SentenceTransformer(model_name, device="cpu")
+    device = _resolve_device()
+    logger.info("Embedding device: %s", device)
+    model = SentenceTransformer(model_name, device=device)
     embeddings = _STEmbeddings(model)
 
     elapsed = time.time() - start
@@ -207,9 +237,10 @@ def get_reranker(model_name: str | None = None) -> Any | None:
         logger.warning("sentence-transformers not installed — reranker disabled")
         return None
 
-    logger.info("Loading reranker: %s", model_name)
+    device = _resolve_device()
+    logger.info("Loading reranker: %s (device=%s)", model_name, device)
     start = time.time()
-    reranker = cross_encoder_cls(model_name, device="cpu")
+    reranker = cross_encoder_cls(model_name, device=device)
     elapsed = time.time() - start
     logger.info("Reranker loaded in %.1fs", elapsed)
     _cached_reranker = reranker
