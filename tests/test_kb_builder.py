@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 import uuid
 from datetime import datetime, timezone
 
@@ -49,7 +51,7 @@ def test_admin_kb_drafts_endpoint_filters_by_status_and_tenant(
         tenant_id = "acme"
         topic = "Возвраты"
         draft_content = "# Возврат\n\nИнструкция"
-        source_ticket_ids = ["1", "2", "3"]
+        source_ticket_ids: ClassVar[list[str]] = ["1", "2", "3"]
         status = "pending"
         created_at = datetime(2026, 4, 21, 10, 0, tzinfo=timezone.utc)
         reviewed_at = None

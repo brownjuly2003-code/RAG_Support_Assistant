@@ -1,4 +1,5 @@
 import io
+from typing import ClassVar
 import subprocess
 import sys
 from pathlib import Path
@@ -125,7 +126,7 @@ def test_task_status_ready_success_refreshes_vector_store(
 
     class FakeResult:
         status = "SUCCESS"
-        result = {"status": "ok", "docs_count": 2}
+        result: ClassVar[dict] = {"status": "ok", "docs_count": 2}
         info = None
 
         def ready(self) -> bool:
@@ -162,7 +163,7 @@ def test_task_status_pending_includes_meta(
     class FakeResult:
         status = "PROCESSING"
         result = None
-        info = {"step": "indexing"}
+        info: ClassVar[dict] = {"step": "indexing"}
 
         def ready(self) -> bool:
             return False

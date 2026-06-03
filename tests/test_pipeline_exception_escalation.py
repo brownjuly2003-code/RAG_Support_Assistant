@@ -7,6 +7,8 @@ on a generic pipeline exception, but no ticket / inbox row was created
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import importlib
 
 import pytest
@@ -29,7 +31,7 @@ def test_pipeline_exception_persists_escalated_ticket(
 
     class _BrokenSession:
         _tenant_id = "tenant-x"
-        _history: list[dict[str, str]] = []
+        _history: ClassVar[list[dict[str, str]]] = []
 
         def ask(self, question, trace_id=None, tenant_id="default"):
             raise RuntimeError("simulated provider outage")

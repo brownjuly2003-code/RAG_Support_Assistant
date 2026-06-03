@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 import importlib
 from datetime import datetime, timezone
 
@@ -76,7 +78,7 @@ def test_admin_kb_gaps_endpoint_filters_by_tenant(
         tenant_id = "acme"
         cluster_id = "returns"
         topic_summary = "Возвраты и отмены"
-        sample_questions = ["Как вернуть товар?"]
+        sample_questions: ClassVar[list[str]] = ["Как вернуть товар?"]
         question_count = 6
         created_at = datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc)
         resolved_at = None

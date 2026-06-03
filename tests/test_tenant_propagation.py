@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 import asyncio
 import importlib
 
@@ -144,7 +146,7 @@ def test_ask_endpoint_propagates_tenant_to_graph(
 
     class FakeSession:
         ask = staticmethod(_spy_ask)
-        _history: list = []
+        _history: ClassVar[list] = []
 
     monkeypatch.setattr(
         api_app,

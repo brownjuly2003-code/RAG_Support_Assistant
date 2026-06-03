@@ -24,7 +24,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, AsyncGenerator, ClassVar, Dict, List, Optional, cast
 
 import httpx
 from fastapi import APIRouter, FastAPI, Request
@@ -192,7 +192,7 @@ except ImportError:
             llm_cache_enabled = False
             llm_cache_ttl_seconds = 3600
             rag_env = "development"
-            cors_origins = ["*"]
+            cors_origins: ClassVar[list[str]] = ["*"]
             session_secret_key = "dev-secret-change-in-production!"
             tenant_email_domains = ""
             google_oidc_client_id = None

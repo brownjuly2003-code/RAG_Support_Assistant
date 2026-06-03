@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import importlib
-from typing import Any
+from typing import Any, ClassVar
 
 from fastapi.testclient import TestClient
 
@@ -32,7 +32,7 @@ def test_ask_response_declares_utf8_for_cyrillic_payload(
 
     class FakeSession:
         ask = staticmethod(_ask)
-        _history: list[dict[str, str]] = []
+        _history: ClassVar[list[dict[str, str]]] = []
 
     monkeypatch.setattr(api_app, "log_audit", _noop_log_audit)
     monkeypatch.setattr(
@@ -69,7 +69,7 @@ def test_cached_ask_response_declares_utf8_for_cyrillic_payload(
             _ = question, kwargs
             raise AssertionError("session.ask must not be called on cache hit")
 
-        _history: list[dict[str, str]] = []
+        _history: ClassVar[list[dict[str, str]]] = []
 
     def _cache_json_get(key: str) -> dict[str, Any]:
         _ = key

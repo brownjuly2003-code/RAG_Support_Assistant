@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 import importlib
 import threading
 import time
@@ -50,7 +52,7 @@ def test_slow_pipeline_returns_504(
 
     class FakeSession:
         ask = staticmethod(_slow_ask)
-        _history: list = []
+        _history: ClassVar[list] = []
 
     monkeypatch.setattr(
         api_app,
@@ -87,7 +89,7 @@ def test_timeout_counter_increments(
 
     class FakeSession:
         ask = staticmethod(_slow_ask)
-        _history: list = []
+        _history: ClassVar[list] = []
 
     monkeypatch.setattr(
         api_app,
@@ -123,7 +125,7 @@ def test_event_loop_not_blocked_during_pipeline(
 
     class FakeSession:
         ask = staticmethod(_sync_ask)
-        _history: list = []
+        _history: ClassVar[list] = []
 
     monkeypatch.setattr(
         api_app,

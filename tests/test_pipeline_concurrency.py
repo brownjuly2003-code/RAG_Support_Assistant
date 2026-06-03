@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 import importlib
 import threading
 import time
@@ -18,7 +20,7 @@ def _fake_slow_session_factory(sleep_sec: float):
 
     class FakeSession:
         ask = staticmethod(_slow_ask)
-        _history: list = []
+        _history: ClassVar[list] = []
 
     return FakeSession
 
