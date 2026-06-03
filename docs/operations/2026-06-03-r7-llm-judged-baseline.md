@@ -67,6 +67,55 @@ cross-border-required-fields · breach-notification-required-fields
    теряющие заголовок-якорь.
 4. Проверить полноту корпуса по этим темам (нет фрагмента → recall недостижим в принципе).
 
+## Диагностика 17 zero-recall — 10 recoverable реранкером + 7 настоящих промахов
+
+Кэш `.tmp/ab_candidates.json` хранит **полный RRF-пул** (24-40 кандидатов/кейс), а recall в
+eval считался по **top-5 БЕЗ production-реранкера** bge-reranker-v2-m3. Разбор 17 промахов по
+наличию ключей в (top-5 / полный пул / корпус):
+
+| Категория | n | Что значит |
+|---|---:|---|
+| **rerank_recoverable** | **10** | ключи ЕСТЬ в RRF-пуле, но ниже top-5 → production-реранкер их, вероятно, поднимает. Кэш-baseline без реранка **занижает recall** |
+| **deep_retrieval_miss** | **7** | ключи в корпусе есть, но RRF (dense+BM25) не достал чанк даже в top-40 — настоящая цель |
+| content_gap | 0 | весь нужный контент в корпусе присутствует |
+
+⇒ Эффективный recall 0.785 — это **нижняя граница без реранкера**; полный A/B 2026-06-02 уже
+дал **80% top-5 С bge-v2-m3** vs 74% без. Реальная цель сузилась с 17 до **7**.
+
+### Корневая причина 7 deep-miss (одинакова во всех)
+
+Все 7 — запросы класса `*-required-fields`. Ожидаемые ключи — это **ID полей внутри
+markdown-таблиц** под заголовком «## 2. Обязательные поля»:
+
+```
+Q: «Какие поля нужны для допуска dangerous goods к air cargo рейсу?»
+kws: cargo_un_number, cargo_class
+корпус: 05_tlog_regulation_dangerous_goods.md → «## 2. Обязательные поля»
+        | `cargo_un_number` | Номер груза UN | `{{cargo_un_number}}` |
+```
+
+Запрос на естественном русском **не пересекается лексически** со snake_case-идентификаторами.
+Dense (BGE-M3) не сближает code-токен `cargo_un_number` с NL-запросом; BM25 тоже мажет (нет
+общих слов). Кейсы: `dangerous-goods-fields`, `customs-clearance-fields`, `waybill-first-mile-fields`,
+`access-control-review`, `driver-hours-required-fields`, `perishable-temperature-controls`,
+`cross-border-required-fields` — все по шаблону `05_tlog_regulation_*` / `06_comp_policy_*`.
+
+### Что это меняет в плане фикса
+
+- **BGE-M3 native sparse / R5 — СЛАБО** для этих 7: общих терминов между запросом и таблицей
+  нет, sparse усиливает exact-match там, где совпадать нечему. (Корректирует прежнюю рекомендацию.)
+- **Contextual-header / parent-child chunking — СИЛЬНО**: чанк-таблица должна нести якорь из
+  заголовка/тайтла («Обязательные поля для опасных грузов / dangerous goods»). Тогда dense
+  матчит «какие поля нужны для dangerous goods» ↔ контекстуализированный чанк. Это
+  Anthropic-style contextual retrieval, сделанный правильно (сейчас static-header баган, R2).
+- **HyDE — умеренно**: гипотетический ответ может дать field-подобные термины, но вряд ли точные
+  snake_case ID.
+
+Рекомендуемый следующий remote-A/B (heavy ingest → Colab/iMac): **contextual-header chunking на
+`05_tlog_regulation_*`/`06_comp_policy_*`**, замер recall на этих 7 + faithfulness re-run.
+Reranker-recoverable 10 — проверить отдельным top-5-С-реранком прогоном (подтвердить, что
+production уже их закрывает, и не гоняться за артефактом rerank-less baseline).
+
 ## Воспроизведение
 
 ```
