@@ -1,5 +1,39 @@
 # Agent State
 
+## 2026-06-03 Update (cont. 9) — R7 LLM-judged baseline UNBLOCKED via Mistral
+
+**HEAD `62cfddc` (master), worktree clean. 29 commits AHEAD of origin — NOT pushed
+(push gated).**
+
+The quality ceiling both audits named (proven-quality 6.5/10 — faithfulness/
+answer_relevancy NEVER measured because free LLM APIs are geo-blocked from RU IP)
+is now **measured**. The blocker was treated as absolute in cont. 1-8 ("free hosted
+LLM unreachable, gated"), but the project's own `MISTRAL_API_KEY` works and Mistral's
+OpenAI-compatible endpoint is reachable from RU without a VPN.
+
+- `62cfddc` **R7 LLM-judged** — added `mistral` provider to
+  `scripts/aircargo_ragas_free.py` (same `FreeChatLLM` OpenAI-compat client, key from
+  `.env`, never printed). Full 100-case aircargo run, `mistral-small-latest` as
+  generator+judge, 300 LLM calls, 0 errors, sub-dollar cost. Report:
+  `docs/operations/2026-06-03-r7-llm-judged-baseline.md`; run
+  `20260603T031646Z-e437ad07` (reports/ragas is gitignored).
+
+**Numbers (first-ever LLM-judged generation):** faithfulness **0.833**,
+answer_relevancy **0.838**, context_precision 0.488, context_recall 0.785
+(precision/recall match the retrieval-only baseline to 3 decimals → stable signal).
+
+**Key finding — the bottleneck is RETRIEVAL, not generation.** faithfulness on
+full-recall cases = **0.893** vs **0.624** on zero-recall (n=74 vs 17). Generation is
+reliable when retrieval hits. The 17 zero-recall cases concentrate on the
+`*-required-fields` query class (field-list lookups in tables/structural sections that
+RRF top-k misses; structural-chunking A/B did NOT close it). **Next RAG step (Lever 2,
+measure→fix→re-measure):** BGE-M3 native sparse (R5-cont) / query-expansion-HyDE on the
+`-fields` class / parent-child section-aware chunking / corpus-completeness check. Heavy
+ingest+rerank still Colab/iMac only (Windows host >1 GiB forbidden); LLM-judging itself
+is light (API calls on cached contexts).
+
+**Re-run:** `set -a; . ./.env; set +a; python scripts/aircargo_ragas_free.py --provider mistral --min-interval 1.2`
+
 ## 2026-06-03 Update (cont. 8) — MiniMax audit acted on (F1 4/4, B009)
 
 **HEAD = handoff commit (master), worktree clean apart from untracked audits (now
