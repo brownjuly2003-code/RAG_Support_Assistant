@@ -28,8 +28,12 @@ reliable when retrieval hits. The 17 zero-recall cases concentrate on the
 `*-required-fields` query class. **Diagnosed (commit `24c5168`):** the 17 split into
 **10 rerank-recoverable** (kws in the full RRF pool but below top-5 — the cached eval has
 NO production bge-v2-m3 reranker, so 0.785 is a LOWER bound; the 2026-06-02 A/B already
-showed 80% top-5 WITH the reranker) + **7 deep-miss** + 0 content-gap. Real target = **7**,
-not 17. All 7 share one root cause: NL RU queries vs snake_case field IDs inside markdown
+showed 80% top-5 WITH the reranker) + **7 deep-miss** + 0 content-gap. **Rank-graded
+(refines an earlier overclaim of "target=7"):** of the 10, only **4** sit at pool-rank ≤10
+(reranker lifts easily → likely prod-covered), **5** at rank 11-20 (uncertain, need a
+top-5-with-reranker run), **1** at rank 32/40 (effectively deep). Honest target = **7 deep +
+1 near-deep confirmed hard, 5 uncertain, 4 covered** — matches the A/B (80% = reranker
+recovered ~6 of 26, not all 10). All 7 share one root cause: NL RU queries vs snake_case field IDs inside markdown
 tables under `## Обязательные поля` — zero lexical overlap, so dense AND BM25 both fail.
 **This kills the earlier "BGE-M3 sparse" idea** (no shared terms); the right lever is
 **contextual-header / parent-child chunking** (chunk must carry the section/topic anchor).
