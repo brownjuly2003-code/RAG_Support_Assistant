@@ -1,5 +1,28 @@
 # Agent State
 
+## 2026-06-03 Update (cont. 5) — F6 slice 4 (UP006/UP035 PEP 585)
+
+**HEAD `c62d28b` (master), worktree clean apart from untracked
+`audit_claude_03_06_26.md`. 19 commits AHEAD of origin — NOT pushed (push gated).**
+
+- `c62d28b` **F6 slice — UP006/UP035** — ruff autofix `typing.Dict/List`→`dict/list`
+  (UP006, 245 annotation sites) + dropped the now-unused `typing` imports
+  (UP035 + F401, 27 lines / 38 files), then added `UP006,UP035` to ruff `select`.
+  Annotation-only, no runtime change; safe on 3.11/3.13 (PEP 585). Verified: ruff
+  clean (`E,F,W,B904,B905,RUF012,UP006,UP035`); full suite **collects 838 tests**
+  (all module + Pydantic class-def imports load); functional subset over most-changed
+  modules **47 pass**; `git diff --check` clean.
+
+**Lint-ratchet this session (all enforced + green): B904 · B905 · RUF012 ·
+UP006/UP035.** Plus R6, F5, 2 F2 test-regression fixes. **Remaining ruff tail (only
+cosmetic, audit-deferred, NOT started — deliberate stop): `I` (isort, ~135 I001 —
+note UP left some `typing`/`collections.abc` import pairs unsorted) + `RUF100`
+(~144 unused-noqa). Do RUF100 LAST so it doesn't strip noqa for rules enabled before
+it; both are one-pass autofix but ~280 mechanical changes — large cosmetic diff, low
+value, kept out of the gated series on purpose.** Larger/gated unchanged:
+app.py/graph.py decomposition (quarter-tier), R7 LLM-RAGAS (env-gated: free LLM APIs
+unreachable from RU IP, no card).
+
 ## 2026-06-03 Update (cont. 4) — F6 slice 3 (RUF012 ClassVar)
 
 **HEAD `d7661ac` (master), worktree clean apart from untracked
