@@ -180,6 +180,37 @@ def test_add_contextual_headers_uses_llm_truncates_and_falls_back() -> None:
     assert "4" in no_llm[0].metadata["contextual_header"]
 
 
+def test_contextual_header_no_llm_carries_markdown_heading_path() -> None:
+    """No-LLM fallback prepends the structural heading path (h1..h4).
+
+    This is the anchor that lets '*-required-fields' NL queries reach the
+    field-table chunk (see docs/operations/2026-06-03-r7-llm-judged-baseline.md):
+    the table chunk's own heading is just 'Обязательные поля', so it must carry
+    the doc topic (h1) + section (h2) for the query to match.
+    """
+    chunk = manager.Document(
+        page_content="| `cargo_un_number` | Номер груза UN |",
+        metadata={
+            "source": "05_tlog_regulation_dangerous_goods.md",
+            "h1": "Регламент: опасные грузы (dangerous goods)",
+            "h2": "2. Обязательные поля",
+        },
+    )
+    enriched = manager.add_contextual_headers([chunk], None)
+    header = enriched[0].metadata["contextual_header"]
+    assert "раздел:" in header
+    assert "Регламент: опасные грузы (dangerous goods)" in header
+    assert "2. Обязательные поля" in header
+    assert "›" in header
+    # the anchor is prepended to the embedded text, not just stored in metadata
+    assert header in enriched[0].page_content
+    # a chunk WITHOUT heading metadata must be unchanged in shape (no stray "раздел:")
+    plain = manager.add_contextual_headers(
+        [manager.Document(page_content="x", metadata={"source": "S"})], None,
+    )
+    assert "раздел:" not in plain[0].metadata["contextual_header"]
+
+
 def test_hybrid_retriever_vector_paths_and_reranker_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

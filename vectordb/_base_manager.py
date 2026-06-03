@@ -618,9 +618,18 @@ def add_contextual_headers(
             except Exception:
                 header = f"Из документа {source}"
         else:
-            # Fallback: генерируем из metadata
-            page = (chunk.metadata or {}).get("page", "")
+            # Fallback: генерируем из metadata (без LLM).
+            # Несём markdown heading-path (h1..h4, которые проставляет
+            # structural_split) — это даёт чанку-таблице якорь раздела
+            # ("Обязательные поля") + тему дока, чего не хватало для запросов
+            # класса "какие поля нужны для X" (см.
+            # docs/operations/2026-06-03-r7-llm-judged-baseline.md).
+            meta = chunk.metadata or {}
             header = f"Из документа {source}"
+            heading_path = [str(meta[h]).strip() for h in ("h1", "h2", "h3", "h4") if meta.get(h)]
+            if heading_path:
+                header += ", раздел: " + " › ".join(heading_path)
+            page = meta.get("page", "")
             if page:
                 header += f", стр. {page}"
 
