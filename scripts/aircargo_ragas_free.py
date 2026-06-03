@@ -19,7 +19,10 @@ Reuses evaluation.ragas_eval.RAGEvaluator and the aircargo report renderer so th
 output is comparable to the mock/live RAGAS reports under reports/ragas/.
 
 The API key is read from the environment only (GROQ_API_KEY / GEMINI_API_KEY /
-OPENROUTER_API_KEY); nothing secret is hard-coded or printed.
+OPENROUTER_API_KEY / MISTRAL_API_KEY); nothing secret is hard-coded or printed.
+The ``mistral`` provider uses the project key and is the one path reachable from a
+RU IP without a VPN (the free tiers above are geo-blocked); it is freemium, so a
+run may incur sub-dollar cost on the cheapest models.
 """
 from __future__ import annotations
 
@@ -60,6 +63,13 @@ _PROVIDERS = {
         "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
         "env": "GEMINI_API_KEY",
         "default_model": "gemini-2.0-flash",
+    },
+    "mistral": {
+        # Mistral's OpenAI-compatible endpoint; reachable from RU IP (unlike the
+        # geo-blocked free tiers above). Uses the project's MISTRAL_API_KEY.
+        "url": "https://api.mistral.ai/v1/chat/completions",
+        "env": "MISTRAL_API_KEY",
+        "default_model": "mistral-small-latest",
     },
 }
 
