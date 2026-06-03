@@ -102,7 +102,7 @@ async def health_check() -> JSONResponse:
         )
     if provider_probe_calls:
         provider_statuses.update(
-            zip(provider_probe_names, await asyncio.gather(*provider_probe_calls))
+            zip(provider_probe_names, await asyncio.gather(*provider_probe_calls), strict=True)
         )
 
     chroma_status, sqlite_status, postgres_status, redis_status = await asyncio.gather(

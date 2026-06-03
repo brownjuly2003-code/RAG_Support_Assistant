@@ -188,9 +188,9 @@ def compute_binary_metrics(
     actual = [bool(item) for item in actual_bad]
     predicted = [bool(item) for item in predicted_bad]
 
-    true_positive = sum(1 for truth, guess in zip(actual, predicted) if truth and guess)
-    false_positive = sum(1 for truth, guess in zip(actual, predicted) if not truth and guess)
-    false_negative = sum(1 for truth, guess in zip(actual, predicted) if truth and not guess)
+    true_positive = sum(1 for truth, guess in zip(actual, predicted, strict=True) if truth and guess)
+    false_positive = sum(1 for truth, guess in zip(actual, predicted, strict=True) if not truth and guess)
+    false_negative = sum(1 for truth, guess in zip(actual, predicted, strict=True) if truth and not guess)
 
     precision = true_positive / (true_positive + false_positive) if (true_positive + false_positive) else 0.0
     recall = true_positive / (true_positive + false_negative) if (true_positive + false_negative) else 0.0

@@ -171,7 +171,8 @@ class IngestPipeline:
                     except Exception as exc:
                         logger.warning("[IngestPipeline] Contextual header generation failed: %s", exc)
                     else:
-                        for doc, response in zip(docs, responses):
+                        # strict=False: tolerate LLM response count drift from docs.
+                        for doc, response in zip(docs, responses, strict=False):
                             header = str(getattr(response, "text", "") or "").strip()
                             if not header:
                                 continue

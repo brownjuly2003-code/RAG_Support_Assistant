@@ -173,7 +173,7 @@ def render_report(fixed: dict, semantic: dict) -> str:
         ]
     )
 
-    for fixed_item, semantic_item in zip(fixed["per_question"], semantic["per_question"]):
+    for fixed_item, semantic_item in zip(fixed["per_question"], semantic["per_question"], strict=True):
         question = fixed_item["question"][:40]
         fixed_score = fixed_item["scores"].get("context_recall", 0)
         semantic_score = semantic_item["scores"].get("context_recall", 0)

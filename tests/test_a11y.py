@@ -204,7 +204,7 @@ def test_a11y_template_heading_order_is_sequential(template_name: str) -> None:
     rendered = env.get_template(template_name).render(**TEMPLATE_A11Y_CONTEXTS[template_name])
     levels = [int(match.group(1)) for match in re.finditer(r"<h([1-6])\b", rendered)]
 
-    for previous, current in zip(levels, levels[1:]):
+    for previous, current in zip(levels, levels[1:], strict=False):
         assert current <= previous + 1, f"{template_name}: h{previous} skips to h{current}"
 
 

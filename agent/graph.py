@@ -1100,7 +1100,9 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
                         batch_grades = None
 
                 if batch_grades is not None:
-                    for doc, (is_relevant, _reason) in zip(context_docs, batch_grades):
+                    # strict=False: LLM batch-grade count can drift from doc count;
+                    # tolerate by truncating to the shorter (existing behavior).
+                    for doc, (is_relevant, _reason) in zip(context_docs, batch_grades, strict=False):
                         if is_relevant:
                             graded.append(doc)
                         else:

@@ -380,7 +380,8 @@ class HybridRetriever:
         pairs = [(query, doc.page_content) for doc in docs]
         try:
             scores = self._reranker.predict(pairs)
-            scored_docs = sorted(zip(docs, scores), key=lambda x: x[1], reverse=True)
+            # strict=True: predict returns exactly one score per (query, doc) pair.
+            scored_docs = sorted(zip(docs, scores, strict=True), key=lambda x: x[1], reverse=True)
             return [doc for doc, _ in scored_docs[:self._rerank_k]]
         except Exception as e:
             logger.warning("[HybridRetriever] Reranker error: %s", e)
@@ -693,7 +694,7 @@ class ParentDocumentStore:
     @staticmethod
     def _cosine(a: List[float], b: List[float]) -> float:
         import math
-        dot = sum(x * y for x, y in zip(a, b))
+        dot = sum(x * y for x, y in zip(a, b, strict=True))
         na = math.sqrt(sum(x * x for x in a))
         nb = math.sqrt(sum(y * y for y in b))
         if na == 0 or nb == 0:
@@ -839,7 +840,7 @@ class QdrantStubStore:
     @staticmethod
     def _cosine(a: List[float], b: List[float]) -> float:
         import math
-        dot = sum(x * y for x, y in zip(a, b))
+        dot = sum(x * y for x, y in zip(a, b, strict=True))
         na = math.sqrt(sum(x * x for x in a))
         nb = math.sqrt(sum(y * y for y in b))
         if na == 0 or nb == 0:
