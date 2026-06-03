@@ -2,10 +2,26 @@
 from __future__ import annotations
 
 import asyncio
+import re
+from pathlib import Path
 
 import pytest
 
 from utils import background_tasks
+
+
+def test_routers_use_spawn_tracked_not_bare_create_task() -> None:
+    """F1 guard: fire-and-forget background work in routers must go through
+    spawn_tracked, never a bare asyncio.create_task whose result is dropped
+    (the task can be garbage-collected mid-run). Covers the audit miss in
+    admin_kb.py and prevents the pattern from creeping back into any router."""
+    routers_dir = Path(__file__).resolve().parents[1] / "api" / "routers"
+    offenders = [
+        path.name
+        for path in sorted(routers_dir.glob("*.py"))
+        if re.search(r"create_task\s*\(", path.read_text(encoding="utf-8"))
+    ]
+    assert offenders == [], f"use spawn_tracked, not create_task, in: {offenders}"
 
 
 def test_spawn_tracked_holds_reference_then_discards_on_completion() -> None:

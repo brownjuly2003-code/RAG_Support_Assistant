@@ -19,6 +19,7 @@ from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant
 from auth.dependencies import require_role
 from db import engine as _db_engine
+from utils.background_tasks import spawn_tracked
 
 router = APIRouter()
 
@@ -65,7 +66,7 @@ async def admin_rebuild_curated_dataset(
             "updated_at": datetime.now(timezone.utc).isoformat(),
         },
     )
-    _app.asyncio.create_task(
+    spawn_tracked(
         _app._run_curated_dataset_rebuild(
             job_id=job_id,
             tenant=tenant,
