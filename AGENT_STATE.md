@@ -1,5 +1,34 @@
 # Agent State
 
+## 2026-06-03 Update (cont. 7) — backlog floor reached; decomposition scoped
+
+**HEAD = handoff commit (master), worktree clean apart from untracked
+`audit_claude_03_06_26.md`. 23 commits AHEAD of origin — NOT pushed (push gated;
+needs explicit go). Everything verified green; nothing in flight.**
+
+**Clean, bounded, free/local backlog is EXHAUSTED — verified, not punted.** Findings
+from scoping the remaining audit §11 items this session:
+
+- **RUF100** (last ruff rule): re-tested in ISOLATION on the isorted tree (not just
+  combined with isort) → still **83 errors**. Confirmed: RUF100 strips re-export
+  `# noqa: F401` and path-script/late-import `# noqa: E402` because ruff prefers
+  `x as x`/`__all__` over noqa-style; those rules then fire. NOT a blanket autofix.
+  To enable: manually convert re-exports to explicit `import x as x` / `__all__` and
+  case-handle E402 sites. Bounded-ish but touches fragile import sections, low ROI.
+- **Decomposition (audit §7/§11)** — the *easy* slices are ALREADY done: graph.py's 11
+  prompt-builders all live in `agent/prompts.py` (only the tiny local `_build_hyde_prompt`
+  ~L490 remains); app.py's 15 routers are already extracted. What's left is the
+  intertwined core — graph.py node fns over shared `state`, app.py `_probe_*`/startup
+  bound to the `_app_module()` late-binding pattern (naive extraction risks circular
+  imports). That is a large, higher-risk refactor, NOT a small bounded slice. Do it
+  deliberately with explicit scope, not autonomously mid-long-session.
+- **R7 LLM-RAGAS** — env-gated (free LLM APIs unreachable from RU IP, no card).
+
+**Next-session entry points (each needs an explicit decision):** (1) `push` the 23-commit
+series — fully verified, the one ready action; (2) RUF100 manual re-export/`__all__`
+conversion; (3) scoped graph.py/app.py core decomposition; (4) R7 once a VPN/billable key
+exists (`scripts/aircargo_ragas_free.py`, contexts cached).
+
 ## 2026-06-03 Update (cont. 6) — F6 slice 5 (isort / ruff I) + I/RUF100 finding
 
 **HEAD `51ffd2f` (master), worktree clean apart from untracked
