@@ -1,5 +1,27 @@
 # Agent State
 
+## 2026-06-03 Update (cont. 3) — F6 slice 2 (B905 zip strict=)
+
+**HEAD `cb59f7e` (master), worktree clean apart from untracked
+`audit_claude_03_06_26.md`. 15 commits AHEAD of origin — NOT pushed (push gated).**
+
+- `cb59f7e` **F6 slice — B905** — made every `zip()` length contract explicit, then
+  added `B905` to ruff `select` (now `E,F,W,B904,B905`). `strict=True` where lengths
+  are equal by construction (system.py provider probe, reranker scores, `_cosine` ×2,
+  analyze_thresholds TP/FP/FN, semantic_chunking_ab A/B — silent truncation there
+  would mask a real bug); `strict=False` where mismatch is tolerated by design
+  (graph batch-grade vs docs, ingestion headers vs docs — LLM count drift; test_a11y
+  `zip(levels, levels[1:])` pairwise idiom). ruff clean; verified base_manager+a11y 46
+  pass, health/provider 13 pass.
+
+**Next free/local (documented, not started — budget stop):** RUF012 (13 mutable
+class-defaults → `ClassVar`, bounded, CI-safe ratchet — natural next step); then the
+remaining wider ruff (`I`/full `B`/`RUF`) incl. the ~130-file RUF100/I001 autofix sweep
+(do AFTER all targeted B/RUF rules are enabled, so RUF100 doesn't strip needed
+suppressions). Larger/gated: app.py/graph.py decomposition (quarter-tier), R7 LLM-RAGAS
+(env-gated: free LLM APIs unreachable from RU IP, no card; `scripts/aircargo_ragas_free.py`
+ready once VPN/billing).
+
 ## 2026-06-03 Update (cont. 2) — F6 slice (B904) + 2 latent F2 test regressions
 
 **HEAD `e5be9a0` (master), worktree clean apart from untracked
