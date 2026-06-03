@@ -14,12 +14,18 @@
   modules **47 pass**; `git diff --check` clean.
 
 **Lint-ratchet this session (all enforced + green): B904 · B905 · RUF012 ·
-UP006/UP035.** Plus R6, F5, 2 F2 test-regression fixes. **Remaining ruff tail (only
-cosmetic, audit-deferred, NOT started — deliberate stop): `I` (isort, ~135 I001 —
-note UP left some `typing`/`collections.abc` import pairs unsorted) + `RUF100`
-(~144 unused-noqa). Do RUF100 LAST so it doesn't strip noqa for rules enabled before
-it; both are one-pass autofix but ~280 mechanical changes — large cosmetic diff, low
-value, kept out of the gated series on purpose.** Larger/gated unchanged:
+UP006/UP035.** Plus R6, F5, 2 F2 test-regression fixes.
+
+**⚠ `I`/`RUF100` are NOT a safe mechanical autofix here — tried 2026-06-03, reverted
+(uncommitted, no damage).** `ruff --select I,RUF100 --fix` (302 changes/143 files)
+produced **84 NEW errors**: RUF100 stripped `# noqa: E402` that legitimately suppress
+module-imports-after-code in path-manipulating scripts + `api/app.py`, and `# noqa: F401`
+on re-export `__init__.py` (e.g. `tracing/__init__.py`). Those noqa are NOT dead — E402/F401
+are in select and DO fire there. Clearing them needs real manual work (convert re-exports
+to `x as x` or `__all__`, restructure E402 sites), so this is genuinely month-tier, not a
+one-pass sweep. The audit's "autofix RUF100/I001" optimism doesn't hold for this repo. If
+revisited: enable `I` alone (isort is clean) as one step, and handle RUF100 site-by-site,
+NOT via blanket `--fix`. Larger/gated unchanged:
 app.py/graph.py decomposition (quarter-tier), R7 LLM-RAGAS (env-gated: free LLM APIs
 unreachable from RU IP, no card).
 
