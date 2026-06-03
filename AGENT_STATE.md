@@ -1,5 +1,29 @@
 # Agent State
 
+## 2026-06-03 Update (cont. 2) — F6 slice (B904) + 2 latent F2 test regressions
+
+**HEAD `e5be9a0` (master), worktree clean apart from untracked
+`audit_claude_03_06_26.md`. 13 commits AHEAD of origin — NOT pushed (push gated).**
+
+Commits (newest first):
+- `e5be9a0` **F2 regression fix** — the CSP commit `67dc286` moved inline page
+  scripts to `static/*.inline*.js` but left two tests asserting that JS against the
+  page HTML: `test_agent_endpoints` (renderRetrievedDocs/renderQualityScores +
+  innerHTML XSS guard that had gone vacuous) and `test_admin_view` (authenticated
+  trace fetch + no-target-_blank guard). Both **failed against the unpushed series**
+  (would break CI on push); repointed at the extracted `.js` and verified green (3
+  pass). Found by grepping every test that reads `static/*.html`; the rest assert
+  DOM ids/text or external `src` and are unaffected.
+- `e079129` **F6 slice — B904** — enforce exception chaining: cleared all 15
+  `raise ... from` sites (`from exc` at validation/backend/SSO; `from None` on the two
+  `/api/ask` asyncio.TimeoutError translations) then added `B904` to ruff `select`.
+  Chose this single high-value rule over the 130-file RUF100/I001 autofix sweep —
+  removing unused-noqa before enabling B/RUF would strip suppressions the new rules
+  then need. `ruff check .` clean with B904 enforced.
+
+Verified: ruff clean; targeted pytest green (agent_endpoints/admin_view F2 fixes 3
+pass; admin_ui/csp/mobile 23 pass; router B904 paths via earlier 8-pass run).
+
 ## 2026-06-03 Update (cont.) — R6 + F5 (audit §11 free/local)
 
 **HEAD `89aa23d` (master, = this handoff commit), worktree clean apart from
