@@ -156,7 +156,12 @@ def test_trace_detail_returns_steps(monkeypatch, client_with_key: TestClient) ->
 
 
 def test_review_queue_trace_action_uses_authenticated_api_fetch() -> None:
-    html = (PROJECT_ROOT / "static" / "admin.html").read_text(encoding="utf-8")
+    # CSP (commit 67dc286) split admin's inline JS into static/admin.inline*.js;
+    # join them so the assertion is robust to which split the code lands in.
+    js = "\n".join(
+        p.read_text(encoding="utf-8")
+        for p in sorted((PROJECT_ROOT / "static").glob("admin.inline*.js"))
+    )
 
-    assert 'fetch("/api/admin/traces/" + encodeURIComponent(item.trace_id || ""), {' in html
-    assert 'traceLink.target = "_blank";' not in html
+    assert 'fetch("/api/admin/traces/" + encodeURIComponent(item.trace_id || ""), {' in js
+    assert 'traceLink.target = "_blank";' not in js

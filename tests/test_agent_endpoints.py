@@ -33,18 +33,22 @@ def test_agent_page_requires_agent_role(client_with_key: TestClient) -> None:
 
 
 def test_agent_page_renders_semantic_context_sections() -> None:
+    # CSP (commit 67dc286) moved the agent page's inline script to
+    # static/agent.inline.js; DOM ids stay in the HTML, JS behavior in the .js.
     html = (PROJECT_ROOT / "static" / "agent.html").read_text(encoding="utf-8")
+    js = (PROJECT_ROOT / "static" / "agent.inline.js").read_text(encoding="utf-8")
 
     assert 'id="retrievedDocs"' in html
     assert 'id="qualityScores"' in html
-    assert "renderRetrievedDocs(data.retrieved_docs || [])" in html
-    assert "renderQualityScores(data.quality_scores || {})" in html
+    assert "renderRetrievedDocs(data.retrieved_docs || [])" in js
+    assert "renderQualityScores(data.quality_scores || {})" in js
 
 
 def test_agent_page_builds_api_content_with_text_nodes() -> None:
-    html = (PROJECT_ROOT / "static" / "agent.html").read_text(encoding="utf-8")
+    # The XSS guard must scan the extracted script, where the JS now lives.
+    js = (PROJECT_ROOT / "static" / "agent.inline.js").read_text(encoding="utf-8")
 
-    unsafe_render_blocks = re.findall(r"\b(?:button|item|card)\.innerHTML\s*=[\s\S]*?;", html)
+    unsafe_render_blocks = re.findall(r"\b(?:button|item|card)\.innerHTML\s*=[\s\S]*?;", js)
 
     assert unsafe_render_blocks == []
 
