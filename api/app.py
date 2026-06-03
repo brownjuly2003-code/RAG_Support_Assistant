@@ -361,7 +361,7 @@ def _load_provider_admin_snapshot(tenant_id: str) -> dict[str, Any]:
     from config.provider_schema import load_provider_registry  # noqa: PLC0415
 
     settings = get_settings()
-    registry = load_provider_registry(getattr(settings, "provider_registry_path"))
+    registry = load_provider_registry(settings.provider_registry_path)
     db_path = Path(getattr(settings, "tracing_db_path", ""))
     cutoff_1m = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
     cutoff_1d = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()

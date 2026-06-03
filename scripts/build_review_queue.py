@@ -222,7 +222,7 @@ async def run_once(
         return {"status": "disabled", "matched": 0, "inserted": 0}
 
     current_time = now or datetime.now(timezone.utc)
-    db_path = Path(getattr(settings, "tracing_db_path"))
+    db_path = Path(settings.tracing_db_path)
     candidates = _scan_trace_candidates(
         db_path=db_path,
         days=days,

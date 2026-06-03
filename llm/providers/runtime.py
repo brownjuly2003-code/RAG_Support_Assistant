@@ -43,7 +43,7 @@ def _active_profile_name(settings: Any) -> str:
 
 
 def _instantiate_provider(settings: Any, provider_id: str, model_name: str) -> Any:
-    registry = load_provider_registry(getattr(settings, "provider_registry_path"))
+    registry = load_provider_registry(settings.provider_registry_path)
     provider_config = registry.get_provider(provider_id)
     if provider_config is None:
         raise KeyError(f"unknown provider '{provider_id}'")
@@ -110,7 +110,7 @@ def _load_profile_fallback(
 ) -> tuple[str, str] | None:
     if not bool(getattr(settings, "failover_chain_enabled", True)):
         return None
-    registry_path = Path(getattr(settings, "provider_registry_path"))
+    registry_path = Path(settings.provider_registry_path)
     payload = yaml.safe_load(registry_path.read_text(encoding="utf-8")) or {}
     profile = ((payload.get("routing_profiles") or {}).get(profile_name)) or {}
     fallback = profile.get("fallback") if isinstance(profile, dict) else None
@@ -132,7 +132,7 @@ def _failover_cache_key(
     fallback_model_name: str,
 ) -> tuple[str, str, str, str, str, str]:
     return (
-        str(Path(getattr(settings, "provider_registry_path")).resolve()),
+        str(Path(settings.provider_registry_path).resolve()),
         profile_name,
         provider_id,
         model_name,
@@ -176,7 +176,7 @@ def _build_provider(
         return ProviderBackedLLM(provider)
 
     fallback_provider_id, fallback_model_name = fallback_target
-    registry = load_provider_registry(getattr(settings, "provider_registry_path"))
+    registry = load_provider_registry(settings.provider_registry_path)
     fallback_provider_config = registry.get_provider(fallback_provider_id)
     if fallback_provider_config is None or fallback_provider_config.kind != "local":
         return ProviderBackedLLM(provider)
@@ -252,7 +252,7 @@ def _enforce_daily_cost_limit(settings: Any, registry: Any, profile_name: str) -
 
 
 def build_provider_runtime(settings: Any) -> ProviderRuntime:
-    registry = load_provider_registry(getattr(settings, "provider_registry_path"))
+    registry = load_provider_registry(settings.provider_registry_path)
     profile_name = _active_profile_name(settings)
     _enforce_daily_cost_limit(settings, registry, profile_name)
     profile = registry.get_profile(profile_name)

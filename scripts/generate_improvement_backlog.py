@@ -297,7 +297,7 @@ async def load_review_queue_signals(
         rows = (await session.execute(text(query), params)).mappings().all()
 
     trace_ids = [str(row["trace_id"]) for row in rows]
-    metadata = _trace_metadata(Path(getattr(settings, "tracing_db_path")), trace_ids)
+    metadata = _trace_metadata(Path(settings.tracing_db_path), trace_ids)
     grouped: dict[tuple[str, str], dict[str, Any]] = {}
 
     for row in rows:
@@ -373,7 +373,7 @@ async def load_slow_trace_signals(
     settings: Any,
 ) -> list[dict[str, Any]]:
     _ = session_factory
-    db_path = Path(getattr(settings, "tracing_db_path"))
+    db_path = Path(settings.tracing_db_path)
     if not db_path.exists():
         return []
 
@@ -613,7 +613,7 @@ async def load_thumbs_down_signals(
     settings: Any,
 ) -> list[dict[str, Any]]:
     _ = session_factory
-    db_path = Path(getattr(settings, "tracing_db_path"))
+    db_path = Path(settings.tracing_db_path)
     if not db_path.exists():
         return []
 

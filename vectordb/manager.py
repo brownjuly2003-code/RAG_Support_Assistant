@@ -146,7 +146,7 @@ def build_vector_store(
         store = build_qdrant(chunks, embeddings)
     else:
         chroma_cls = _get_chroma()
-        persist_directory = str(getattr(settings, "vectordb_chroma_dir"))
+        persist_directory = str(settings.vectordb_chroma_dir)
         collection_name = _collection_name(tenant)
 
         try:
@@ -229,7 +229,7 @@ def get_retriever(
     if vector_store is None and backend != "qdrant":
         chroma_cls = _get_chroma()
         vector_store = chroma_cls(
-            persist_directory=str(persist_directory or getattr(settings, "vectordb_chroma_dir")),
+            persist_directory=str(persist_directory or settings.vectordb_chroma_dir),
             embedding_function=embeddings,
             collection_name=_collection_name(tenant),
         )

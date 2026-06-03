@@ -440,7 +440,7 @@ def test_build_helpers_handle_backends_and_simple_retriever(
         _Embeddings(),
     )
     assert built_chunks == chunks
-    assert getattr(store, "_source_docs") == docs
+    assert store._source_docs == docs
 
     simple = manager.build_retriever(docs, _Embeddings(), vector_store=_Store(), chunks=chunks)
     assert simple.get_relevant_documents("alpha") == chunks

@@ -209,7 +209,7 @@ async def get_session_history(
         session = _app._sessions[session_id]
         session_tenant = None
         if hasattr(session, "_tenant_id"):
-            session_tenant = getattr(session, "_tenant_id")
+            session_tenant = session._tenant_id
         elif isinstance(session, dict):
             session_tenant = session.get("tenant_id") or session.get("_tenant_id")
         if session_tenant is not None and session_tenant != user_tenant:
@@ -272,7 +272,7 @@ async def list_sessions(
     for sid, session in list(_app._sessions.items()):
         session_tenant = None
         if hasattr(session, "_tenant_id"):
-            session_tenant = getattr(session, "_tenant_id")
+            session_tenant = session._tenant_id
         elif isinstance(session, dict):
             session_tenant = session.get("tenant_id") or session.get("_tenant_id")
         if session_tenant is not None and session_tenant != user_tenant:
@@ -306,7 +306,7 @@ async def clear_session(
         session = _app._sessions[session_id]
         session_tenant = None
         if hasattr(session, "_tenant_id"):
-            session_tenant = getattr(session, "_tenant_id")
+            session_tenant = session._tenant_id
         elif isinstance(session, dict):
             session_tenant = session.get("tenant_id") or session.get("_tenant_id")
         # Tenant isolation: in-memory session must belong to caller's tenant.

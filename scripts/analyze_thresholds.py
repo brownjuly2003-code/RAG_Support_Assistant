@@ -592,7 +592,7 @@ async def run_once(
 ) -> dict[str, Any]:
     active_settings = settings or get_settings()
     current_time = now or datetime.now(timezone.utc)
-    db_path = Path(getattr(active_settings, "tracing_db_path"))
+    db_path = Path(active_settings.tracing_db_path)
     min_labels = int(getattr(active_settings, "threshold_analysis_min_labels", 20))
 
     traces = _load_trace_rows(

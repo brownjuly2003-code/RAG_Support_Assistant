@@ -385,7 +385,7 @@ async def run_once(
         filtered_rows.append(dict(row))
 
     trace_ids = [str(row["trace_id"]) for row in filtered_rows]
-    trace_details = _load_trace_details(trace_ids, Path(getattr(settings, "tracing_db_path")))
+    trace_details = _load_trace_details(trace_ids, Path(settings.tracing_db_path))
 
     records = _load_existing_records(out)
     written = 0
