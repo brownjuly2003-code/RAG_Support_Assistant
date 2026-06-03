@@ -1,5 +1,32 @@
 # Agent State
 
+## 2026-06-03 Update (cont.) — R6 + F5 (audit §11 free/local)
+
+**HEAD `89aa23d` (master, = this handoff commit), worktree clean apart from
+untracked `audit_claude_03_06_26.md`. 11 commits AHEAD of origin — NOT pushed
+(push gated; needs explicit go).**
+
+This continuation's commits (newest first):
+- `082576b` **F5** — 4 of 15 S110 `try/except/pass` sites where swallowing masks
+  real failures now `logger.debug(exc_info=True)`: tenant `verify_token` fallback +
+  embedding-compat `count()` probe (`api/app.py`), source-docs/embeddings attach
+  (`vectordb/_base_manager.py`), `engine.dispose()` after online-eval persist
+  (`agent/graph.py`). Remaining 11 wrap Prometheus metrics → best-effort by design,
+  left intentionally. Logging-only, behavior unchanged. ruff clean; tenant_propagation
+  + startup_concurrency (8) pass.
+- `eadfc16` **R6** — hardcoded `device="cpu"` on embedder + reranker → `RAG_DEVICE`
+  setting (default `auto`: cuda→mps→cpu, guarded fallback to cpu if torch absent).
+  `_resolve_device()` in `_base_manager.py`; documented in `.env.example`.
+  test_base_manager 15 pass (4 new device tests); ruff clean.
+
+**Remaining audit §11 (all heavier / gated):** F6 (widen ruff `I`/`B`/`RUF` — large
+148-change diff + needs manual B904/RUF012/B905, month-tier), app.py/graph.py
+decomposition (quarter-tier), R7 LLM-judged RAGAS (gated — free hosted LLM APIs
+unreachable from this RU IP, no card; runnable via `scripts/aircargo_ragas_free.py`
+once VPN/billing available, contexts cached). Local env note: no project venv (3.13
+divergent) — ruff/py_compile/targeted-pytest reliable, full pytest/mypy = CI source of
+truth.
+
 ## 2026-06-03 Update — audit_claude_03_06_26 acted on: A/Bs collected, R7-free, F1/F2/F3
 
 **HEAD `c1b6168` (master), worktree clean, 7 commits AHEAD of origin (`a73687b`,
