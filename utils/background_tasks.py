@@ -12,8 +12,8 @@ layer (including ``db.*``) without creating an import cycle.
 from __future__ import annotations
 
 import asyncio
-from typing import Any
 from collections.abc import Coroutine
+from typing import Any
 
 _background_tasks: set[asyncio.Task[Any]] = set()
 

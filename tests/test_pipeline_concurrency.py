@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import ClassVar
-
 import importlib
 import threading
 import time
+from typing import ClassVar
 
 import pytest
 from fastapi.testclient import TestClient

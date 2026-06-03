@@ -8,8 +8,8 @@ import logging
 import re
 import time
 import uuid
-from typing import Any, Optional
 from collections.abc import AsyncGenerator
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -529,7 +529,10 @@ async def ask_stream(
                 elif isinstance(session, dict):
                     chat_history = session.get("history", [])
 
-                from agent.prompts import build_qa_prompt, build_conversational_qa_prompt  # noqa: PLC0415
+                from agent.prompts import (  # noqa: PLC0415
+                    build_conversational_qa_prompt,
+                    build_qa_prompt,
+                )
 
                 plain_docs = []
                 for doc in docs[:5]:

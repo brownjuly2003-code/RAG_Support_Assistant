@@ -8,11 +8,11 @@ import re
 import smtplib
 import time
 import uuid
+from collections.abc import Callable
 from email.message import EmailMessage, Message
 from email.utils import parseaddr
 from html import unescape
 from typing import Any
-from collections.abc import Callable
 
 from config.settings import get_settings
 
@@ -28,8 +28,9 @@ class _NoopMetric:
 
 
 try:
-    from monitoring import prometheus as prometheus_metrics
     from prometheus_client import Counter, Gauge
+
+    from monitoring import prometheus as prometheus_metrics
 except ImportError:
     EMAIL_POLLER_FETCHED_TOTAL = _NoopMetric()
     EMAIL_POLLER_ERRORS_TOTAL = _NoopMetric()

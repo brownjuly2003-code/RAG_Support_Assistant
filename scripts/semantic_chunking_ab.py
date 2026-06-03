@@ -16,7 +16,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from evaluation.ragas_eval import RAGEvaluator, TestCase
 
-
 SYNTHETIC_DOCS = [
     """Ошибка E401 означает отказ в авторизации. Токен доступа недействителен или истёк.
 Для восстановления доступа нужно повторно авторизоваться через личный кабинет.

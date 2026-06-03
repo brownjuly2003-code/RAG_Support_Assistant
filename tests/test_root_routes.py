@@ -3,7 +3,6 @@ from starlette.routing import Match
 
 from auth.jwt_handler import create_access_token
 
-
 AGENT_HEADERS = {"Authorization": f"Bearer {create_access_token('op1', 'agent')}"}
 VIEWER_HEADERS = {"Authorization": f"Bearer {create_access_token('v1', 'viewer')}"}
 

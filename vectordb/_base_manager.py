@@ -28,9 +28,9 @@ import logging
 import os
 import re
 import time
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Optional
-from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 _BM25_TOKEN_RE = re.compile(r"[^\W_]+", re.UNICODE)
@@ -145,9 +145,13 @@ def _load_recursive_text_splitter() -> Any:
         return RecursiveCharacterTextSplitter
 
     try:
-        from langchain_text_splitters import RecursiveCharacterTextSplitter as splitter_cls  # type: ignore
+        from langchain_text_splitters import (
+            RecursiveCharacterTextSplitter as splitter_cls,  # type: ignore
+        )
     except ImportError:
-        from langchain.text_splitter import RecursiveCharacterTextSplitter as splitter_cls  # type: ignore
+        from langchain.text_splitter import (
+            RecursiveCharacterTextSplitter as splitter_cls,  # type: ignore
+        )
 
     RecursiveCharacterTextSplitter = splitter_cls
     return splitter_cls
@@ -439,7 +443,9 @@ def _load_semantic_chunker() -> Any | None:
         return SemanticChunker
 
     try:
-        from langchain_experimental.text_splitter import SemanticChunker as semantic_chunker_cls  # type: ignore
+        from langchain_experimental.text_splitter import (
+            SemanticChunker as semantic_chunker_cls,  # type: ignore
+        )
     except ImportError:
         HAS_SEMANTIC_CHUNKER = False
         return None

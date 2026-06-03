@@ -48,8 +48,8 @@ agent/state.py
 
 from __future__ import annotations
 
-from typing import Any, Literal, Optional, TypedDict
 import uuid
+from typing import Any, Literal, Optional, TypedDict
 
 
 class GraphState(TypedDict, total=False):

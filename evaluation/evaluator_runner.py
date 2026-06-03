@@ -18,7 +18,6 @@ from evaluation.online_evaluators import (
 )
 from monitoring.prometheus import record_online_evaluator_error, record_online_evaluator_run
 
-
 ONLINE_EVALUATORS = {
     "citation_coverage": evaluate_citation_coverage,
     "answer_length_anomaly": lambda state: evaluate_answer_length_anomaly(

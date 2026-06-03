@@ -11,10 +11,10 @@ All behaviour is opt-in via `AUTO_ROLLBACK_ENABLED`.
 from __future__ import annotations
 
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Optional
-from collections.abc import Awaitable, Callable
 
 from config.settings import get_settings
 

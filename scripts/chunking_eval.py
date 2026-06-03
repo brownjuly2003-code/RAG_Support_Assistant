@@ -31,10 +31,10 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
-from collections.abc import Sequence
 
 try:
     from langchain_core.documents import Document  # type: ignore

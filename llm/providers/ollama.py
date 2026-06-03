@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator
 import time
+from collections.abc import AsyncIterator
 from typing import Any
 
 from llm.providers.base import (
@@ -67,7 +67,9 @@ class OllamaProvider:
         started = time.perf_counter()
 
         try:
-            from langchain_ollama import OllamaLLM as ollama_llm_cls  # type: ignore[import-not-found]
+            from langchain_ollama import (
+                OllamaLLM as ollama_llm_cls,  # type: ignore[import-not-found]
+            )
 
             llm = _instantiate_with_timeout(
                 ollama_llm_cls,
@@ -116,7 +118,9 @@ class OllamaProvider:
         started = time.perf_counter()
 
         try:
-            from langchain_ollama import ChatOllama as chat_ollama_cls  # type: ignore[import-not-found]
+            from langchain_ollama import (
+                ChatOllama as chat_ollama_cls,  # type: ignore[import-not-found]
+            )
 
             chat = _instantiate_with_timeout(
                 chat_ollama_cls,
@@ -206,7 +210,9 @@ class OllamaProvider:
         prompt = flatten_messages(messages)
 
         try:
-            from langchain_ollama import OllamaLLM as ollama_llm_cls  # type: ignore[import-not-found]
+            from langchain_ollama import (
+                OllamaLLM as ollama_llm_cls,  # type: ignore[import-not-found]
+            )
 
             llm = _instantiate_with_timeout(
                 ollama_llm_cls,

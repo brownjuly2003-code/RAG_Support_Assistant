@@ -3,13 +3,12 @@ from __future__ import annotations
 import io
 import sys
 import types
+from unittest.mock import Mock
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import Mock
 
 from auth.jwt_handler import create_access_token
-
 
 CLIENT_WITH_KEY_SETTINGS_OVERRIDES = {
     "project_root": "__tmp_path__",

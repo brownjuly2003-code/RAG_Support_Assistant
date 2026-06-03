@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
 import os
-from pathlib import Path
 import subprocess
 import sys
+from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 

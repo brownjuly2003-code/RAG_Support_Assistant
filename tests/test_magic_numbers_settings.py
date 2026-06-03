@@ -5,9 +5,9 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import agent.graph as agent_graph
-from vectordb import _base_manager as manager
 import vectordb.manager as tenant_manager
 from ingestion.pipeline import IngestPipeline
+from vectordb import _base_manager as manager
 
 
 def test_ingest_pipeline_uses_settings_chunk_defaults(

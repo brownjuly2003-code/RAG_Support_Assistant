@@ -17,8 +17,17 @@ exclude = [
 # enforced after clearing every site:
 #   B904 exception chaining · B905 zip strict= · RUF012 ClassVar
 #   UP006/UP035 PEP 585 builtins (typing.Dict/List → dict/list)
-select = ["E", "F", "W", "B904", "B905", "RUF012", "UP006", "UP035"]
+#   I import sorting (isort)
+select = ["E", "F", "W", "B904", "B905", "RUF012", "UP006", "UP035", "I"]
 ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# api/app.py has a hand-tuned import layout that isort fights: split
+# `from x import (a,b,c)` detaches per-name `# noqa: F401` on re-exports, and
+# resorting the late router-registration block (deliberately after _lifespan,
+# each `# noqa: E402`) breaks those suppressions. Left to the planned app.py
+# decomposition (audit §11) rather than forcing isort here.
+"api/app.py" = ["I001"]
 
 [tool.pytest.ini_options]
 markers = [

@@ -4,11 +4,11 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
 from typing import Optional, TypeVar
-from collections.abc import Callable
 
 T = TypeVar("T")
 

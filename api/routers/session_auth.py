@@ -126,7 +126,11 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
 @router.post("/auth/refresh", response_model=TokenResponse)
 async def refresh_token(body: RefreshRequest) -> TokenResponse:
     """Refresh access token."""
-    from auth.jwt_handler import create_access_token, create_refresh_token, verify_token  # noqa: PLC0415
+    from auth.jwt_handler import (  # noqa: PLC0415
+        create_access_token,
+        create_refresh_token,
+        verify_token,
+    )
 
     payload = verify_token(body.refresh_token, expected_type="refresh")
     if payload is None:
@@ -174,7 +178,8 @@ async def get_session_history(
             from sqlalchemy import select  # noqa: PLC0415
 
             from db.engine import async_session  # noqa: PLC0415
-            from db.models import Message, Session as DBSession  # noqa: PLC0415
+            from db.models import Message  # noqa: PLC0415
+            from db.models import Session as DBSession
 
             async with async_session() as db:
                 # Tenant isolation: messages must belong to a session
@@ -240,7 +245,8 @@ async def list_sessions(
             from sqlalchemy import func, select  # noqa: PLC0415
 
             from db.engine import async_session  # noqa: PLC0415
-            from db.models import Message, Session as DBSession  # noqa: PLC0415
+            from db.models import Message  # noqa: PLC0415
+            from db.models import Session as DBSession
 
             async with async_session() as db:
                 db_result = await asyncio.wait_for(

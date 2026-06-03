@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
-from collections.abc import Callable
-
 
 Message = dict[str, Any]
 

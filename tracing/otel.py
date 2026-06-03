@@ -1,8 +1,8 @@
 """OpenTelemetry bootstrap with safe no-op behavior when disabled."""
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 trace = None
 OTLPSpanExporter = None
@@ -64,11 +64,15 @@ def _ensure_dependencies() -> None:
         return
 
     from opentelemetry import trace as otel_trace
-    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter as otel_exporter
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+        OTLPSpanExporter as otel_exporter,
+    )
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor as fastapi_instrumentor
     from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor as httpx_instrumentor
     from opentelemetry.instrumentation.redis import RedisInstrumentor as redis_instrumentor
-    from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor as sqlalchemy_instrumentor
+    from opentelemetry.instrumentation.sqlalchemy import (
+        SQLAlchemyInstrumentor as sqlalchemy_instrumentor,
+    )
     from opentelemetry.sdk.resources import Resource as otel_resource
     from opentelemetry.sdk.trace import TracerProvider as otel_provider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor as span_processor

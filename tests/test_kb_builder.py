@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import ClassVar
-
 import uuid
 from datetime import datetime, timezone
+from typing import ClassVar
 
 import pytest
 

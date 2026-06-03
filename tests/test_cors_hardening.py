@@ -68,8 +68,9 @@ def test_cors_max_age_passed_to_middleware(monkeypatch: pytest.MonkeyPatch) -> N
 
     _reload_settings()
 
-    import api.app as app_module
     from starlette.middleware.cors import CORSMiddleware
+
+    import api.app as app_module
 
     app_module = importlib.reload(app_module)
 

@@ -12,7 +12,6 @@ import pytest
 
 from config.settings import Settings, get_settings
 
-
 _STRONG_SECRET = "S" * 48
 _DEV_SECRET = "dev-secret-change-in-production!"
 

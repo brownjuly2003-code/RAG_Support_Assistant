@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-
 APP_MODULE_ROUTER_FILES = [
     Path("api/routers/auth_sso.py"),
     Path("api/routers/feedback.py"),

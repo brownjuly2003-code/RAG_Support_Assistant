@@ -3,15 +3,14 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 from typing import TYPE_CHECKING, Any
-from collections.abc import Sequence
-
-from vectordb import _base_manager
 
 from config.settings import get_settings
+from vectordb import _base_manager
 
 logger = logging.getLogger(__name__)
 

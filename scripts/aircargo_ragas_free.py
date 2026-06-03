@@ -29,10 +29,10 @@ import os
 import sys
 import time
 import uuid
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from collections.abc import Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -40,7 +40,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import httpx
 
-from evaluation.ragas_eval import RAGEvaluator, TestCase as RAGTestCase
+from evaluation.ragas_eval import RAGEvaluator
+from evaluation.ragas_eval import TestCase as RAGTestCase
 from scripts.aircargo_ragas_eval import write_report_files
 
 _PROVIDERS = {

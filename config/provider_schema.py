@@ -5,7 +5,6 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_PROVIDER_REGISTRY_PATH = PROJECT_ROOT / "config" / "providers.yml"
 _REGISTRY_CACHE: dict[Path, "ProviderRegistry"] = {}

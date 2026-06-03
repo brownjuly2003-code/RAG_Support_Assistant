@@ -18,7 +18,6 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from db.engine import async_session
 
-
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "reports" / "eval_daily"
 
 

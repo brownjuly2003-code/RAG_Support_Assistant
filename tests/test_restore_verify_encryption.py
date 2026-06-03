@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import sqlite3
 import shutil
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -11,7 +11,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts import backup_snapshot, restore_verify
 from tests.test_backup_snapshot_encryption import _generate_age_identity, _make_project_root
-
 
 pytestmark = pytest.mark.skipif(
     shutil.which("age") is None or shutil.which("age-keygen") is None,

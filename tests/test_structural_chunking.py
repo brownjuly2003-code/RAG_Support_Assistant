@@ -5,9 +5,8 @@ Pure text transforms — no embeddings/models, so these run locally.
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from vectordb import _base_manager as manager
 from config import settings as settings_module
-
+from vectordb import _base_manager as manager
 
 # ---------------------------------------------------------------------------
 # structural_split

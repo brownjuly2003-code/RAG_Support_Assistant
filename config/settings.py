@@ -37,7 +37,6 @@ from typing import Any, Optional
 import yaml  # type: ignore[import-untyped]
 from pydantic import SecretStr
 
-
 # Определяем корень проекта как родительскую директорию для config/
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 EXPERIMENT_OVERRIDE_PATH = PROJECT_ROOT / "config" / "experiment_override.yaml"
@@ -711,8 +710,8 @@ class Settings:
         Если активный профиль использует Ollama и REQUIRE_OLLAMA=false — только предупреждение.
         """
         import logging
-        import urllib.request
         import urllib.error
+        import urllib.request
 
         log = logging.getLogger(__name__)
 

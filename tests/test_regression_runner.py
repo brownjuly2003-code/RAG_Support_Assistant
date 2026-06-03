@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 import yaml
-from auth.jwt_handler import create_access_token
 
+from auth.jwt_handler import create_access_token
 
 ADMIN_HEADERS = {"Authorization": f"Bearer {create_access_token('admin', 'admin')}"}
 

@@ -1,11 +1,12 @@
 import io
-from typing import ClassVar
 import subprocess
 import sys
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 from fastapi.testclient import TestClient
+
 CLIENT_WITH_KEY_SETTINGS_OVERRIDES = {
     "project_root": "__tmp_path__",
 }

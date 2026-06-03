@@ -10,8 +10,8 @@ IngestPipeline: end-to-end document ingestion.
 
 from __future__ import annotations
 
-import json
 import inspect
+import json
 import logging
 import time
 from datetime import datetime
@@ -31,10 +31,10 @@ except ImportError:
             page_content: str
             metadata: dict[str, Any]
 
-from ingestion.loader import DocumentLoader
-from ingestion.categorizer import annotate_documents_with_categories
-from vectordb import _base_manager as legacy_manager
 import vectordb.manager as tenant_manager
+from ingestion.categorizer import annotate_documents_with_categories
+from ingestion.loader import DocumentLoader
+from vectordb import _base_manager as legacy_manager
 
 logger = logging.getLogger(__name__)
 

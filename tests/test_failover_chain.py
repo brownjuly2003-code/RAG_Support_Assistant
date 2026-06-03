@@ -112,9 +112,9 @@ def test_failover_uses_ollama_when_gracekelly_is_unavailable(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    import llm.providers.runtime as runtime_module
     from llm.providers.base import LLMResponse, ProviderUnavailable
     from llm.providers.runtime import build_provider_runtime
-    import llm.providers.runtime as runtime_module
 
     registry_path = tmp_path / "providers.yml"
     _write_registry(registry_path)
@@ -157,9 +157,9 @@ def test_failover_cache_skips_primary_checks_for_five_minutes(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    import llm.providers.runtime as runtime_module
     from llm.providers.base import LLMResponse, ProviderUnavailable
     from llm.providers.runtime import build_provider_runtime
-    import llm.providers.runtime as runtime_module
 
     registry_path = tmp_path / "providers.yml"
     _write_registry(registry_path)
@@ -202,10 +202,10 @@ def test_failover_increments_prometheus_metric(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    import llm.providers.runtime as runtime_module
     from llm.providers.base import LLMResponse, ProviderUnavailable
     from llm.providers.runtime import build_provider_runtime
     from monitoring import prometheus as metrics
-    import llm.providers.runtime as runtime_module
 
     registry_path = tmp_path / "providers.yml"
     _write_registry(registry_path)
@@ -253,9 +253,9 @@ def test_failover_depth_is_limited_to_one(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    import llm.providers.runtime as runtime_module
     from llm.providers.base import ProviderUnavailable
     from llm.providers.runtime import build_provider_runtime
-    import llm.providers.runtime as runtime_module
 
     registry_path = tmp_path / "providers.yml"
     _write_registry(registry_path)

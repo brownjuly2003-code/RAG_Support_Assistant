@@ -164,8 +164,7 @@ def test_regression_eval_live_no_asyncpg_race_no_fk_violation(monkeypatch: pytes
 
         monkeypatch.setattr(_settings_module, "_settings", None)
         # engine is created at import time; we need to recreate it
-        from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-        from sqlalchemy.ext.asyncio import AsyncSession
+        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
         test_engine = create_async_engine(db_url, echo=False, pool_size=5, max_overflow=10)
         monkeypatch.setattr(_engine_module, "engine", test_engine)
@@ -220,10 +219,10 @@ def test_regression_eval_live_no_asyncpg_race_no_fk_violation(monkeypatch: pytes
             agent_logger.addHandler(handler)
 
             try:
-                from scripts import regression_eval
                 import agent.graph as agent_graph
                 from agent.graph import run_qa_pipeline
                 from config.settings import get_settings
+                from scripts import regression_eval
 
                 monkeypatch.setattr(
                     agent_graph,

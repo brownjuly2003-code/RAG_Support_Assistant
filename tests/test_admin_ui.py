@@ -1,7 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
 
-
 STATIC_HTML_PATHS = [
     "/static/admin.html",
     "/static/agent.html",

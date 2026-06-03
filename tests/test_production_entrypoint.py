@@ -15,8 +15,8 @@ import pytest
 
 
 def test_main_app_is_canonical_api_app():
-    from api.app import app as api_app
     import main as legacy_entrypoint
+    from api.app import app as api_app
 
     assert legacy_entrypoint.app is api_app, (
         "main:app must re-export api.app:app — Docker/uvicorn entrypoints "
@@ -42,8 +42,8 @@ def test_production_import_disables_fastapi_docs(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv("RAG_ENV", "production")
     monkeypatch.setenv("CORS_ORIGINS", "https://app.example.com")
 
-    import config.settings as settings_module
     import api.app as app_module
+    import config.settings as settings_module
 
     settings_module = importlib.reload(settings_module)
     settings_module._settings = None
@@ -68,6 +68,7 @@ def test_production_auto_migrate_failure_fails_startup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import alembic.command
+
     import api.app as app_module
 
     monkeypatch.setenv("AUTO_MIGRATE", "true")
@@ -87,6 +88,7 @@ def test_production_auto_migrate_fail_open_requires_explicit_opt_in(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import alembic.command
+
     import api.app as app_module
 
     monkeypatch.setenv("AUTO_MIGRATE", "true")

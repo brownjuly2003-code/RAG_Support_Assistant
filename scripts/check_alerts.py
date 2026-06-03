@@ -19,7 +19,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from tracing.sqlite_trace import get_metrics_snapshot
 
-
 WEBHOOK_URL: str = os.getenv("ALERT_WEBHOOK_URL", "")
 THRESH_ESCALATION_PCT: float = float(os.getenv("ALERT_ESCALATION_PCT", "35"))
 THRESH_QUALITY_MIN: float = float(os.getenv("ALERT_QUALITY_MIN", "65"))

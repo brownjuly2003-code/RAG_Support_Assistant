@@ -17,7 +17,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -27,7 +27,6 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from db.models import Base  # noqa: E402
-
 
 EXIT_OK = 0
 EXIT_RESTORE_FAILED = 1

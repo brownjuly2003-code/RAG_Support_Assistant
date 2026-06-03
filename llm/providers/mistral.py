@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator, Mapping
 import os
 import time
+from collections.abc import AsyncIterator, Mapping
 from typing import Any
 
 import httpx
@@ -14,7 +14,6 @@ from llm.providers.base import (
     estimate_tokens,
     parse_structured_output,
 )
-
 
 _PLACEHOLDER_API_KEYS = {"changeme", "change-me", "change_me"}
 

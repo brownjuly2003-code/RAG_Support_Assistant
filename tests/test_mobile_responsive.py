@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 STATIC_PAGES = {
     "chat": PROJECT_ROOT / "static" / "chat.html",

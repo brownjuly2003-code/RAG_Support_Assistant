@@ -7,7 +7,8 @@ from typing import Any
 import yaml
 
 try:
-    from langdetect import DetectorFactory, detect as _langdetect_detect
+    from langdetect import DetectorFactory
+    from langdetect import detect as _langdetect_detect
 except ImportError:
     DetectorFactory = None
     _langdetect_detect = None

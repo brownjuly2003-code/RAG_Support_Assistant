@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
+
 api_app = importlib.import_module("api.app")
 CLIENT_RAISE_SERVER_EXCEPTIONS = False
 CLIENT_WITH_KEY_RAISE_SERVER_EXCEPTIONS = False

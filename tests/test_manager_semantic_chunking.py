@@ -4,8 +4,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from vectordb import _base_manager as manager
 from config import settings as settings_module
+from vectordb import _base_manager as manager
 
 
 def test_base_manager_import_does_not_eagerly_import_semantic_chunker() -> None:

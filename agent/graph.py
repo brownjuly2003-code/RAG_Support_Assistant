@@ -11,16 +11,18 @@ Level 3: + conversation memory, multi-query retrieval, contextual retrieval
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
-import inspect
 import re
 import time
-from typing import TYPE_CHECKING, Any, Literal, Optional, Protocol, cast
 from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Literal, Optional, Protocol, cast
 
 from langgraph.graph import END, StateGraph
+
 from tracing.langfuse_trace import trace_llm_call
+
 try:
     from tracing.otel import get_tracer as get_otel_tracer
 except ImportError:
@@ -52,22 +54,22 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from utils.circuit_breaker import CircuitBreaker
 
-from agent.state import GraphState, create_initial_state  # noqa: E402
 from agent.prompts import (  # noqa: E402
     build_classify_complexity_prompt,
-    build_extract_claims_prompt,
-    build_qa_prompt,
-    build_self_eval_prompt,
-    build_suggested_questions_prompt,
-    build_query_transform_prompt,
-    build_doc_grade_batch_prompt,
-    build_doc_grade_prompt,
-    build_query_rewrite_prompt,
-    build_verify_claim_prompt,
     build_conversational_qa_prompt,
     build_conversational_query_transform_prompt,
+    build_doc_grade_batch_prompt,
+    build_doc_grade_prompt,
+    build_extract_claims_prompt,
+    build_qa_prompt,
+    build_query_rewrite_prompt,
+    build_query_transform_prompt,
+    build_self_eval_prompt,
+    build_suggested_questions_prompt,
+    build_verify_claim_prompt,
 )
-from tracing.sqlite_trace import start_trace, log_step, finish_trace  # noqa: E402
+from agent.state import GraphState, create_initial_state  # noqa: E402
+from tracing.sqlite_trace import finish_trace, log_step, start_trace  # noqa: E402
 
 try:
     from evaluation.evaluator_runner import persist_online_evaluations, run_online_evaluators

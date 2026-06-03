@@ -3,11 +3,11 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import vectordb.manager as tenant_manager
 from config.settings import Settings
 from ingestion.pipeline import IngestPipeline
 from llm.providers import LLMResponse
 from vectordb import _base_manager as manager
-import vectordb.manager as tenant_manager
 
 
 def test_contextual_headers_enabled_by_default(monkeypatch) -> None:

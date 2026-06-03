@@ -11,7 +11,6 @@ import json as _json
 from typing import Any
 
 from tracing import _base_trace as _sqlite_trace
-
 from utils.pii import redact_pii
 
 # Re-exports from _base_trace (canonical home) so that production code

@@ -20,7 +20,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from evaluation.ragas_eval import RAGEvaluator, TestCase
 
-
 MODEL_PROFILES = {
     "qwen2.5:7b": {
         "mera_industrial": 0.555,

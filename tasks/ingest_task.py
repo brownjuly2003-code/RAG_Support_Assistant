@@ -33,8 +33,8 @@ def ingest_document(self, file_path: str) -> dict:
     self.update_state(state="PROCESSING", meta={"step": "indexing", "docs_count": len(docs)})
 
     try:
-        from vectordb.manager import build_vector_store, get_embeddings
         from config.settings import get_settings
+        from vectordb.manager import build_vector_store, get_embeddings
 
         settings = get_settings()
         chunk_config = {

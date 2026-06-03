@@ -7,16 +7,17 @@ import json
 import sys
 import time
 import uuid
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from collections.abc import Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from evaluation.ragas_eval import RAGEvaluator, TestCase as RAGTestCase
+from evaluation.ragas_eval import RAGEvaluator
+from evaluation.ragas_eval import TestCase as RAGTestCase
 from scripts.regression_eval import CuratedCase, load_curated_cases, sample_cases
 
 

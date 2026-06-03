@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from html.parser import HTMLParser
-from pathlib import Path
 import shutil
 import subprocess
+from html.parser import HTMLParser
+from pathlib import Path
 
 import pytest
-
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 JSDELIVR_NPM_PREFIX = "https://cdn.jsdelivr.net/npm/"

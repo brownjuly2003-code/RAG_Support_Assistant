@@ -17,7 +17,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from auth.jwt_handler import create_access_token
 
-
 ADMIN_HEADERS = {"Authorization": f"Bearer {create_access_token('admin', 'admin')}"}
 
 

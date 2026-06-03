@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+
 api_app = importlib.import_module("api.app")
 
 PROVIDER_REGISTRY_PATH = Path(__file__).resolve().parent.parent / "config" / "providers.yml"

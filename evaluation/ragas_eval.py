@@ -21,10 +21,10 @@ import json
 import logging
 import re
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
-from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 
-from packaging.requirements import Requirement
 import yaml
-
+from packaging.requirements import Requirement
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 

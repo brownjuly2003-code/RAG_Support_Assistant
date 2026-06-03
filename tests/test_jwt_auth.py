@@ -1,5 +1,7 @@
-from auth.jwt_handler import JWT_SECRET, verify_token
 from fastapi.testclient import TestClient
+
+from auth.jwt_handler import JWT_SECRET, verify_token
+
 CLIENT_SETTINGS_OVERRIDES = {
     "api_key": "secret123",
     "ollama_model_name": "test-model",

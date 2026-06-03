@@ -15,10 +15,10 @@ Re-exports:
 from evaluation.ragas_eval import (
     RAGEvaluator,
     TestCase,
-    faithfulness,
     answer_relevancy,
     context_precision,
     context_recall,
+    faithfulness,
 )
 
 __all__ = [

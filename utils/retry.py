@@ -4,8 +4,8 @@ from __future__ import annotations
 import logging
 import random
 import time
-from typing import Literal, TypeVar
 from collections.abc import Callable
+from typing import Literal, TypeVar
 
 T = TypeVar("T")
 RetryEvent = Literal["attempt", "success", "retry", "exhausted"]

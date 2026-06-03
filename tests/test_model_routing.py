@@ -8,8 +8,8 @@ from unittest.mock import MagicMock
 def test_classifier_returns_simple_and_records_metric(monkeypatch) -> None:
     import config.settings as settings_module
     from agent.graph import make_classify_complexity_node
-    from monitoring.prometheus import MODEL_ROUTING, PROMETHEUS_AVAILABLE
     from agent.state import create_initial_state
+    from monitoring.prometheus import MODEL_ROUTING, PROMETHEUS_AVAILABLE
 
     monkeypatch.setenv("MODEL_ROUTING_ENABLED", "true")
     settings_module._settings = None
@@ -147,8 +147,8 @@ def test_generate_and_evaluate_route_by_complexity() -> None:
 
 
 def test_simple_graph_fast_path_skips_grade_docs_and_verify(monkeypatch) -> None:
-    import config.settings as settings_module
     import agent.graph as graph
+    import config.settings as settings_module
     from agent.state import create_initial_state
 
     settings = SimpleNamespace(

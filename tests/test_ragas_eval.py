@@ -9,12 +9,14 @@ import pytest
 
 from evaluation.ragas_eval import (
     RAGEvaluator,
-    TestCase as RAGTestCase,
     answer_relevancy,
     answer_relevancy_embedding,
     context_precision,
     context_recall,
     faithfulness,
+)
+from evaluation.ragas_eval import (
+    TestCase as RAGTestCase,
 )
 
 

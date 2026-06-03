@@ -7,9 +7,8 @@ on a generic pipeline exception, but no ticket / inbox row was created
 
 from __future__ import annotations
 
-from typing import ClassVar
-
 import importlib
+from typing import ClassVar
 
 import pytest
 from fastapi.testclient import TestClient

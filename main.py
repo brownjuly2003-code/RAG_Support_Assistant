@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from api.app import app  # noqa: F401  re-exported as `main:app` for backwards compat
 
-
 if __name__ == "__main__":
     import os
 

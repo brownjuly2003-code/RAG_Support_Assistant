@@ -39,7 +39,6 @@ async def _ensure_pipeline() -> None:
             return
 
         from agent.graph import ConversationSession, LocalOllamaLLM
-
         from vectordb.manager import get_embeddings, get_retriever
 
         try:

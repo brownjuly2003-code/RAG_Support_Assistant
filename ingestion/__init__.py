@@ -8,7 +8,7 @@ Modules:
     pipeline -- IngestPipeline: load + build vector store + log metadata
 """
 
-from ingestion.loader import DocumentChangeTracker, DocumentLoader, SUPPORTED_EXTENSIONS
+from ingestion.loader import SUPPORTED_EXTENSIONS, DocumentChangeTracker, DocumentLoader
 from ingestion.pipeline import IngestPipeline
 
 __all__ = [
