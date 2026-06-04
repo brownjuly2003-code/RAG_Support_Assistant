@@ -1,5 +1,34 @@
 # Agent State
 
+## 2026-06-05 Update (cont. 12) — Kaggle Phase 2: 4 фейла задиагностированы и закрыты, kernel v5 (CPU) СЧИТАЕТСЯ
+
+**HEAD = этот handoff-коммит (master), origin не тронут (push всё ещё gated).**
+**Kernel `liovinajo/rag-phase2-contextual-ab` v5 запущен 2026-06-04 21:57 MSK, на 00:16 RUNNING (2h19m). ETA worst-case ~7h total (BGE-M3 на 4 vCPU: 5077 chunks × 2 плеча + 2 rerank-прохода; лимит Kaggle CPU 12h). Сессия закрыта до завершения — поллинг умер вместе с ней, в новой сессии просто проверить статус.**
+
+Цепочка фейлов v1→v4 (каждый — реальный root-cause, не повторы):
+1. **v1 (из cont.11):** в датасете НЕ было `repo_targz.bin` — `kaggle datasets version` из подкаталога падает `[Errno 2]` на resume-метаданных в Temp (CLI-баг), прошлая сессия этого не заметила. Фикс: загрузка ИЗ папки датасета (`cd .tmp/kaggle_phase2/dataset && kaggle datasets version -p .`) → **датасет v3 (18:23Z) с blob 2 215 169 b — ПОДТВЕРЖДЁН**. Гоча: `kaggle datasets files` отдаёт максимум **200 строк/страницу** даже с `--page-size 500` — blob виден только на стр. 2 (`--page-token`); «файла нет в листинге» ≠ «upload не прошёл».
+2. **v2:** kernel пушнут через ~2 мин после загрузки v3 — смонтировался ещё старый датасет. (Постфактум: маскировалось и п.3.)
+3. **v3:** диагностический листинг показал **mount = 0 entries**. Probe-kernel `liovinajo/rag-ds-probe` (CPU, 30 сек) вскрыл: **Kaggle сменил layout монтирования** — датасеты теперь в `/kaggle/input/datasets/<owner>/<slug>/`, НЕ в `/kaggle/input/<slug>/`. Фикс в `run_phase2.py`: `DS = Path("/kaggle/input")` + существующие rglob (layout-agnostic).
+4. **v4:** mount ок (207 entries), repo extracted, corpus 201 ✓, pools/A дошёл до encode и упал: `torch.AcceleratorError: CUDA error: no kernel image is available` — **Kaggle выдал P100 (sm_60, Pascal)**, у torch на их образе Pascal-кернели выброшены (warning «If you want to use the Tesla P100-PCIE-16GB…» в логе). Тип GPU через CLI-метаданные НЕ выбирается. Фикс: **v5 = `enable_gpu: false`** — детерминированно, GPU-квоту не жжёт.
+
+Все гочи продублированы в глобальную память (`reference_kaggle_kernels_gotchas_2026`).
+
+**Продолжение в новой сессии (по шагам):**
+1. `kaggle kernels status liovinajo/rag-phase2-contextual-ab`:
+   - RUNNING → ждать (старт 2026-06-04 18:57Z; после 19:00Z 05.06 = >12h — значит убит лимитом, см. п.4-альтернативы);
+   - ERROR → лог: `kaggle kernels output liovinajo/rag-phase2-contextual-ab -p .tmp/kaggle_phase2/outN --file-pattern ".*\.log$"` (JSON-массив; progress-bar-шум фильтровать по `Loading weights|Batches:`);
+   - COMPLETE → шаг 2.
+2. Забрать результаты (`--file-pattern` обязателен, иначе после mid-pipeline crash польётся весь распакованный repo; на success скрипт сам делает rmtree):
+   `kaggle kernels output liovinajo/rag-phase2-contextual-ab -p .tmp/kaggle_phase2/out_final --file-pattern "(ab_phase2_summary\.md|ab_candidates_phase2_[AC]\.json|ab_phase2_[AC]_pool\.json|.*\.log)"`
+   → coverage@top-5 A vs C, таблица 13 целей, верификация 10 rerank-recoverable.
+3. R7 LLM-judged ЛОКАЛЬНО (контракт producer→consumer сверен в этой сессии: `case_id/query/kws/rerank_k/cands` ✓; judge = `mistral-small-latest`, free-tier паттерн рабочий с baseline-прогона):
+   `set -a; . ./.env; set +a; python scripts/aircargo_ragas_free.py --provider mistral --min-interval 1.2 --contexts .tmp/kaggle_phase2/out_final/ab_candidates_phase2_C.json` (и с `_A`).
+   Baseline для сравнения: **faithfulness 0.833 / context_recall 0.785** (`reports/ragas/20260603T031646Z-e437ad07-*`; запись 031614Z с 1.0 — smoke, игнорировать).
+4. Phase 3 по плану (`docs/plans/2026-06-03-overcome-retrieval-barrier.md`): подтвердилось → решение про дефолт `RAG_STRUCTURAL_CHUNKING` + отчёт `docs/operations/2026-06-0X-phase2-...md`; нет → query-expansion/BM25-вес. Если kernel убит/фейл — альтернатива: iMac two-phase (проверить, свободен ли от DV2) или Colab (требует push).
+5. Push 3+1 коммитов на origin — GATED, спрашивать явно.
+
+Артефакты на диске (`.tmp/` gitignored): `.tmp/kaggle_phase2/{dataset,kernel,probe}/`, `repo.tar.gz.bak` (= bytes blob'а), `kernel/run_phase2.py` v5 — актуальная версия с mount-фиксом и диагностикой mount-листинга. Креды: `~/.kaggle/kaggle.json` (liovinajo), CLI 2.1.2.
+
 ## 2026-06-04 Update (cont. 11) — Phase 1 proxy A/B: направление ПОДТВЕРЖДЕНО (GO Phase 2), обрезка тела чанка починена
 
 **HEAD = handoff commit (master). 2 коммита ВПЕРЕДИ origin — НЕ запушены (push gated).**
