@@ -27,10 +27,20 @@ A=baseline-зеркало / B=фикс с production-обрезкой / C=фик
   правильный док в пуле позицией 2, но другим чанком; кандидат на parent-child/реранк —
   строка Phase 3, не блокер.
 
-**Next = Phase 2 (gated, remote):** BGE-M3 + bge-reranker-v2-m3 на Colab (приоритет, Julia
-интерактивно; CC готовит turnkey cell + corpus.zip) или iMac two-phase (проверить, что
-свободен от DV2). Плечи: A-конфиг vs `RAG_STRUCTURAL_CHUNKING=true` + дефолтные headers
-(пост-фикс). Метрики: recall/top-5 на 100 кейсах + re-run R7 LLM-judged через Mistral.
+**Next = Phase 2 (gated, remote) — turnkey ГОТОВ:**
+- `scripts/ab_remote_contextual.py` — три стадии (`pools A/C` → `rerank A/C` → `report`),
+  каждая отдельным процессом (эмбеддер и реранкер не резидентны вместе — iMac-safe);
+  report пишет `.tmp/ab_phase2_summary.md` (coverage@top-5, таблица 13 целей A vs C,
+  верификация 10 rerank-recoverable). Smoke: report-стадия на синтетике + pools на пустом
+  корпусе (без моделей) — зелёные; ruff clean.
+- Notebook: 2 новые ячейки «Phase 2 contextual-header A/B» (после reindex-ячейки) гоняют
+  все стадии; из cell 8 убран устаревший пин `ms-marco` реранкера (противоречил R1).
+- Корпус: `.tmp/aircargo_uploads.zip` (201 md, 1.1 MB, layout `aircargo/`) — Julia
+  загружает в Colab по промпту cell 6.
+- R7 LLM-judged re-run — ЛОКАЛЬНО после скачивания кандидатов (ключ не уезжает в Colab):
+  `python scripts/aircargo_ragas_free.py --provider mistral --contexts .tmp/ab_candidates_phase2_C.json`.
+- **Пререквизит: push** (Colab клонирует GitHub master — нужны `4844094` + turnkey-коммит).
+  Альтернатива без push: iMac two-phase (сначала проверить, что свободен от DV2).
 
 ## 2026-06-03 Update (cont. 10) — retrieval-fix barrier plan + Phase 0 done + PUSHED
 
