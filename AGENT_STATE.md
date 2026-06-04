@@ -1,5 +1,37 @@
 # Agent State
 
+## 2026-06-04 Update (cont. 11) — Phase 1 proxy A/B: направление ПОДТВЕРЖДЕНО (GO Phase 2), обрезка тела чанка починена
+
+**HEAD = handoff commit (master). 2 коммита ВПЕРЕДИ origin — НЕ запушены (push gated).**
+
+Phase 1 барьер-плана выполнена локально (<1GiB, multilingual-MiniLM прокси, 3 плеча
+A=baseline-зеркало / B=фикс с production-обрезкой / C=фикс без обрезки;
+`.tmp/ab_proxy_minilm.py`, two-phase encode/eval + чекпойнты + RAM-watchdog):
+
+- **A→C: 12/13 диагноз-целей улучшены, 0 регрессий**; top-5 FULL 65→73%. Спасения из
+  «вне пула top-40» в top-5: waybill-first-mile →3, oversized-permit 35→1, fuel-supply 12→1.
+  **GO на Phase 2.**
+- **A→B: 3 регрессии, root-cause доказан** — production-обрезка `[:chunk_size]` в
+  `manager.add_contextual_headers` вырезала хвостовые строки field-таблиц
+  (`vehicle_tir_carnet`/`escort_vehicle_count`/`gps_device_id` отсутствовали во ВСЁМ пуле;
+  обрезка била 33% structural-чанков, 28% fixed).
+- `4844094` **fix(retrieval)**: тело чанка больше не режется; header клампится до 200 в
+  обоих путях `_base_manager`; warning-спам (1443/ингест) → один summary-INFO. 25 тестов,
+  ruff clean. После фикса production-путь ≡ плечо C — re-run B′ не нужен.
+- Отчёт: `docs/operations/2026-06-04-phase1-proxy-ab-contextual-header.md` (там же
+  честные границы прокси: max_seq=128 смещение в пользу якоря — поэтому Phase 2 обязателен).
+- **Поправка cont.10:** `contextual_headers` default **ON** (пинован
+  `test_contextual_headers_enabled_by_default`; и Mac-baseline кэш нёс header на 300/300
+  кандидатах). «Default off» относилось только к `RAG_STRUCTURAL_CHUNKING`.
+- Остаточный промах customs-clearance-fields (— во всех плечах): целевая секция есть,
+  правильный док в пуле позицией 2, но другим чанком; кандидат на parent-child/реранк —
+  строка Phase 3, не блокер.
+
+**Next = Phase 2 (gated, remote):** BGE-M3 + bge-reranker-v2-m3 на Colab (приоритет, Julia
+интерактивно; CC готовит turnkey cell + corpus.zip) или iMac two-phase (проверить, что
+свободен от DV2). Плечи: A-конфиг vs `RAG_STRUCTURAL_CHUNKING=true` + дефолтные headers
+(пост-фикс). Метрики: recall/top-5 на 100 кейсах + re-run R7 LLM-judged через Mistral.
+
 ## 2026-06-03 Update (cont. 10) — retrieval-fix barrier plan + Phase 0 done + PUSHED
 
 **PUSHED 2026-06-03: `9b219fa..2a4000e` → `origin/master`. CI run `26864082546` GREEN
