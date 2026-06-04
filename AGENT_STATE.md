@@ -27,6 +27,31 @@ A=baseline-зеркало / B=фикс с production-обрезкой / C=фик
   правильный док в пуле позицией 2, но другим чанком; кандидат на parent-child/реранк —
   строка Phase 3, не блокер.
 
+**⏳ ОЖИДАЕТСЯ (запущено 2026-06-04 ~19:00, сессия закрыта до завершения): Phase 2 СЧИТАЕТСЯ на Kaggle.**
+Push-гейт ОБОЙДЁН легально: код уехал приватным датасетом (git archive HEAD c 3 локальными
+коммитами), НЕ через GitHub. Артефакты (все пути от корня репо, `.tmp/` gitignored, на диске живы):
+- Датасет `liovinajo/rag-phase2-ab-bundle` (private): corpus (Kaggle распаковал zip) +
+  `repo_targz.bin` (= repo.tar.gz; **гоча: Kaggle ТИХО ВЫБРАСЫВАЕТ `*.tar.gz` из датасетов,
+  zip — авторазворачивает**; потому blob). Исходники пакета: `.tmp/kaggle_phase2/dataset/`.
+- Kernel `liovinajo/rag-phase2-contextual-ab` (private, GPU T4, script): `.tmp/kaggle_phase2/kernel/`
+  (`run_phase2.py` layout-agnostic + `kernel-metadata.json`). Запущен version 1.
+- Креды: `~/.kaggle/kaggle.json` (username liovinajo), CLI 2.1.2.
+
+**Продолжение в новой сессии (по шагам):**
+1. `kaggle kernels status liovinajo/rag-phase2-contextual-ab` → ждать `complete`
+   (≈10-25 мин GPU; `error` → `kaggle kernels output ... -p .tmp/kaggle_phase2/out` всё равно
+   отдаст лог — диагностировать).
+2. `kaggle kernels output liovinajo/rag-phase2-contextual-ab -p .tmp/kaggle_phase2/out` →
+   `ab_phase2_summary.md` (coverage@top-5 A vs C, таблица 13 целей, верификация 10
+   rerank-recoverable) + `ab_candidates_phase2_{A,C}.json` + pool-файлы.
+3. R7 LLM-judged re-run ЛОКАЛЬНО на обоих плечах (ключ из `.env`, не печатать):
+   `set -a; . ./.env; set +a; python scripts/aircargo_ragas_free.py --provider mistral --min-interval 1.2 --contexts .tmp/kaggle_phase2/out/ab_candidates_phase2_C.json`
+   (и то же с `_A` для базы). Сравнить faithfulness/recall A vs C с baseline 0.833/0.785.
+4. Phase 3 по плану: подтвердилось → решение про дефолт `RAG_STRUCTURAL_CHUNKING` + отчёт
+   `docs/operations/2026-06-0X-phase2-...md` + обновить план-доку; нет → query-expansion/BM25-вес.
+5. Push 3+1 коммитов на origin — ВСЁ ЕЩЁ gated, спросить явно (Kaggle-путь его не заменяет
+   для CI/Pages; Colab-ячейки тоже ждут push).
+
 **Next = Phase 2 (gated, remote) — turnkey ГОТОВ:**
 - `scripts/ab_remote_contextual.py` — три стадии (`pools A/C` → `rerank A/C` → `report`),
   каждая отдельным процессом (эмбеддер и реранкер не резидентны вместе — iMac-safe);
