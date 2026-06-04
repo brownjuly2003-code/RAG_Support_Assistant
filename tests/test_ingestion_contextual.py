@@ -191,6 +191,55 @@ def test_build_vector_store_skips_contextual_headers_when_disabled(
     assert "has_context_header" not in chunks[0].metadata
 
 
+def test_add_contextual_headers_preserves_full_body_when_over_chunk_size() -> None:
+    """Заголовок не должен стоить хвоста тела чанка.
+
+    Прежний wrapper резал enriched-чанк назад до chunk_size — для чанка,
+    уже стоящего на chunk_size, это срезало хвост тела на длину заголовка.
+    Прокси-A/B 2026-06-04 показал, что так теряются хвостовые строки
+    field-таблиц (`vehicle_tir_carnet`, `escort_vehicle_count`, ...) и
+    contextual-header из выигрыша превращается в регрессию
+    (docs/operations/2026-06-04-phase1-proxy-ab-contextual-header.md).
+    """
+    tail_row = "| `vehicle_tir_carnet` | Карнет TIR | `{{vehicle_tir_carnet}}` |"
+    body = ("Регламент перевозки. " * 40).strip() + "\n" + tail_row
+    chunk = tenant_manager.Document(
+        page_content=body,
+        metadata={
+            "source": "05_tlog_regulation_cross_border.md",
+            "h1": "Регламент: международные перевозки",
+            "h2": "2. Обязательные поля",
+        },
+    )
+
+    enriched = tenant_manager.add_contextual_headers([chunk], [], chunk_size=len(body))
+
+    out = enriched[0].page_content
+    assert out.startswith("[Контекст:")
+    assert body in out  # тело сохранено целиком
+    assert out.endswith(tail_row)  # хвостовая строка таблицы не срезана
+    assert len(out) > len(body)  # заголовок добавлен, а не вытеснил контент
+    assert enriched[0].metadata["has_context_header"] is True
+    # граница превышения: header ограничен клампом 200 символов
+    assert len(enriched[0].metadata["contextual_header"]) <= 200
+
+
+def test_contextual_header_fallback_clamps_pathological_heading_path() -> None:
+    """No-LLM fallback клампит заголовок до 200 символов, как LLM-путь."""
+    chunk = tenant_manager.Document(
+        page_content="x",
+        metadata={
+            "source": "doc_" + "a" * 80 + ".md",
+            "h1": "Раздел " + "б" * 90,
+            "h2": "Подраздел " + "в" * 90,
+        },
+    )
+
+    enriched = manager.add_contextual_headers([chunk], llm=None)
+
+    assert len(enriched[0].metadata["contextual_header"]) == 200
+
+
 def test_ingest_pipeline_uses_provider_batch_for_contextual_headers(
     monkeypatch,
     tmp_path,

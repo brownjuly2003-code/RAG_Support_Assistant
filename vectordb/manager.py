@@ -68,19 +68,30 @@ def add_contextual_headers(
         full_documents=list(full_documents),
     )
     prepared: list[Document] = []
+    oversize = 0
     for chunk in enriched:
-        page_content = chunk.page_content
-        if len(page_content) > chunk_size:
-            logger.warning(
-                "Contextual header exceeded chunk_size for source %s; truncating chunk",
-                (chunk.metadata or {}).get("source", "unknown"),
-            )
-            page_content = page_content[:chunk_size]
+        # Тело чанка НЕ режем. Прежний `page_content[:chunk_size]` срезал хвост
+        # тела на длину заголовка (~28-33% чанков корпуса) — прокси-A/B
+        # 2026-06-04 показал, что это вырезает хвостовые строки field-таблиц и
+        # превращает выигрыш contextual-header в регрессию (3/13 целевых кейсов;
+        # docs/operations/2026-06-04-phase1-proxy-ab-contextual-header.md).
+        # Превышение chunk_size ограничено длиной заголовка: оба пути
+        # (_base_manager LLM и no-LLM fallback) клампят его до 200 символов.
+        if len(chunk.page_content) > chunk_size:
+            oversize += 1
         prepared.append(
             Document(
-                page_content=page_content,
+                page_content=chunk.page_content,
                 metadata={**(chunk.metadata or {}), "has_context_header": True},
             )
+        )
+    if oversize:
+        logger.info(
+            "Contextual headers push %d/%d chunks past chunk_size=%d "
+            "(body preserved; overflow bounded by the 200-char header clamp)",
+            oversize,
+            len(prepared),
+            chunk_size,
         )
     return prepared
 

@@ -632,6 +632,11 @@ def add_contextual_headers(
             page = meta.get("page", "")
             if page:
                 header += f", стр. {page}"
+            # Та же граница, что у LLM-пути: заголовок — якорь, не контент,
+            # и его длина должна быть ограничена (см. manager.add_contextual_headers,
+            # который больше не режет тело чанка и полагается на эту границу).
+            if len(header) > 200:
+                header = header[:200]
 
         # Prepend header to chunk content
         new_content = f"[Контекст: {header}]\n{chunk.page_content}"
