@@ -71,6 +71,20 @@ COVERED_4 = [
 TARGETS_13 = DEEP_7 + NEAR_DEEP_1 + UNCERTAIN_5
 RECOVERABLE_10 = NEAR_DEEP_1 + UNCERTAIN_5 + COVERED_4
 
+# Residual problem cases after Phase 2 (4 regressions + 4 deep MISS) with the
+# measured parent-context potential 8/8
+# (docs/operations/2026-06-05-residual-miss-diagnosis.md).
+PROBLEM_8 = [
+    "aircargo-customs-broker-escalation",
+    "aircargo-dangerous-goods-clearance",
+    "aircargo-breach-notification-participants",
+    "aircargo-perishable-special-cargo-evidence",
+    "aircargo-customs-clearance-fields",
+    "aircargo-waybill-first-mile-fields",
+    "aircargo-perishable-temperature-controls",
+    "aircargo-cross-border-required-fields",
+]
+
 
 def _set_arm_env(arm: str) -> None:
     """Environment must be set before any project import reads settings."""
@@ -324,15 +338,157 @@ def stage_report(out_dir: Path) -> int:
     return 0
 
 
+def stage_expand(src: Path, corpus: Path, window: int, max_chars: int) -> int:
+    """Arm D = arm C post-rerank candidates + parent-expansion. Local, no models.
+
+    The expansion runs AFTER the rerank, so arm D's selection is identical to
+    arm C — only the candidate texts change. That makes this measurement exact
+    (not a proxy) and fully local: the arm-C chunk list is reproduced with the
+    same pure-text pipeline the Kaggle kernel used (structural_split +
+    contextual headers, verified 1:1 in the residual-miss diagnosis), and the
+    expansion itself is done by the production
+    HybridRetriever._expand_parents — not a reimplementation.
+    """
+    _set_arm_env("C")
+    from config.settings import get_settings
+    from ingestion.loader import DocumentLoader
+    from vectordb import manager
+    from vectordb._base_manager import Document, HybridRetriever, select_chunks
+
+    settings = get_settings()
+    docs = DocumentLoader(recursive=False).load_documents(str(corpus))
+    if not docs:
+        print(f"[expand] no documents under {corpus}", flush=True)
+        return 2
+    chunks = select_chunks(
+        list(docs), None, settings.chunk_size, settings.chunk_overlap, settings=settings
+    )
+    if getattr(settings, "contextual_headers", False):
+        chunks = manager.add_contextual_headers(chunks, docs, chunk_size=settings.chunk_size)
+    print(f"[expand] {len(docs)} docs -> {len(chunks)} chunks (arm C reproduction)", flush=True)
+
+    text_to_pos: dict[str, int] = {}
+    for idx, chunk in enumerate(chunks):
+        text_to_pos.setdefault(chunk.page_content, idx)
+
+    retriever = HybridRetriever(
+        vector_store=None,
+        chunks=chunks,
+        reranker=None,
+        use_bm25=False,
+        parent_expansion=True,
+        parent_expansion_window=window,
+        parent_expansion_max_chars=max_chars,
+    )
+
+    rows = json.loads(src.read_text(encoding="utf-8"))
+    unmatched = 0
+    transitions: dict[tuple[str, str], list[str]] = {}
+    out_rows = []
+    for row in rows:
+        top_k = int(row.get("rerank_k", 5))
+        sources = row.get("cand_sources", [])
+        selected: list[Document] = []
+        for i, text in enumerate(row["cands"][:top_k]):
+            pos = text_to_pos.get(text)
+            if pos is None:
+                unmatched += 1
+                src_name = sources[i] if i < len(sources) else "?"
+                selected.append(Document(page_content=text, metadata={"source": src_name}))
+            else:
+                selected.append(chunks[pos])
+        expanded = retriever._expand_parents(selected)
+
+        status_c = _kw_status(row["kws"], row["cands"][:top_k])
+        status_d = _kw_status(row["kws"], [d.page_content for d in expanded])
+        transitions.setdefault((status_c, status_d), []).append(row["case_id"])
+
+        out_row = dict(row)
+        out_row["cands"] = [d.page_content for d in expanded] + row["cands"][top_k:]
+        out_row["parent_expanded"] = sum(
+            1 for d in expanded if (d.metadata or {}).get("parent_expanded")
+        )
+        out_rows.append(out_row)
+
+    if unmatched:
+        print(
+            f"[expand] WARNING: {unmatched} candidate texts not found in the local "
+            "chunk reproduction — those stayed unexpanded",
+            flush=True,
+        )
+
+    out_path = src.parent / "ab_candidates_phase2_D.json"
+    out_path.write_text(json.dumps(out_rows, ensure_ascii=False), encoding="utf-8")
+
+    lines: list[str] = []
+
+    def emit(line: str = "") -> None:
+        print(line, flush=True)
+        lines.append(line)
+
+    emit(f"# Arm D = arm C + parent-expansion (window={window}, max_chars={max_chars})")
+    emit()
+    by_id = {r["case_id"]: r for r in out_rows}
+    for label, key_rows in (("C", rows), ("D", out_rows)):
+        counts = {"FULL": 0, "PART": 0, "MISS": 0}
+        for r in key_rows:
+            counts[_kw_status(r["kws"], r["cands"][: int(r.get("rerank_k", 5))])] += 1
+        n = len(key_rows)
+        emit(
+            f"- arm {label}: FULL {counts['FULL']}/{n} = {100*counts['FULL']/max(n,1):.0f}% "
+            f"PART {counts['PART']} MISS {counts['MISS']}"
+        )
+    emit()
+    emit("## Transitions C -> D")
+    emit()
+    for (c_st, d_st), ids in sorted(transitions.items()):
+        if c_st == d_st:
+            emit(f"- {c_st} -> {d_st}: {len(ids)}")
+        else:
+            emit(f"- {c_st} -> {d_st}: {len(ids)} ({', '.join(i.removeprefix('aircargo-') for i in ids)})")
+    emit()
+    emit("## 8 residual problem cases (4 regressions + 4 deep)")
+    emit()
+    emit("| case | C top5 | D top5 | sections added |")
+    emit("|---|---|---|---|")
+    for cid in PROBLEM_8:
+        row_c = next((r for r in rows if r["case_id"] == cid), None)
+        row_d = by_id.get(cid)
+        if row_c is None or row_d is None:
+            emit(f"| {cid.removeprefix('aircargo-')} | ? | ? | ? |")
+            continue
+        top_k = int(row_c.get("rerank_k", 5))
+        emit(
+            f"| {cid.removeprefix('aircargo-')} "
+            f"| {_kw_status(row_c['kws'], row_c['cands'][:top_k])} "
+            f"| {_kw_status(row_d['kws'], row_d['cands'][:top_k])} "
+            f"| {row_d['parent_expanded']}/{top_k} |"
+        )
+
+    summary_path = src.parent / "ab_phase2_D_summary.md"
+    summary_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"\n[expand] saved -> {out_path}\n[expand] summary -> {summary_path}", flush=True)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--stage", required=True, choices=("pools", "rerank", "report"))
+    parser.add_argument("--stage", required=True, choices=("pools", "rerank", "report", "expand"))
     parser.add_argument("--arm", default="", choices=("", "A", "C"))
     parser.add_argument("--corpus", default=str(PROJECT_ROOT / "data" / "uploads" / "aircargo"))
     parser.add_argument(
         "--cases", default=str(PROJECT_ROOT / "evaluation" / "curated_cases_aircargo.jsonl")
     )
     parser.add_argument("--out-dir", default=str(PROJECT_ROOT / ".tmp"))
+    parser.add_argument(
+        "--src",
+        default=str(
+            PROJECT_ROOT / ".tmp" / "kaggle_phase2" / "out_final" / "ab_candidates_phase2_C.json"
+        ),
+        help="--stage expand: arm C post-rerank candidates",
+    )
+    parser.add_argument("--window", type=int, default=1, help="--stage expand: sections per side")
+    parser.add_argument("--max-chars", type=int, default=2400, help="--stage expand: text cap")
     args = parser.parse_args(argv)
 
     out_dir = Path(args.out_dir)
@@ -344,6 +500,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.arm not in ("A", "C"):
             parser.error("--stage rerank requires --arm A|C")
         return stage_rerank(args.arm, out_dir)
+    if args.stage == "expand":
+        return stage_expand(Path(args.src), Path(args.corpus), args.window, args.max_chars)
     return stage_report(out_dir)
 
 
