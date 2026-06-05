@@ -35,13 +35,22 @@
    в A за счёт широкого тематического контекста fixed-чанков; узкие structural-секции
    этот контекст потеряли. Обратная сторона того же трейдоффа, который дал +8 gains
    на field-запросах.
-3. **Рычаги следующего цикла (по убыванию ожидаемой отдачи):**
-   - **parent-child retrieval** (`RAG_PARENT_CHILD` уже wired, выключен): child-точность
-     structural-секций + parent-контекст для тематических запросов — бьёт и в 4 регрессии,
-     и в 2 neither-кейса (связка живёт в parent'е), и потенциально в customs-clearance-fields
-     (док в пуле не той секцией).
-   - **query-expansion / BM25-вес** — для 4 deep-целей (NL RU ↔ snake_case/EN-термины,
-     вне пула в обеих нарезках).
-4. Замер обоих рычагов — production-стек (BGE-M3+reranker) → Kaggle-паттерн Phase 2
-   уже turnkey (`scripts/ab_remote_contextual.py` + датасет-бандл); расширить плечом
-   «C + parent-child» дёшево.
+3. **Потенциал parent-контекста измерен по Kaggle C-пулу: 8/8.** Для ВСЕХ 8 проблемных
+   кейсов (4 регрессии + 4 deep) правильный документ (где связка живёт одним чанком)
+   УЖЕ присутствует в top-40 пула C, причём first-rank 1-7 (у трёх deep-целей — 18-24
+   чанка дока в пуле): customs-broker r1 (4 чанка), dangerous-goods-clearance r2 (9),
+   breach-notification r1 (8), perishable-special-cargo r7 (6), customs-clearance r1 (18),
+   waybill-first-mile r1 (20), perishable-temperature r1 (24), cross-border r2 (8).
+   Retrieval находит правильный док — но не тем чанком; возврат parent-контекста
+   механически приносит связку.
+4. **`RAG_PARENT_CHILD` as-is НЕ включать** — проверено по коду: `ParentDocumentStore`
+   (`vectordb/_base_manager.py:656`) — in-memory brute-force ретривер, который ПОДМЕНЯЕТ
+   HybridRetriever целиком (`:1019`): теряется BM25+RRF+reranker (основа 80%+ coverage),
+   children эмбеддятся при каждом построении (без персистентности), нарезка детей
+   fixed 300/50 (не structural). Включение флага = регрессия всего retrieval-пути.
+5. **Правильный шов следующего цикла: parent-expansion ПОСЛЕ реранка в HybridRetriever** —
+   финальные top-k child-чанки дополняются контекстом соседних structural-секций своего
+   документа (чистый текст-lookup по metadata source + порядковому индексу; hybrid-путь
+   не меняется). Бьёт в доказанные 8/8 + 2 neither-кейса. Для 4 deep дополнительный
+   рычаг — query-expansion (если parent-expansion не доберёт). Замер — Kaggle-паттерн
+   Phase 2 (turnkey готов, добавить плечо «C + parent-expansion»).
