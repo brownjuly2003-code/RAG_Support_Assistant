@@ -15,6 +15,11 @@
 
 **Следующая сессия (кандидаты, НЕ блокеры):** query-expansion для customs-clearance-fields (последний MISS) · Phase 0 chunk-size плана (локально, без моделей) · push 6 коммитов — GATED, спрашивать явно.
 
+**ДОПОЛНЕНО той же сессией (после push):**
+- **PUSHED**: `e429399` + CI-fix `7aeb3b5` — **CI зелёный**. Гоча моего теста: `reranker_model` в Settings — import-time default (НЕ default_factory) → `monkeypatch.setenv` бессилен, гасить `monkeypatch.setattr` на singleton'е; локально маскируется shell-env. CI-фейл 3 per-tenant тестов = HF-outage на раннере (transient, прошёл на re-run).
+- **`5d91d87`**: chunk-size план ЗАКРЫТ Phase 0 гейтом — 800/200 обоснован (cap=1200/1600 возвращают 1 связку, уже FULL; потерь 0). Sweep отменён. `docs/operations/2026-06-05-chunk-size-phase0-justification.md`.
+- **Query-expansion probe СДЕЛАН** (`docs/operations/2026-06-05-query-expansion-probe.md`): field-aware HyDE (промпт со snake_case-полями) — BM25-ранг kw-чанка 159→13 / 305→2 / 89→5 / 1021→99 на 4 deep-кейсах. GO на плечо E: прекомпьют расширений локально → Kaggle pools+rerank (~3h, шаблон есть) → expand → judge. Стандартный HyDE-промпт недостаточен (159→46).
+
 **Judge-прогоны:** C2 `20260605T104909Z`, D1 `20260605T101506Z`, D2 `20260605T103014Z`; артефакты D в `.tmp/kaggle_phase2/out_final/ab_candidates_phase2_D{1,2}.json` + `ab_phase2_D{1,2}_summary.md`.
 
 ## 2026-06-05 Update (cont. 14) — Phase 2 ЗАКРЫТА: R7-judge A+C прогнаны, `RAG_STRUCTURAL_CHUNKING` default ON, 838 тестов зелёные
