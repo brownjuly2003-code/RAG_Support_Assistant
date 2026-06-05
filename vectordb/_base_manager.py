@@ -297,6 +297,9 @@ class HybridRetriever:
         doc_key_chars: int = 200,
         reranker: Any = None,
         use_bm25: bool = True,
+        parent_expansion: bool = False,
+        parent_expansion_window: int = 1,
+        parent_expansion_max_chars: int = 2400,
     ):
         self._vector_store = vector_store
         self._chunks = chunks
@@ -305,6 +308,17 @@ class HybridRetriever:
         self._rrf_k = rrf_k
         self._doc_key_chars = doc_key_chars
         self._reranker = reranker
+        self._parent_expansion = parent_expansion
+        self._parent_window = max(0, parent_expansion_window)
+        self._parent_max_chars = parent_expansion_max_chars
+
+        # Position of each chunk in ingestion order — neighbour lookup for
+        # parent-expansion. Keyed the same way as RRF dedup, so documents
+        # returned by the vector store map back to their ingestion position.
+        self._chunk_positions: dict[str, int] = {}
+        if parent_expansion and chunks:
+            for idx, doc in enumerate(chunks):
+                self._chunk_positions.setdefault(_rrf_document_key(doc, doc_key_chars), idx)
 
         # Build BM25 index
         self._bm25 = None
@@ -353,6 +367,10 @@ class HybridRetriever:
         else:
             merged = merged[:self._rerank_k]
 
+        # Step 5: Parent expansion (post-rerank, selection unchanged)
+        if self._parent_expansion and merged:
+            merged = self._expand_parents(merged)
+
         return merged
 
     def _rrf_merge(self, list_a: list[Document], list_b: list[Document]) -> list[Document]:
@@ -391,6 +409,65 @@ class HybridRetriever:
         except Exception as e:
             logger.warning("[HybridRetriever] Reranker error: %s", e)
             return docs[:self._rerank_k]
+
+    @staticmethod
+    def _strip_contextual_header(text: str) -> str:
+        """Neighbour sections join an already-anchored core chunk — their own
+        "[Контекст: ...]" line would only add noise to the merged text."""
+        if text.startswith("[Контекст:"):
+            first_nl = text.find("\n")
+            if first_nl != -1:
+                return text[first_nl + 1:]
+        return text
+
+    def _expand_parents(self, docs: list[Document]) -> list[Document]:
+        """Parent-expansion: дополняет финальные top-k чанки соседними
+        structural-секциями их source-документа.
+
+        Чистый текст-lookup по порядку ингеста (self._chunks) — отбор
+        BM25+RRF+reranker уже сделан и не меняется. Бьёт в кейсы, где
+        retrieval находит правильный док, но не тем чанком
+        (docs/operations/2026-06-05-residual-miss-diagnosis.md, потенциал 8/8).
+        """
+        # Чанки, уже выбранные в top-k, и добавленные соседи не дублируются.
+        used_keys = {_rrf_document_key(d, self._doc_key_chars) for d in docs}
+        expanded: list[Document] = []
+        for doc in docs:
+            pos = self._chunk_positions.get(_rrf_document_key(doc, self._doc_key_chars))
+            source = (doc.metadata or {}).get("source")
+            if pos is None or source is None:
+                expanded.append(doc)
+                continue
+            before: list[str] = []
+            after: list[str] = []
+            budget = self._parent_max_chars - len(doc.page_content)
+            # Ближайшие секции первыми — у них больше шансов влезть в бюджет.
+            for dist in range(1, self._parent_window + 1):
+                for side, npos in ((before, pos - dist), (after, pos + dist)):
+                    if npos < 0 or npos >= len(self._chunks):
+                        continue
+                    neighbor = self._chunks[npos]
+                    if (neighbor.metadata or {}).get("source") != source:
+                        continue
+                    nkey = _rrf_document_key(neighbor, self._doc_key_chars)
+                    if nkey in used_keys:
+                        continue
+                    text = self._strip_contextual_header(neighbor.page_content).strip()
+                    if not text or len(text) > budget:
+                        continue
+                    budget -= len(text)
+                    used_keys.add(nkey)
+                    side.append(text)
+            if not before and not after:
+                expanded.append(doc)
+                continue
+            # before собран от ближнего к дальнему — разворачиваем в порядок документа.
+            parts = list(reversed(before)) + [doc.page_content] + after
+            expanded.append(Document(
+                page_content="\n\n".join(parts),
+                metadata={**(doc.metadata or {}), "parent_expanded": True},
+            ))
+        return expanded
 
     def invoke(self, query: str) -> list[Document]:
         return self.get_relevant_documents(query)
@@ -1052,6 +1129,9 @@ def build_retriever(
             doc_key_chars=getattr(settings, "rrf_doc_key_chars", 200),
             reranker=reranker,
             use_bm25=use_bm25,
+            parent_expansion=getattr(settings, "parent_expansion", False),
+            parent_expansion_window=getattr(settings, "parent_expansion_window", 1),
+            parent_expansion_max_chars=getattr(settings, "parent_expansion_max_chars", 2400),
         )
 
     if hasattr(vector_store, "as_retriever"):
@@ -1123,6 +1203,9 @@ def get_retriever(
             doc_key_chars=getattr(settings, "rrf_doc_key_chars", 200),
             reranker=reranker,
             use_bm25=use_bm25,
+            parent_expansion=getattr(settings, "parent_expansion", False),
+            parent_expansion_window=getattr(settings, "parent_expansion_window", 1),
+            parent_expansion_max_chars=getattr(settings, "parent_expansion_max_chars", 2400),
         )
 
     # Fallback: simple vector retriever

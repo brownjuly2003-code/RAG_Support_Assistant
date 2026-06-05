@@ -59,6 +59,9 @@ EXPERIMENT_SETTINGS_KEYS = (
     "agentic_mode",
     "hyde",
     "parent_child",
+    "parent_expansion",
+    "parent_expansion_window",
+    "parent_expansion_max_chars",
     "self_rag_max_iterations",
     "self_rag_min_quality",
     "fact_verification_enabled",
@@ -87,6 +90,9 @@ _EXPERIMENT_SETTING_ENV_VARS: dict[str, tuple[str, ...]] = {
     "agentic_mode": ("RAG_AGENTIC_MODE",),
     "hyde": ("RAG_HYDE",),
     "parent_child": ("RAG_PARENT_CHILD",),
+    "parent_expansion": ("RAG_PARENT_EXPANSION",),
+    "parent_expansion_window": ("RAG_PARENT_EXPANSION_WINDOW",),
+    "parent_expansion_max_chars": ("RAG_PARENT_EXPANSION_MAX_CHARS",),
     "self_rag_max_iterations": ("RAG_SELF_RAG_MAX_ITER",),
     "self_rag_min_quality": ("RAG_SELF_RAG_MIN_QUALITY",),
     "fact_verification_enabled": ("FACT_VERIFICATION_ENABLED",),
@@ -359,6 +365,25 @@ class Settings:
     # --- Parent-Child Chunking ---
     parent_child: bool = field(
         default_factory=lambda: os.getenv("RAG_PARENT_CHILD", "false").strip().lower() in ("1", "true", "yes")
+    )
+
+    # --- Parent expansion (post-rerank) ---
+    # Final top-k chunks are supplemented with neighbouring structural sections
+    # of their source document (pure text-lookup by ingestion order; the hybrid
+    # BM25+RRF+rerank selection is untouched). Targets the 8/8 cases where the
+    # right document is retrieved but by a different chunk
+    # (docs/operations/2026-06-05-residual-miss-diagnosis.md). Default OFF
+    # until the arm-D measurement confirms it.
+    parent_expansion: bool = field(
+        default_factory=lambda: os.getenv("RAG_PARENT_EXPANSION", "false").strip().lower() in ("1", "true", "yes")
+    )
+    # Neighbouring sections taken from each side of a selected chunk.
+    parent_expansion_window: int = field(
+        default_factory=lambda: int(os.getenv("RAG_PARENT_EXPANSION_WINDOW", "1"))
+    )
+    # Cap on the expanded chunk text (core chunk + added neighbours).
+    parent_expansion_max_chars: int = field(
+        default_factory=lambda: int(os.getenv("RAG_PARENT_EXPANSION_MAX_CHARS", "2400"))
     )
 
     # --- Level 2: Self-RAG ---

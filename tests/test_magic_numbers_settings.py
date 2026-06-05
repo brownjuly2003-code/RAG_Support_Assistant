@@ -115,6 +115,9 @@ def test_build_retriever_uses_rrf_settings() -> None:
         mock_settings.return_value.rrf_doc_key_chars = 13
         mock_settings.return_value.reranker_model = ""
         mock_settings.return_value.semantic_chunking = False
+        mock_settings.return_value.parent_expansion = False
+        mock_settings.return_value.parent_expansion_window = 1
+        mock_settings.return_value.parent_expansion_max_chars = 2400
 
         retriever = manager.build_retriever(
             docs=[doc],
