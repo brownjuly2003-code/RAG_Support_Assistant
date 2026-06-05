@@ -1,5 +1,27 @@
 # Agent State
 
+## 2026-06-05 Update (cont. 14) — Phase 2 ЗАКРЫТА: R7-judge A+C прогнаны, `RAG_STRUCTURAL_CHUNKING` default ON, 838 тестов зелёные
+
+**HEAD = этот handoff-коммит (master). Origin не тронут — push GATED, теперь 8 коммитов ahead (`4844094`..HEAD).**
+
+Шаги 1-4 cont.12/13 выполнены до конца, барьер-план «retrieval-fix» ЗАКРЫТ:
+
+1. **R7 LLM-judged оба плеча** (mistral-small, 300 вызовов/плечо, локально):
+   - A (production-зеркало): faith **0.8747** / rel 0.888 / prec 0.4985 / recall **0.855** (`20260605T054729Z-de03550d`)
+   - C (structural): faith **0.9092** / rel 0.864 / prec 0.5073 / recall **0.905** (`20260605T052606Z-85b99bdf`)
+   - Δ C−A: recall **+0.050**, faithfulness **+0.034**; vs старый no-reranker baseline 0.833/0.785 — C даёт +0.076/+0.120.
+   - Гоча: первый прогон A умер на 16/100 БЕЗ traceback (transient kill процесса; вероятно, шатдаун параллельной утренней сессии — см. её cont.13 про «kill-итерации»), re-run чистый 100/100.
+2. **Матрица переходов из cont.13 ВЕРИФИЦИРОВАНА по сырым candidates** (мой независимый пересчёт той же `_kw_status`-логикой, совпало 1-в-1): 8 gains / 4 regressions, нетто +5 FULL. Регрессии по характеру: 1 жёсткая (customs-broker-escalation — kws выпали из всего top-40 пула C; в A co-occur rank 9) + 3 мягких (в пуле C: dangerous-goods-clearance r26, breach-notification-participants r16, perishable-special-cargo-evidence union-FULL — реранкер не поднял в top-5).
+3. **Phase 3 LANDED** (`3e1b088`): `RAG_STRUCTURAL_CHUNKING` default **true** (`config/settings.py`) + пин-тест `test_structural_chunking_enabled_by_default`. Отчёт: `docs/operations/2026-06-05-phase2-contextual-ab-production.md` (8/4-матрица и характер регрессий — обязательная часть). План-дока обновлена (Phase 2+3 ✅). Откат: `RAG_RERANKER_MODEL`-стиль — `RAG_STRUCTURAL_CHUNKING=false` в env. Существующие индексы не мигрируются — новый чанкинг с следующего ингеста.
+4. **Полный suite: 838 passed, 5 skipped** (`RAG_RERANKER_MODEL="" python -m pytest tests/ -q -p no:schemathesis -p no:cacheprovider --timeout=300`). Гоча: без `RAG_RERANKER_MODEL=""` full-suite на этой машине НЕ гонять — `test_per_tenant_vectorstore::test_two_tenants_get_different_retrievers` мокает Chroma/embeddings, но НЕ реранкер → `get_retriever` тянет реальный CrossEncoder bge-reranker-v2-m3 (~2.3GB) с HF через xet → таймаут/повис (в CI проходит — там сеть). Таргетные прогоны это не задевало 11 сессий.
+
+**Незакрытые хвосты (кандидаты следующей сессии, НЕ блокеры):**
+- 6 MISS @ top-5 в C: 4 deep diagnosis-цели (query-side: NL RU ↔ snake_case → query-expansion / BM25-вес) + 2 регрессии (выше). Рычаги: parent-child (`RAG_PARENT_CHILD` wired), реранк-тюнинг.
+- Kaggle-артефакты `.tmp/kaggle_phase2/` (24MB) можно чистить после push; датасет/kernel на Kaggle private — живут.
+- Colab-ячейки Phase 2 в notebook устарели по смыслу (Kaggle-путь их заменил) — решить при следующем заходе в notebook.
+
+**PUSH — GATED, спрашивать явно: 8 коммитов** (`4844094` fix, `c4ffd50` отчёт Phase 1, `09195c1` turnkey, `9c0d964`+`fd39c69`+`1e302d8` handoffs, `3e1b088` default-flip, +этот). CI на push прогонит full-suite сам.
+
 ## 2026-06-05 Update (cont. 13) — Kernel v5 DONE, артефакты скачаны, coverage A 82% → C 87%; R7-judge прерван закрытием сессии
 
 **HEAD = этот handoff-коммит (master), origin не тронут (push всё ещё gated, теперь 4+1 коммитов).**
