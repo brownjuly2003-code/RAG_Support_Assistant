@@ -10,8 +10,13 @@ separate process so the embedder and the reranker are never resident together.
 Arms:
   A  production baseline: fixed 800/200 chunking + contextual headers (prod default)
   C  the fix: RAG_STRUCTURAL_CHUNKING=true + contextual headers (heading-path anchors)
+  E  arm C + field-aware HyDE query expansion (precomputed locally by
+     scripts/precompute_field_hyde.py, travels as a dataset file — no API key
+     remotely). The expanded query drives retrieval AND rerank (mirrors the
+     production retrieve node, where hyde_query feeds get_relevant_documents);
+     the ORIGINAL query stays in the output rows for the LLM-judge contract.
 
-Both arms run the post-4844094 header path (body never truncated, header clamped 200).
+All arms run the post-4844094 header path (body never truncated, header clamped 200).
 
 Stages (run order: pools A -> pools C -> rerank A -> rerank C -> report):
   pools   load corpus, chunk per arm, apply headers, embed (project embedder),
@@ -90,8 +95,15 @@ def _set_arm_env(arm: str) -> None:
     """Environment must be set before any project import reads settings."""
     os.environ["RAG_RERANKER_MODEL"] = ""  # pools stage never loads the reranker
     os.environ["RAG_SEMANTIC_CHUNKING"] = "false"
-    os.environ["RAG_STRUCTURAL_CHUNKING"] = "true" if arm == "C" else "false"
+    # Arm E = arm C chunking + expanded queries (query side only).
+    os.environ["RAG_STRUCTURAL_CHUNKING"] = "true" if arm in ("C", "E") else "false"
     # RAG_CONTEXTUAL_HEADERS stays at the production default (on).
+
+
+def _load_expansions(path: Path) -> dict[str, str]:
+    """case_id -> expanded_query from scripts/precompute_field_hyde.py output."""
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    return {r["case_id"]: r["expanded_query"] for r in rows}
 
 
 def _load_cases(path: Path) -> list[dict]:
@@ -116,7 +128,13 @@ def _cooccur_rank(kws: list[str], texts: list[str]) -> int | None:
     return None
 
 
-def stage_pools(arm: str, corpus: Path, cases_path: Path, out_dir: Path) -> int:
+def stage_pools(
+    arm: str,
+    corpus: Path,
+    cases_path: Path,
+    out_dir: Path,
+    expansions: dict[str, str] | None = None,
+) -> int:
     _set_arm_env(arm)
     import numpy as np
 
@@ -163,20 +181,29 @@ def stage_pools(arm: str, corpus: Path, cases_path: Path, out_dir: Path) -> int:
     print(f"[pools/{arm}] encoded {len(texts)} chunks in {time.time()-t0:.0f}s", flush=True)
 
     cases = _load_cases(cases_path)
+    expansions = expansions or {}
+    if arm == "E" and expansions:
+        missing = [c["case_id"] for c in cases if c["case_id"] not in expansions]
+        if missing:
+            print(f"[pools/{arm}] {len(missing)} cases lack expansions: {missing[:5]}", flush=True)
+            return 2
+    # Retrieval queries: arm E uses the precomputed expanded query (mirrors the
+    # production retrieve node where hyde_query drives get_relevant_documents).
+    eff_queries = [expansions.get(c["case_id"], c["query"]) for c in cases]
     if st_model is not None:
         qmat = st_model.encode(
-            [c["query"] for c in cases], normalize_embeddings=True, batch_size=16
+            eff_queries, normalize_embeddings=True, batch_size=16
         ).astype(np.float32)
     else:  # pragma: no cover
         qmat = np.asarray(
-            [embeddings.embed_query(c["query"]) for c in cases], dtype=np.float32
+            [embeddings.embed_query(q) for q in eff_queries], dtype=np.float32
         )
 
     class _MatrixStore:
         """similarity_search-compatible stub: exact cosine over normalized vectors."""
 
         def __init__(self) -> None:
-            self._qv = {c["query"]: qmat[i] for i, c in enumerate(cases)}
+            self._qv = {q: qmat[i] for i, q in enumerate(eff_queries)}
 
         def similarity_search(self, query: str, k: int = 20):
             idx = np.argsort(-(mat @ self._qv[query]))[:k]
@@ -192,27 +219,28 @@ def stage_pools(arm: str, corpus: Path, cases_path: Path, out_dir: Path) -> int:
     )
 
     rows = []
-    for case in cases:
-        query = case["query"]
-        vector_results = store.similarity_search(query, k=retriever._retrieval_k)
+    for case, eff_query in zip(cases, eff_queries, strict=True):
+        vector_results = store.similarity_search(eff_query, k=retriever._retrieval_k)
         bm25_results = []
         if retriever._bm25 is not None:
-            scores = retriever._bm25.get_scores(_tokenize_for_bm25(query))
+            scores = retriever._bm25.get_scores(_tokenize_for_bm25(eff_query))
             top = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
             bm25_results = [
                 retriever._chunks[i] for i in top[: retriever._retrieval_k] if scores[i] > 0
             ]
         merged = retriever._rrf_merge(vector_results, bm25_results) if bm25_results else vector_results
-        rows.append(
-            {
-                "case_id": case["case_id"],
-                "query": query,
-                "kws": case["expected"]["answer_contains"],
-                "rerank_k": settings.rerank_top_k,
-                "cands": [d.page_content for d in merged],
-                "cand_sources": [(d.metadata or {}).get("source", "?") for d in merged],
-            }
-        )
+        row = {
+            # The ORIGINAL query — the LLM-judge generates from it.
+            "case_id": case["case_id"],
+            "query": case["query"],
+            "kws": case["expected"]["answer_contains"],
+            "rerank_k": settings.rerank_top_k,
+            "cands": [d.page_content for d in merged],
+            "cand_sources": [(d.metadata or {}).get("source", "?") for d in merged],
+        }
+        if eff_query != case["query"]:
+            row["expanded_query"] = eff_query
+        rows.append(row)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     pool_path = out_dir / f"ab_phase2_{arm}_pool.json"
@@ -244,7 +272,10 @@ def stage_rerank(arm: str, out_dir: Path) -> int:
 
     t0 = time.time()
     for i, row in enumerate(rows, 1):
-        pairs = [(row["query"], text) for text in row["cands"]]
+        # Arm E: the reranker scores against the expanded query, like the
+        # production path where hyde_query reaches HybridRetriever.
+        rerank_query = row.get("expanded_query") or row["query"]
+        pairs = [(rerank_query, text) for text in row["cands"]]
         scores = reranker.predict(pairs)
         order = sorted(range(len(scores)), key=lambda j: scores[j], reverse=True)
         row["prerank_cands"] = row["cands"]
@@ -338,8 +369,13 @@ def stage_report(out_dir: Path) -> int:
     return 0
 
 
-def stage_expand(src: Path, corpus: Path, window: int, max_chars: int) -> int:
+def stage_expand(
+    src: Path, corpus: Path, window: int, max_chars: int, label: str = "D"
+) -> int:
     """Arm D = arm C post-rerank candidates + parent-expansion. Local, no models.
+
+    With --label E the same machinery turns arm-E rerank candidates into the
+    full stack (expanded queries + structural chunking + parent-expansion).
 
     The expansion runs AFTER the rerank, so arm D's selection is identical to
     arm C — only the candidate texts change. That makes this measurement exact
@@ -417,7 +453,7 @@ def stage_expand(src: Path, corpus: Path, window: int, max_chars: int) -> int:
             flush=True,
         )
 
-    out_path = src.parent / "ab_candidates_phase2_D.json"
+    out_path = src.parent / f"ab_candidates_phase2_{label}.json"
     out_path.write_text(json.dumps(out_rows, ensure_ascii=False), encoding="utf-8")
 
     lines: list[str] = []
@@ -426,20 +462,24 @@ def stage_expand(src: Path, corpus: Path, window: int, max_chars: int) -> int:
         print(line, flush=True)
         lines.append(line)
 
-    emit(f"# Arm D = arm C + parent-expansion (window={window}, max_chars={max_chars})")
+    src_label = "C" if label == "D" else f"{label}-pre"
+    emit(
+        f"# Arm {label} = {src_label} + parent-expansion "
+        f"(window={window}, max_chars={max_chars})"
+    )
     emit()
     by_id = {r["case_id"]: r for r in out_rows}
-    for label, key_rows in (("C", rows), ("D", out_rows)):
+    for arm_label, key_rows in ((src_label, rows), (label, out_rows)):
         counts = {"FULL": 0, "PART": 0, "MISS": 0}
         for r in key_rows:
             counts[_kw_status(r["kws"], r["cands"][: int(r.get("rerank_k", 5))])] += 1
         n = len(key_rows)
         emit(
-            f"- arm {label}: FULL {counts['FULL']}/{n} = {100*counts['FULL']/max(n,1):.0f}% "
+            f"- arm {arm_label}: FULL {counts['FULL']}/{n} = {100*counts['FULL']/max(n,1):.0f}% "
             f"PART {counts['PART']} MISS {counts['MISS']}"
         )
     emit()
-    emit("## Transitions C -> D")
+    emit(f"## Transitions {src_label} -> {label}")
     emit()
     for (c_st, d_st), ids in sorted(transitions.items()):
         if c_st == d_st:
@@ -449,7 +489,7 @@ def stage_expand(src: Path, corpus: Path, window: int, max_chars: int) -> int:
     emit()
     emit("## 8 residual problem cases (4 regressions + 4 deep)")
     emit()
-    emit("| case | C top5 | D top5 | sections added |")
+    emit(f"| case | {src_label} top5 | {label} top5 | sections added |")
     emit("|---|---|---|---|")
     for cid in PROBLEM_8:
         row_c = next((r for r in rows if r["case_id"] == cid), None)
@@ -465,7 +505,7 @@ def stage_expand(src: Path, corpus: Path, window: int, max_chars: int) -> int:
             f"| {row_d['parent_expanded']}/{top_k} |"
         )
 
-    summary_path = src.parent / "ab_phase2_D_summary.md"
+    summary_path = src.parent / f"ab_phase2_{label}_summary.md"
     summary_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"\n[expand] saved -> {out_path}\n[expand] summary -> {summary_path}", flush=True)
     return 0
@@ -474,7 +514,7 @@ def stage_expand(src: Path, corpus: Path, window: int, max_chars: int) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stage", required=True, choices=("pools", "rerank", "report", "expand"))
-    parser.add_argument("--arm", default="", choices=("", "A", "C"))
+    parser.add_argument("--arm", default="", choices=("", "A", "C", "E"))
     parser.add_argument("--corpus", default=str(PROJECT_ROOT / "data" / "uploads" / "aircargo"))
     parser.add_argument(
         "--cases", default=str(PROJECT_ROOT / "evaluation" / "curated_cases_aircargo.jsonl")
@@ -489,19 +529,32 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--window", type=int, default=1, help="--stage expand: sections per side")
     parser.add_argument("--max-chars", type=int, default=2400, help="--stage expand: text cap")
+    parser.add_argument(
+        "--label", default="D", help="--stage expand: output arm label (D or E)"
+    )
+    parser.add_argument(
+        "--expansions",
+        default=str(PROJECT_ROOT / ".tmp" / "query_expansions_field_hyde.json"),
+        help="--arm E: precomputed expanded queries (scripts/precompute_field_hyde.py)",
+    )
     args = parser.parse_args(argv)
 
     out_dir = Path(args.out_dir)
     if args.stage == "pools":
-        if args.arm not in ("A", "C"):
-            parser.error("--stage pools requires --arm A|C")
-        return stage_pools(args.arm, Path(args.corpus), Path(args.cases), out_dir)
+        if args.arm not in ("A", "C", "E"):
+            parser.error("--stage pools requires --arm A|C|E")
+        expansions = _load_expansions(Path(args.expansions)) if args.arm == "E" else None
+        return stage_pools(
+            args.arm, Path(args.corpus), Path(args.cases), out_dir, expansions=expansions
+        )
     if args.stage == "rerank":
-        if args.arm not in ("A", "C"):
-            parser.error("--stage rerank requires --arm A|C")
+        if args.arm not in ("A", "C", "E"):
+            parser.error("--stage rerank requires --arm A|C|E")
         return stage_rerank(args.arm, out_dir)
     if args.stage == "expand":
-        return stage_expand(Path(args.src), Path(args.corpus), args.window, args.max_chars)
+        return stage_expand(
+            Path(args.src), Path(args.corpus), args.window, args.max_chars, label=args.label
+        )
     return stage_report(out_dir)
 
 
