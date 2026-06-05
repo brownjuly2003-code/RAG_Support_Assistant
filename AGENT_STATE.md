@@ -13,9 +13,11 @@
 5. **R7-judge** (mistral-small, 300 вызовов, `20260605T214926Z-e728353a`): E recall **0.920** prec **0.509** rel 0.833 faith 0.766 (zeros 19) vs D2 0.975/0.576/0.895/0.864 (z7) — проигрыш по всем и в agg, и в mean-без-нулей. **Перекрёстная валидация: judge recall-zeros E = ровно те же 5 FULL→MISS кейсов kw-матрицы, 1-в-1** — два независимых замера сошлись.
 6. **РЕШЕНИЕ: NO-SHIP** — field-aware промпт в `_build_hyde_prompt` не внедряем. D2-стек (structural + parent-expansion w=2/3600, оба default ON) остаётся production; остаточный MISS один (`customs-clearance-fields`). Отчёт: `docs/operations/2026-06-06-arm-e-field-hyde-results.md` (+ итог в план-доке пробы).
 
+**ДОПОЛНЕНО той же сессией (после push, по явному «продолжай» Юли). АКТУАЛЬНОЕ СОСТОЯНИЕ: origin = `9d80814` (CI ЗЕЛЁНЫЙ), unpushed только этот addendum-коммит.**
+- **PUSHED `eaf8dd9..9d80814`** (5 коммитов). CI: первый прогон — `test-unit (3.11)` упал на HF `429 Too Many Requests` (скачивание `bge-reranker-v2-m3` per-tenant тестами — ровно гоча cont.15, transient), `gh run rerun --failed` → **зелёный 11/11**. Docs-deploy зелёный с первого раза.
+- **`.tmp/kaggle_phase2/` вычищен (68MB)** — датасет v4/kernel v6 на Kaggle private живут, E-артефакты воспроизводимы (kernel output скачивается повторно, expand детерминирован); judge-репорты в `reports/ragas/` не тронуты.
+
 **Кандидаты следующей сессии (НЕ блокеры):**
-- **Push N коммитов — GATED, спрашивать явно** (CI прогонит full-suite).
-- Чистка `.tmp/kaggle_phase2/` (~36MB с out_E) — после push; датасет/kernel на Kaggle private живут.
 - Арм F split-query (expanded для пулов, оригинал для реранкера — обоснование в отчёте) — **только по явному запросу Юли**, новый параметр retriever'а.
 - Colab-ячейки Phase 2 в notebook устарели (гоча cont.14) — при следующем заходе в notebook.
 
