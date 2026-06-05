@@ -1,5 +1,24 @@
 # Agent State
 
+## 2026-06-06 Update (cont. 17) — плечо E ЗАКРЫТО: NO-SHIP (1 gain / 8 регрессий vs D2), диагноз rerank-демоции записан
+
+**HEAD = этот handoff-коммит (master). Origin = `eaf8dd9` — unpushed: `584ecae`+`26587ab` (cont.16 хвост) + docs этой сессии + этот. Push GATED.**
+
+Шаги 3-5 плана плеча E (`docs/operations/2026-06-05-query-expansion-probe.md`) выполнены, цикл закрыт:
+
+1. **Kernel v6 чистый** (`[kaggle-phase2-E] DONE`, 5.7h CPU): скачан в `.tmp/kaggle_phase2/out_E/` (candidates 8MB + pool 4MB + log). Гоча: первый `kaggle kernels output` оборвался `IncompleteRead` 2.5MB/8MB и оставил **пустой** `ab_candidates_phase2_E.json` — удалить перед retry (retry прошёл). Контракт judge в данных верен: `expanded_query` у 100/100, `query` = оригинал.
+2. **Expand** (`--stage expand --label E -w 2 --max-chars 3600`): E-pre 79 → **E 89/100 FULL** (PART 6, MISS 5); summary в `out_E/ab_phase2_E_summary.md`.
+3. **Матрица D2→E (пересчёт `_kw_status` по обоим файлам): 1 gain / 8 регрессий, нетто −7 FULL (96→89).** Gain — ровно целевой `customs-clearance-fields` (последний MISS D2 закрыт: query-side гэп мостится). Регрессии: 5 FULL→MISS + 3 FULL→PART.
+4. **Диагноз по прерank-пулам E: 7/8 регрессий — rerank-демоция** (kw-чанки В пуле на RRF rank 1-9, cross-encoder против длинного расширенного запроса, медиана 574 chars, не поднимает в top-5; 1/8 — pool-выпадение). Риск из «Ограничений пробы» реализовался.
+5. **R7-judge** (mistral-small, 300 вызовов, `20260605T214926Z-e728353a`): E recall **0.920** prec **0.509** rel 0.833 faith 0.766 (zeros 19) vs D2 0.975/0.576/0.895/0.864 (z7) — проигрыш по всем и в agg, и в mean-без-нулей. **Перекрёстная валидация: judge recall-zeros E = ровно те же 5 FULL→MISS кейсов kw-матрицы, 1-в-1** — два независимых замера сошлись.
+6. **РЕШЕНИЕ: NO-SHIP** — field-aware промпт в `_build_hyde_prompt` не внедряем. D2-стек (structural + parent-expansion w=2/3600, оба default ON) остаётся production; остаточный MISS один (`customs-clearance-fields`). Отчёт: `docs/operations/2026-06-06-arm-e-field-hyde-results.md` (+ итог в план-доке пробы).
+
+**Кандидаты следующей сессии (НЕ блокеры):**
+- **Push N коммитов — GATED, спрашивать явно** (CI прогонит full-suite).
+- Чистка `.tmp/kaggle_phase2/` (~36MB с out_E) — после push; датасет/kernel на Kaggle private живут.
+- Арм F split-query (expanded для пулов, оригинал для реранкера — обоснование в отчёте) — **только по явному запросу Юли**, новый параметр retriever'а.
+- Colab-ячейки Phase 2 в notebook устарели (гоча cont.14) — при следующем заходе в notebook.
+
 ## 2026-06-05 Update (cont. 16) — плечо E ЗАПУЩЕНО: expansions посчитаны, kernel v6 (arm E) считается на Kaggle
 
 **HEAD = этот handoff-коммит (master). Origin = `7aeb3b5` (CI зелёный) — unpushed: docs cont.15 + `e810867` (arm E) + этот. Push GATED.**
