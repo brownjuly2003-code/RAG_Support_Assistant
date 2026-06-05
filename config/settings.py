@@ -370,20 +370,23 @@ class Settings:
     # --- Parent expansion (post-rerank) ---
     # Final top-k chunks are supplemented with neighbouring structural sections
     # of their source document (pure text-lookup by ingestion order; the hybrid
-    # BM25+RRF+rerank selection is untouched). Targets the 8/8 cases where the
-    # right document is retrieved but by a different chunk
-    # (docs/operations/2026-06-05-residual-miss-diagnosis.md). Default OFF
-    # until the arm-D measurement confirms it.
+    # BM25+RRF+rerank selection is untouched). Default ON since the arm-D
+    # measurement 2026-06-05: coverage FULL 87->96 @ top-5, context_recall
+    # 0.905->0.975, both hard Phase-2 regressions recovered; the residual
+    # faithfulness cost is ~-0.02..-0.04 on a minority of cases (judge-flip
+    # artifact excluded). Report:
+    # docs/operations/2026-06-05-parent-expansion-arm-d.md. Rollback:
+    # RAG_PARENT_EXPANSION=false; conservative config: window=1/max_chars=2400.
     parent_expansion: bool = field(
-        default_factory=lambda: os.getenv("RAG_PARENT_EXPANSION", "false").strip().lower() in ("1", "true", "yes")
+        default_factory=lambda: os.getenv("RAG_PARENT_EXPANSION", "true").strip().lower() in ("1", "true", "yes")
     )
     # Neighbouring sections taken from each side of a selected chunk.
     parent_expansion_window: int = field(
-        default_factory=lambda: int(os.getenv("RAG_PARENT_EXPANSION_WINDOW", "1"))
+        default_factory=lambda: int(os.getenv("RAG_PARENT_EXPANSION_WINDOW", "2"))
     )
     # Cap on the expanded chunk text (core chunk + added neighbours).
     parent_expansion_max_chars: int = field(
-        default_factory=lambda: int(os.getenv("RAG_PARENT_EXPANSION_MAX_CHARS", "2400"))
+        default_factory=lambda: int(os.getenv("RAG_PARENT_EXPANSION_MAX_CHARS", "3600"))
     )
 
     # --- Level 2: Self-RAG ---

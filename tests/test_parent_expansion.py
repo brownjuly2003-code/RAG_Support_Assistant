@@ -13,14 +13,18 @@ from config.settings import Settings
 from vectordb import _base_manager as manager
 
 
-def test_parent_expansion_disabled_by_default(monkeypatch) -> None:
+def test_parent_expansion_enabled_by_default(monkeypatch) -> None:
+    # Default ON since the arm-D measurement (2026-06-05): FULL 87->96,
+    # context_recall 0.905->0.975. Rollback: RAG_PARENT_EXPANSION=false.
     monkeypatch.delenv("RAG_PARENT_EXPANSION", raising=False)
+    monkeypatch.delenv("RAG_PARENT_EXPANSION_WINDOW", raising=False)
+    monkeypatch.delenv("RAG_PARENT_EXPANSION_MAX_CHARS", raising=False)
 
     settings = Settings()
 
-    assert settings.parent_expansion is False
-    assert settings.parent_expansion_window == 1
-    assert settings.parent_expansion_max_chars == 2400
+    assert settings.parent_expansion is True
+    assert settings.parent_expansion_window == 2
+    assert settings.parent_expansion_max_chars == 3600
 
 
 def _make_chunks() -> list[manager.Document]:

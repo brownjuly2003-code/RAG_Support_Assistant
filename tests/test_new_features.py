@@ -144,6 +144,9 @@ def test_build_retriever_default_returns_hybrid_when_parent_child_false() -> Non
         mock_settings.return_value.rerank_top_k = 3
         mock_settings.return_value.reranker_model = ""
         mock_settings.return_value.semantic_chunking = False
+        mock_settings.return_value.parent_expansion = False
+        mock_settings.return_value.parent_expansion_window = 2
+        mock_settings.return_value.parent_expansion_max_chars = 3600
 
         retriever = build_retriever(
             docs=[doc],

@@ -255,6 +255,10 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `RAG_AGENTIC_MODE` | `false` | Enable the tool-calling agent graph |
 | `RAG_HYDE` | `false` | Enable Hypothetical Document Embeddings |
 | `RAG_PARENT_CHILD` | `false` | Enable parent-child chunking |
+| `RAG_STRUCTURAL_CHUNKING` | `true` | Split markdown by headers (sections), cap to `CHUNK_SIZE` |
+| `RAG_PARENT_EXPANSION` | `true` | Post-rerank: supplement final chunks with neighbouring sections of their source |
+| `RAG_PARENT_EXPANSION_WINDOW` | `2` | Sections taken from each side of a selected chunk |
+| `RAG_PARENT_EXPANSION_MAX_CHARS` | `3600` | Cap on expanded chunk text (core + neighbours) |
 | `RAG_SELF_RAG_MAX_ITER` | `2` | Maximum Self-RAG iterations |
 | `RAG_SELF_RAG_MIN_QUALITY` | `70` | Minimum quality score to avoid retry/escalation |
 | `FACT_VERIFICATION_ENABLED` | `true` | Run fact verification after generation |
