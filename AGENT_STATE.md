@@ -12,7 +12,7 @@
 
 **Следующие шаги (по плану, после kernel):**
 1. `kaggle kernels output liovinajo/rag-phase2-contextual-ab -p .tmp/kaggle_phase2/out_E --file-pattern "(ab_candidates_phase2_E\.json|ab_phase2_E_pool\.json|.*\.log)"` (status 500 после завершения = finished — гоча).
-2. `python scripts/ab_remote_contextual.py --stage expand --label E --src .tmp/kaggle_phase2/out_E/ab_candidates_phase2_E.json --window 2 --max-chars 3600` → полный стек (как D2).
+2. `python scripts/ab_remote_contextual.py --stage expand --label E --src .tmp/kaggle_phase2/out_E/ab_candidates_phase2_E.json --window 2 --max-chars 3600` → полный стек (как D2). Выход = `ab_candidates_phase2_E_expanded.json` (guard `584ecae`: src не перезаписывается — pre-expansion нужен для матрицы).
 3. kw-матрица переходов E(+exp) vs D2 (`.tmp/kaggle_phase2/out_final/ab_candidates_phase2_D2.json`) — по всем кейсам, не только целям.
 4. R7-judge: `set -a; . ./.env; set +a; python scripts/aircargo_ragas_free.py --provider mistral --min-interval 1.2 --contexts <E-expanded>` — **сравнивать медиану/mean-без-нулей (гоча судьи: random zero-флипы faithfulness на длинных контекстах)**. Базы: D2 recall 0.975 prec 0.576 faith 0.864; C recall 0.905 faith 0.909.
 5. Решение: field-aware промпт в `_build_hyde_prompt` (флаг/замена при `RAG_HYDE`) — только при выигрыше E-замера. No shipping blind.
