@@ -454,6 +454,10 @@ def stage_expand(
         )
 
     out_path = src.parent / f"ab_candidates_phase2_{label}.json"
+    if out_path == src:
+        # --label E with src = the arm-E rerank output would overwrite the
+        # source; keep both (pre-expansion is needed for the transition matrix).
+        out_path = src.parent / f"ab_candidates_phase2_{label}_expanded.json"
     out_path.write_text(json.dumps(out_rows, ensure_ascii=False), encoding="utf-8")
 
     lines: list[str] = []
