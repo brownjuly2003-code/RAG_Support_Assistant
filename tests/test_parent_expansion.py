@@ -155,14 +155,17 @@ def test_window_two_takes_two_sections_each_side() -> None:
 
 
 def test_build_retriever_wires_parent_expansion_from_settings(monkeypatch) -> None:
-    # Реальный reranker (bge ~2.3GB) не должен грузиться в тесте.
-    monkeypatch.setenv("RAG_RERANKER_MODEL", "")
     monkeypatch.setenv("RAG_PARENT_EXPANSION", "true")
     monkeypatch.setenv("RAG_PARENT_EXPANSION_WINDOW", "2")
     monkeypatch.setenv("RAG_PARENT_EXPANSION_MAX_CHARS", "999")
 
     import config.settings as settings_module
     settings_module._settings = None  # singleton перечитает env
+    settings = settings_module.get_settings()
+    # reranker_model — import-time class default (НЕ default_factory): env-патч
+    # на него не действует, в CI тест тянул бы реальный bge (~2.3GB) с HF.
+    # Гасим прямо на singleton'е.
+    monkeypatch.setattr(settings, "reranker_model", "")
 
     chunks = _make_chunks()
     store = SimpleNamespace(similarity_search=lambda query, k: [])
