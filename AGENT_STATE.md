@@ -1,5 +1,22 @@
 # Agent State
 
+## 2026-06-05 Update (cont. 16) — плечо E ЗАПУЩЕНО: expansions посчитаны, kernel v6 (arm E) считается на Kaggle
+
+**HEAD = этот handoff-коммит (master). Origin = `7aeb3b5` (CI зелёный) — unpushed: docs cont.15 + `e810867` (arm E) + этот. Push GATED.**
+
+Шаги 1-2 плана плеча E (`docs/operations/2026-06-05-query-expansion-probe.md`) выполнены:
+
+1. **`e810867` feat(eval):** arm E в `ab_remote_contextual.py` — C-конфиг чанкинга + field-aware HyDE расширенные запросы для dense+BM25+rerank (зеркалит production retrieve node: hyde_query → get_relevant_documents). **Контракт judge сохранён: в rows `query` = оригинальный вопрос (генерация), `expanded_query` — отдельным полем (retrieval/rerank).** `--stage expand --label E` = parent-expansion поверх E-кандидатов (полный стек). Новый `scripts/precompute_field_hyde.py` — прекомпьют расширений локально (mistral-small, t=0, точный промпт пробы), ключ на Kaggle НЕ уезжает.
+2. **Expansions готовы:** `.tmp/query_expansions_field_hyde.json` — 100/100, все со snake_case-лексикой, длины 403-987 (медиана 574). Smoke локально (лёгкие модели): pools E + rerank E на 5-doc корпусе — контракт верен; pools C — регрессий нет.
+3. **Kaggle:** датасет `liovinajo/rag-phase2-ab-bundle` v4 (repo blob `e810867` 2 246 868 b + expansions; blob на стр. 2 листинга — пагинация 200). **Kernel `liovinajo/rag-phase2-contextual-ab` v6 (CPU, arm E only: pools E → rerank E) запущен 2026-06-05 ~13:10Z, ETA ~3h** (один арм vs 6h24m за два в v5). Guard в kernel: assert arm-E support в blob (stale-датасет гоча v2). Гоча: `kernels status` сразу после push отдаёт 500 (сессия в очереди) — НЕ только для finished.
+
+**Следующие шаги (по плану, после kernel):**
+1. `kaggle kernels output liovinajo/rag-phase2-contextual-ab -p .tmp/kaggle_phase2/out_E --file-pattern "(ab_candidates_phase2_E\.json|ab_phase2_E_pool\.json|.*\.log)"` (status 500 после завершения = finished — гоча).
+2. `python scripts/ab_remote_contextual.py --stage expand --label E --src .tmp/kaggle_phase2/out_E/ab_candidates_phase2_E.json --window 2 --max-chars 3600` → полный стек (как D2).
+3. kw-матрица переходов E(+exp) vs D2 (`.tmp/kaggle_phase2/out_final/ab_candidates_phase2_D2.json`) — по всем кейсам, не только целям.
+4. R7-judge: `set -a; . ./.env; set +a; python scripts/aircargo_ragas_free.py --provider mistral --min-interval 1.2 --contexts <E-expanded>` — **сравнивать медиану/mean-без-нулей (гоча судьи: random zero-флипы faithfulness на длинных контекстах)**. Базы: D2 recall 0.975 prec 0.576 faith 0.864; C recall 0.905 faith 0.909.
+5. Решение: field-aware промпт в `_build_hyde_prompt` (флаг/замена при `RAG_HYDE`) — только при выигрыше E-замера. No shipping blind.
+
 ## 2026-06-05 Update (cont. 15) — parent-expansion LANDED default ON: FULL 87→96, recall 0.905→0.975; план-доки graph + chunk-size добавлены
 
 **HEAD = этот handoff-коммит (master). Origin = `50e50aa` (push cont.14 прошёл, CI 11/11 green) — теперь 5+1 коммитов ahead, push GATED.**
