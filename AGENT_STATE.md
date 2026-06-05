@@ -1,5 +1,22 @@
 # Agent State
 
+## 2026-06-05 Update (cont. 15) — parent-expansion LANDED default ON: FULL 87→96, recall 0.905→0.975; план-доки graph + chunk-size добавлены
+
+**HEAD = этот handoff-коммит (master). Origin = `50e50aa` (push cont.14 прошёл, CI 11/11 green) — теперь 5+1 коммитов ahead, push GATED.**
+
+Барьер-план полностью закрыт (остаток cont.14 «6 MISS + регрессии» снят):
+
+1. **`9a6bfcf` feat:** post-rerank parent-expansion в HybridRetriever (`_expand_parents`): финальные top-k чанки дополняются соседними structural-секциями своего source (текст-lookup по порядку ингеста, hybrid BM25+RRF+reranker не меняется; дедуп против top-k и уже добавленных соседей; `[Контекст:]`-заголовок соседа срезается). Settings: `RAG_PARENT_EXPANSION{,_WINDOW,_MAX_CHARS}`.
+2. **`8dd90cb` feat(eval):** `scripts/ab_remote_contextual.py --stage expand` — плечо D БЕЗ моделей и БЕЗ Kaggle: отбор D идентичен C (экспансия после реранка) ⇒ kw-coverage пересчитывается локально по скачанным C-кандидатам, экспансию делает боевой `_expand_parents`. Замер точный, не прокси.
+3. **Результаты:** D1 (w=1/2400) FULL 93/100 MISS 3; D2 (w=2/3600) **FULL 96/100 MISS 1**; 7/8 проблемных кейсов закрыты, обе жёсткие регрессии Phase 2 восстановлены. Регрессии невозможны по построению (текст только растёт).
+4. **R7-judge ×3 (mistral-small, локально)** + **re-judge C для полосы шума**: C повторяем (0.9092/0.9132, zeros 6/5 — 5 общих), D2 recall **0.975** prec 0.576 rel 0.895 faith 0.864. **Гоча судьи: aggregate faithfulness на длинных контекстах систематически занижен случайными флипами 1.0→0.0** (D1∩D2 zero-кейсы = 2; sick-leave: байт-в-байт тот же ответ C=1.0/D1=0.0). Остаточная честная цена ≈ −0.03 (paired median 0.000). При сравнении плеч разной длины контекста смотреть медиану/mean-без-нулей.
+5. **`f82f262` flip:** default ON w=2/3600 + пин-тест `test_parent_expansion_enabled_by_default` + README-таблица. Откат `RAG_PARENT_EXPANSION=false`; консервативно w=1/2400. **Full suite 847 passed / 5 skipped** (паттерн `RAG_RERANKER_MODEL=""`, гоча из cont.14 в силе).
+6. **План-доки по запросу Юли:** `docs/plans/2026-06-05-graph-retrieval-activation.md` (`efd0235`) — графовый поиск с условной активацией: метрика = чанки (= chars/800, обоснование почему НЕ доки) + connectivity-probe + multi-hop eval-bucket, пороги 20k чанков / 15% cross-doc / 5 MISS; `docs/plans/2026-06-05-chunk-size-justification.md` (`bd16818`) — доказать 800/200: замерено cap=800 режет 18.3% секций (медиана 563), MiniLM-прокси непригоден для size-sweep (max_seq 128), путь = Phase 0 co-occur гейт без моделей → Kaggle CPU sweep S1200/S1600.
+
+**Следующая сессия (кандидаты, НЕ блокеры):** query-expansion для customs-clearance-fields (последний MISS) · Phase 0 chunk-size плана (локально, без моделей) · push 6 коммитов — GATED, спрашивать явно.
+
+**Judge-прогоны:** C2 `20260605T104909Z`, D1 `20260605T101506Z`, D2 `20260605T103014Z`; артефакты D в `.tmp/kaggle_phase2/out_final/ab_candidates_phase2_D{1,2}.json` + `ab_phase2_D{1,2}_summary.md`.
+
 ## 2026-06-05 Update (cont. 14) — Phase 2 ЗАКРЫТА: R7-judge A+C прогнаны, `RAG_STRUCTURAL_CHUNKING` default ON, 838 тестов зелёные
 
 **HEAD = этот handoff-коммит (master). Origin не тронут — push GATED, теперь 8 коммитов ahead (`4844094`..HEAD).**
