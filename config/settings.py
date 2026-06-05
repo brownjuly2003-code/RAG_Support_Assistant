@@ -321,8 +321,10 @@ class Settings:
 
     # --- Level 2: Semantic Chunking ---
     semantic_chunking: bool = os.getenv("RAG_SEMANTIC_CHUNKING", "true").strip().lower() in ("1", "true", "yes")
-    # --- Markdown-structural chunking (opt-in, default off): split by markdown headers, cap to chunk_size ---
-    structural_chunking: bool = os.getenv("RAG_STRUCTURAL_CHUNKING", "false").strip().lower() in ("1", "true", "yes")
+    # --- Markdown-structural chunking (default ON since Phase 2 A/B 2026-06-05: split by markdown
+    # headers, cap to chunk_size; production-stack validation showed top-5 coverage 82%->87%
+    # (8 gains / 4 regressions, net +5), context_recall 0.855->0.905, faithfulness 0.875->0.909) ---
+    structural_chunking: bool = os.getenv("RAG_STRUCTURAL_CHUNKING", "true").strip().lower() in ("1", "true", "yes")
     contextual_headers: bool = field(
         default_factory=lambda: os.getenv(
             "RAG_CONTEXTUAL_HEADERS", "true"

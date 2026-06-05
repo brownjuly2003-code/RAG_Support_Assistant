@@ -18,6 +18,14 @@ def test_contextual_headers_enabled_by_default(monkeypatch) -> None:
     assert settings.contextual_headers is True
 
 
+def test_structural_chunking_enabled_by_default(monkeypatch) -> None:
+    monkeypatch.delenv("RAG_STRUCTURAL_CHUNKING", raising=False)
+
+    settings = Settings()
+
+    assert settings.structural_chunking is True
+
+
 def test_ingestion_batch_disabled_by_default(monkeypatch) -> None:
     monkeypatch.delenv("INGESTION_BATCH_ENABLED", raising=False)
 
