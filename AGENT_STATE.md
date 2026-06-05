@@ -1,5 +1,32 @@
 # Agent State
 
+## 2026-06-05 Update (cont. 13) — Kernel v5 DONE, артефакты скачаны, coverage A 82% → C 87%; R7-judge прерван закрытием сессии
+
+**HEAD = этот handoff-коммит (master), origin не тронут (push всё ещё gated, теперь 4+1 коммитов).**
+
+**Kernel `liovinajo/rag-phase2-contextual-ab` v5 ЗАВЕРШЁН: `[kaggle-phase2] DONE` на 23 034 s = 6h24m wall (лимит 12h не задет, без Traceback).** Гоча: `kaggle kernels status` для завершённой сессии отдаёт стабильный **500 Internal Server Error** — это НЕ «kernel жив/умер», проверять доступность через `kaggle kernels output` (он же и скачивает). Прошлый поллер вышел в 01:05Z не по смене статуса, а по `ConnectionAbortedError 10053`.
+
+**Артефакты скачаны** → `.tmp/kaggle_phase2/out_final/` (6 файлов, 24 MB): `ab_phase2_summary.md`, `ab_candidates_phase2_{A,C}.json`, `ab_phase2_{A,C}_pool.json`, `rag-phase2-contextual-ab.log`.
+
+**Результат Phase 2 (production stack BGE-M3 + reranker, post-rerank top-5, 100 кейсов):**
+- **A (baseline): FULL 82/100, PART 7, MISS 11. C (structural chunking): FULL 87/100, PART 7, MISS 6.**
+- Полная матрица переходов (мой пересчёт по candidates, та же `_kw_status`-логика): **8 gains / 4 regressions**, нетто +5 FULL.
+  - Gains: dangerous-goods-fields, sick-leave-required-fields, cargo-loss-required-fields (PART→FULL), driver-hours, warehouse-3pl, gps-monitoring, weight-control, cross-border-pdn-required-fields (все MISS→FULL).
+  - **Regressions (НЕ видны в summary по 13 целям, обязательны в отчёте):** customs-broker-escalation FULL→MISS; perishable-special-cargo-evidence FULL→PART; breach-notification-participants FULL→PART; dangerous-goods-clearance PART→MISS.
+- Из 13 диагноз-целей: 5 спасено, 4 остаются MISS в обоих плечах (customs-clearance-fields — в пуле C на ранге 27, реранкер не поднимает; waybill-first-mile, perishable-temperature, cross-border-required-fields — вне пула). Rerank-recoverable верификация: 6/10.
+
+**R7 LLM-judge (шаг 3) НЕ ЗАВЕРШЁН:** был запущен последовательно (A → C), arm A прошёл генерацию 100/100 (~6 мин, чисто), но прерван закрытием сессии ДО judge-фазы. Чекпойнтов нет — в новой сессии перезапустить с нуля:
+```bash
+cd /d/RAG_Support_Assistant && set -a && . ./.env && set +a
+python scripts/aircargo_ragas_free.py --provider mistral --min-interval 1.2 --contexts .tmp/kaggle_phase2/out_final/ab_candidates_phase2_A.json
+python scripts/aircargo_ragas_free.py --provider mistral --min-interval 1.2 --contexts .tmp/kaggle_phase2/out_final/ab_candidates_phase2_C.json
+```
+Последовательно (free-tier один ключ), суммарно ~25-35 мин. Baseline для сравнения: **faithfulness 0.833 / context_recall 0.785** (`reports/ragas/20260603T031646Z-e437ad07-*`; запись 031614Z с 1.0 — smoke, игнорировать).
+
+**Гоча Windows/CC, стоившая трёх kill-итераций:** фоновая bash-цепочка `(python A; python C)` переживает TaskStop — после убийства python-ребёнка bash запускает СЛЕДУЮЩУЮ команду цепочки. Убивать только деревом: `taskkill //PID <bash_pid> //T //F`. На выходе из этой сессии проверено: python-процессов 0.
+
+**Шаги новой сессии:** 1) judge A + C (команды выше) → 2) сравнить faithfulness/recall A vs C vs baseline → 3) Phase 3 решение: coverage-условие уже выполнено (87>82, MISS −5), при «faithfulness не просел» — дефолт `RAG_STRUCTURAL_CHUNKING` + отчёт `docs/operations/2026-06-0X-phase2-contextual-ab.md` (в отчёт обязательно 4 регрессии и остаточные 4 MISS) + обновить план-доку `docs/plans/2026-06-03-overcome-retrieval-barrier.md` → 4) push 4+1 коммитов — GATED, спрашивать явно.
+
 ## 2026-06-05 Update (cont. 12) — Kaggle Phase 2: 4 фейла задиагностированы и закрыты, kernel v5 (CPU) СЧИТАЕТСЯ
 
 **HEAD = этот handoff-коммит (master), origin не тронут (push всё ещё gated).**
