@@ -1,5 +1,22 @@
 # Agent State
 
+## 2026-06-06 Update (cont. 18 IN-FLIGHT) — арм F запущен на Kaggle; graph-условие в коде; probe 0.296
+
+**Сессия активна. Origin = `eeb7cd0`; локально 4+ коммита: `06b9d84` (arm F) + `62a54cd` (notebook) + `c8cd806` (graph probe) + этот. Push GATED.**
+
+Сделано сегодня (по «бери в работу все»):
+1. **Graph-activation условие ПРОПИСАНО В КОДЕ** (`9c77590`, запушен): `RAG_GRAPH_RETRIEVAL=off|on|auto` + пороги, решение логируется при каждом ингесте (`ingestion/graph_activation.py`), 11 тестов. Chunk 800/200 запинован с обоснованием (`eeb7cd0`).
+2. **Phase 1 connectivity-probe ВЫПОЛНЕН** (`c8cd806`): share **0.296** ≥ 0.15 — гейт связности пройден; размер 5589 < 20000 → lane корректно off. `RAG_GRAPH_CROSSDOC_SHARE=0.296` в .env.example.
+3. **Colab-ячейки Phase 2 обновлены** (`62a54cd`).
+4. **Арм F (split-query)**: код `06b9d84` (rerank по ОРИГИНАЛЬНОМУ запросу, пулы = E); датасет v7 (гоча: v5/v6 битые — заливать `--dir-mode zip` и смотреть ВЕСЬ вывод аплоада, «Skipping folder» = corpus не уехал); **kernel v7 запущен 2026-06-06 08:49Z**: rerank F → pools C → rerank C (C регенерируется: v5-output недоступен, CLI не отдаёт versioned output; D2-база была вычищена в cont.17 — урок: кандидаты теперь хранить в dataset).
+
+**Если сессия умерла — продолжение отсюда:**
+1. `kaggle kernels output liovinajo/rag-phase2-contextual-ab -p .tmp/kaggle_phase2/out_F` (ждать `[kaggle-phase2-F] DONE` в логах; status 500 = queued ИЛИ finished; пустой json после IncompleteRead удалить и retry).
+2. `python scripts/ab_remote_contextual.py --stage expand --label D2 --src .tmp/kaggle_phase2/out_F/ab_candidates_phase2_C.json -w 2 --max-chars 3600` и то же с `--label F --src .../ab_candidates_phase2_F.json`.
+3. kw-матрица переходов F vs D2 inline-python по обоим expanded-файлам (`_kw_status`, все 100 кейсов, gains И regressions).
+4. R7-judge: `set -a; . ./.env; set +a; python scripts/aircargo_ragas_free.py --provider mistral --min-interval 1.2 --contexts <F-expanded>`; сравнивать с D2 0.975/0.576/0.895/0.864 медианой/mean-без-нулей.
+5. Решение ship/no-ship: ship = новый параметр retriever'а (split hyde_query: пулы expanded, реранкер оригинал) — только при FULL ≥ 96 и judge не хуже D2. Отчёт в docs/operations/, cont.18 финализировать.
+
 ## 2026-06-06 Update (cont. 17) — плечо E ЗАКРЫТО: NO-SHIP (1 gain / 8 регрессий vs D2), диагноз rerank-демоции записан
 
 **HEAD = этот handoff-коммит (master). Origin = `eaf8dd9` — unpushed: `584ecae`+`26587ab` (cont.16 хвост) + docs этой сессии + этот. Push GATED.**
