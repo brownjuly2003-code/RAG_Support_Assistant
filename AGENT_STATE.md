@@ -1,21 +1,23 @@
 # Agent State
 
-## 2026-06-06 Update (cont. 18 IN-FLIGHT) — арм F запущен на Kaggle; graph-условие в коде; probe 0.296
+## 2026-06-06 Update (cont. 18 ЗАКРЫТ) — плечо F NO-SHIP (95 < 96), цикл query-expansion ЗАКРЫТ; production = D2
 
-**Сессия активна. Origin = `eeb7cd0`; локально 4+ коммита: `06b9d84` (arm F) + `62a54cd` (notebook) + `c8cd806` (graph probe) + этот. Push GATED.**
+**HEAD = этот handoff-коммит (master). Origin = `eeb7cd0` — unpushed: `06b9d84`+`62a54cd`+`c8cd806`+`d9d205f` (утренняя половина) + отчёт F + этот. Push GATED.**
 
-Сделано сегодня (по «бери в работу все»):
-1. **Graph-activation условие ПРОПИСАНО В КОДЕ** (`9c77590`, запушен): `RAG_GRAPH_RETRIEVAL=off|on|auto` + пороги, решение логируется при каждом ингесте (`ingestion/graph_activation.py`), 11 тестов. Chunk 800/200 запинован с обоснованием (`eeb7cd0`).
-2. **Phase 1 connectivity-probe ВЫПОЛНЕН** (`c8cd806`): share **0.296** ≥ 0.15 — гейт связности пройден; размер 5589 < 20000 → lane корректно off. `RAG_GRAPH_CROSSDOC_SHARE=0.296` в .env.example.
-3. **Colab-ячейки Phase 2 обновлены** (`62a54cd`).
-4. **Арм F (split-query)**: код `06b9d84` (rerank по ОРИГИНАЛЬНОМУ запросу, пулы = E); датасет v7 (гоча: v5/v6 битые — заливать `--dir-mode zip` и смотреть ВЕСЬ вывод аплоада, «Skipping folder» = corpus не уехал); **kernel v7 запущен 2026-06-06 08:49Z**: rerank F → pools C → rerank C (C регенерируется: v5-output недоступен, CLI не отдаёт versioned output; D2-база была вычищена в cont.17 — урок: кандидаты теперь хранить в dataset).
+Первая половина сессии (до kernel): graph-условие в коде (`9c77590`, запушен) + probe share 0.296 (`c8cd806`) + chunk-пин (`eeb7cd0`) + notebook (`62a54cd`) + арм F код (`06b9d84`) + kernel v7 запущен — детали в cont.18-IN-FLIGHT истории git (blob `d9d205f`).
 
-**Если сессия умерла — продолжение отсюда:**
-1. `kaggle kernels output liovinajo/rag-phase2-contextual-ab -p .tmp/kaggle_phase2/out_F` (ждать `[kaggle-phase2-F] DONE` в логах; status 500 = queued ИЛИ finished; пустой json после IncompleteRead удалить и retry).
-2. `python scripts/ab_remote_contextual.py --stage expand --label D2 --src .tmp/kaggle_phase2/out_F/ab_candidates_phase2_C.json -w 2 --max-chars 3600` и то же с `--label F --src .../ab_candidates_phase2_F.json`.
-3. kw-матрица переходов F vs D2 inline-python по обоим expanded-файлам (`_kw_status`, все 100 кейсов, gains И regressions).
-4. R7-judge: `set -a; . ./.env; set +a; python scripts/aircargo_ragas_free.py --provider mistral --min-interval 1.2 --contexts <F-expanded>`; сравнивать с D2 0.975/0.576/0.895/0.864 медианой/mean-без-нулей.
-5. Решение ship/no-ship: ship = новый параметр retriever'а (split hyde_query: пулы expanded, реранкер оригинал) — только при FULL ≥ 96 и judge не хуже D2. Отчёт в docs/operations/, cont.18 финализировать.
+Вторая половина (продолжение после обрыва, шаги 1-5 выполнены):
+
+1. **Kernel v7 чистый** (`[kaggle-phase2-F] DONE`, 6h05m): скачан в `.tmp/kaggle_phase2/out_F/` (4 json + log, байты сошлись с логом 1-в-1).
+2. **Expand обоих плеч** (`--window 2 --max-chars 3600`; гоча: короткого `-w` у скрипта НЕТ): **регенерированный D2 = FULL 96/PART 3/MISS 1, остаточный MISS тот же — baseline воспроизведён 1-в-1 (cont.15 валиден)**; F-pre 92 → **F 95/100 FULL** (PART 3, MISS 2).
+3. **Матрица D2→F (все 100): 1 gain / 2 регрессии, нетто −1 FULL (96→95).** Gain `customs-special-cargo-manual-check`; регрессии `customs-broker-escalation` FULL→MISS (rerank-anchor shift: co-occur В пуле r20, original-реранк выбирает якоря без kw-соседей) + `waybill-escalation-events` FULL→PART (pool-выпадение — детерминированное наследство E-пулов, было предсказано). Gain E (`customs-clearance-fields`) НЕ сохранился: его закрывал expanded-РЕРАНК, не пулы → MISS опять.
+4. **R7-judge SKIPPED обоснованно**: конъюнктивный критерий упал на ноге 1 (FULL 95 < 96), дельта 3 кейса внутри полосы шума судьи (гоча cont.15 re-judge C) — 300 вызовов сигнала не добавят.
+5. **РЕШЕНИЕ: NO-SHIP** split-query параметра retriever'а. F-pre 92 > D2-pre 87 — split-query реально лучше БЕЗ экспансии, но parent-expansion (default ON) поглощает выигрыш (D2 +9 экспансией, F +3). **Цикл probe → E → F закрыт; production-стек = D2** (structural + parent-expansion w=2/3600). Отчёт: `docs/operations/2026-06-06-arm-f-split-query-results.md` (+ итог-блок в E-отчёте).
+
+**Кандидаты следующей сессии (НЕ блокеры):**
+- Push unpushed-коммитов — GATED, спрашивать явно.
+- `.tmp/kaggle_phase2/out_F/` (24MB) чистить только после push (датасет v7 + kernel v7 на Kaggle private живут; кандидаты теперь в dataset — урок cont.17 учтён).
+- `customs-clearance-fields` — единственный остаточный MISS; оба известных рычага (E, F) отвергнуты данными. Новых заходов НЕ изобретать без явного запроса.
 
 ## 2026-06-06 Update (cont. 17) — плечо E ЗАКРЫТО: NO-SHIP (1 gain / 8 регрессий vs D2), диагноз rerank-демоции записан
 
