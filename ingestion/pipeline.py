@@ -33,6 +33,7 @@ except ImportError:
 
 import vectordb.manager as tenant_manager
 from ingestion.categorizer import annotate_documents_with_categories
+from ingestion.graph_activation import log_graph_activation
 from ingestion.loader import DocumentLoader
 from vectordb import _base_manager as legacy_manager
 
@@ -216,7 +217,11 @@ class IngestPipeline:
         self._store = store
         self._chunks = chunks
 
-        # Step 3 -- write ingestion log
+        # Step 3 -- evaluate & log the graph-lane activation condition
+        # (docs/plans/2026-06-05-graph-retrieval-activation.md)
+        log_graph_activation(len(chunks))
+
+        # Step 4 -- write ingestion log
         self._write_log(docs, chunks, docs_dir, chunk_config)
 
         return store, chunks
@@ -291,6 +296,8 @@ class IngestPipeline:
             )
         self._store = store
         self._chunks = chunks
+
+        log_graph_activation(len(chunks))
 
         self._append_log_entry(new_docs, chunks, file_path, chunk_config)
 

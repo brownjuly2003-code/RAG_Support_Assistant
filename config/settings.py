@@ -389,6 +389,35 @@ class Settings:
         default_factory=lambda: int(os.getenv("RAG_PARENT_EXPANSION_MAX_CHARS", "3600"))
     )
 
+    # --- Graph retrieval (GraphRAG lane) activation gate ---
+    # Plan: docs/plans/2026-06-05-graph-retrieval-activation.md. The lane
+    # itself is Phase 2 (not built yet); these settings implement the
+    # activation CONDITION, evaluated and logged on every ingestion
+    # (ingestion/graph_activation.py). "auto" activates only when the chunk
+    # threshold AND the connectivity gate (measured by the Phase-1 probe,
+    # value supplied via RAG_GRAPH_CROSSDOC_SHARE) both hold.
+    graph_retrieval: str = field(
+        default_factory=lambda: os.getenv("RAG_GRAPH_RETRIEVAL", "off").strip().lower()
+    )
+    # Chunk-count threshold (~chars/800; fixed for the 800/200 chunking —
+    # recompute as chars/800 if the chunking changes).
+    graph_min_chunks: int = field(
+        default_factory=lambda: int(os.getenv("RAG_GRAPH_MIN_CHUNKS", "20000"))
+    )
+    # Minimal share of entities present in >=2 documents (connectivity gate).
+    graph_min_crossdoc_share: float = field(
+        default_factory=lambda: float(os.getenv("RAG_GRAPH_MIN_CROSSDOC_SHARE", "0.15"))
+    )
+    # Measured cross-doc entity share from the Phase-1 connectivity probe.
+    # Unset = probe not run yet -> "auto" stays off regardless of corpus size.
+    graph_crossdoc_share: Optional[float] = field(
+        default_factory=lambda: (
+            float(raw)
+            if (raw := os.getenv("RAG_GRAPH_CROSSDOC_SHARE", "").strip())
+            else None
+        )
+    )
+
     # --- Level 2: Self-RAG ---
     self_rag_max_iterations: int = int(os.getenv("RAG_SELF_RAG_MAX_ITER", "2"))
     self_rag_min_quality: int = int(os.getenv("RAG_SELF_RAG_MIN_QUALITY", "70"))

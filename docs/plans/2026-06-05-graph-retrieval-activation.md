@@ -1,7 +1,12 @@
 # План: графовый поиск (GraphRAG-lane) с условной активацией по масштабу корпуса
 
 - Дата: 2026-06-05.
-- Статус: PLANNED (не начато; очередь после закрытия parent-expansion цикла).
+- Статус: условие активации ПРОПИСАНО В КОДЕ (2026-06-06):
+  `RAG_GRAPH_RETRIEVAL=off|on|auto` + пороги в `config/settings.py`, решение
+  считается и логируется при каждом ингесте (`ingestion/graph_activation.py`,
+  вызов из `IngestPipeline.ingest`/`add_document`), тесты
+  `tests/test_graph_activation.py`. Сам graph-lane (Phase 2) НЕ построен —
+  сработавшее условие в логах = сигнал запускать Phase 1 probe / Phase 2.
 - Контекст: flat-retrieval (BM25+dense+RRF+reranker+structural chunking+parent-expansion)
   на текущем корпусе (201 док / 5589 чанков / ~4.5MB) даёт 96% FULL @ top-5 —
   графовый слой сейчас НЕ нужен. План фиксирует, КОГДА он становится нужен,

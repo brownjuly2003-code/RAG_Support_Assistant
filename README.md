@@ -259,6 +259,10 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `RAG_PARENT_EXPANSION` | `true` | Post-rerank: supplement final chunks with neighbouring sections of their source |
 | `RAG_PARENT_EXPANSION_WINDOW` | `2` | Sections taken from each side of a selected chunk |
 | `RAG_PARENT_EXPANSION_MAX_CHARS` | `3600` | Cap on expanded chunk text (core + neighbours) |
+| `RAG_GRAPH_RETRIEVAL` | `off` | Graph-lane activation gate: `off`/`on`/`auto`; condition evaluated & logged at ingestion (lane itself = Phase 2, not built) |
+| `RAG_GRAPH_MIN_CHUNKS` | `20000` | `auto`: minimal chunk count to consider the graph lane |
+| `RAG_GRAPH_MIN_CROSSDOC_SHARE` | `0.15` | `auto`: minimal cross-doc entity share (connectivity gate) |
+| `RAG_GRAPH_CROSSDOC_SHARE` | unset | Measured probe value; unset = probe not run, `auto` stays off |
 | `RAG_SELF_RAG_MAX_ITER` | `2` | Maximum Self-RAG iterations |
 | `RAG_SELF_RAG_MIN_QUALITY` | `70` | Minimum quality score to avoid retry/escalation |
 | `FACT_VERIFICATION_ENABLED` | `true` | Run fact verification after generation |
