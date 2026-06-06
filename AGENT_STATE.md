@@ -14,10 +14,13 @@
 4. **R7-judge SKIPPED обоснованно**: конъюнктивный критерий упал на ноге 1 (FULL 95 < 96), дельта 3 кейса внутри полосы шума судьи (гоча cont.15 re-judge C) — 300 вызовов сигнала не добавят.
 5. **РЕШЕНИЕ: NO-SHIP** split-query параметра retriever'а. F-pre 92 > D2-pre 87 — split-query реально лучше БЕЗ экспансии, но parent-expansion (default ON) поглощает выигрыш (D2 +9 экспансией, F +3). **Цикл probe → E → F закрыт; production-стек = D2** (structural + parent-expansion w=2/3600). Отчёт: `docs/operations/2026-06-06-arm-f-split-query-results.md` (+ итог-блок в E-отчёте).
 
+**ДОПОЛНЕНО той же сессией (после push, по явному «продолжи» Юли). АКТУАЛЬНОЕ СОСТОЯНИЕ: origin = `51628e2` (CI ЗЕЛЁНЫЙ), unpushed только этот addendum-коммит.**
+- **PUSHED `eeb7cd0..3576410` + CI-fix `51628e2`** (6 коммитов суммарно). Первый CI-прогон упал на pre-commit `end-of-file-fixer`: notebook `62a54cd` был без trailing newline (единственный фейл, остальные 9 джобов зелёные) — фикс `51628e2`, второй прогон **success полностью**. Docs-deploy зелёный с первого раза. Гоча сети: github.com с этой машины флапает (DNS-фейл + wsarecv reset) — лечится простым retry через 10-20s.
+- **`.tmp/kaggle_phase2/` вычищен (56MB**, включая v7-staging и недочищенный out_E) — датасет v7 + kernel v7 на Kaggle private живут, кандидаты в dataset (урок cont.17), expand детерминирован.
+
 **Кандидаты следующей сессии (НЕ блокеры):**
-- Push unpushed-коммитов — GATED, спрашивать явно.
-- `.tmp/kaggle_phase2/out_F/` (24MB) чистить только после push (датасет v7 + kernel v7 на Kaggle private живут; кандидаты теперь в dataset — урок cont.17 учтён).
 - `customs-clearance-fields` — единственный остаточный MISS; оба известных рычага (E, F) отвергнуты данными. Новых заходов НЕ изобретать без явного запроса.
+- В working tree чужие untracked `docs/architecture-data-flow.html` + `scripts/check_architecture_diagram.py` (параллельная сессия) — не трогать, не коммитить.
 
 ## 2026-06-06 Update (cont. 17) — плечо E ЗАКРЫТО: NO-SHIP (1 gain / 8 регрессий vs D2), диагноз rerank-демоции записан
 
