@@ -319,6 +319,14 @@ class Settings:
     rrf_k: int = int(os.getenv("RRF_K", "60"))
     rrf_doc_key_chars: int = int(os.getenv("RRF_DOC_KEY_CHARS", "200"))
     quality_threshold: int = int(os.getenv("QUALITY_THRESHOLD", "80"))
+    # 800/200 are MEASURED for this corpus, not arbitrary (Phase-0 co-occur gate,
+    # docs/operations/2026-06-05-chunk-size-phase0-justification.md): cap=800 keeps
+    # 98/100 curated kw-bundles within a single chunk; cap=1200/1600 recover exactly
+    # one bundle that is already FULL in the production stack (a ranking case, not a
+    # splitting case), so the sweep was cancelled. The known weakness of a small cap
+    # (narrow sections losing context) is covered by parent-expansion (default ON).
+    # Revisit only on corpus change or new "bundle split across chunks" MISS cases.
+    # NOTE: graph_min_chunks below is calibrated for this chunk_size (~chars/800).
     chunk_size: int = int(os.getenv("CHUNK_SIZE") or os.getenv("RAG_CHUNK_SIZE") or "800")
     chunk_overlap: int = int(os.getenv("CHUNK_OVERLAP") or os.getenv("RAG_CHUNK_OVERLAP") or "200")
     api_default_page_size: int = int(os.getenv("API_DEFAULT_PAGE_SIZE", "50"))

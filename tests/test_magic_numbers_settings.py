@@ -37,6 +37,25 @@ def test_ingest_pipeline_uses_settings_chunk_defaults(
     assert captured["chunk_config"] == {"chunk_size": 321, "chunk_overlap": 123}
 
 
+def test_chunk_defaults_pinned_to_measured_values(monkeypatch) -> None:
+    # 800/200 are corpus-measured (Phase-0 co-occur gate,
+    # docs/operations/2026-06-05-chunk-size-phase0-justification.md):
+    # 98/100 kw-bundles live inside a single chunk at cap=800 and larger caps
+    # buy nothing the production stack hasn't already closed. Changing the
+    # defaults invalidates that measurement AND the graph-lane chunk threshold
+    # (RAG_GRAPH_MIN_CHUNKS is calibrated as ~chars/800) — re-run the Phase-0
+    # gate before bumping these.
+    from config.settings import Settings
+
+    for var in ("CHUNK_SIZE", "RAG_CHUNK_SIZE", "CHUNK_OVERLAP", "RAG_CHUNK_OVERLAP"):
+        monkeypatch.delenv(var, raising=False)
+
+    settings = Settings()
+
+    assert settings.chunk_size == 800
+    assert settings.chunk_overlap == 200
+
+
 def test_tenant_vector_store_uses_settings_chunk_defaults(
     monkeypatch,
     tmp_path,
