@@ -1,0 +1,6094 @@
+{
+  "timestamp": "20260606T090729Z",
+  "model": "mistral-small-latest",
+  "sample_chunks": 200,
+  "sampled_docs": 184,
+  "corpus_chunks": 5589,
+  "extraction_failures": 0,
+  "entities_total": 1518,
+  "entities_crossdoc": 449,
+  "crossdoc_share": 0.2958,
+  "gate_min_share": 0.15,
+  "gate_passed": true,
+  "top_connecting": [
+    {
+      "entity": "awb",
+      "docs": 60
+    },
+    {
+      "entity": "booking",
+      "docs": 37
+    },
+    {
+      "entity": "hawb",
+      "docs": 36
+    },
+    {
+      "entity": "mawb",
+      "docs": 32
+    },
+    {
+      "entity": "юрист",
+      "docs": 20
+    },
+    {
+      "entity": "пломба",
+      "docs": 19
+    },
+    {
+      "entity": "рейс",
+      "docs": 19
+    },
+    {
+      "entity": "терминал",
+      "docs": 18
+    },
+    {
+      "entity": "dangerous_goods",
+      "docs": 17
+    },
+    {
+      "entity": "sla",
+      "docs": 17
+    },
+    {
+      "entity": "приказ",
+      "docs": 17
+    },
+    {
+      "entity": "акт",
+      "docs": 15
+    },
+    {
+      "entity": "аэропорт",
+      "docs": 15
+    },
+    {
+      "entity": "владелец процесса",
+      "docs": 15
+    },
+    {
+      "entity": "uld",
+      "docs": 14
+    },
+    {
+      "entity": "груз",
+      "docs": 14
+    },
+    {
+      "entity": "договор",
+      "docs": 13
+    },
+    {
+      "entity": "cargo_manifest",
+      "docs": 12
+    },
+    {
+      "entity": "заявление",
+      "docs": 12
+    },
+    {
+      "entity": "персональные данные",
+      "docs": 12
+    },
+    {
+      "entity": "cmr",
+      "docs": 11
+    },
+    {
+      "entity": "бронирование",
+      "docs": 11
+    },
+    {
+      "entity": "риск",
+      "docs": 11
+    },
+    {
+      "entity": "спор",
+      "docs": 11
+    },
+    {
+      "entity": "customs",
+      "docs": 10
+    }
+  ],
+  "entity_doc_map": {
+    "увольнение": [
+      "01_hr_dismissal_procedure.md",
+      "07_faq_commercial_secret.md",
+      "07_faq_employee_material_liability.md"
+    ],
+    "выходное пособие": [
+      "01_hr_dismissal_procedure.md"
+    ],
+    "расчет": [
+      "01_hr_dismissal_procedure.md",
+      "03_legal_contract_termination_checklist.md",
+      "05_tlog_policy_transport_safety.md",
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "трудовая книжка": [
+      "01_hr_dismissal_procedure.md",
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "hr-директор": [
+      "01_hr_dismissal_procedure.md",
+      "01_hr_pol_bonus.md",
+      "01_hr_pol_conflict_interest.md",
+      "01_hr_pol_gifts.md",
+      "01_hr_pol_kpi.md",
+      "01_hr_pol_safety.md",
+      "02_hr_tmp_employment_order.md",
+      "02_hr_tmp_internship_agreement.md",
+      "02_hr_tmp_remote_work_agreement.md",
+      "02_hr_tmp_resignation_letter.md"
+    ],
+    "трудовой кодекс рф": [
+      "01_hr_dismissal_procedure.md",
+      "01_hr_pol_gifts.md"
+    ],
+    "постоянный_перевод": [
+      "01_hr_internal_transfer.md"
+    ],
+    "временный_перевод": [
+      "01_hr_internal_transfer.md"
+    ],
+    "существенные_условия_трудового_договора": [
+      "01_hr_internal_transfer.md"
+    ],
+    "пробный_период_при_переводе": [
+      "01_hr_internal_transfer.md"
+    ],
+    "трудовая_функция": [
+      "01_hr_internal_transfer.md",
+      "02_hr_tmp_job_description_lawyer.md"
+    ],
+    "структурное_подразделение": [
+      "01_hr_internal_transfer.md"
+    ],
+    "должность": [
+      "01_hr_internal_transfer.md",
+      "01_hr_pol_talent_pool.md",
+      "02_hr_tmp_business_trip_order.md"
+    ],
+    "трудовой_договор": [
+      "01_hr_internal_transfer.md",
+      "01_hr_pol_salary.md",
+      "01_hr_probation_procedure.md",
+      "02_hr_tmp_add_agreement.md",
+      "02_hr_tmp_employment_contract.md",
+      "02_hr_tmp_job_description_lawyer.md",
+      "02_hr_tmp_material_liability_agreement.md",
+      "02_hr_tmp_remote_work_agreement.md"
+    ],
+    "режим_труда": [
+      "01_hr_internal_transfer.md"
+    ],
+    "гарантия": [
+      "01_hr_internal_transfer.md",
+      "01_hr_pol_talent_pool.md"
+    ],
+    "положение об адаптации новых сотрудников": [
+      "01_hr_pol_adaptation.md"
+    ],
+    "кадровое событие": [
+      "01_hr_pol_adaptation.md"
+    ],
+    "приказ": [
+      "01_hr_pol_adaptation.md",
+      "01_hr_pol_childcare.md",
+      "01_hr_pol_compensation.md",
+      "01_hr_pol_exit_interview.md",
+      "01_hr_pol_performance_review.md",
+      "01_hr_pol_shift_schedule.md",
+      "01_hr_pol_talent_pool.md",
+      "02_hr_tmp_confidentiality_ack.md",
+      "02_hr_tmp_employment_order.md",
+      "02_hr_tmp_internship_agreement.md",
+      "02_hr_tmp_job_description_hr.md",
+      "02_hr_tmp_job_description_lawyer.md",
+      "02_hr_tmp_material_liability_agreement.md",
+      "02_hr_tmp_nepotism_disclosure.md",
+      "02_hr_tmp_remote_work_agreement.md",
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "заявление": [
+      "01_hr_pol_adaptation.md",
+      "01_hr_pol_childcare.md",
+      "01_hr_pol_compensation.md",
+      "01_hr_pol_exit_interview.md",
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_mental_health.md",
+      "01_hr_pol_performance_review.md",
+      "01_hr_pol_shift_schedule.md",
+      "01_hr_pol_talent_pool.md",
+      "02_hr_tmp_confidentiality_ack.md",
+      "02_hr_tmp_job_description_lawyer.md",
+      "02_hr_tmp_transfer_order.md"
+    ],
+    "оффер": [
+      "01_hr_pol_adaptation.md",
+      "01_hr_pol_talent_pool.md",
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "дополнительное соглашение": [
+      "01_hr_pol_adaptation.md",
+      "02_hr_tmp_confidentiality_ack.md",
+      "02_hr_tmp_internship_agreement.md",
+      "02_hr_tmp_job_description_hr.md",
+      "02_hr_tmp_transfer_order.md"
+    ],
+    "отчет об оценке": [
+      "01_hr_pol_adaptation.md"
+    ],
+    "программа адаптации": [
+      "01_hr_pol_adaptation.md"
+    ],
+    "лист ознакомления": [
+      "01_hr_pol_adaptation.md",
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_mental_health.md"
+    ],
+    "карточка события": [
+      "01_hr_pol_adaptation.md"
+    ],
+    "наставник": [
+      "01_hr_pol_adaptation.md"
+    ],
+    "юрист": [
+      "01_hr_pol_adaptation.md",
+      "01_hr_pol_conflict_interest.md",
+      "01_hr_pol_safety.md",
+      "02_hr_tmp_job_description_lawyer.md",
+      "02_hr_tmp_material_liability_agreement.md",
+      "03_legal_contract_franchise.md",
+      "03_legal_contract_insurance_civil_liability.md",
+      "03_legal_contract_supplement_general.md",
+      "03_legal_contract_supply_auto_parts.md",
+      "03_legal_contract_termination_checklist.md",
+      "04_legal_claim_lease_breach.md",
+      "04_legal_claim_service_fail.md",
+      "04_legal_letter_notary_demand.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_regulation_dangerous_goods.md",
+      "05_tlog_regulation_weight_control.md",
+      "06_comp_policy_commercial_secret.md",
+      "06_comp_policy_nda_contractor.md",
+      "06_comp_policy_nda_employee.md",
+      "07_faq_commercial_secret.md"
+    ],
+    "инструкция_по_охране_труда": [
+      "01_hr_pol_alcohol.md"
+    ],
+    "регламент_увольнения": [
+      "01_hr_pol_alcohol.md"
+    ],
+    "порядок_прохождения_медосмотров": [
+      "01_hr_pol_alcohol.md"
+    ],
+    "положение о премировании": [
+      "01_hr_pol_bonus.md"
+    ],
+    "kpi": [
+      "01_hr_pol_bonus.md",
+      "02_hr_tmp_timesheet.md"
+    ],
+    "бонус": [
+      "01_hr_pol_bonus.md"
+    ],
+    "мотивация": [
+      "01_hr_pol_bonus.md"
+    ],
+    "командировка": [
+      "01_hr_pol_business_trip.md"
+    ],
+    "служебное_поручение": [
+      "01_hr_pol_business_trip.md"
+    ],
+    "срок": [
+      "01_hr_pol_business_trip.md",
+      "01_hr_pol_childcare.md",
+      "02_hr_tmp_business_trip_order.md",
+      "04_legal_letter_notary_demand.md",
+      "04_legal_reply_late_delivery.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "07_faq_probation.md"
+    ],
+    "первичный_документ": [
+      "01_hr_pol_business_trip.md"
+    ],
+    "билет": [
+      "01_hr_pol_business_trip.md"
+    ],
+    "чек": [
+      "01_hr_pol_business_trip.md"
+    ],
+    "счёт": [
+      "01_hr_pol_business_trip.md",
+      "03_legal_contract_factoring.md"
+    ],
+    "маршрут": [
+      "01_hr_pol_business_trip.md",
+      "03_legal_contract_insurance_cargo.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_expedition_multimodal.md",
+      "05_tlog_regulation_oversized.md",
+      "06_comp_policy_access_control.md",
+      "06_comp_policy_anticorruption_local.md",
+      "06_comp_policy_nda_contractor.md",
+      "06_comp_policy_nda_employee.md"
+    ],
+    "письменное_согласие": [
+      "01_hr_pol_business_trip.md",
+      "01_hr_pol_overtime.md"
+    ],
+    "руководитель": [
+      "01_hr_pol_business_trip.md",
+      "01_hr_pol_internal_comm.md",
+      "01_hr_pol_remote_work.md",
+      "01_hr_pol_second_job.md",
+      "01_hr_pol_social_package.md",
+      "02_hr_tmp_job_description_lawyer.md",
+      "02_hr_tmp_material_liability_agreement.md"
+    ],
+    "положение об отпуске по уходу за ребенком": [
+      "01_hr_pol_childcare.md"
+    ],
+    "категория работника": [
+      "01_hr_pol_childcare.md",
+      "01_hr_pol_compensation.md",
+      "01_hr_pol_corruption.md",
+      "01_hr_pol_exit_interview.md",
+      "01_hr_pol_grievance.md",
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_mental_health.md"
+    ],
+    "табель": [
+      "01_hr_pol_childcare.md",
+      "01_hr_pol_compensation.md",
+      "01_hr_pol_exit_interview.md",
+      "01_hr_pol_performance_review.md",
+      "01_hr_pol_shift_schedule.md"
+    ],
+    "акт": [
+      "01_hr_pol_childcare.md",
+      "01_hr_pol_exit_interview.md",
+      "01_hr_pol_it_access.md",
+      "03_legal_contract_expedition_international.md",
+      "03_legal_contract_services_it.md",
+      "04_legal_memo_contract_breach.md",
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "дата события": [
+      "01_hr_pol_childcare.md",
+      "01_hr_pol_compensation.md",
+      "01_hr_pol_corruption.md",
+      "01_hr_pol_exit_interview.md",
+      "01_hr_pol_grievance.md",
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_mental_health.md",
+      "07_faq_claims_procedure.md",
+      "07_faq_contract_templates.md"
+    ],
+    "подтверждающий документ": [
+      "01_hr_pol_childcare.md",
+      "07_faq_claims_procedure.md"
+    ],
+    "раздел": [
+      "01_hr_pol_childcare.md",
+      "02_hr_tmp_add_agreement.md"
+    ],
+    "локальный акт": [
+      "01_hr_pol_childcare.md",
+      "01_hr_pol_exit_interview.md",
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_mental_health.md",
+      "07_faq_contract_templates.md"
+    ],
+    "участник": [
+      "01_hr_pol_childcare.md",
+      "02_hr_tmp_business_trip_order.md",
+      "06_comp_policy_anticorruption_local.md",
+      "06_comp_policy_whistleblower.md",
+      "07_faq_probation.md"
+    ],
+    "сумма": [
+      "01_hr_pol_childcare.md",
+      "02_hr_tmp_business_trip_order.md",
+      "04_legal_claim_lease_breach.md",
+      "04_legal_claim_service_fail.md",
+      "04_legal_reply_late_delivery.md",
+      "05_tlog_policy_transport_safety.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "06_comp_policy_anticorruption_local.md",
+      "06_comp_policy_whistleblower.md",
+      "07_faq_probation.md"
+    ],
+    "ответственный": [
+      "01_hr_pol_childcare.md",
+      "02_hr_tmp_business_trip_order.md",
+      "04_legal_claim_lease_breach.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "07_faq_probation.md"
+    ],
+    "политика компенсаций и льгот": [
+      "01_hr_pol_compensation.md"
+    ],
+    "подразделение": [
+      "01_hr_pol_compensation.md",
+      "01_hr_pol_conflict_interest.md",
+      "01_hr_pol_corruption.md",
+      "01_hr_pol_grievance.md",
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_it_access.md",
+      "01_hr_pol_mental_health.md",
+      "01_hr_pol_shift_schedule.md",
+      "01_hr_pol_talent_pool.md",
+      "07_faq_claims_procedure.md"
+    ],
+    "редакция лна": [
+      "01_hr_pol_compensation.md",
+      "01_hr_pol_corruption.md",
+      "01_hr_pol_grievance.md"
+    ],
+    "локальный hr-документ": [
+      "01_hr_pol_compensation.md",
+      "01_hr_pol_corruption.md"
+    ],
+    "график": [
+      "01_hr_pol_compensation.md",
+      "01_hr_pol_performance_review.md",
+      "01_hr_pol_remote_work.md",
+      "01_hr_pol_shift_schedule.md",
+      "02_hr_tmp_timesheet.md"
+    ],
+    "штатное расписание": [
+      "01_hr_pol_compensation.md",
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "акт работодателя": [
+      "01_hr_pol_compensation.md"
+    ],
+    "риск механического применения правила": [
+      "01_hr_pol_compensation.md"
+    ],
+    "кадровое решение": [
+      "01_hr_pol_compensation.md",
+      "01_hr_pol_mental_health.md"
+    ],
+    "письменное основание": [
+      "01_hr_pol_compensation.md",
+      "01_hr_pol_mental_health.md"
+    ],
+    "согласие": [
+      "01_hr_pol_compensation.md",
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_it_access.md",
+      "01_hr_pol_mental_health.md",
+      "01_hr_pol_second_job.md",
+      "01_hr_pol_talent_pool.md",
+      "06_comp_policy_incident_response.md"
+    ],
+    "ознакомление": [
+      "01_hr_pol_compensation.md",
+      "01_hr_pol_it_access.md",
+      "01_hr_pol_mental_health.md",
+      "01_hr_pol_shift_schedule.md",
+      "01_hr_pol_talent_pool.md"
+    ],
+    "уточняющий вопрос": [
+      "01_hr_pol_compensation.md",
+      "02_hr_tmp_confidentiality_ack.md"
+    ],
+    "руководитель подразделения": [
+      "01_hr_pol_conflict_interest.md",
+      "01_hr_pol_corruption.md",
+      "02_hr_tmp_internship_agreement.md"
+    ],
+    "конфликт": [
+      "01_hr_pol_conflict_interest.md",
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "полномочия": [
+      "01_hr_pol_conflict_interest.md"
+    ],
+    "сотрудник": [
+      "01_hr_pol_conflict_interest.md",
+      "01_hr_pol_kpi.md",
+      "02_hr_tmp_employment_order.md",
+      "05_tlog_checklist_cargo_acceptance.md"
+    ],
+    "вопрос": [
+      "01_hr_pol_conflict_interest.md",
+      "05_tlog_policy_transport_safety.md",
+      "06_comp_checklist_contract_compliance.md",
+      "07_faq_pdp.md"
+    ],
+    "внешняя деятельность": [
+      "01_hr_pol_conflict_interest.md"
+    ],
+    "директор по комплаенсу": [
+      "01_hr_pol_corruption.md"
+    ],
+    "hr-владелец процедуры": [
+      "01_hr_pol_corruption.md"
+    ],
+    "юрист/compliance при риске": [
+      "01_hr_pol_corruption.md",
+      "02_hr_tmp_internship_agreement.md"
+    ],
+    "антикоррупционная политика": [
+      "01_hr_pol_corruption.md"
+    ],
+    "локальный нормативный акт": [
+      "01_hr_pol_corruption.md"
+    ],
+    "риск": [
+      "01_hr_pol_corruption.md",
+      "01_hr_pol_exit_interview.md",
+      "01_hr_pol_shift_schedule.md",
+      "02_hr_tmp_confidentiality_ack.md",
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_waybill.md",
+      "06_comp_checklist_contract_compliance.md",
+      "06_comp_policy_whistleblower.md"
+    ],
+    "владелец процесса": [
+      "01_hr_pol_diversity.md",
+      "01_hr_pol_exit_interview.md",
+      "01_hr_pol_kpi.md",
+      "01_hr_pol_references.md",
+      "02_hr_tmp_job_description_accountant.md",
+      "02_hr_tmp_job_description_logistics.md",
+      "02_hr_tmp_resignation_letter.md",
+      "03_legal_contract_software_license.md",
+      "04_legal_power_of_attorney_contracts.md",
+      "05_tlog_instruction_logistics_manager.md",
+      "06_comp_policy_commercial_secret.md",
+      "06_comp_policy_cookies.md",
+      "06_comp_policy_nda_employee.md",
+      "07_faq_claims_procedure.md",
+      "07_faq_probation.md"
+    ],
+    "спор": [
+      "01_hr_pol_diversity.md",
+      "01_hr_pol_references.md",
+      "02_hr_tmp_job_description_accountant.md",
+      "02_hr_tmp_job_description_logistics.md",
+      "04_legal_memo_contract_breach.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_policy_transport_safety.md",
+      "05_tlog_regulation_dangerous_goods.md",
+      "05_tlog_regulation_weight_control.md",
+      "06_comp_policy_anticorruption_local.md",
+      "07_faq_commercial_secret.md"
+    ],
+    "законодательство": [
+      "01_hr_pol_diversity.md",
+      "01_hr_pol_kpi.md",
+      "01_hr_pol_references.md",
+      "02_hr_tmp_job_description_accountant.md",
+      "02_hr_tmp_job_description_logistics.md",
+      "02_hr_tmp_resignation_letter.md",
+      "05_tlog_checklist_cargo_acceptance.md"
+    ],
+    "типовой сценарий": [
+      "01_hr_pol_diversity.md",
+      "01_hr_pol_references.md",
+      "02_hr_tmp_job_description_accountant.md",
+      "02_hr_tmp_job_description_logistics.md"
+    ],
+    "внутренний документ": [
+      "01_hr_pol_diversity.md",
+      "02_hr_tmp_job_description_accountant.md",
+      "02_hr_tmp_job_description_logistics.md"
+    ],
+    "инструкция по электробезопасности": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "требование безопасности": [
+      "01_hr_pol_electrical_safety.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "инцидент": [
+      "01_hr_pol_electrical_safety.md",
+      "06_comp_checklist_contract_compliance.md",
+      "06_comp_policy_breach_notification.md",
+      "06_comp_policy_incident_response.md",
+      "06_comp_policy_nda_employee.md",
+      "06_comp_policy_whistleblower.md",
+      "07_faq_pdp.md"
+    ],
+    "место работы": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "инструктаж": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "допуск": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "медосмотр": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "журнал регистрации": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "журнал инструктажа": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "акт допуска": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "медзаключение": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "акт н-1": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "объяснение": [
+      "01_hr_pol_electrical_safety.md",
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_mental_health.md"
+    ],
+    "предписание": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "контроль исполнения": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "группа допуска": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "электроустановка": [
+      "01_hr_pol_electrical_safety.md"
+    ],
+    "exit interview": [
+      "01_hr_pol_exit_interview.md"
+    ],
+    "раздел регламента": [
+      "01_hr_pol_exit_interview.md"
+    ],
+    "правило": [
+      "01_hr_pol_exit_interview.md",
+      "01_hr_pol_internal_comm.md",
+      "06_comp_policy_anticorruption_local.md",
+      "07_faq_employee_material_liability.md",
+      "07_faq_leave.md",
+      "07_faq_probation.md"
+    ],
+    "политика приема подарков": [
+      "01_hr_pol_gifts.md"
+    ],
+    "ук рф": [
+      "01_hr_pol_gifts.md"
+    ],
+    "антикоррупция": [
+      "01_hr_pol_gifts.md"
+    ],
+    "порог": [
+      "01_hr_pol_gifts.md"
+    ],
+    "порядок рассмотрения трудовых споров": [
+      "01_hr_pol_grievance.md"
+    ],
+    "специальные гарантии": [
+      "01_hr_pol_grievance.md"
+    ],
+    "беременность": [
+      "01_hr_pol_grievance.md"
+    ],
+    "больничный": [
+      "01_hr_pol_grievance.md"
+    ],
+    "несовершеннолетний": [
+      "01_hr_pol_grievance.md",
+      "01_hr_probation_procedure.md"
+    ],
+    "профсоюз": [
+      "01_hr_pol_grievance.md"
+    ],
+    "удаленный режим": [
+      "01_hr_pol_grievance.md"
+    ],
+    "спорные данные": [
+      "01_hr_pol_grievance.md",
+      "02_hr_tmp_timesheet.md"
+    ],
+    "расчетные данные": [
+      "01_hr_pol_grievance.md",
+      "02_hr_tmp_timesheet.md"
+    ],
+    "санкционные данные": [
+      "01_hr_pol_grievance.md",
+      "02_hr_tmp_timesheet.md",
+      "03_legal_contract_supply_auto_parts.md"
+    ],
+    "кадрово-защищенные данные": [
+      "01_hr_pol_grievance.md",
+      "02_hr_tmp_timesheet.md"
+    ],
+    "персональные данные": [
+      "01_hr_pol_grievance.md",
+      "02_hr_tmp_business_trip_order.md",
+      "02_hr_tmp_timesheet.md",
+      "03_legal_contract_supply_auto_parts.md",
+      "04_legal_claim_service_fail.md",
+      "04_legal_letter_arbitration_notice.md",
+      "04_legal_letter_debt_collection.md",
+      "05_tlog_policy_transport_safety.md",
+      "06_comp_checklist_contract_compliance.md",
+      "06_comp_policy_cross_border_transfer.md",
+      "06_comp_policy_pdp.md",
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "политика противодействия домогательствам": [
+      "01_hr_pol_harassment.md"
+    ],
+    "уведомление": [
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_it_access.md",
+      "01_hr_pol_mental_health.md",
+      "01_hr_pol_talent_pool.md",
+      "02_hr_tmp_transfer_order.md",
+      "03_legal_contract_expedition_international.md",
+      "04_legal_letter_arbitration_notice.md",
+      "06_comp_policy_breach_notification.md",
+      "06_comp_policy_incident_response.md"
+    ],
+    "конфликт интересов": [
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_mental_health.md"
+    ],
+    "служебная записка": [
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_mental_health.md",
+      "02_hr_tmp_confidentiality_ack.md",
+      "02_hr_tmp_internship_agreement.md",
+      "02_hr_tmp_transfer_order.md"
+    ],
+    "решение комиссии": [
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_mental_health.md"
+    ],
+    "hr-запись": [
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_mental_health.md"
+    ],
+    "профильный риск": [
+      "01_hr_pol_harassment.md",
+      "07_faq_contract_templates.md"
+    ],
+    "меры": [
+      "01_hr_pol_harassment.md"
+    ],
+    "расследование": [
+      "01_hr_pol_harassment.md"
+    ],
+    "доказательство": [
+      "01_hr_pol_harassment.md",
+      "01_hr_pol_shift_schedule.md",
+      "06_comp_checklist_contract_compliance.md",
+      "06_comp_policy_anticorruption_local.md",
+      "07_faq_commercial_secret.md"
+    ],
+    "письменная фиксация решения": [
+      "01_hr_pol_harassment.md"
+    ],
+    "домогательство": [
+      "01_hr_pol_harassment.md"
+    ],
+    "дискриминация": [
+      "01_hr_pol_harassment.md"
+    ],
+    "несчастный случай": [
+      "01_hr_pol_injury.md"
+    ],
+    "производство": [
+      "01_hr_pol_injury.md"
+    ],
+    "дорожно-транспортное происшествие": [
+      "01_hr_pol_injury.md"
+    ],
+    "травма": [
+      "01_hr_pol_injury.md"
+    ],
+    "трудовая обязанность": [
+      "01_hr_pol_injury.md"
+    ],
+    "удаленная работа": [
+      "01_hr_pol_injury.md"
+    ],
+    "профессиональное заболевание": [
+      "01_hr_pol_injury.md"
+    ],
+    "бытовая травма": [
+      "01_hr_pol_injury.md"
+    ],
+    "канал": [
+      "01_hr_pol_internal_comm.md"
+    ],
+    "hr": [
+      "01_hr_pol_internal_comm.md",
+      "02_hr_tmp_job_description_lawyer.md",
+      "02_hr_tmp_material_liability_agreement.md",
+      "02_hr_tmp_reference_letter_template.md",
+      "06_comp_policy_nda_employee.md",
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "тема": [
+      "01_hr_pol_internal_comm.md",
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "цель": [
+      "01_hr_pol_internal_comm.md",
+      "06_comp_checklist_contract_compliance.md",
+      "06_comp_policy_pdp.md",
+      "06_comp_policy_whistleblower.md"
+    ],
+    "сообщение": [
+      "01_hr_pol_internal_comm.md"
+    ],
+    "администратор": [
+      "01_hr_pol_internal_comm.md"
+    ],
+    "рабочее_время": [
+      "01_hr_pol_internal_comm.md",
+      "01_hr_pol_remote_work.md",
+      "01_hr_pol_second_job.md"
+    ],
+    "чрезвычайная_ситуация": [
+      "01_hr_pol_internal_comm.md"
+    ],
+    "регламент_доступа_к_ит-ресурсам": [
+      "01_hr_pol_it_access.md"
+    ],
+    "категория_работника": [
+      "01_hr_pol_it_access.md",
+      "01_hr_pol_shift_schedule.md",
+      "01_hr_pol_talent_pool.md"
+    ],
+    "дата_события": [
+      "01_hr_pol_it_access.md",
+      "01_hr_pol_shift_schedule.md",
+      "07_faq_commercial_secret.md"
+    ],
+    "локальный_акт": [
+      "01_hr_pol_it_access.md",
+      "01_hr_pol_talent_pool.md",
+      "02_hr_tmp_nepotism_disclosure.md"
+    ],
+    "конфликт_интересов": [
+      "01_hr_pol_it_access.md",
+      "02_hr_tmp_nepotism_disclosure.md"
+    ],
+    "ит-доступ": [
+      "01_hr_pol_it_access.md"
+    ],
+    "учетная_запись": [
+      "01_hr_pol_it_access.md"
+    ],
+    "ролевая_модель": [
+      "01_hr_pol_it_access.md"
+    ],
+    "кадровое_решение": [
+      "01_hr_pol_it_access.md",
+      "01_hr_pol_shift_schedule.md",
+      "01_hr_pol_talent_pool.md"
+    ],
+    "письменное_основание": [
+      "01_hr_pol_it_access.md",
+      "01_hr_pol_shift_schedule.md",
+      "01_hr_pol_talent_pool.md"
+    ],
+    "персональные_данные": [
+      "01_hr_pol_it_access.md",
+      "02_hr_tmp_nepotism_disclosure.md",
+      "06_comp_checklist_pdp_audit.md",
+      "06_comp_policy_access_control.md",
+      "06_comp_policy_anticorruption_local.md",
+      "06_comp_policy_data_destruction.md"
+    ],
+    "секретные_данные": [
+      "01_hr_pol_it_access.md"
+    ],
+    "оплата_услуг": [
+      "01_hr_pol_it_access.md"
+    ],
+    "результат": [
+      "01_hr_pol_it_access.md"
+    ],
+    "sla": [
+      "01_hr_pol_it_access.md",
+      "02_hr_tmp_material_liability_agreement.md",
+      "03_legal_contract_expedition_international.md",
+      "03_legal_contract_franchise.md",
+      "03_legal_contract_insurance_civil_liability.md",
+      "03_legal_contract_joint_activity.md",
+      "03_legal_contract_services_consulting.md",
+      "03_legal_contract_services_general.md",
+      "03_legal_contract_services_it.md",
+      "03_legal_contract_software_license.md",
+      "03_legal_contract_supplement_general.md",
+      "03_legal_contract_supply_auto_parts.md",
+      "04_legal_claim_non_payment.md",
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md",
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "редакция": [
+      "01_hr_pol_it_access.md",
+      "01_hr_pol_mental_health.md",
+      "01_hr_pol_talent_pool.md",
+      "07_faq_claims_procedure.md"
+    ],
+    "дата_утверждения": [
+      "01_hr_pol_it_access.md",
+      "01_hr_pol_talent_pool.md"
+    ],
+    "владелец_hr-процесса": [
+      "01_hr_pol_it_access.md",
+      "01_hr_pol_talent_pool.md"
+    ],
+    "плановый пересмотр": [
+      "01_hr_pol_kpi.md",
+      "02_hr_tmp_resignation_letter.md"
+    ],
+    "положение об оценке эффективности (kpi)": [
+      "01_hr_pol_kpi.md"
+    ],
+    "организационная структура": [
+      "01_hr_pol_kpi.md",
+      "02_hr_tmp_resignation_letter.md"
+    ],
+    "маршрут согласования": [
+      "01_hr_pol_kpi.md",
+      "02_hr_tmp_resignation_letter.md",
+      "03_legal_contract_services_it.md"
+    ],
+    "шаблон": [
+      "01_hr_pol_kpi.md",
+      "02_hr_tmp_confidentiality_ack.md",
+      "02_hr_tmp_internship_agreement.md",
+      "02_hr_tmp_material_liability_agreement.md",
+      "02_hr_tmp_remote_work_agreement.md",
+      "02_hr_tmp_resignation_letter.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "контрагент": [
+      "01_hr_pol_kpi.md",
+      "03_legal_contract_insurance_civil_liability.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "07_faq_claims_procedure.md"
+    ],
+    "листок_нетрудоспособности": [
+      "01_hr_pol_maternity.md",
+      "01_hr_pol_part_time.md"
+    ],
+    "заявление_на_отпуск": [
+      "01_hr_pol_maternity.md"
+    ],
+    "заявление_на_пособие": [
+      "01_hr_pol_maternity.md"
+    ],
+    "hr_отдел": [
+      "01_hr_pol_maternity.md"
+    ],
+    "hr_специалист": [
+      "01_hr_pol_maternity.md"
+    ],
+    "приказ_о_предоставлении_отпуска": [
+      "01_hr_pol_maternity.md"
+    ],
+    "пособие_по_беременности_и_родам": [
+      "01_hr_pol_maternity.md"
+    ],
+    "фсс": [
+      "01_hr_pol_maternity.md"
+    ],
+    "внеочередной_медосмотр": [
+      "01_hr_pol_medical_check.md"
+    ],
+    "заявление_работника": [
+      "01_hr_pol_medical_check.md"
+    ],
+    "направление_руководителя": [
+      "01_hr_pol_medical_check.md"
+    ],
+    "временная_нетрудоспособность": [
+      "01_hr_pol_medical_check.md"
+    ],
+    "условия_труда": [
+      "01_hr_pol_medical_check.md"
+    ],
+    "вредный_фактор": [
+      "01_hr_pol_medical_check.md"
+    ],
+    "травма_на_производстве": [
+      "01_hr_pol_medical_check.md"
+    ],
+    "политика психологической поддержки": [
+      "01_hr_pol_mental_health.md"
+    ],
+    "mental health": [
+      "01_hr_pol_mental_health.md"
+    ],
+    "eap": [
+      "01_hr_pol_mental_health.md"
+    ],
+    "психолог": [
+      "01_hr_pol_mental_health.md"
+    ],
+    "стресс": [
+      "01_hr_pol_mental_health.md"
+    ],
+    "дата утверждения": [
+      "01_hr_pol_mental_health.md"
+    ],
+    "владелец hr-процесса": [
+      "01_hr_pol_mental_health.md"
+    ],
+    "сверхурочная_работа": [
+      "01_hr_pol_overtime.md"
+    ],
+    "компенсация": [
+      "01_hr_pol_overtime.md"
+    ],
+    "ежегодный_оплачиваемый_отпуск": [
+      "01_hr_pol_part_time.md"
+    ],
+    "стаж": [
+      "01_hr_pol_part_time.md"
+    ],
+    "hr-документ": [
+      "01_hr_pol_performance_review.md"
+    ],
+    "штатное_расписание": [
+      "01_hr_pol_performance_review.md",
+      "01_hr_pol_shift_schedule.md"
+    ],
+    "акт_работодателя": [
+      "01_hr_pol_performance_review.md",
+      "01_hr_pol_shift_schedule.md"
+    ],
+    "performance_review": [
+      "01_hr_pol_performance_review.md"
+    ],
+    "оценка_эффективности": [
+      "01_hr_pol_performance_review.md"
+    ],
+    "калибровка": [
+      "01_hr_pol_performance_review.md"
+    ],
+    "360": [
+      "01_hr_pol_performance_review.md"
+    ],
+    "трудовой_кодекс_рф": [
+      "01_hr_pol_performance_review.md",
+      "02_hr_tmp_material_liability_agreement.md"
+    ],
+    "корпоративный_портал": [
+      "01_hr_pol_remote_work.md"
+    ],
+    "отчет": [
+      "01_hr_pol_remote_work.md",
+      "02_hr_tmp_material_liability_agreement.md"
+    ],
+    "задача": [
+      "01_hr_pol_remote_work.md"
+    ],
+    "мониторинг": [
+      "01_hr_pol_remote_work.md"
+    ],
+    "активность": [
+      "01_hr_pol_remote_work.md"
+    ],
+    "клавиатура": [
+      "01_hr_pol_remote_work.md"
+    ],
+    "мышь": [
+      "01_hr_pol_remote_work.md"
+    ],
+    "видеонаблюдение": [
+      "01_hr_pol_remote_work.md"
+    ],
+    "график_работы": [
+      "01_hr_pol_remote_work.md"
+    ],
+    "авиационное_исключение": [
+      "01_hr_pol_safety.md"
+    ],
+    "руководитель_смены": [
+      "01_hr_pol_safety.md"
+    ],
+    "служба_авиационной_безопасности": [
+      "01_hr_pol_safety.md"
+    ],
+    "операционный_руководитель_терминала": [
+      "01_hr_pol_safety.md"
+    ],
+    "допуск_в_зону_аэропорта": [
+      "01_hr_pol_safety.md"
+    ],
+    "пропуск_в_зону_аэропорта": [
+      "01_hr_pol_safety.md"
+    ],
+    "ночная_смена": [
+      "01_hr_pol_safety.md"
+    ],
+    "график_смены": [
+      "01_hr_pol_safety.md"
+    ],
+    "медицинское_заключение": [
+      "01_hr_pol_safety.md"
+    ],
+    "допуск_по_средствам_индивидуальной_защиты": [
+      "01_hr_pol_safety.md"
+    ],
+    "дисциплинарное_событие": [
+      "01_hr_pol_safety.md"
+    ],
+    "система_контроля_и_управления_доступом": [
+      "01_hr_pol_safety.md"
+    ],
+    "журнал_смены": [
+      "01_hr_pol_safety.md"
+    ],
+    "расчёт_при_увольнении": [
+      "01_hr_pol_salary.md"
+    ],
+    "заработная_плата": [
+      "01_hr_pol_salary.md"
+    ],
+    "неполный_месяц": [
+      "01_hr_pol_salary.md"
+    ],
+    "окончательный_расчёт": [
+      "01_hr_pol_salary.md"
+    ],
+    "требование": [
+      "01_hr_pol_salary.md",
+      "04_legal_claim_ip_infringement.md",
+      "04_legal_power_of_attorney_court.md",
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md"
+    ],
+    "ст._140_тк_рф": [
+      "01_hr_pol_salary.md"
+    ],
+    "совместительство": [
+      "01_hr_pol_second_job.md"
+    ],
+    "переработка": [
+      "01_hr_pol_second_job.md"
+    ],
+    "основное_место_работы": [
+      "01_hr_pol_second_job.md"
+    ],
+    "отпуск": [
+      "01_hr_pol_second_job.md",
+      "07_faq_leave.md"
+    ],
+    "сопоставление": [
+      "01_hr_pol_shift_schedule.md"
+    ],
+    "положение": [
+      "01_hr_pol_shift_schedule.md",
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "редакция_лна": [
+      "01_hr_pol_shift_schedule.md"
+    ],
+    "локальный_hr-документ": [
+      "01_hr_pol_shift_schedule.md"
+    ],
+    "уточняющий_вопрос": [
+      "01_hr_pol_shift_schedule.md"
+    ],
+    "заявка_на_обучение": [
+      "01_hr_pol_social_package.md"
+    ],
+    "портал_self-service": [
+      "01_hr_pol_social_package.md"
+    ],
+    "курс": [
+      "01_hr_pol_social_package.md",
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "программа": [
+      "01_hr_pol_social_package.md"
+    ],
+    "провайдер": [
+      "01_hr_pol_social_package.md"
+    ],
+    "сертификат": [
+      "01_hr_pol_social_package.md",
+      "03_legal_contract_supply_equipment.md"
+    ],
+    "справка_о_прохождении": [
+      "01_hr_pol_social_package.md"
+    ],
+    "обязательный_период": [
+      "01_hr_pol_social_package.md"
+    ],
+    "кадровый_резерв": [
+      "01_hr_pol_talent_pool.md"
+    ],
+    "succession_planning": [
+      "01_hr_pol_talent_pool.md"
+    ],
+    "кадровое_событие": [
+      "01_hr_pol_talent_pool.md"
+    ],
+    "дата_вступления": [
+      "01_hr_pol_talent_pool.md"
+    ],
+    "дополнительное_соглашение": [
+      "01_hr_pol_talent_pool.md",
+      "02_hr_tmp_add_agreement.md",
+      "02_hr_tmp_job_description_lawyer.md",
+      "02_hr_tmp_nepotism_disclosure.md"
+    ],
+    "отчет_об_оценке": [
+      "01_hr_pol_talent_pool.md"
+    ],
+    "программа_адаптации": [
+      "01_hr_pol_talent_pool.md"
+    ],
+    "лист_ознакомления": [
+      "01_hr_pol_talent_pool.md",
+      "02_hr_tmp_nepotism_disclosure.md"
+    ],
+    "испытательный_срок": [
+      "01_hr_probation_procedure.md",
+      "02_hr_tmp_employment_contract.md",
+      "02_hr_tmp_probation_report.md"
+    ],
+    "руководитель_подразделения": [
+      "01_hr_probation_procedure.md",
+      "02_hr_tmp_employment_order.md",
+      "02_hr_tmp_remote_work_agreement.md"
+    ],
+    "главный_бухгалтер": [
+      "01_hr_probation_procedure.md"
+    ],
+    "беременная_женщина": [
+      "01_hr_probation_procedure.md"
+    ],
+    "ребенок": [
+      "01_hr_probation_procedure.md"
+    ],
+    "конкурс": [
+      "01_hr_probation_procedure.md"
+    ],
+    "дата_вступления_в_силу": [
+      "02_hr_tmp_add_agreement.md"
+    ],
+    "основание": [
+      "02_hr_tmp_add_agreement.md",
+      "02_hr_tmp_business_trip_order.md",
+      "02_hr_tmp_remote_work_agreement.md",
+      "06_comp_checklist_contract_compliance.md",
+      "06_comp_policy_pdp.md",
+      "06_comp_policy_whistleblower.md"
+    ],
+    "работодатель": [
+      "02_hr_tmp_add_agreement.md"
+    ],
+    "работник": [
+      "02_hr_tmp_add_agreement.md",
+      "02_hr_tmp_reference_letter_template.md"
+    ],
+    "подпись": [
+      "02_hr_tmp_add_agreement.md"
+    ],
+    "печать": [
+      "02_hr_tmp_add_agreement.md"
+    ],
+    "приказ о командировке": [
+      "02_hr_tmp_business_trip_order.md"
+    ],
+    "поле": [
+      "02_hr_tmp_business_trip_order.md"
+    ],
+    "дата": [
+      "02_hr_tmp_business_trip_order.md",
+      "03_legal_contract_supply_goods.md",
+      "05_tlog_policy_transport_safety.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "06_comp_policy_anticorruption_local.md",
+      "06_comp_policy_whistleblower.md",
+      "07_faq_probation.md"
+    ],
+    "подписант": [
+      "02_hr_tmp_business_trip_order.md",
+      "02_hr_tmp_nepotism_disclosure.md",
+      "03_legal_contract_services_it.md"
+    ],
+    "факт": [
+      "02_hr_tmp_business_trip_order.md",
+      "05_tlog_policy_transport_safety.md",
+      "06_comp_policy_anticorruption_local.md",
+      "06_comp_policy_whistleblower.md",
+      "07_faq_employee_material_liability.md",
+      "07_faq_leave.md",
+      "07_faq_probation.md"
+    ],
+    "запрос": [
+      "02_hr_tmp_confidentiality_ack.md",
+      "03_legal_contract_ndc.md",
+      "06_comp_policy_anticorruption_local.md",
+      "07_faq_pdp.md"
+    ],
+    "подтверждение ознакомления с nda": [
+      "02_hr_tmp_confidentiality_ack.md"
+    ],
+    "трудовой договор": [
+      "02_hr_tmp_confidentiality_ack.md",
+      "02_hr_tmp_internship_agreement.md",
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "подтверждение согласования": [
+      "02_hr_tmp_confidentiality_ack.md"
+    ],
+    "кадровый документ": [
+      "02_hr_tmp_confidentiality_ack.md"
+    ],
+    "существенное_условие": [
+      "02_hr_tmp_employment_contract.md"
+    ],
+    "материальная_ответственность": [
+      "02_hr_tmp_employment_contract.md",
+      "02_hr_tmp_material_liability_agreement.md"
+    ],
+    "конфиденциальная_информация": [
+      "02_hr_tmp_employment_contract.md"
+    ],
+    "генеральный_директор": [
+      "02_hr_tmp_employment_order.md"
+    ],
+    "уполномоченное_лицо": [
+      "02_hr_tmp_employment_order.md"
+    ],
+    "hr-специалист по шаблону": [
+      "02_hr_tmp_internship_agreement.md"
+    ],
+    "договор о стажировке": [
+      "02_hr_tmp_internship_agreement.md"
+    ],
+    "заявление сотрудника": [
+      "02_hr_tmp_internship_agreement.md"
+    ],
+    "hr-менеджер": [
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "подбор персонала": [
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "резюме": [
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "собеседование": [
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "личная карточка т-2": [
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "welcome day": [
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "наставничество": [
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "лнa": [
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "отчет по кадровой численности": [
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "отчет по текучести": [
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "отчет по аналитике подбора": [
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "обучение": [
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "hr-система": [
+      "02_hr_tmp_job_description_hr.md"
+    ],
+    "служебная_записка": [
+      "02_hr_tmp_job_description_lawyer.md",
+      "02_hr_tmp_material_liability_agreement.md",
+      "02_hr_tmp_remote_work_agreement.md"
+    ],
+    "согласование": [
+      "02_hr_tmp_job_description_lawyer.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "06_comp_policy_commercial_secret.md"
+    ],
+    "бухгалтерия": [
+      "02_hr_tmp_job_description_lawyer.md",
+      "02_hr_tmp_material_liability_agreement.md"
+    ],
+    "должностная_инструкция": [
+      "02_hr_tmp_job_description_lawyer.md"
+    ],
+    "правовое_сопровождение": [
+      "02_hr_tmp_job_description_lawyer.md"
+    ],
+    "кадровая_система": [
+      "02_hr_tmp_leave_request.md",
+      "02_hr_tmp_reference_letter_template.md"
+    ],
+    "личное_дело": [
+      "02_hr_tmp_leave_request.md",
+      "02_hr_tmp_reference_letter_template.md"
+    ],
+    "плейсхолдер": [
+      "02_hr_tmp_leave_request.md",
+      "03_legal_contract_franchise.md",
+      "04_legal_reply_late_delivery.md",
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_perishable.md",
+      "06_comp_policy_pdp.md"
+    ],
+    "льготная_категория": [
+      "02_hr_tmp_leave_request.md"
+    ],
+    "размер_компенсации": [
+      "02_hr_tmp_leave_request.md"
+    ],
+    "период_удаленной_работы": [
+      "02_hr_tmp_leave_request.md"
+    ],
+    "допсоглашение": [
+      "02_hr_tmp_material_liability_agreement.md",
+      "02_hr_tmp_remote_work_agreement.md"
+    ],
+    "задание": [
+      "02_hr_tmp_material_liability_agreement.md"
+    ],
+    "акт_оказанных_услуг": [
+      "02_hr_tmp_material_liability_agreement.md"
+    ],
+    "тикет": [
+      "02_hr_tmp_material_liability_agreement.md"
+    ],
+    "договор": [
+      "02_hr_tmp_material_liability_agreement.md",
+      "02_hr_tmp_nepotism_disclosure.md",
+      "03_legal_contract_factoring.md",
+      "03_legal_contract_insurance_cargo.md",
+      "03_legal_contract_services_consulting.md",
+      "03_legal_contract_settlement.md",
+      "03_legal_contract_supply_auto_parts.md",
+      "03_legal_contract_supply_goods.md",
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "мол": [
+      "02_hr_tmp_material_liability_agreement.md"
+    ],
+    "декларация_о_конфликте_интересов": [
+      "02_hr_tmp_nepotism_disclosure.md"
+    ],
+    "основание_документа": [
+      "02_hr_tmp_nepotism_disclosure.md"
+    ],
+    "дата_действия": [
+      "02_hr_tmp_nepotism_disclosure.md"
+    ],
+    "исходное_заявление": [
+      "02_hr_tmp_nepotism_disclosure.md"
+    ],
+    "отчет_об_испытательном_сроке": [
+      "02_hr_tmp_probation_report.md"
+    ],
+    "рекомендация": [
+      "02_hr_tmp_probation_report.md"
+    ],
+    "kpi_испытательного_срока": [
+      "02_hr_tmp_probation_report.md"
+    ],
+    "руководитель_процесса": [
+      "02_hr_tmp_reference_letter_template.md"
+    ],
+    "кадровое_действие": [
+      "02_hr_tmp_reference_letter_template.md"
+    ],
+    "hr-специалист_по_шаблону": [
+      "02_hr_tmp_remote_work_agreement.md"
+    ],
+    "юрист/compliance_при_риске": [
+      "02_hr_tmp_remote_work_agreement.md"
+    ],
+    "соглашение_об_удаленной_работе": [
+      "02_hr_tmp_remote_work_agreement.md"
+    ],
+    "заявление_сотрудника": [
+      "02_hr_tmp_remote_work_agreement.md"
+    ],
+    "обязательное_поле": [
+      "02_hr_tmp_remote_work_agreement.md"
+    ],
+    "заявление об увольнении": [
+      "02_hr_tmp_resignation_letter.md"
+    ],
+    "ответственная роль": [
+      "02_hr_tmp_resignation_letter.md"
+    ],
+    "больничный_лист": [
+      "02_hr_tmp_sick_leave_procedure.md"
+    ],
+    "дата_открытия": [
+      "02_hr_tmp_sick_leave_procedure.md"
+    ],
+    "дата_закрытия": [
+      "02_hr_tmp_sick_leave_procedure.md"
+    ],
+    "код_диагноза": [
+      "02_hr_tmp_sick_leave_procedure.md"
+    ],
+    "сумма_выплаты": [
+      "02_hr_tmp_sick_leave_procedure.md"
+    ],
+    "табель учета рабочего времени": [
+      "02_hr_tmp_timesheet.md"
+    ],
+    "основание оформления": [
+      "02_hr_tmp_timesheet.md"
+    ],
+    "полномочия подписанта": [
+      "02_hr_tmp_timesheet.md",
+      "03_legal_contract_ndc.md"
+    ],
+    "hr-регламент": [
+      "02_hr_tmp_timesheet.md"
+    ],
+    "основание доплаты": [
+      "02_hr_tmp_timesheet.md"
+    ],
+    "премия": [
+      "02_hr_tmp_timesheet.md",
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "расчетный период": [
+      "02_hr_tmp_timesheet.md"
+    ],
+    "ключевые факты": [
+      "02_hr_tmp_timesheet.md"
+    ],
+    "приказ о переводе": [
+      "02_hr_tmp_transfer_order.md"
+    ],
+    "основание изменения": [
+      "02_hr_tmp_transfer_order.md"
+    ],
+    "дата вступления": [
+      "02_hr_tmp_transfer_order.md"
+    ],
+    "старое условие": [
+      "02_hr_tmp_transfer_order.md"
+    ],
+    "новое условие": [
+      "02_hr_tmp_transfer_order.md"
+    ],
+    "согласие работника": [
+      "02_hr_tmp_transfer_order.md"
+    ],
+    "итоговый расчет": [
+      "02_hr_tmp_transfer_order.md"
+    ],
+    "отчет испытательного срока": [
+      "02_hr_tmp_transfer_order.md"
+    ],
+    "расчетный лист": [
+      "02_hr_tmp_transfer_order.md"
+    ],
+    "manifest": [
+      "03_legal_contract_agency.md",
+      "04_legal_claim_defective_goods.md",
+      "06_comp_policy_data_retention.md",
+      "07_faq_transport_road.md"
+    ],
+    "normative_source_manifest": [
+      "03_legal_contract_agency.md",
+      "04_legal_claim_defective_goods.md",
+      "07_faq_transport_road.md"
+    ],
+    "legal_contract_services_general": [
+      "03_legal_contract_agency.md"
+    ],
+    "legal_contract_supply_goods": [
+      "03_legal_contract_agency.md"
+    ],
+    "legal_claim_non_payment": [
+      "03_legal_contract_agency.md"
+    ],
+    "legal_memo_contract_breach": [
+      "03_legal_contract_agency.md"
+    ],
+    "change_request": [
+      "03_legal_contract_amendment_procedure.md"
+    ],
+    "edition": [
+      "03_legal_contract_amendment_procedure.md"
+    ],
+    "booking": [
+      "03_legal_contract_amendment_procedure.md",
+      "03_legal_contract_cargo_transport_general.md",
+      "03_legal_contract_cargo_transport_rail.md",
+      "03_legal_contract_cargo_transport_road.md",
+      "03_legal_contract_franchise.md",
+      "03_legal_contract_insurance_civil_liability.md",
+      "03_legal_contract_penalty_clause.md",
+      "03_legal_contract_rent_warehouse.md",
+      "03_legal_contract_services_consulting.md",
+      "03_legal_contract_services_it.md",
+      "03_legal_contract_services_marketing.md",
+      "03_legal_contract_supplement_general.md",
+      "03_legal_contract_supply_auto_parts.md",
+      "03_legal_contract_supply_equipment.md",
+      "03_legal_contract_termination_checklist.md",
+      "04_legal_claim_lease_breach.md",
+      "04_legal_letter_arbitration_notice.md",
+      "04_legal_letter_debt_collection.md",
+      "04_legal_letter_demand.md",
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md",
+      "04_legal_reply_late_delivery.md",
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_expedition_domestic.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_regulation_cmr.md",
+      "05_tlog_regulation_dangerous_goods.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_oversized.md",
+      "06_comp_policy_access_control.md",
+      "06_comp_policy_anticorruption_local.md",
+      "06_comp_policy_nda_contractor.md",
+      "06_comp_policy_nda_employee.md"
+    ],
+    "confirmation": [
+      "03_legal_contract_amendment_procedure.md"
+    ],
+    "customs_export_note": [
+      "03_legal_contract_amendment_procedure.md"
+    ],
+    "dangerous_goods": [
+      "03_legal_contract_amendment_procedure.md",
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_cargo_transport_general.md",
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_expedition_international.md",
+      "03_legal_contract_leasing_vehicle.md",
+      "03_legal_contract_penalty_clause.md",
+      "03_legal_contract_services_accounting.md",
+      "03_legal_contract_services_general.md",
+      "04_legal_letter_demand.md",
+      "04_legal_memo_contract_breach.md",
+      "04_legal_memo_dispute_risk.md",
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_expedition_domestic.md",
+      "05_tlog_contract_fuel_supply.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "customs_hold": [
+      "03_legal_contract_amendment_procedure.md",
+      "03_legal_contract_customs_broker.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_regulation_weight_control.md"
+    ],
+    "insurance_notice": [
+      "03_legal_contract_amendment_procedure.md"
+    ],
+    "awb": [
+      "03_legal_contract_amendment_procedure.md",
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_cargo_transport_general.md",
+      "03_legal_contract_cargo_transport_rail.md",
+      "03_legal_contract_cargo_transport_road.md",
+      "03_legal_contract_commission.md",
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_expedition_general.md",
+      "03_legal_contract_factoring.md",
+      "03_legal_contract_franchise.md",
+      "03_legal_contract_insurance_civil_liability.md",
+      "03_legal_contract_penalty_clause.md",
+      "03_legal_contract_rent_warehouse.md",
+      "03_legal_contract_services_accounting.md",
+      "03_legal_contract_services_consulting.md",
+      "03_legal_contract_services_general.md",
+      "03_legal_contract_services_it.md",
+      "03_legal_contract_services_marketing.md",
+      "03_legal_contract_settlement.md",
+      "03_legal_contract_software_license.md",
+      "03_legal_contract_subcontract.md",
+      "03_legal_contract_supplement_general.md",
+      "03_legal_contract_supply_auto_parts.md",
+      "03_legal_contract_supply_equipment.md",
+      "03_legal_contract_termination_checklist.md",
+      "04_legal_claim_cargo_damage.md",
+      "04_legal_claim_expedition_breach.md",
+      "04_legal_claim_lease_breach.md",
+      "04_legal_claim_non_payment.md",
+      "04_legal_letter_arbitration_notice.md",
+      "04_legal_letter_debt_collection.md",
+      "04_legal_letter_demand.md",
+      "04_legal_letter_notary_demand.md",
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_late_delivery.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_fuel_supply.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_cmr.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_dangerous_goods.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_perishable.md",
+      "06_comp_policy_access_control.md",
+      "06_comp_policy_anticorruption_local.md",
+      "06_comp_policy_nda_contractor.md",
+      "06_comp_policy_nda_employee.md",
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "mawb": [
+      "03_legal_contract_amendment_procedure.md",
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_cargo_transport_general.md",
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_expedition_international.md",
+      "03_legal_contract_rent_warehouse.md",
+      "03_legal_contract_supply_equipment.md",
+      "03_legal_contract_termination_checklist.md",
+      "04_legal_claim_cargo_damage.md",
+      "04_legal_letter_arbitration_notice.md",
+      "04_legal_letter_debt_collection.md",
+      "04_legal_letter_demand.md",
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_cmr.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_dangerous_goods.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_perishable.md",
+      "07_faq_expedition.md"
+    ],
+    "hawb": [
+      "03_legal_contract_amendment_procedure.md",
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_cargo_transport_general.md",
+      "03_legal_contract_cargo_transport_road.md",
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_expedition_international.md",
+      "03_legal_contract_penalty_clause.md",
+      "03_legal_contract_rent_warehouse.md",
+      "03_legal_contract_supply_equipment.md",
+      "03_legal_contract_termination_checklist.md",
+      "04_legal_claim_cargo_damage.md",
+      "04_legal_claim_expedition_breach.md",
+      "04_legal_claim_non_payment.md",
+      "04_legal_letter_arbitration_notice.md",
+      "04_legal_letter_debt_collection.md",
+      "04_legal_letter_demand.md",
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_cmr.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_dangerous_goods.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_perishable.md",
+      "07_faq_expedition.md"
+    ],
+    "flight": [
+      "03_legal_contract_amendment_procedure.md",
+      "03_legal_contract_rent_warehouse.md",
+      "03_legal_contract_services_general.md",
+      "04_legal_claim_lease_breach.md",
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "airport": [
+      "03_legal_contract_amendment_procedure.md",
+      "03_legal_contract_rent_warehouse.md",
+      "03_legal_contract_services_general.md"
+    ],
+    "terminal": [
+      "03_legal_contract_amendment_procedure.md",
+      "03_legal_contract_services_general.md",
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "status": [
+      "03_legal_contract_amendment_procedure.md",
+      "04_legal_claim_non_payment.md"
+    ],
+    "responsibility": [
+      "03_legal_contract_amendment_procedure.md"
+    ],
+    "obligation": [
+      "03_legal_contract_amendment_procedure.md"
+    ],
+    "term": [
+      "03_legal_contract_amendment_procedure.md"
+    ],
+    "acceptance": [
+      "03_legal_contract_amendment_procedure.md",
+      "04_legal_claim_cargo_damage.md",
+      "04_legal_claim_late_delivery.md"
+    ],
+    "damage": [
+      "03_legal_contract_amendment_procedure.md",
+      "05_tlog_regulation_weight_control.md"
+    ],
+    "payment": [
+      "03_legal_contract_amendment_procedure.md"
+    ],
+    "handover": [
+      "03_legal_contract_amendment_procedure.md",
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "proof_of_delivery": [
+      "03_legal_contract_amendment_procedure.md",
+      "03_legal_contract_rent_warehouse.md",
+      "04_legal_claim_non_payment.md",
+      "04_legal_letter_demand.md"
+    ],
+    "first_mile": [
+      "03_legal_contract_amendment_procedure.md",
+      "03_legal_contract_rent_warehouse.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_fuel_supply.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "last_mile": [
+      "03_legal_contract_amendment_procedure.md",
+      "03_legal_contract_rent_warehouse.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_fuel_supply.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "multimodal_operation": [
+      "03_legal_contract_amendment_procedure.md"
+    ],
+    "руководитель_юридического_отдела": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_services_accounting.md",
+      "03_legal_contract_warehouse_services.md",
+      "04_legal_claim_late_delivery.md"
+    ],
+    "finance_receivables_owner": [
+      "03_legal_contract_assignment.md"
+    ],
+    "finance_insurance_owner": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_services_accounting.md"
+    ],
+    "compliance_customs_contact": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_services_accounting.md"
+    ],
+    "уступка_авиагрузового_требования": [
+      "03_legal_contract_assignment.md"
+    ],
+    "liability_cap": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_penalty_clause.md",
+      "03_legal_contract_services_accounting.md",
+      "03_legal_contract_services_consulting.md",
+      "03_legal_contract_services_marketing.md",
+      "04_legal_claim_expedition_breach.md",
+      "04_legal_claim_late_delivery.md"
+    ],
+    "waiver": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_services_accounting.md",
+      "04_legal_claim_late_delivery.md",
+      "04_legal_power_of_attorney_contracts.md"
+    ],
+    "operational_facts": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_services_accounting.md"
+    ],
+    "договор-основание": [
+      "03_legal_contract_assignment.md"
+    ],
+    "invoice": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_expedition_international.md",
+      "03_legal_contract_factoring.md",
+      "04_legal_claim_non_payment.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "акт_услуг": [
+      "03_legal_contract_assignment.md"
+    ],
+    "сверка_расчетов": [
+      "03_legal_contract_assignment.md"
+    ],
+    "notice_debtor": [
+      "03_legal_contract_assignment.md"
+    ],
+    "claim_file": [
+      "03_legal_contract_assignment.md"
+    ],
+    "тариф": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_expedition_international.md",
+      "03_legal_contract_franchise.md",
+      "03_legal_contract_services_accounting.md",
+      "03_legal_contract_supplement_general.md",
+      "06_comp_policy_access_control.md",
+      "06_comp_policy_nda_contractor.md",
+      "06_comp_policy_nda_employee.md"
+    ],
+    "reserves": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_services_accounting.md"
+    ],
+    "страховое_покрытие": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_loan.md",
+      "03_legal_contract_services_accounting.md",
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "deductible": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_services_accounting.md"
+    ],
+    "право_регресса": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_services_accounting.md",
+      "04_legal_claim_ip_infringement.md"
+    ],
+    "санкции": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_cargo_transport_rail.md",
+      "03_legal_contract_services_consulting.md",
+      "03_legal_contract_services_it.md",
+      "03_legal_contract_software_license.md",
+      "04_legal_letter_arbitration_notice.md",
+      "04_legal_letter_debt_collection.md",
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "export_control": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_expedition_international.md",
+      "03_legal_contract_leasing_vehicle.md",
+      "03_legal_contract_penalty_clause.md",
+      "03_legal_contract_services_accounting.md",
+      "03_legal_contract_services_consulting.md",
+      "04_legal_letter_demand.md"
+    ],
+    "airport_security": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_services_accounting.md",
+      "04_legal_memo_contract_breach.md",
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "ограничение_передачи_данных": [
+      "03_legal_contract_assignment.md",
+      "03_legal_contract_services_accounting.md"
+    ],
+    "договор_цессии": [
+      "03_legal_contract_assignment.md"
+    ],
+    "cargo_manifest": [
+      "03_legal_contract_cargo_transport_general.md",
+      "03_legal_contract_customs_broker.md",
+      "04_legal_claim_cargo_damage.md",
+      "04_legal_claim_expedition_breach.md",
+      "04_legal_letter_demand.md",
+      "04_legal_reply_defective_goods.md",
+      "04_legal_reply_late_delivery.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_fuel_supply.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "flight_status": [
+      "03_legal_contract_cargo_transport_general.md",
+      "03_legal_contract_penalty_clause.md",
+      "04_legal_claim_expedition_breach.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "terminal_acceptance": [
+      "03_legal_contract_cargo_transport_general.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_fuel_supply.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_regulation_cmr.md",
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "weight_note": [
+      "03_legal_contract_cargo_transport_general.md"
+    ],
+    "special_cargo_approval": [
+      "03_legal_contract_cargo_transport_general.md"
+    ],
+    "заявка_инициатора": [
+      "03_legal_contract_cargo_transport_general.md"
+    ],
+    "карточка_контрагента": [
+      "03_legal_contract_cargo_transport_general.md",
+      "03_legal_contract_franchise.md",
+      "03_legal_contract_insurance_civil_liability.md"
+    ],
+    "authority_matrix": [
+      "03_legal_contract_cargo_transport_general.md",
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_services_general.md"
+    ],
+    "коммерческое_предложение": [
+      "03_legal_contract_cargo_transport_general.md",
+      "03_legal_contract_expedition_international.md",
+      "03_legal_contract_franchise.md"
+    ],
+    "страховой_approval": [
+      "03_legal_contract_cargo_transport_general.md"
+    ],
+    "финансовый_approval": [
+      "03_legal_contract_cargo_transport_general.md"
+    ],
+    "договор_перевозки_груза": [
+      "03_legal_contract_cargo_transport_rail.md",
+      "05_tlog_contract_transport_air.md"
+    ],
+    "железнодорожное_фидерное_плечо": [
+      "03_legal_contract_cargo_transport_rail.md"
+    ],
+    "авиагруз": [
+      "03_legal_contract_cargo_transport_rail.md",
+      "03_legal_contract_warehouse_storage.md",
+      "04_legal_reply_defective_goods.md",
+      "05_tlog_contract_transport_sea.md"
+    ],
+    "аэропорт_терминал": [
+      "03_legal_contract_cargo_transport_rail.md"
+    ],
+    "номер_рейса": [
+      "03_legal_contract_cargo_transport_rail.md"
+    ],
+    "аэропорт_пара": [
+      "03_legal_contract_cargo_transport_rail.md",
+      "04_legal_reply_cargo_damage.md"
+    ],
+    "опасный_груз": [
+      "03_legal_contract_cargo_transport_rail.md",
+      "03_legal_contract_termination_checklist.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "таможня": [
+      "03_legal_contract_cargo_transport_rail.md",
+      "03_legal_contract_services_it.md",
+      "03_legal_contract_supply_equipment.md",
+      "03_legal_contract_termination_checklist.md",
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "экспортный_контроль": [
+      "03_legal_contract_cargo_transport_rail.md",
+      "03_legal_contract_supply_equipment.md",
+      "03_legal_contract_warehouse_services.md",
+      "06_comp_policy_anticorruption_local.md",
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "страхование": [
+      "03_legal_contract_cargo_transport_rail.md",
+      "03_legal_contract_cargo_transport_road.md",
+      "03_legal_contract_insurance_civil_liability.md",
+      "03_legal_contract_services_it.md",
+      "03_legal_contract_supply_auto_parts.md",
+      "04_legal_claim_service_fail.md",
+      "04_legal_letter_arbitration_notice.md"
+    ],
+    "акт_приемки": [
+      "03_legal_contract_cargo_transport_rail.md"
+    ],
+    "перевозчик": [
+      "03_legal_contract_cargo_transport_road.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_waybill.md",
+      "05_tlog_regulation_weight_control.md"
+    ],
+    "pharma cargo": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "cargo terminal": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "cutoff time": [
+      "03_legal_contract_cargo_transport_road.md",
+      "05_tlog_contract_transport_sea.md"
+    ],
+    "пломба": [
+      "03_legal_contract_cargo_transport_road.md",
+      "03_legal_contract_leasing_vehicle.md",
+      "03_legal_contract_supply_equipment.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_gps_tracking.md",
+      "05_tlog_regulation_perishable.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "temperature regime": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "вес": [
+      "03_legal_contract_cargo_transport_road.md",
+      "03_legal_contract_supply_equipment.md",
+      "04_legal_reply_late_delivery.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "слот терминала": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "акт сдачи": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "cmr": [
+      "03_legal_contract_cargo_transport_road.md",
+      "03_legal_contract_expedition_international.md",
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_fuel_supply.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "ттн": [
+      "03_legal_contract_cargo_transport_road.md",
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "дорожное плечо": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "фото": [
+      "03_legal_contract_cargo_transport_road.md",
+      "03_legal_contract_expedition_international.md",
+      "04_legal_claim_lease_breach.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "температурный лог": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "aviation-specific предмет": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "route": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "airport details": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "приемочные доказательства": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "liability cap": [
+      "03_legal_contract_cargo_transport_road.md",
+      "03_legal_contract_supplement_general.md",
+      "04_legal_power_of_attorney_contracts.md",
+      "04_legal_power_of_attorney_court.md"
+    ],
+    "претензия": [
+      "03_legal_contract_cargo_transport_road.md",
+      "04_legal_claim_lease_breach.md",
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md",
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "special cargo": [
+      "03_legal_contract_cargo_transport_road.md",
+      "03_legal_contract_supplement_general.md",
+      "04_legal_letter_arbitration_notice.md",
+      "04_legal_letter_debt_collection.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "customs риск": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "автоперевозка": [
+      "03_legal_contract_cargo_transport_road.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "груз": [
+      "03_legal_contract_cargo_transport_road.md",
+      "03_legal_contract_expedition_international.md",
+      "03_legal_contract_insurance_cargo.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_contract_expedition_multimodal.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cmr.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_gps_tracking.md",
+      "06_comp_policy_breach_notification.md"
+    ],
+    "259-фз": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "путевой лист": [
+      "03_legal_contract_cargo_transport_road.md"
+    ],
+    "flight_number": [
+      "03_legal_contract_commission.md",
+      "03_legal_contract_settlement.md",
+      "04_legal_letter_demand.md",
+      "04_legal_reply_defective_goods.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "airport_pair": [
+      "03_legal_contract_commission.md",
+      "03_legal_contract_settlement.md",
+      "04_legal_letter_demand.md",
+      "04_legal_reply_defective_goods.md",
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "terminal_status": [
+      "03_legal_contract_commission.md",
+      "03_legal_contract_settlement.md"
+    ],
+    "customs_status": [
+      "03_legal_contract_commission.md",
+      "03_legal_contract_rent_warehouse.md",
+      "03_legal_contract_settlement.md",
+      "04_legal_letter_demand.md",
+      "04_legal_reply_late_delivery.md"
+    ],
+    "chargeable_weight": [
+      "03_legal_contract_commission.md",
+      "03_legal_contract_factoring.md",
+      "03_legal_contract_settlement.md",
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_contract_expedition_domestic.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_regulation_cmr.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "сделка": [
+      "03_legal_contract_commission.md"
+    ],
+    "профиль_таможенное_оформление_авиагруза": [
+      "03_legal_contract_customs_broker.md"
+    ],
+    "commercial_условия": [
+      "03_legal_contract_customs_broker.md"
+    ],
+    "packing_list": [
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_expedition_international.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "customs_declaration": [
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_expedition_international.md"
+    ],
+    "permit": [
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_expedition_international.md"
+    ],
+    "broker_authority": [
+      "03_legal_contract_customs_broker.md"
+    ],
+    "customs_message": [
+      "03_legal_contract_customs_broker.md"
+    ],
+    "sanctions": [
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_services_accounting.md"
+    ],
+    "insurance_gap": [
+      "03_legal_contract_customs_broker.md"
+    ],
+    "request_for_documents": [
+      "03_legal_contract_customs_broker.md"
+    ],
+    "inspection": [
+      "03_legal_contract_customs_broker.md"
+    ],
+    "sanctions_hit": [
+      "03_legal_contract_customs_broker.md"
+    ],
+    "customs_стоимость": [
+      "03_legal_contract_customs_broker.md"
+    ],
+    "версия_договора": [
+      "03_legal_contract_customs_broker.md"
+    ],
+    "приложение": [
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_settlement.md",
+      "03_legal_contract_software_license.md"
+    ],
+    "протокол_разногласий": [
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_joint_activity.md",
+      "03_legal_contract_settlement.md",
+      "03_legal_contract_subcontract.md"
+    ],
+    "change_log": [
+      "03_legal_contract_customs_broker.md",
+      "03_legal_contract_settlement.md"
+    ],
+    "договорной учёт": [
+      "03_legal_contract_expedition_general.md"
+    ],
+    "booking evidence": [
+      "03_legal_contract_expedition_general.md"
+    ],
+    "протокол разногласий": [
+      "03_legal_contract_expedition_general.md",
+      "03_legal_contract_software_license.md"
+    ],
+    "подтверждение полномочий": [
+      "03_legal_contract_expedition_general.md"
+    ],
+    "страховой документ": [
+      "03_legal_contract_expedition_general.md"
+    ],
+    "таможенный документ": [
+      "03_legal_contract_expedition_general.md"
+    ],
+    "рабочий проект": [
+      "03_legal_contract_expedition_general.md"
+    ],
+    "финальная версия": [
+      "03_legal_contract_expedition_general.md"
+    ],
+    "цена": [
+      "03_legal_contract_expedition_international.md",
+      "03_legal_contract_franchise.md",
+      "03_legal_contract_supply_goods.md"
+    ],
+    "сроки": [
+      "03_legal_contract_expedition_international.md"
+    ],
+    "приемка": [
+      "03_legal_contract_expedition_international.md"
+    ],
+    "rate_sheet": [
+      "03_legal_contract_expedition_international.md",
+      "03_legal_contract_services_marketing.md",
+      "03_legal_contract_tender_rules.md",
+      "04_legal_claim_non_payment.md"
+    ],
+    "export_booking": [
+      "03_legal_contract_expedition_international.md"
+    ],
+    "tir": [
+      "03_legal_contract_expedition_international.md"
+    ],
+    "carrier_notice": [
+      "03_legal_contract_expedition_international.md"
+    ],
+    "недостача": [
+      "03_legal_contract_expedition_international.md"
+    ],
+    "задержка_рейса": [
+      "03_legal_contract_expedition_international.md"
+    ],
+    "отказ_авиаперевозчика": [
+      "03_legal_contract_expedition_international.md"
+    ],
+    "missed_cutoff": [
+      "03_legal_contract_expedition_international.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_regulation_weight_control.md"
+    ],
+    "температура": [
+      "03_legal_contract_expedition_international.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "lithium_battery": [
+      "03_legal_contract_expedition_international.md",
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_expedition_domestic.md",
+      "05_tlog_contract_fuel_supply.md"
+    ],
+    "pharma": [
+      "03_legal_contract_expedition_international.md",
+      "05_tlog_checklist_driver_pre_trip.md"
+    ],
+    "cold_chain": [
+      "03_legal_contract_expedition_international.md"
+    ],
+    "valuable_cargo": [
+      "03_legal_contract_expedition_international.md",
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_expedition_domestic.md",
+      "05_tlog_contract_fuel_supply.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "журнал_событий": [
+      "03_legal_contract_expedition_international.md"
+    ],
+    "temperature_log": [
+      "03_legal_contract_expedition_international.md",
+      "03_legal_contract_leasing_vehicle.md",
+      "04_legal_letter_demand.md",
+      "04_legal_reply_late_delivery.md"
+    ],
+    "финансовое_обязательство": [
+      "03_legal_contract_factoring.md"
+    ],
+    "авиагрузовая_операция": [
+      "03_legal_contract_factoring.md",
+      "03_legal_contract_franchise.md"
+    ],
+    "страховая_выплата": [
+      "03_legal_contract_factoring.md"
+    ],
+    "штраф": [
+      "03_legal_contract_factoring.md",
+      "03_legal_contract_franchise.md"
+    ],
+    "фактор": [
+      "03_legal_contract_factoring.md"
+    ],
+    "клиент": [
+      "03_legal_contract_factoring.md",
+      "05_tlog_contract_expedition_multimodal.md"
+    ],
+    "задолженность": [
+      "03_legal_contract_factoring.md"
+    ],
+    "лимит_финансирования": [
+      "03_legal_contract_factoring.md"
+    ],
+    "ставка_комиссии": [
+      "03_legal_contract_factoring.md"
+    ],
+    "условия_регресса": [
+      "03_legal_contract_factoring.md"
+    ],
+    "freight_handling_fee": [
+      "03_legal_contract_factoring.md"
+    ],
+    "претензия_по_грузу": [
+      "03_legal_contract_factoring.md"
+    ],
+    "рамoчный_договор": [
+      "03_legal_contract_framework.md"
+    ],
+    "сторона": [
+      "03_legal_contract_framework.md",
+      "03_legal_contract_supply_fuel.md"
+    ],
+    "представитель": [
+      "03_legal_contract_framework.md",
+      "03_legal_contract_supply_fuel.md",
+      "04_legal_power_of_attorney_court.md"
+    ],
+    "полномочие": [
+      "03_legal_contract_framework.md",
+      "03_legal_contract_supply_fuel.md"
+    ],
+    "устав": [
+      "03_legal_contract_framework.md",
+      "03_legal_contract_supply_fuel.md"
+    ],
+    "доверенность": [
+      "03_legal_contract_framework.md",
+      "03_legal_contract_supply_fuel.md"
+    ],
+    "решение_органа_управления": [
+      "03_legal_contract_framework.md",
+      "03_legal_contract_supply_fuel.md"
+    ],
+    "авиагрузовой_документ": [
+      "03_legal_contract_framework.md",
+      "03_legal_contract_supply_fuel.md"
+    ],
+    "инициатор": [
+      "03_legal_contract_franchise.md",
+      "07_faq_claims_procedure.md"
+    ],
+    "полномочия_подписанта": [
+      "03_legal_contract_franchise.md",
+      "03_legal_contract_insurance_civil_liability.md",
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "рейс": [
+      "03_legal_contract_franchise.md",
+      "03_legal_contract_insurance_civil_liability.md",
+      "03_legal_contract_services_consulting.md",
+      "03_legal_contract_supply_equipment.md",
+      "03_legal_contract_termination_checklist.md",
+      "04_legal_letter_notary_demand.md",
+      "04_legal_letter_settlement_proposal.md",
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_late_delivery.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "05_tlog_regulation_perishable.md",
+      "05_tlog_regulation_waybill.md",
+      "07_faq_expedition.md"
+    ],
+    "аэропорт": [
+      "03_legal_contract_franchise.md",
+      "03_legal_contract_insurance_civil_liability.md",
+      "03_legal_contract_services_consulting.md",
+      "03_legal_contract_supply_equipment.md",
+      "03_legal_contract_termination_checklist.md",
+      "04_legal_letter_settlement_proposal.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_waybill.md",
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "лимит_ответственности": [
+      "03_legal_contract_franchise.md",
+      "03_legal_contract_insurance_civil_liability.md"
+    ],
+    "срок_приемки": [
+      "03_legal_contract_franchise.md"
+    ],
+    "гарантийный_срок": [
+      "03_legal_contract_guarantee.md"
+    ],
+    "ссылка_на_авианакладную_или_инвойс": [
+      "03_legal_contract_guarantee.md"
+    ],
+    "расчётный_вес": [
+      "03_legal_contract_guarantee.md"
+    ],
+    "плата_за_перевозку_или_обработку": [
+      "03_legal_contract_guarantee.md"
+    ],
+    "статус_претензии": [
+      "03_legal_contract_guarantee.md"
+    ],
+    "страховщик": [
+      "03_legal_contract_insurance_cargo.md",
+      "04_legal_claim_ip_infringement.md",
+      "04_legal_claim_lease_breach.md",
+      "04_legal_letter_settlement_proposal.md",
+      "04_legal_power_of_attorney_contracts.md"
+    ],
+    "страхователь": [
+      "03_legal_contract_insurance_cargo.md"
+    ],
+    "страховая_премия": [
+      "03_legal_contract_insurance_cargo.md"
+    ],
+    "транспорт": [
+      "03_legal_contract_insurance_cargo.md"
+    ],
+    "франшиза": [
+      "03_legal_contract_insurance_cargo.md",
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "авиагрузовая_накладная": [
+      "03_legal_contract_insurance_cargo.md",
+      "03_legal_contract_warehouse_storage.md"
+    ],
+    "инициатор_сделки": [
+      "03_legal_contract_insurance_civil_liability.md"
+    ],
+    "юридический_отдел": [
+      "03_legal_contract_insurance_civil_liability.md",
+      "03_legal_contract_loan.md",
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "заявка": [
+      "03_legal_contract_insurance_civil_liability.md",
+      "03_legal_contract_supply_equipment.md",
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md",
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "авиационный_предмет": [
+      "03_legal_contract_insurance_civil_liability.md"
+    ],
+    "коммерческие_условия": [
+      "03_legal_contract_insurance_civil_liability.md"
+    ],
+    "cutoff_time": [
+      "03_legal_contract_insurance_civil_liability.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "cargo_terminal": [
+      "03_legal_contract_insurance_civil_liability.md",
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "gha": [
+      "03_legal_contract_insurance_civil_liability.md",
+      "03_legal_contract_supply_auto_parts.md",
+      "03_legal_contract_warehouse_services.md",
+      "04_legal_claim_cargo_damage.md",
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md"
+    ],
+    "special_cargo": [
+      "03_legal_contract_insurance_civil_liability.md",
+      "03_legal_contract_services_consulting.md",
+      "03_legal_contract_warehouse_storage.md",
+      "04_legal_letter_demand.md",
+      "04_legal_reply_late_delivery.md",
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_expedition_domestic.md",
+      "05_tlog_contract_fuel_supply.md"
+    ],
+    "дата_подписания": [
+      "03_legal_contract_insurance_civil_liability.md"
+    ],
+    "маршрут_согласования": [
+      "03_legal_contract_insurance_civil_liability.md",
+      "05_tlog_checklist_cargo_acceptance.md"
+    ],
+    "версия_приложения": [
+      "03_legal_contract_insurance_civil_liability.md"
+    ],
+    "совместный_air_cargo_проект": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "aviation_evidence_по_сделке": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "project_charter": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "contribution_schedule": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "airport_permissions": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "booking_forecast": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "sla_matrix": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "cost_sharing": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "incident_log": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "операционное_ограничение": [
+      "03_legal_contract_joint_activity.md",
+      "03_legal_contract_tender_rules.md"
+    ],
+    "revenue_share": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "operational_incident": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "эскалационное_событие": [
+      "03_legal_contract_joint_activity.md",
+      "03_legal_contract_tender_rules.md"
+    ],
+    "перерасход_проекта": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "срыв_запуска_рейса": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "спор_о_данных_клиентов": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "terminal_slot": [
+      "03_legal_contract_joint_activity.md",
+      "03_legal_contract_leasing_vehicle.md"
+    ],
+    "legal": [
+      "03_legal_contract_joint_activity.md",
+      "03_legal_contract_loan.md",
+      "03_legal_contract_warehouse_services.md",
+      "05_tlog_contract_fuel_supply.md",
+      "05_tlog_instruction_logistics_manager.md",
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "operations": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "finance_insurance": [
+      "03_legal_contract_joint_activity.md"
+    ],
+    "лизинг_gse": [
+      "03_legal_contract_leasing_vehicle.md"
+    ],
+    "спецтранспорт_терминала": [
+      "03_legal_contract_leasing_vehicle.md"
+    ],
+    "air_cargo_route": [
+      "03_legal_contract_leasing_vehicle.md"
+    ],
+    "terminal_handover": [
+      "03_legal_contract_leasing_vehicle.md",
+      "03_legal_contract_rent_warehouse.md",
+      "07_faq_expedition.md"
+    ],
+    "расчёт_по_перевозке": [
+      "03_legal_contract_leasing_vehicle.md"
+    ],
+    "наземная_передача": [
+      "03_legal_contract_leasing_vehicle.md"
+    ],
+    "evidence": [
+      "03_legal_contract_leasing_vehicle.md",
+      "03_legal_contract_ndc.md",
+      "03_legal_contract_penalty_clause.md",
+      "03_legal_contract_software_license.md"
+    ],
+    "pickup_proof": [
+      "03_legal_contract_leasing_vehicle.md"
+    ],
+    "delivery_proof": [
+      "03_legal_contract_leasing_vehicle.md"
+    ],
+    "customs": [
+      "03_legal_contract_leasing_vehicle.md",
+      "03_legal_contract_penalty_clause.md",
+      "03_legal_contract_services_consulting.md",
+      "03_legal_contract_services_general.md",
+      "03_legal_contract_supplement_general.md",
+      "04_legal_letter_notary_demand.md",
+      "04_legal_memo_contract_breach.md",
+      "04_legal_memo_dispute_risk.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "temperature_cargo": [
+      "03_legal_contract_leasing_vehicle.md"
+    ],
+    "security_screening": [
+      "03_legal_contract_leasing_vehicle.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "договор_лизинга_транспортных_средств": [
+      "03_legal_contract_leasing_vehicle.md"
+    ],
+    "владелец_процесса": [
+      "03_legal_contract_leasing_vehicle.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "06_comp_checklist_contract_compliance.md"
+    ],
+    "спорный_кейс": [
+      "03_legal_contract_leasing_vehicle.md"
+    ],
+    "нетиповой_кейс": [
+      "03_legal_contract_leasing_vehicle.md"
+    ],
+    "пересмотр": [
+      "03_legal_contract_loan.md",
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "breach_of_covenant": [
+      "03_legal_contract_loan.md"
+    ],
+    "delayed_receivables": [
+      "03_legal_contract_loan.md"
+    ],
+    "customs_deposit_overrun": [
+      "03_legal_contract_loan.md"
+    ],
+    "cross-default": [
+      "03_legal_contract_loan.md"
+    ],
+    "carrier_rule": [
+      "03_legal_contract_loan.md"
+    ],
+    "gha_rule": [
+      "03_legal_contract_loan.md"
+    ],
+    "airport_security_требование": [
+      "03_legal_contract_loan.md"
+    ],
+    "customs/export_control_режим": [
+      "03_legal_contract_loan.md"
+    ],
+    "судебная_практика": [
+      "03_legal_contract_loan.md",
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "кейс": [
+      "03_legal_contract_loan.md",
+      "03_legal_contract_warehouse_services.md",
+      "06_comp_policy_cookies.md",
+      "07_faq_employee_material_liability.md",
+      "07_faq_leave.md"
+    ],
+    "evidence_list": [
+      "03_legal_contract_loan.md",
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "срок_согласования": [
+      "03_legal_contract_loan.md"
+    ],
+    "роль_эскалации": [
+      "03_legal_contract_loan.md",
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "ограничение_rag-ответа": [
+      "03_legal_contract_loan.md",
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "договор о неразглашении": [
+      "03_legal_contract_ndc.md"
+    ],
+    "профиль": [
+      "03_legal_contract_ndc.md",
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "data room log": [
+      "03_legal_contract_ndc.md"
+    ],
+    "тарифный лист": [
+      "03_legal_contract_ndc.md"
+    ],
+    "авиагрузовая накладная": [
+      "03_legal_contract_ndc.md",
+      "04_legal_letter_settlement_proposal.md",
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "05_tlog_regulation_gps_tracking.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "access list": [
+      "03_legal_contract_ndc.md"
+    ],
+    "экспортный контроль": [
+      "03_legal_contract_ndc.md",
+      "03_legal_contract_services_it.md",
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "страховое покрытие": [
+      "03_legal_contract_ndc.md",
+      "03_legal_contract_supply_auto_parts.md"
+    ],
+    "условия оплаты": [
+      "03_legal_contract_ndc.md"
+    ],
+    "регламент_применения_неустоек_и_штрафов": [
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "неустойка": [
+      "03_legal_contract_penalty_clause.md",
+      "03_legal_contract_supply_auto_parts.md"
+    ],
+    "air_cargo_sla": [
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "sla_appendix": [
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "terminal_timestamp": [
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "delay_reason": [
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "calculation_sheet": [
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "версия_приложений": [
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "insurance": [
+      "03_legal_contract_penalty_clause.md",
+      "03_legal_contract_supplement_general.md",
+      "03_legal_contract_tender_rules.md",
+      "04_legal_letter_debt_collection.md",
+      "04_legal_letter_demand.md",
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "payment_terms": [
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "causal_link": [
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "исключение_перевозчика": [
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "temperature_условие": [
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "security_условие": [
+      "03_legal_contract_penalty_clause.md"
+    ],
+    "аренда": [
+      "03_legal_contract_rent_office.md"
+    ],
+    "срок_аренды": [
+      "03_legal_contract_rent_office.md",
+      "05_tlog_contract_leasing_truck.md"
+    ],
+    "аренда_склада": [
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "cold_room": [
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "lease_plan": [
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "temperature_map": [
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "terminal_rules": [
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "acceptance_act": [
+      "03_legal_contract_rent_warehouse.md",
+      "03_legal_contract_services_general.md"
+    ],
+    "storage_tariff": [
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "access_log": [
+      "03_legal_contract_rent_warehouse.md",
+      "06_comp_policy_access_control.md",
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "cargo_segregation_records": [
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "temperature_mapping": [
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "security": [
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "dangerous_goods_segregation": [
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "мультимодальная_перевозка": [
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "фидерная_перевозка": [
+      "03_legal_contract_rent_warehouse.md"
+    ],
+    "accounting_service_owner": [
+      "03_legal_contract_services_accounting.md"
+    ],
+    "учет_air_cargo_расчетов": [
+      "03_legal_contract_services_accounting.md"
+    ],
+    "accounting_sla": [
+      "03_legal_contract_services_accounting.md"
+    ],
+    "chart_of_accounts": [
+      "03_legal_contract_services_accounting.md"
+    ],
+    "invoice_registry": [
+      "03_legal_contract_services_accounting.md"
+    ],
+    "acts": [
+      "03_legal_contract_services_accounting.md"
+    ],
+    "tax_documents": [
+      "03_legal_contract_services_accounting.md"
+    ],
+    "reconciliation": [
+      "03_legal_contract_services_accounting.md",
+      "04_legal_claim_non_payment.md"
+    ],
+    "payment_approvals": [
+      "03_legal_contract_services_accounting.md"
+    ],
+    "договор_на_бухгалтерское_обслуживание": [
+      "03_legal_contract_services_accounting.md"
+    ],
+    "авиагрузовая_сделка": [
+      "03_legal_contract_services_consulting.md"
+    ],
+    "ассистент": [
+      "03_legal_contract_services_consulting.md",
+      "06_comp_policy_cookies.md",
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "черновик_договора": [
+      "03_legal_contract_services_consulting.md"
+    ],
+    "поле_договора": [
+      "03_legal_contract_services_consulting.md"
+    ],
+    "service_order": [
+      "03_legal_contract_services_general.md"
+    ],
+    "task_log": [
+      "03_legal_contract_services_general.md"
+    ],
+    "booking_reference": [
+      "03_legal_contract_services_general.md"
+    ],
+    "terminal_message": [
+      "03_legal_contract_services_general.md"
+    ],
+    "incident_register": [
+      "03_legal_contract_services_general.md"
+    ],
+    "claim": [
+      "03_legal_contract_services_general.md",
+      "03_legal_contract_termination_checklist.md",
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "counterparty_card": [
+      "03_legal_contract_services_general.md"
+    ],
+    "commercial_offer": [
+      "03_legal_contract_services_general.md"
+    ],
+    "approval": [
+      "03_legal_contract_services_general.md",
+      "03_legal_contract_services_marketing.md"
+    ],
+    "shipment": [
+      "03_legal_contract_services_general.md"
+    ],
+    "договор оказания услуг": [
+      "03_legal_contract_services_it.md"
+    ],
+    "договор на ит-услуги и поддержку": [
+      "03_legal_contract_services_it.md"
+    ],
+    "авиагрузовой документ": [
+      "03_legal_contract_services_it.md"
+    ],
+    "система": [
+      "03_legal_contract_services_it.md",
+      "06_comp_policy_access_control.md",
+      "06_comp_policy_cookies.md",
+      "06_comp_policy_subject_rights.md"
+    ],
+    "cargo data": [
+      "03_legal_contract_services_it.md",
+      "03_legal_contract_supply_auto_parts.md",
+      "04_legal_letter_arbitration_notice.md",
+      "04_legal_letter_debt_collection.md"
+    ],
+    "cutoff": [
+      "03_legal_contract_services_it.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "доступ": [
+      "03_legal_contract_services_it.md",
+      "03_legal_contract_termination_checklist.md",
+      "05_tlog_policy_transport_safety.md",
+      "06_comp_policy_anticorruption_local.md",
+      "06_comp_policy_pdp.md",
+      "06_comp_policy_whistleblower.md"
+    ],
+    "журнал": [
+      "03_legal_contract_services_it.md"
+    ],
+    "конфиденциальность": [
+      "03_legal_contract_services_it.md"
+    ],
+    "версия приложения": [
+      "03_legal_contract_services_it.md"
+    ],
+    "aviation evidence": [
+      "03_legal_contract_services_it.md"
+    ],
+    "dangerous goods": [
+      "03_legal_contract_services_it.md",
+      "03_legal_contract_software_license.md",
+      "03_legal_contract_supply_auto_parts.md",
+      "04_legal_letter_arbitration_notice.md",
+      "04_legal_letter_debt_collection.md",
+      "04_legal_power_of_attorney_contracts.md",
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_contract_tire_service.md"
+    ],
+    "температурный режим": [
+      "03_legal_contract_services_it.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "валюта": [
+      "03_legal_contract_services_it.md"
+    ],
+    "cold_chain_air_freight_route": [
+      "03_legal_contract_services_marketing.md"
+    ],
+    "tariff_claim": [
+      "03_legal_contract_services_marketing.md"
+    ],
+    "cargo_data": [
+      "03_legal_contract_services_marketing.md",
+      "04_legal_claim_ip_infringement.md",
+      "04_legal_letter_demand.md"
+    ],
+    "sla_statement": [
+      "03_legal_contract_services_marketing.md"
+    ],
+    "route_capacity_plan": [
+      "03_legal_contract_services_marketing.md"
+    ],
+    "aviation_specific_предмет": [
+      "03_legal_contract_services_marketing.md"
+    ],
+    "route_airport_detail": [
+      "03_legal_contract_services_marketing.md"
+    ],
+    "special_cargo_risk": [
+      "03_legal_contract_services_marketing.md"
+    ],
+    "профиль лицензия cargo operations software": [
+      "03_legal_contract_software_license.md"
+    ],
+    "authority matrix": [
+      "03_legal_contract_software_license.md"
+    ],
+    "commercial conditions": [
+      "03_legal_contract_software_license.md"
+    ],
+    "license order": [
+      "03_legal_contract_software_license.md"
+    ],
+    "user list": [
+      "03_legal_contract_software_license.md"
+    ],
+    "data categories": [
+      "03_legal_contract_software_license.md"
+    ],
+    "api/edi specs": [
+      "03_legal_contract_software_license.md"
+    ],
+    "audit log": [
+      "03_legal_contract_software_license.md"
+    ],
+    "support ticket": [
+      "03_legal_contract_software_license.md"
+    ],
+    "security review": [
+      "03_legal_contract_software_license.md"
+    ],
+    "insurance gap": [
+      "03_legal_contract_software_license.md"
+    ],
+    "airport security": [
+      "03_legal_contract_software_license.md"
+    ],
+    "license overuse": [
+      "03_legal_contract_software_license.md"
+    ],
+    "data export failure": [
+      "03_legal_contract_software_license.md"
+    ],
+    "outage": [
+      "03_legal_contract_software_license.md"
+    ],
+    "audit dispute": [
+      "03_legal_contract_software_license.md"
+    ],
+    "vendor lock-in": [
+      "03_legal_contract_software_license.md"
+    ],
+    "версия договора": [
+      "03_legal_contract_software_license.md"
+    ],
+    "change log": [
+      "03_legal_contract_software_license.md"
+    ],
+    "flight number": [
+      "03_legal_contract_software_license.md",
+      "04_legal_letter_debt_collection.md",
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_transport_sea.md"
+    ],
+    "airport pair": [
+      "03_legal_contract_software_license.md",
+      "04_legal_letter_debt_collection.md",
+      "05_tlog_checklist_driver_pre_trip.md"
+    ],
+    "terminal status": [
+      "03_legal_contract_software_license.md"
+    ],
+    "customs status": [
+      "03_legal_contract_software_license.md"
+    ],
+    "chargeable weight": [
+      "03_legal_contract_software_license.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_transport_sea.md"
+    ],
+    "договорной_учет": [
+      "03_legal_contract_subcontract.md"
+    ],
+    "booking_evidence": [
+      "03_legal_contract_subcontract.md"
+    ],
+    "подтверждение_полномочий": [
+      "03_legal_contract_subcontract.md"
+    ],
+    "страховой_документ": [
+      "03_legal_contract_subcontract.md"
+    ],
+    "таможенный_документ": [
+      "03_legal_contract_subcontract.md"
+    ],
+    "рабочий_проект": [
+      "03_legal_contract_subcontract.md"
+    ],
+    "подписанная_версия": [
+      "03_legal_contract_subcontract.md"
+    ],
+    "грузовой_реестр": [
+      "03_legal_contract_subcontract.md"
+    ],
+    "финансы": [
+      "03_legal_contract_supplement_general.md",
+      "04_legal_claim_lease_breach.md",
+      "04_legal_power_of_attorney_contracts.md"
+    ],
+    "air cargo operations": [
+      "03_legal_contract_supplement_general.md",
+      "04_legal_power_of_attorney_contracts.md",
+      "05_tlog_checklist_vehicle_inspection.md"
+    ],
+    "compliance": [
+      "03_legal_contract_supplement_general.md",
+      "03_legal_contract_supply_auto_parts.md",
+      "04_legal_power_of_attorney_contracts.md",
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "gha/терминал": [
+      "03_legal_contract_supplement_general.md"
+    ],
+    "customs broker": [
+      "03_legal_contract_supplement_general.md",
+      "04_legal_power_of_attorney_contracts.md"
+    ],
+    "страховая": [
+      "03_legal_contract_supplement_general.md"
+    ],
+    "технический владелец": [
+      "03_legal_contract_supplement_general.md"
+    ],
+    "проект": [
+      "03_legal_contract_supplement_general.md"
+    ],
+    "handling": [
+      "03_legal_contract_supplement_general.md",
+      "04_legal_letter_notary_demand.md"
+    ],
+    "export control": [
+      "03_legal_contract_supplement_general.md",
+      "03_legal_contract_supply_auto_parts.md",
+      "04_legal_letter_debt_collection.md"
+    ],
+    "оборудование авиационного контура": [
+      "03_legal_contract_supplement_general.md"
+    ],
+    "лимит ответственности": [
+      "03_legal_contract_supply_auto_parts.md",
+      "04_legal_letter_notary_demand.md"
+    ],
+    "возмещение убытков": [
+      "03_legal_contract_supply_auto_parts.md"
+    ],
+    "ответственность": [
+      "03_legal_contract_supply_auto_parts.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_regulation_dispatch.md",
+      "07_faq_commercial_secret.md",
+      "07_faq_employee_material_liability.md"
+    ],
+    "terminal handling": [
+      "03_legal_contract_supply_auto_parts.md"
+    ],
+    "customs delay": [
+      "03_legal_contract_supply_auto_parts.md"
+    ],
+    "отказ в приемке": [
+      "03_legal_contract_supply_auto_parts.md"
+    ],
+    "temperature excursion": [
+      "03_legal_contract_supply_auto_parts.md",
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "carrier": [
+      "03_legal_contract_supply_auto_parts.md",
+      "03_legal_contract_warehouse_services.md",
+      "04_legal_claim_non_payment.md",
+      "04_legal_memo_dispute_risk.md",
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_transport_sea.md"
+    ],
+    "broker": [
+      "03_legal_contract_supply_auto_parts.md"
+    ],
+    "first mile": [
+      "03_legal_contract_supply_auto_parts.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "last mile": [
+      "03_legal_contract_supply_auto_parts.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "таможенные данные": [
+      "03_legal_contract_supply_auto_parts.md"
+    ],
+    "sds": [
+      "03_legal_contract_supply_equipment.md"
+    ],
+    "грузовой_терминал": [
+      "03_legal_contract_supply_equipment.md"
+    ],
+    "приемочное_испытание": [
+      "03_legal_contract_supply_equipment.md"
+    ],
+    "критичность": [
+      "03_legal_contract_supply_equipment.md"
+    ],
+    "время_вылета": [
+      "03_legal_contract_supply_equipment.md",
+      "05_tlog_contract_transport_air.md"
+    ],
+    "пункт_назначения": [
+      "03_legal_contract_supply_equipment.md"
+    ],
+    "время_отсечки": [
+      "03_legal_contract_supply_equipment.md"
+    ],
+    "терминал_обработки": [
+      "03_legal_contract_supply_equipment.md"
+    ],
+    "улд": [
+      "03_legal_contract_supply_equipment.md"
+    ],
+    "паллета": [
+      "03_legal_contract_supply_equipment.md",
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "специальный_груз": [
+      "03_legal_contract_supply_equipment.md",
+      "05_tlog_contract_transport_air.md"
+    ],
+    "доказательство_получения": [
+      "03_legal_contract_supply_equipment.md"
+    ],
+    "слот_терминала": [
+      "03_legal_contract_supply_equipment.md"
+    ],
+    "температурный_журнал": [
+      "03_legal_contract_supply_equipment.md"
+    ],
+    "доказательство_передачи": [
+      "03_legal_contract_supply_equipment.md"
+    ],
+    "договор_поставки": [
+      "03_legal_contract_supply_fuel.md"
+    ],
+    "топливо": [
+      "03_legal_contract_supply_fuel.md"
+    ],
+    "поставщик": [
+      "03_legal_contract_supply_goods.md"
+    ],
+    "покупатель": [
+      "03_legal_contract_supply_goods.md"
+    ],
+    "товар": [
+      "03_legal_contract_supply_goods.md"
+    ],
+    "количество": [
+      "03_legal_contract_supply_goods.md"
+    ],
+    "условие_доставки": [
+      "03_legal_contract_supply_goods.md"
+    ],
+    "инкотермс": [
+      "03_legal_contract_supply_goods.md"
+    ],
+    "ставка_штрафа": [
+      "03_legal_contract_supply_goods.md"
+    ],
+    "назначение_для_air_cargo_gse": [
+      "03_legal_contract_supply_goods.md"
+    ],
+    "тендер_на_air_cargo_service_provider": [
+      "03_legal_contract_tender_rules.md"
+    ],
+    "aviation_evidence": [
+      "03_legal_contract_tender_rules.md"
+    ],
+    "tender_brief": [
+      "03_legal_contract_tender_rules.md"
+    ],
+    "qualification_docs": [
+      "03_legal_contract_tender_rules.md"
+    ],
+    "service_matrix": [
+      "03_legal_contract_tender_rules.md"
+    ],
+    "airport_permit": [
+      "03_legal_contract_tender_rules.md"
+    ],
+    "scoring_protocol": [
+      "03_legal_contract_tender_rules.md"
+    ],
+    "clarification": [
+      "03_legal_contract_tender_rules.md"
+    ],
+    "чеклист_расторжения_договора": [
+      "03_legal_contract_termination_checklist.md"
+    ],
+    "termination_notice": [
+      "03_legal_contract_termination_checklist.md"
+    ],
+    "open_awb_list": [
+      "03_legal_contract_termination_checklist.md"
+    ],
+    "debt_reconciliation": [
+      "03_legal_contract_termination_checklist.md"
+    ],
+    "claims_register": [
+      "03_legal_contract_termination_checklist.md"
+    ],
+    "access_revocation": [
+      "03_legal_contract_termination_checklist.md"
+    ],
+    "data_return": [
+      "03_legal_contract_termination_checklist.md"
+    ],
+    "insurer_notice": [
+      "03_legal_contract_termination_checklist.md"
+    ],
+    "терминал": [
+      "03_legal_contract_termination_checklist.md",
+      "04_legal_claim_cargo_damage.md",
+      "04_legal_letter_notary_demand.md",
+      "04_legal_letter_settlement_proposal.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_waybill.md",
+      "05_tlog_regulation_weight_control.md",
+      "06_comp_policy_access_control.md",
+      "06_comp_policy_breach_notification.md",
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "договор_оказания_услуг": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "складские_услуги": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "3pl": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "логистика": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "глава_39": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "глава_47": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "гк_рф": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "плановый_пересмотр": [
+      "03_legal_contract_warehouse_services.md",
+      "05_tlog_checklist_cargo_acceptance.md"
+    ],
+    "внеплановый_пересмотр": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "дефицит": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "повреждение_при_хранении": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "таможенная_задержка": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "неверная_выдача_грузополучателю": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "превышение_емкости_хранения": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "правила_перевозчика": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "правила_gha": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "требования_аэропортовой_безопасности": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "таможенный_режим": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "услуга_cargo_terminal_warehouse": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "сроки_согласования": [
+      "03_legal_contract_warehouse_services.md"
+    ],
+    "ответственное_хранение": [
+      "03_legal_contract_warehouse_storage.md"
+    ],
+    "складское_свидетельство": [
+      "03_legal_contract_warehouse_storage.md"
+    ],
+    "грузовая_ведомость": [
+      "03_legal_contract_warehouse_storage.md"
+    ],
+    "фото_состояния_груза": [
+      "03_legal_contract_warehouse_storage.md"
+    ],
+    "журнал_температуры": [
+      "03_legal_contract_warehouse_storage.md"
+    ],
+    "журнал_доступа": [
+      "03_legal_contract_warehouse_storage.md",
+      "06_comp_policy_breach_notification.md"
+    ],
+    "инструкция_на_выдачу": [
+      "03_legal_contract_warehouse_storage.md"
+    ],
+    "custody": [
+      "03_legal_contract_warehouse_storage.md"
+    ],
+    "риск_хранения": [
+      "03_legal_contract_warehouse_storage.md"
+    ],
+    "повреждение_авиагруза": [
+      "04_legal_claim_cargo_damage.md"
+    ],
+    "претензионная_процедура": [
+      "04_legal_claim_cargo_damage.md"
+    ],
+    "damage_report": [
+      "04_legal_claim_cargo_damage.md"
+    ],
+    "фото_до_и_после": [
+      "04_legal_claim_cargo_damage.md"
+    ],
+    "весовая_сверка": [
+      "04_legal_claim_cargo_damage.md"
+    ],
+    "claim_notice": [
+      "04_legal_claim_cargo_damage.md",
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "custody_timeline": [
+      "04_legal_claim_cargo_damage.md"
+    ],
+    "release": [
+      "04_legal_claim_cargo_damage.md",
+      "04_legal_claim_late_delivery.md"
+    ],
+    "escalation_route": [
+      "04_legal_claim_cargo_damage.md"
+    ],
+    "safe_legal_position": [
+      "04_legal_claim_cargo_damage.md"
+    ],
+    "глава 40": [
+      "04_legal_claim_cargo_loss.md"
+    ],
+    "воздушный кодекс": [
+      "04_legal_claim_cargo_loss.md"
+    ],
+    "монреальская конвенция": [
+      "04_legal_claim_cargo_loss.md"
+    ],
+    "тк еаэс": [
+      "04_legal_claim_customs_delay.md"
+    ],
+    "федеральный закон от 03.08.2018 № 289-фз": [
+      "04_legal_claim_customs_delay.md"
+    ],
+    "воздушный кодекс рф": [
+      "04_legal_claim_customs_delay.md",
+      "05_tlog_policy_eco_norms.md"
+    ],
+    "legal_letter_demand": [
+      "04_legal_claim_defective_goods.md"
+    ],
+    "legal_memo_dispute_risk": [
+      "04_legal_claim_defective_goods.md"
+    ],
+    "legal_reply_non_payment": [
+      "04_legal_claim_defective_goods.md"
+    ],
+    "legal_contract_customs_broker": [
+      "04_legal_claim_defective_goods.md"
+    ],
+    "tlog_contract_transport_air": [
+      "04_legal_claim_defective_goods.md"
+    ],
+    "expedition_order": [
+      "04_legal_claim_expedition_breach.md"
+    ],
+    "booking_confirmation": [
+      "04_legal_claim_expedition_breach.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "correspondence": [
+      "04_legal_claim_expedition_breach.md"
+    ],
+    "terminal_rejection": [
+      "04_legal_claim_expedition_breach.md"
+    ],
+    "cost_calculation": [
+      "04_legal_claim_expedition_breach.md"
+    ],
+    "proof_of_instruction": [
+      "04_legal_claim_expedition_breach.md"
+    ],
+    "cutoff_timeline": [
+      "04_legal_claim_expedition_breach.md"
+    ],
+    "causation": [
+      "04_legal_claim_expedition_breach.md"
+    ],
+    "terminal_record": [
+      "04_legal_claim_expedition_breach.md",
+      "04_legal_reply_late_delivery.md",
+      "05_tlog_checklist_claims_road.md"
+    ],
+    "notice_deadline": [
+      "04_legal_claim_expedition_breach.md"
+    ],
+    "финансовый_контакт": [
+      "04_legal_claim_ip_infringement.md"
+    ],
+    "брокер": [
+      "04_legal_claim_ip_infringement.md",
+      "06_comp_policy_access_control.md",
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "претензия_по_неправомерной_маркировке": [
+      "04_legal_claim_ip_infringement.md"
+    ],
+    "авиаперевозка": [
+      "04_legal_claim_ip_infringement.md"
+    ],
+    "резерв": [
+      "04_legal_claim_ip_infringement.md"
+    ],
+    "оплата": [
+      "04_legal_claim_ip_infringement.md"
+    ],
+    "таможенные_расходы": [
+      "04_legal_claim_ip_infringement.md"
+    ],
+    "страховое_уведомление": [
+      "04_legal_claim_ip_infringement.md"
+    ],
+    "delay_claims_owner": [
+      "04_legal_claim_late_delivery.md"
+    ],
+    "air_cargo_operations": [
+      "04_legal_claim_late_delivery.md",
+      "05_tlog_regulation_weight_control.md"
+    ],
+    "gha_contact": [
+      "04_legal_claim_late_delivery.md"
+    ],
+    "позиция_по_профилю": [
+      "04_legal_claim_late_delivery.md"
+    ],
+    "settlement_authority": [
+      "04_legal_claim_late_delivery.md",
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "chronology": [
+      "04_legal_claim_late_delivery.md"
+    ],
+    "evidence_bundle": [
+      "04_legal_claim_late_delivery.md"
+    ],
+    "carrier_escalation": [
+      "04_legal_claim_late_delivery.md"
+    ],
+    "customer_notice": [
+      "04_legal_claim_late_delivery.md"
+    ],
+    "mitigation_rebooking": [
+      "04_legal_claim_late_delivery.md"
+    ],
+    "претензия_о_задержке_рейса": [
+      "04_legal_claim_late_delivery.md"
+    ],
+    "offload_авиагруза": [
+      "04_legal_claim_late_delivery.md"
+    ],
+    "movement": [
+      "04_legal_claim_late_delivery.md"
+    ],
+    "offload": [
+      "04_legal_claim_late_delivery.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_instruction_logistics_manager.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_weight_control.md"
+    ],
+    "terminal_act": [
+      "04_legal_claim_late_delivery.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "handling_record": [
+      "04_legal_claim_late_delivery.md",
+      "04_legal_letter_demand.md",
+      "04_legal_reply_late_delivery.md"
+    ],
+    "operational_root_cause": [
+      "04_legal_claim_late_delivery.md"
+    ],
+    "ответ": [
+      "04_legal_claim_lease_breach.md",
+      "07_faq_pdp.md"
+    ],
+    "cargo manifest": [
+      "04_legal_claim_lease_breach.md",
+      "04_legal_letter_arbitration_notice.md",
+      "04_legal_letter_debt_collection.md",
+      "05_tlog_contract_driver_services.md"
+    ],
+    "терминал record": [
+      "04_legal_claim_lease_breach.md"
+    ],
+    "акт терминала": [
+      "04_legal_claim_lease_breach.md",
+      "04_legal_letter_arbitration_notice.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "отметка": [
+      "04_legal_claim_lease_breach.md",
+      "04_legal_memo_contract_breach.md"
+    ],
+    "переписка": [
+      "04_legal_claim_lease_breach.md",
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "settlement": [
+      "04_legal_claim_lease_breach.md",
+      "04_legal_power_of_attorney_contracts.md",
+      "04_legal_power_of_attorney_court.md"
+    ],
+    "аренда uld": [
+      "04_legal_claim_lease_breach.md"
+    ],
+    "температурный контейнер": [
+      "04_legal_claim_lease_breach.md"
+    ],
+    "терминальная зона": [
+      "04_legal_claim_lease_breach.md"
+    ],
+    "timeline событие": [
+      "04_legal_claim_lease_breach.md"
+    ],
+    "аэропорт pair": [
+      "04_legal_claim_lease_breach.md"
+    ],
+    "доказательство вручения": [
+      "04_legal_claim_lease_breach.md",
+      "04_legal_letter_debt_collection.md"
+    ],
+    "contract": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "order": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "act": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "payment_reminder": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "dispute_reserve": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "calculation_requirement": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "forwarder": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "customs_broker": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "insurer": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "undisputed_charge": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "disputed_charge": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "source": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "responsible_party": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "deadline": [
+      "04_legal_claim_non_payment.md",
+      "04_legal_letter_notary_demand.md"
+    ],
+    "liability": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "amount": [
+      "04_legal_claim_non_payment.md"
+    ],
+    "процесс": [
+      "04_legal_claim_service_fail.md"
+    ],
+    "санкция": [
+      "04_legal_claim_service_fail.md",
+      "05_tlog_policy_transport_safety.md",
+      "06_comp_policy_anticorruption_local.md",
+      "06_comp_policy_breach_notification.md",
+      "06_comp_policy_nda_contractor.md",
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "контроль экспорта": [
+      "04_legal_claim_service_fail.md"
+    ],
+    "опасный груз": [
+      "04_legal_claim_service_fail.md"
+    ],
+    "грузовые данные": [
+      "04_legal_claim_service_fail.md"
+    ],
+    "письменное согласование": [
+      "04_legal_claim_service_fail.md"
+    ],
+    "реквизит": [
+      "04_legal_claim_service_fail.md",
+      "05_tlog_policy_transport_safety.md",
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "статус таможни": [
+      "04_legal_claim_service_fail.md"
+    ],
+    "арбитраж": [
+      "04_legal_letter_arbitration_notice.md"
+    ],
+    "авиагрузовой спор": [
+      "04_legal_letter_arbitration_notice.md"
+    ],
+    "номер рейса": [
+      "04_legal_letter_arbitration_notice.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "пара аэропортов": [
+      "04_legal_letter_arbitration_notice.md"
+    ],
+    "gha акт": [
+      "04_legal_letter_arbitration_notice.md",
+      "04_legal_letter_debt_collection.md"
+    ],
+    "таможенные записи": [
+      "04_legal_letter_arbitration_notice.md"
+    ],
+    "записи обработки": [
+      "04_legal_letter_arbitration_notice.md"
+    ],
+    "записи досмотра": [
+      "04_legal_letter_arbitration_notice.md"
+    ],
+    "температурный журнал": [
+      "04_legal_letter_arbitration_notice.md",
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "доказательства вручения": [
+      "04_legal_letter_arbitration_notice.md"
+    ],
+    "срок ответа": [
+      "04_legal_letter_arbitration_notice.md",
+      "04_legal_letter_debt_collection.md"
+    ],
+    "письмо": [
+      "04_legal_letter_debt_collection.md",
+      "04_legal_memo_contract_breach.md",
+      "05_tlog_instruction_logistics_manager.md",
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "взыскание задолженности": [
+      "04_legal_letter_debt_collection.md"
+    ],
+    "авиагрузовые услуги": [
+      "04_legal_letter_debt_collection.md"
+    ],
+    "air cargo dispute": [
+      "04_legal_letter_debt_collection.md"
+    ],
+    "terminal акт": [
+      "04_legal_letter_debt_collection.md"
+    ],
+    "customs record": [
+      "04_legal_letter_debt_collection.md"
+    ],
+    "handling record": [
+      "04_legal_letter_debt_collection.md"
+    ],
+    "screening record": [
+      "04_legal_letter_debt_collection.md",
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_perishable.md"
+    ],
+    "temperature log": [
+      "04_legal_letter_debt_collection.md"
+    ],
+    "customs control": [
+      "04_legal_letter_debt_collection.md"
+    ],
+    "исковое_заявление": [
+      "04_legal_letter_demand.md"
+    ],
+    "air_cargo_dispute": [
+      "04_legal_letter_demand.md"
+    ],
+    "terminal_gha_акт": [
+      "04_legal_letter_demand.md"
+    ],
+    "customs_record": [
+      "04_legal_letter_demand.md",
+      "04_legal_reply_late_delivery.md"
+    ],
+    "screening_record": [
+      "04_legal_letter_demand.md",
+      "04_legal_reply_late_delivery.md",
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "personal_data": [
+      "04_legal_letter_demand.md"
+    ],
+    "позиция": [
+      "04_legal_letter_notary_demand.md"
+    ],
+    "вина": [
+      "04_legal_letter_notary_demand.md",
+      "04_legal_power_of_attorney_court.md"
+    ],
+    "долг": [
+      "04_legal_letter_notary_demand.md",
+      "04_legal_power_of_attorney_court.md"
+    ],
+    "ущерб": [
+      "04_legal_letter_notary_demand.md",
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "06_comp_checklist_contract_compliance.md"
+    ],
+    "право": [
+      "04_legal_letter_notary_demand.md"
+    ],
+    "способ вручения": [
+      "04_legal_letter_notary_demand.md"
+    ],
+    "предметная проверка": [
+      "04_legal_letter_notary_demand.md"
+    ],
+    "признак": [
+      "04_legal_letter_notary_demand.md"
+    ],
+    "air cargo": [
+      "04_legal_letter_notary_demand.md"
+    ],
+    "temperature": [
+      "04_legal_letter_notary_demand.md",
+      "04_legal_memo_contract_breach.md",
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "карточка спора": [
+      "04_legal_letter_notary_demand.md"
+    ],
+    "бронирование": [
+      "04_legal_letter_settlement_proposal.md",
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_regulation_cross_border.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_gps_tracking.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "грузовой манифест": [
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "скрининг": [
+      "04_legal_letter_settlement_proposal.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_gps_tracking.md",
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "счёт-фактура": [
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "подтверждение доставки": [
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "срок предъявления претензии": [
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "фото повреждения": [
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "разногласие": [
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "проект урегулирования": [
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "одобрение страховщика": [
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "объём освобождения": [
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "расчёт": [
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "журнал переговоров": [
+      "04_legal_letter_settlement_proposal.md"
+    ],
+    "terminal_release": [
+      "04_legal_memo_contract_breach.md",
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "запрос_органа": [
+      "04_legal_memo_contract_breach.md"
+    ],
+    "лог": [
+      "04_legal_memo_contract_breach.md"
+    ],
+    "владелец_спора": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "внутренняя_справка_по_рискам_спора": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "карточка_спора": [
+      "04_legal_memo_dispute_risk.md",
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md"
+    ],
+    "срок_ответа": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "способ_вручения": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "risk_matrix": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "evidence_inventory": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "awb/hawb": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "gha_reply": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "insurance_position": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "financial_exposure_model": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "legal_triage": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "проект_претензии": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "процессуальный_календарь": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "reserve_update": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "escalation_to_external_counsel": [
+      "04_legal_memo_dispute_risk.md"
+    ],
+    "процесс_подписания": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "процесс_вручения": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "процесс_хранения": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "роль_контрагента": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "документ_final_version": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "документ_proof_of_delivery": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "документ_evidence_bundle": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "документ_calculation_file": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "документ_insurance_notice": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "документ_процессуальный_календарь": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "система_карточка_спора": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "тип_груза_courier_delivery": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "тип_операции_awb_terms": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "канал_вручения_эдо": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "канал_вручения_договорный_email": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "канал_вручения_почта_с_описью": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "канал_вручения_portal_carrier_gha": [
+      "04_legal_power_of_attorney_bank.md"
+    ],
+    "юрист по спору": [
+      "04_legal_power_of_attorney_contracts.md"
+    ],
+    "gha/terminal": [
+      "04_legal_power_of_attorney_contracts.md"
+    ],
+    "carrier manager": [
+      "04_legal_power_of_attorney_contracts.md"
+    ],
+    "temperature-controlled cargo": [
+      "04_legal_power_of_attorney_contracts.md"
+    ],
+    "customs/export control": [
+      "04_legal_power_of_attorney_contracts.md"
+    ],
+    "валютные платежи": [
+      "04_legal_power_of_attorney_contracts.md"
+    ],
+    "страховой случай": [
+      "04_legal_power_of_attorney_contracts.md"
+    ],
+    "размер ущерба": [
+      "04_legal_power_of_attorney_court.md"
+    ],
+    "возражение": [
+      "04_legal_power_of_attorney_court.md"
+    ],
+    "деньги": [
+      "04_legal_power_of_attorney_court.md"
+    ],
+    "письменное решение": [
+      "04_legal_power_of_attorney_court.md"
+    ],
+    "доверитель": [
+      "04_legal_power_of_attorney_court.md"
+    ],
+    "срок действия": [
+      "04_legal_power_of_attorney_court.md"
+    ],
+    "шаблон_письма": [
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md"
+    ],
+    "awb_terms": [
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md"
+    ],
+    "грузовой_манифест": [
+      "04_legal_reply_cargo_damage.md"
+    ],
+    "акт_терминала": [
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md"
+    ],
+    "событие": [
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md"
+    ],
+    "нарушение": [
+      "04_legal_reply_cargo_damage.md"
+    ],
+    "спорное_начисление": [
+      "04_legal_reply_cargo_damage.md",
+      "04_legal_reply_defective_goods.md"
+    ],
+    "temperature_excursion": [
+      "04_legal_reply_defective_goods.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_regulation_weight_control.md"
+    ],
+    "gha_record": [
+      "04_legal_reply_late_delivery.md"
+    ],
+    "причина_offload": [
+      "04_legal_reply_late_delivery.md"
+    ],
+    "размер_ущерба": [
+      "04_legal_reply_late_delivery.md"
+    ],
+    "event_datetime": [
+      "04_legal_reply_non_payment.md",
+      "04_legal_reply_service_fail.md"
+    ],
+    "claim_amount": [
+      "04_legal_reply_non_payment.md",
+      "04_legal_reply_service_fail.md"
+    ],
+    "response_deadline": [
+      "04_legal_reply_non_payment.md",
+      "04_legal_reply_service_fail.md"
+    ],
+    "логист": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_contract_tire_service.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "air cargo диспетчер": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "операция": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "авиаперевозчик": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "gsa": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_weight_control.md"
+    ],
+    "экспедитор": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "бронирование подтверждение": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "terminal slot": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "uld": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_dangerous_goods.md",
+      "05_tlog_regulation_dispatch.md",
+      "05_tlog_regulation_oversized.md",
+      "05_tlog_regulation_perishable.md"
+    ],
+    "pallet plan": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "температурный логгер": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "фотофиксация": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "gps данные": [
+      "05_tlog_checklist_cargo_acceptance.md"
+    ],
+    "директор_по_логистике": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "организационная_структура": [
+      "05_tlog_checklist_cargo_acceptance.md"
+    ],
+    "роль": [
+      "05_tlog_checklist_cargo_acceptance.md",
+      "06_comp_policy_access_control.md",
+      "06_comp_policy_cookies.md",
+      "06_comp_policy_pdp.md",
+      "06_comp_policy_subject_rights.md"
+    ],
+    "cargo": [
+      "05_tlog_checklist_claims_road.md"
+    ],
+    "terminal_sla": [
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "air_cargo_operation": [
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "terminal_log": [
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "build-up_record": [
+      "05_tlog_checklist_claims_road.md"
+    ],
+    "gps_наземное_плечо": [
+      "05_tlog_checklist_claims_road.md",
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "водитель": [
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_regulation_gps_tracking.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "транспортное средство": [
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "terminal pass": [
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_contract_transport_sea.md"
+    ],
+    "gps": [
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "температурное оборудование": [
+      "05_tlog_checklist_driver_pre_trip.md"
+    ],
+    "readiness": [
+      "05_tlog_checklist_driver_pre_trip.md"
+    ],
+    "lithium": [
+      "05_tlog_checklist_driver_pre_trip.md"
+    ],
+    "cold chain": [
+      "05_tlog_checklist_driver_pre_trip.md"
+    ],
+    "security escort": [
+      "05_tlog_checklist_driver_pre_trip.md"
+    ],
+    "hold": [
+      "05_tlog_checklist_driver_pre_trip.md",
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_expedition_domestic.md",
+      "05_tlog_contract_fuel_supply.md",
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "air cargo чек-лист": [
+      "05_tlog_checklist_vehicle_inspection.md"
+    ],
+    "terminal acceptance": [
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_perishable.md"
+    ],
+    "screening": [
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "pallet build-up": [
+      "05_tlog_checklist_vehicle_inspection.md"
+    ],
+    "temperature logger": [
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "карточка инцидента": [
+      "05_tlog_checklist_vehicle_inspection.md"
+    ],
+    "tms": [
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_instruction_logistics_manager.md",
+      "05_tlog_regulation_cmr.md",
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "wms": [
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_instruction_logistics_manager.md",
+      "05_tlog_regulation_cmr.md",
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "terminal log": [
+      "05_tlog_checklist_vehicle_inspection.md",
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "комплект_air_cargo_документов": [
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "pallet_build-up_sheet": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "страховой_сертификат": [
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "путевой_лист": [
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "событие_air_cargo_рейса": [
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "failed_screening": [
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "terminal_damage": [
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "shortage": [
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "uld_split": [
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "security_hold": [
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_regulation_weight_control.md"
+    ],
+    "delay": [
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "rerouting": [
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "инцидент_наземного_плеча": [
+      "05_tlog_contract_cargo_insurance.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "договор_страхования_авиагруза": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "авиагрузовой_договор": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "авиационная_накладная": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "мастер_авиационная_накладная": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "house_авиационная_накладная": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "аэропорт_отправления": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "аэропорт_назначения": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "генеральный_агент_перевозчика": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "проверка_экранирования": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "лист_uld_паллета": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "процедура_претензий": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "страховой_риск": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "акт_обслуживания": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "вес_оплачиваемый": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "срок_вылета": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "отклонение_маршрута": [
+      "05_tlog_contract_cargo_insurance.md"
+    ],
+    "screening_build_up_record": [
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_fuel_supply.md"
+    ],
+    "pharma_cold_chain": [
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_expedition_domestic.md",
+      "05_tlog_contract_fuel_supply.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "perishable": [
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_expedition_domestic.md",
+      "05_tlog_contract_fuel_supply.md"
+    ],
+    "oversized_cargo": [
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_expedition_domestic.md",
+      "05_tlog_contract_fuel_supply.md"
+    ],
+    "finance": [
+      "05_tlog_contract_carrier_liability.md",
+      "05_tlog_contract_fuel_supply.md",
+      "05_tlog_instruction_logistics_manager.md",
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "legal_claim": [
+      "05_tlog_contract_carrier_liability.md"
+    ],
+    "aviation_proof": [
+      "05_tlog_contract_carrier_liability.md"
+    ],
+    "таможенная_процедура": [
+      "05_tlog_contract_customs_representative.md"
+    ],
+    "структура_вознаграждения": [
+      "05_tlog_contract_customs_representative.md"
+    ],
+    "категория_груза": [
+      "05_tlog_contract_customs_representative.md"
+    ],
+    "код_тн_вэд": [
+      "05_tlog_contract_customs_representative.md"
+    ],
+    "условие_ответственности": [
+      "05_tlog_contract_customs_representative.md",
+      "05_tlog_contract_expedition_multimodal.md"
+    ],
+    "договор с водителем-ип на подвоз авиагруза к терминалу": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "рабочий экземпляр": [
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "основание применения": [
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cross_border.md",
+      "06_comp_policy_cookies.md"
+    ],
+    "обращение": [
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "air cargo booking": [
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_contract_tire_service.md",
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_perishable.md"
+    ],
+    "аэропорт отправления": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "аэропорт назначения": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "время cutoff": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "вес брутто": [
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "вес расчётный": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "особые ограничения груза": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "требования терминала": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "комплект air cargo документов": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "booking confirmation": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "packing list": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "воздушный_кодекс": [
+      "05_tlog_contract_driver_services.md",
+      "05_tlog_policy_eco_norms.md"
+    ],
+    "налоговый_кодекс": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "глава_39_гк_рф": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "ип": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "самозанятый": [
+      "05_tlog_contract_driver_services.md"
+    ],
+    "авиационное_доказательство": [
+      "05_tlog_contract_expedition_domestic.md"
+    ],
+    "транспортный_шаблон": [
+      "05_tlog_contract_expedition_domestic.md"
+    ],
+    "транспортный_вид": [
+      "05_tlog_contract_expedition_multimodal.md"
+    ],
+    "стоимость_фрахта": [
+      "05_tlog_contract_expedition_multimodal.md"
+    ],
+    "incoterms": [
+      "05_tlog_contract_expedition_multimodal.md"
+    ],
+    "pallet_build_up_sheet": [
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_contract_transport_road.md",
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "повреждение": [
+      "05_tlog_contract_forwarder.md"
+    ],
+    "утрата": [
+      "05_tlog_contract_forwarder.md"
+    ],
+    "регресс": [
+      "05_tlog_contract_forwarder.md"
+    ],
+    "глава_41_гк_рф": [
+      "05_tlog_contract_forwarder.md"
+    ],
+    "воздушный_кодекс_рф": [
+      "05_tlog_contract_forwarder.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "транспортная_экспедиция": [
+      "05_tlog_contract_forwarder.md"
+    ],
+    "ttn": [
+      "05_tlog_contract_fuel_supply.md"
+    ],
+    "procurement": [
+      "05_tlog_contract_fuel_supply.md"
+    ],
+    "airport_operations": [
+      "05_tlog_contract_fuel_supply.md"
+    ],
+    "qhse": [
+      "05_tlog_contract_fuel_supply.md"
+    ],
+    "invoice_reconciliation": [
+      "05_tlog_contract_fuel_supply.md"
+    ],
+    "safety_clearance": [
+      "05_tlog_contract_fuel_supply.md"
+    ],
+    "лизингополучатель": [
+      "05_tlog_contract_leasing_truck.md"
+    ],
+    "транспортное_средство": [
+      "05_tlog_contract_leasing_truck.md",
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_contract_transport_road.md"
+    ],
+    "ежемесячный_платеж": [
+      "05_tlog_contract_leasing_truck.md"
+    ],
+    "цена_выкупа": [
+      "05_tlog_contract_leasing_truck.md"
+    ],
+    "лимит_пробега": [
+      "05_tlog_contract_leasing_truck.md"
+    ],
+    "обязанность_обслуживания": [
+      "05_tlog_contract_leasing_truck.md"
+    ],
+    "диспетчер": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "склад": [
+      "05_tlog_contract_tire_service.md",
+      "05_tlog_contract_warehouse_3pl.md"
+    ],
+    "авиагрузовой терминал": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "договор то транспорта для airport first/last mile": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "security screening": [
+      "05_tlog_contract_tire_service.md",
+      "05_tlog_contract_transport_sea.md"
+    ],
+    "build-up": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "handover to carrier": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "recovery at destination": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "lithium batteries": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "pharma/cold chain": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "perishables": [
+      "05_tlog_contract_tire_service.md",
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "oversized cargo": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "valuable cargo": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "iata dgr": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "sds/shipper's declaration": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "температурный профиль": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "special permits": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "security status": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "valuable cargo instructions": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "оказание услуг": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "глава 39": [
+      "05_tlog_contract_tire_service.md"
+    ],
+    "договор_авиаперевозки": [
+      "05_tlog_contract_transport_air.md"
+    ],
+    "накладная": [
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "приёмка": [
+      "05_tlog_contract_transport_air.md"
+    ],
+    "досмотр": [
+      "05_tlog_contract_transport_air.md"
+    ],
+    "грузоотправитель": [
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "грузополучатель": [
+      "05_tlog_contract_transport_air.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "первая_миля": [
+      "05_tlog_contract_transport_air.md"
+    ],
+    "последняя_миля": [
+      "05_tlog_contract_transport_air.md"
+    ],
+    "пропуск_терминала": [
+      "05_tlog_contract_transport_air.md"
+    ],
+    "температурный_логгер": [
+      "05_tlog_contract_transport_air.md"
+    ],
+    "перечень_доказательств": [
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "упаковка": [
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "lithium_batteries": [
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "oversized": [
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "airport_origin": [
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "airport_destination": [
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "gross_weight": [
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "handover_to_airline": [
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "выпуск_из_терминала": [
+      "05_tlog_contract_transport_rail.md",
+      "05_tlog_regulation_cmr.md"
+    ],
+    "air_cargo_документ": [
+      "05_tlog_contract_transport_road.md"
+    ],
+    "договор перевозки груза": [
+      "05_tlog_contract_transport_sea.md"
+    ],
+    "резервное фидерное плечо": [
+      "05_tlog_contract_transport_sea.md"
+    ],
+    "airport origin": [
+      "05_tlog_contract_transport_sea.md"
+    ],
+    "airport destination": [
+      "05_tlog_contract_transport_sea.md"
+    ],
+    "pallet": [
+      "05_tlog_contract_transport_sea.md",
+      "05_tlog_regulation_oversized.md"
+    ],
+    "gross weight": [
+      "05_tlog_contract_transport_sea.md"
+    ],
+    "shipper": [
+      "05_tlog_contract_transport_sea.md",
+      "07_faq_expedition.md"
+    ],
+    "consignee": [
+      "05_tlog_contract_transport_sea.md",
+      "07_faq_expedition.md"
+    ],
+    "тс": [
+      "05_tlog_contract_transport_sea.md"
+    ],
+    "услуга": [
+      "05_tlog_contract_warehouse_3pl.md"
+    ],
+    "вознаграждение_хранения": [
+      "05_tlog_contract_warehouse_3pl.md"
+    ],
+    "вознаграждение_обработки": [
+      "05_tlog_contract_warehouse_3pl.md"
+    ],
+    "sla_метрика": [
+      "05_tlog_contract_warehouse_3pl.md"
+    ],
+    "инвентаризация": [
+      "05_tlog_contract_warehouse_3pl.md"
+    ],
+    "точность_целевая": [
+      "05_tlog_contract_warehouse_3pl.md"
+    ],
+    "должностная инструкция air cargo диспетчера": [
+      "05_tlog_instruction_dispatcher.md"
+    ],
+    "авиарейс": [
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "air cargo leg": [
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "booking number": [
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "операционное отклонение": [
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "missed cutoff": [
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "failed security screening": [
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "terminal damage": [
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "должностная инструкция": [
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_instruction_driver_duty.md"
+    ],
+    "паллет": [
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "контракт": [
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "экспедиторский заказ": [
+      "05_tlog_instruction_dispatcher.md"
+    ],
+    "манифест": [
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "опасные грузы": [
+      "05_tlog_instruction_dispatcher.md"
+    ],
+    "литиевый статус": [
+      "05_tlog_instruction_dispatcher.md"
+    ],
+    "статус рейса": [
+      "05_tlog_instruction_dispatcher.md",
+      "05_tlog_regulation_waybill.md"
+    ],
+    "грузовой терминал": [
+      "05_tlog_instruction_driver_duty.md"
+    ],
+    "просрочка": [
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_regulation_customs_clearance.md"
+    ],
+    "наземное плечо": [
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "ограничение": [
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "05_tlog_regulation_waybill.md",
+      "06_comp_checklist_contract_compliance.md",
+      "06_comp_policy_whistleblower.md",
+      "07_faq_commercial_secret.md"
+    ],
+    "проверка": [
+      "05_tlog_instruction_driver_duty.md",
+      "05_tlog_regulation_customs_clearance.md",
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "customs/security hold": [
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "damage/loss": [
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "stop": [
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "customer communication": [
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "logistics manager": [
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "customer service": [
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "rag-ответ": [
+      "05_tlog_instruction_logistics_manager.md"
+    ],
+    "операционное решение": [
+      "05_tlog_instruction_logistics_manager.md",
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "договор перевозки": [
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_perishable.md"
+    ],
+    "договор экспедиции": [
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_perishable.md"
+    ],
+    "pallet build-up sheet": [
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_perishable.md"
+    ],
+    "gps-трек": [
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_perishable.md"
+    ],
+    "температурный лист": [
+      "05_tlog_policy_driver_hours.md",
+      "05_tlog_regulation_perishable.md"
+    ],
+    "политика": [
+      "05_tlog_policy_eco_norms.md"
+    ],
+    "директор по логистике": [
+      "05_tlog_policy_eco_norms.md"
+    ],
+    "технический регламент о безопасности колесных транспортных средств": [
+      "05_tlog_policy_eco_norms.md"
+    ],
+    "евро-5": [
+      "05_tlog_policy_eco_norms.md"
+    ],
+    "евро-6": [
+      "05_tlog_policy_eco_norms.md"
+    ],
+    "выброс": [
+      "05_tlog_policy_eco_norms.md"
+    ],
+    "федеральный_закон": [
+      "05_tlog_policy_eco_norms.md"
+    ],
+    "технический_регламент": [
+      "05_tlog_policy_eco_norms.md"
+    ],
+    "колесное_транспортное_средство": [
+      "05_tlog_policy_eco_norms.md"
+    ],
+    "политика авиационной грузовой безопасности": [
+      "05_tlog_policy_transport_safety.md"
+    ],
+    "защищенная категория": [
+      "05_tlog_policy_transport_safety.md"
+    ],
+    "регламент международных авиагрузовых перевозок": [
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "регламент": [
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "авиагрузовая_перевозка": [
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "грузовой_отсек": [
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "наземное_плечо": [
+      "05_tlog_regulation_cross_border.md"
+    ],
+    "рейсовый стык": [
+      "05_tlog_regulation_customs_clearance.md"
+    ],
+    "регламент таможенного оформления авиагрузов": [
+      "05_tlog_regulation_customs_clearance.md"
+    ],
+    "temperature_logger": [
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "gps_трек": [
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "logistics": [
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "warehouse": [
+      "05_tlog_regulation_dangerous_goods.md"
+    ],
+    "gps-данные": [
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "литиевый_статус": [
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "temperature_mode": [
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "reгламент_диспетчеризации": [
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "air_cargo_операция": [
+      "05_tlog_regulation_dispatch.md"
+    ],
+    "аэропортовый терминал": [
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "пропуск": [
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "статус gps": [
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "слот времени": [
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "лимит рабочего времени": [
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "flight status": [
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "режим температуры": [
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "сборка": [
+      "05_tlog_regulation_gps_tracking.md"
+    ],
+    "tender": [
+      "05_tlog_regulation_oversized.md"
+    ],
+    "carrier_approval": [
+      "05_tlog_regulation_oversized.md"
+    ],
+    "terminal_capability": [
+      "05_tlog_regulation_oversized.md"
+    ],
+    "screening_plan": [
+      "05_tlog_regulation_oversized.md"
+    ],
+    "monitoring_milestone": [
+      "05_tlog_regulation_oversized.md"
+    ],
+    "предметная_проверка": [
+      "05_tlog_regulation_oversized.md"
+    ],
+    "негабарит": [
+      "05_tlog_regulation_oversized.md"
+    ],
+    "разрешение": [
+      "05_tlog_regulation_oversized.md"
+    ],
+    "сопровождение": [
+      "05_tlog_regulation_oversized.md"
+    ],
+    "приказ_минтранса_рф_от_15.10.2020_№_368": [
+      "05_tlog_regulation_waybill.md"
+    ],
+    "мастер авиагрузовая накладная": [
+      "05_tlog_regulation_waybill.md"
+    ],
+    "house авиагрузовая накладная": [
+      "05_tlog_regulation_waybill.md"
+    ],
+    "место": [
+      "05_tlog_regulation_waybill.md"
+    ],
+    "оплачиваемый вес": [
+      "05_tlog_regulation_waybill.md"
+    ],
+    "юнит локадер": [
+      "05_tlog_regulation_waybill.md"
+    ],
+    "генеральный агент": [
+      "05_tlog_regulation_waybill.md"
+    ],
+    "акцепт терминала": [
+      "05_tlog_regulation_waybill.md"
+    ],
+    "документ наземного плеча": [
+      "05_tlog_regulation_waybill.md"
+    ],
+    "терминальный пропуск": [
+      "05_tlog_regulation_waybill.md"
+    ],
+    "объяснение перевозчика": [
+      "05_tlog_regulation_waybill.md"
+    ],
+    "запись терминала": [
+      "05_tlog_regulation_waybill.md"
+    ],
+    "эскалация": [
+      "05_tlog_regulation_weight_control.md"
+    ],
+    "loss": [
+      "05_tlog_regulation_weight_control.md"
+    ],
+    "terminal_charge": [
+      "05_tlog_regulation_weight_control.md"
+    ],
+    "sla_penalty": [
+      "05_tlog_regulation_weight_control.md"
+    ],
+    "контрольный_владелец": [
+      "06_comp_checklist_contract_compliance.md"
+    ],
+    "отклонение": [
+      "06_comp_checklist_contract_compliance.md"
+    ],
+    "срок_хранения": [
+      "06_comp_checklist_contract_compliance.md"
+    ],
+    "корректирующее_действие": [
+      "06_comp_checklist_contract_compliance.md"
+    ],
+    "данные": [
+      "06_comp_checklist_contract_compliance.md"
+    ],
+    "владелец": [
+      "06_comp_checklist_contract_compliance.md"
+    ],
+    "коммерческая тайна": [
+      "06_comp_checklist_contract_compliance.md",
+      "06_comp_policy_cross_border_transfer.md",
+      "06_comp_policy_video_surveillance.md",
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "санкционная информация": [
+      "06_comp_checklist_contract_compliance.md",
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "чеклист проверки договора на compliance": [
+      "06_comp_checklist_contract_compliance.md"
+    ],
+    "федеральный_закон_152-фз": [
+      "06_comp_checklist_pdp_audit.md",
+      "06_comp_policy_data_destruction.md"
+    ],
+    "постановление_правительства_рф_№1119": [
+      "06_comp_checklist_pdp_audit.md"
+    ],
+    "пользователь": [
+      "06_comp_policy_access_control.md"
+    ],
+    "owner_approval": [
+      "06_comp_policy_access_control.md"
+    ],
+    "customer_data": [
+      "06_comp_policy_access_control.md",
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "containment": [
+      "06_comp_policy_access_control.md"
+    ],
+    "коммерческая_тайна": [
+      "06_comp_policy_access_control.md"
+    ],
+    "санкционная_информация": [
+      "06_comp_policy_access_control.md"
+    ],
+    "агент": [
+      "06_comp_policy_access_control.md",
+      "06_comp_policy_breach_notification.md",
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "матрица_ролей": [
+      "06_comp_policy_access_control.md"
+    ],
+    "документ": [
+      "06_comp_policy_anticorruption_local.md",
+      "07_faq_expedition.md",
+      "07_faq_probation.md"
+    ],
+    "источник": [
+      "06_comp_policy_anticorruption_local.md",
+      "07_faq_employee_material_liability.md",
+      "07_faq_leave.md",
+      "07_faq_probation.md"
+    ],
+    "предмет": [
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "посредник": [
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "подарок": [
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "платеж": [
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "грузовой_рейс": [
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "статус": [
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "категория": [
+      "06_comp_policy_anticorruption_local.md"
+    ],
+    "авиационная_контрольная_точка": [
+      "06_comp_policy_breach_notification.md",
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "данные_awb": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "данные_бронирования": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "данные_клиента": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "данные_водителя": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "данные_агентства": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "данные_доступа_в_аэропорт": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "сведения_о_маршруте": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "роль_информационной_безопасности": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "роль_службы_защиты_данных": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "роль_авиаопераций": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "роль_комплаенс": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "журнал_расследования": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "список_затронутых_awb": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "решение": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "корректирующая_мера": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "система_управления_транспортировкой": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "система_управления_складом": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "выгрузка": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "канал_уведомления": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "контроль_экспорта": [
+      "06_comp_policy_breach_notification.md"
+    ],
+    "compliance officer": [
+      "06_comp_policy_commercial_secret.md",
+      "06_comp_policy_nda_employee.md",
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "информационная безопасность": [
+      "06_comp_policy_commercial_secret.md",
+      "06_comp_policy_nda_employee.md"
+    ],
+    "цель обработки": [
+      "06_comp_policy_commercial_secret.md"
+    ],
+    "правовое основание": [
+      "06_comp_policy_commercial_secret.md",
+      "06_comp_policy_cross_border_transfer.md",
+      "07_faq_contract_templates.md"
+    ],
+    "срок хранения": [
+      "06_comp_policy_commercial_secret.md",
+      "06_comp_policy_pdp.md",
+      "06_comp_policy_whistleblower.md"
+    ],
+    "матрица доступа": [
+      "06_comp_policy_commercial_secret.md",
+      "06_comp_policy_cookies.md",
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "журналирование": [
+      "06_comp_policy_commercial_secret.md"
+    ],
+    "маршрут инцидента": [
+      "06_comp_policy_commercial_secret.md"
+    ],
+    "порядок ответа": [
+      "06_comp_policy_commercial_secret.md"
+    ],
+    "дата_подписи": [
+      "06_comp_policy_consent_form.md"
+    ],
+    "контекст_awb_booking": [
+      "06_comp_policy_consent_form.md"
+    ],
+    "retention_после_отзыва_согласия": [
+      "06_comp_policy_consent_form.md"
+    ],
+    "политика использования cookies и веб-аналитики": [
+      "06_comp_policy_cookies.md"
+    ],
+    "правовое основание обработки": [
+      "06_comp_policy_cookies.md"
+    ],
+    "реестр обработки": [
+      "06_comp_policy_cookies.md"
+    ],
+    "категория данных": [
+      "06_comp_policy_cookies.md"
+    ],
+    "срок доступа": [
+      "06_comp_policy_cookies.md"
+    ],
+    "владелец согласования": [
+      "06_comp_policy_cookies.md"
+    ],
+    "трансграничная передача": [
+      "06_comp_policy_cross_border_transfer.md"
+    ],
+    "санкционные сведения": [
+      "06_comp_policy_cross_border_transfer.md"
+    ],
+    "документ подтверждения": [
+      "06_comp_policy_cross_border_transfer.md"
+    ],
+    "приказ_роскомнадзора": [
+      "06_comp_policy_data_destruction.md"
+    ],
+    "порядок_уничтожения_пдн": [
+      "06_comp_policy_data_destruction.md"
+    ],
+    "нормативный_источник_manifest": [
+      "06_comp_policy_data_retention.md"
+    ],
+    "политика_пдп": [
+      "06_comp_policy_data_retention.md"
+    ],
+    "политика_коммерческой_тайны": [
+      "06_comp_policy_data_retention.md"
+    ],
+    "регламент_одобрения_контракта": [
+      "06_comp_policy_data_retention.md"
+    ],
+    "чек-лист_соответствия_контракта": [
+      "06_comp_policy_data_retention.md"
+    ],
+    "реестр_обработки": [
+      "06_comp_policy_incident_response.md",
+      "06_comp_policy_subject_rights.md"
+    ],
+    "договор_поручения": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "матрица_доступа": [
+      "06_comp_policy_incident_response.md",
+      "06_comp_policy_nda_contractor.md",
+      "06_comp_policy_subject_rights.md"
+    ],
+    "приказ_о_режиме": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "логи_доступа": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "акт_уничтожения": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "журнал_инцидентов": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "запрос_субъекта": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "решение_ответственного": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "affected_awb_list": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "tms_wms_logs": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "airport_access_logs": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "forensic_report": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "shipment_hold_record": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "data_hold_record": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "карточка_инцидента": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "решение_комиссии": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "план": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "187-фз": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "152-фз": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "приказ_фстэк_№_235": [
+      "06_comp_policy_incident_response.md"
+    ],
+    "nda": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "screening_status": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "airport_access_record": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "терминальная_процедура": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "shipment_hold/release": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "ground_handler": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "ит-поставщик": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "retention": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "access_approval": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "журнал_выгрузки": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "акт_возврата/уничтожения": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "incident_record": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "договорное_досье": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "рейсовое_досье": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "incident_flow": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "владелец_данных": [
+      "06_comp_policy_nda_contractor.md"
+    ],
+    "контролёр": [
+      "06_comp_policy_nda_employee.md"
+    ],
+    "журнал доступа": [
+      "06_comp_policy_nda_employee.md",
+      "07_faq_contract_templates.md"
+    ],
+    "журнал инцидентов": [
+      "06_comp_policy_nda_employee.md",
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "журнал запросов": [
+      "06_comp_policy_nda_employee.md"
+    ],
+    "журнал согласований": [
+      "06_comp_policy_nda_employee.md"
+    ],
+    "customer data": [
+      "06_comp_policy_nda_employee.md"
+    ],
+    "access log": [
+      "06_comp_policy_nda_employee.md"
+    ],
+    "screening status": [
+      "06_comp_policy_nda_employee.md"
+    ],
+    "утечка": [
+      "06_comp_policy_nda_employee.md",
+      "06_comp_regulation_contract_approval.md",
+      "07_faq_pdp.md"
+    ],
+    "рейсовые данные": [
+      "06_comp_policy_nda_employee.md"
+    ],
+    "airport access record": [
+      "06_comp_policy_nda_employee.md"
+    ],
+    "dpo": [
+      "06_comp_policy_nda_employee.md",
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "реестр compliance-документов": [
+      "06_comp_policy_pdp.md"
+    ],
+    "порядок_реализации_прав_субъекта_пдн": [
+      "06_comp_policy_subject_rights.md"
+    ],
+    "рабочий_экземпляр": [
+      "06_comp_policy_subject_rights.md"
+    ],
+    "основание_применения": [
+      "06_comp_policy_subject_rights.md"
+    ],
+    "правовое_основание_обработки": [
+      "06_comp_policy_subject_rights.md",
+      "07_faq_pdp.md"
+    ],
+    "категория_данных": [
+      "06_comp_policy_subject_rights.md"
+    ],
+    "срок_хранения_и_удаления": [
+      "06_comp_policy_subject_rights.md"
+    ],
+    "retention-период": [
+      "06_comp_policy_subject_rights.md"
+    ],
+    "акт_удаления": [
+      "06_comp_policy_subject_rights.md"
+    ],
+    "лог_удаления": [
+      "06_comp_policy_subject_rights.md"
+    ],
+    "товар двойного назначения": [
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "внутренний контроль": [
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "нормативный акт": [
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "политика торгового compliance": [
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "федеральный_закон_от_2006_№_281-фз": [
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "указ_президента_рф": [
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "регламент_ес": [
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "регламент_сша": [
+      "06_comp_policy_trade_compliance.md"
+    ],
+    "цель запроса": [
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "камера": [
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "зона аэропорта": [
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "период записи": [
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "booking context": [
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "роль доступа": [
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "retention hold": [
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "preservation hold": [
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "журнал экспорта": [
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "документ-основание": [
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "владелец данных": [
+      "06_comp_policy_video_surveillance.md",
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "видеозапись": [
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "контролируемая зона аэропорта": [
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "маскирование третьих лиц": [
+      "06_comp_policy_video_surveillance.md"
+    ],
+    "политика сообщений о нарушениях": [
+      "06_comp_policy_whistleblower.md"
+    ],
+    "минимизация": [
+      "06_comp_policy_whistleblower.md"
+    ],
+    "журнал действий": [
+      "06_comp_policy_whistleblower.md"
+    ],
+    "compliance-контроль": [
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "реестр": [
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "запрос субъекта": [
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "доступ вне роли": [
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "передача за рубеж": [
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "санкционный риск": [
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "маршрут эскалации": [
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "ответственный за пдн": [
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "иб": [
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "владелец системы": [
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "исключение": [
+      "06_comp_regulation_contract_approval.md"
+    ],
+    "рабочий комплект": [
+      "07_faq_claims_procedure.md"
+    ],
+    "faq-статья": [
+      "07_faq_claims_procedure.md"
+    ],
+    "нормативный ориентир": [
+      "07_faq_claims_procedure.md"
+    ],
+    "роль пользователя": [
+      "07_faq_claims_procedure.md",
+      "07_faq_contract_templates.md"
+    ],
+    "спорный кейс": [
+      "07_faq_claims_procedure.md"
+    ],
+    "compliance_officer": [
+      "07_faq_commercial_secret.md"
+    ],
+    "владелец_базы_знаний": [
+      "07_faq_commercial_secret.md"
+    ],
+    "профильный_специалист": [
+      "07_faq_commercial_secret.md",
+      "07_faq_employee_material_liability.md"
+    ],
+    "faq_по_коммерческой_тайне": [
+      "07_faq_commercial_secret.md"
+    ],
+    "вопрос_пользователя": [
+      "07_faq_commercial_secret.md"
+    ],
+    "внутренний_документ": [
+      "07_faq_commercial_secret.md"
+    ],
+    "нормативный_ориентир": [
+      "07_faq_commercial_secret.md"
+    ],
+    "faq_статья": [
+      "07_faq_commercial_secret.md"
+    ],
+    "нормативный_источник": [
+      "07_faq_commercial_secret.md"
+    ],
+    "выплата": [
+      "07_faq_commercial_secret.md",
+      "07_faq_employee_material_liability.md"
+    ],
+    "faq": [
+      "07_faq_contract_templates.md"
+    ],
+    "шаблон договора": [
+      "07_faq_contract_templates.md"
+    ],
+    "профильный документ корпуса": [
+      "07_faq_contract_templates.md"
+    ],
+    "спорный факт": [
+      "07_faq_contract_templates.md"
+    ],
+    "ограничение раскрытия": [
+      "07_faq_contract_templates.md"
+    ],
+    "источник подтверждения": [
+      "07_faq_contract_templates.md"
+    ],
+    "первичная_консультация": [
+      "07_faq_employee_material_liability.md"
+    ],
+    "типовые_вопросы": [
+      "07_faq_employee_material_liability.md"
+    ],
+    "дисциплина": [
+      "07_faq_employee_material_liability.md"
+    ],
+    "тема_обращения": [
+      "07_faq_employee_material_liability.md",
+      "07_faq_leave.md"
+    ],
+    "house_shipment": [
+      "07_faq_expedition.md"
+    ],
+    "ежегодный_отпуск": [
+      "07_faq_leave.md"
+    ],
+    "учебный_отпуск": [
+      "07_faq_leave.md"
+    ],
+    "декретный_отпуск": [
+      "07_faq_leave.md"
+    ],
+    "компенсация_отпуска": [
+      "07_faq_leave.md"
+    ],
+    "консультация": [
+      "07_faq_leave.md"
+    ],
+    "специалист": [
+      "07_faq_leave.md"
+    ],
+    "пользовательский запрос": [
+      "07_faq_probation.md"
+    ],
+    "безопасная реакция ассистента": [
+      "07_faq_probation.md"
+    ],
+    "испытательный срок": [
+      "07_faq_probation.md"
+    ],
+    "ручная проверка": [
+      "07_faq_probation.md"
+    ],
+    "faq_leave": [
+      "07_faq_transport_road.md"
+    ],
+    "faq_contract_template": [
+      "07_faq_transport_road.md"
+    ],
+    "faq_claims_procedure": [
+      "07_faq_transport_road.md"
+    ]
+  }
+}

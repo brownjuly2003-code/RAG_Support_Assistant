@@ -262,7 +262,7 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `RAG_GRAPH_RETRIEVAL` | `off` | Graph-lane activation gate: `off`/`on`/`auto`; condition evaluated & logged at ingestion (lane itself = Phase 2, not built) |
 | `RAG_GRAPH_MIN_CHUNKS` | `20000` | `auto`: minimal chunk count to consider the graph lane |
 | `RAG_GRAPH_MIN_CROSSDOC_SHARE` | `0.15` | `auto`: minimal cross-doc entity share (connectivity gate) |
-| `RAG_GRAPH_CROSSDOC_SHARE` | unset | Measured probe value; unset = probe not run, `auto` stays off |
+| `RAG_GRAPH_CROSSDOC_SHARE` | unset | Measured probe value (`scripts/graph_probe.py`; 2026-06-06 corpus: **0.296**, gate passed); unset = probe not run, `auto` stays off |
 | `RAG_SELF_RAG_MAX_ITER` | `2` | Maximum Self-RAG iterations |
 | `RAG_SELF_RAG_MIN_QUALITY` | `70` | Minimum quality score to avoid retry/escalation |
 | `FACT_VERIFICATION_ENABLED` | `true` | Run fact verification after generation |

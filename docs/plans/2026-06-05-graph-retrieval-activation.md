@@ -6,7 +6,16 @@
   считается и логируется при каждом ингесте (`ingestion/graph_activation.py`,
   вызов из `IngestPipeline.ingest`/`add_document`), тесты
   `tests/test_graph_activation.py`. Сам graph-lane (Phase 2) НЕ построен —
-  сработавшее условие в логах = сигнал запускать Phase 1 probe / Phase 2.
+  сработавшее условие в логах = сигнал запускать Phase 2.
+- Phase 1 (connectivity-probe) ВЫПОЛНЕНА 2026-06-06: `scripts/graph_probe.py`,
+  200 чанков / 184 дока, mistral-small t=0, 0 фейлов извлечения.
+  **cross-doc share = 0.296 — connectivity-гейт ПРОЙДЕН** (порог 0.15);
+  топ связующих сущностей: awb (60 доков), booking (37), hawb (36), mawb (32).
+  Отчёт: `reports/graph_probe/20260606T090729Z-graph-probe.{json,md}`.
+  Итог гейта: размерный порог НЕ пройден (5589 < 20000 чанков) → `auto`
+  корректно держит lane выключенным; при росте корпуса до ~20k чанков
+  условие сработает само (значение probe пинуется `RAG_GRAPH_CROSSDOC_SHARE=0.296`,
+  при существенной смене состава корпуса probe перегнать — 13 минут).
 - Контекст: flat-retrieval (BM25+dense+RRF+reranker+structural chunking+parent-expansion)
   на текущем корпусе (201 док / 5589 чанков / ~4.5MB) даёт 96% FULL @ top-5 —
   графовый слой сейчас НЕ нужен. План фиксирует, КОГДА он становится нужен,
