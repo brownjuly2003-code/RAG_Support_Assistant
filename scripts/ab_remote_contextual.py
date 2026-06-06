@@ -15,6 +15,11 @@ Arms:
      remotely). The expanded query drives retrieval AND rerank (mirrors the
      production retrieve node, where hyde_query feeds get_relevant_documents);
      the ORIGINAL query stays in the output rows for the LLM-judge contract.
+  F  split-query: arm-E POOLS (expanded query for dense+BM25 — kw-chunks of
+     the E regressions sit at RRF rank 1-9 there) + rerank against the
+     ORIGINAL query (as in C/D2, where those cases are FULL). Pools are NOT
+     recomputed: copy ab_phase2_E_pool.json -> ab_phase2_F_pool.json and run
+     rerank F. Rationale: docs/operations/2026-06-06-arm-e-field-hyde-results.md.
 
 All arms run the post-4844094 header path (body never truncated, header clamped 200).
 
@@ -274,7 +279,13 @@ def stage_rerank(arm: str, out_dir: Path) -> int:
     for i, row in enumerate(rows, 1):
         # Arm E: the reranker scores against the expanded query, like the
         # production path where hyde_query reaches HybridRetriever.
-        rerank_query = row.get("expanded_query") or row["query"]
+        # Arm F (split-query): pools came from the expanded query, but the
+        # reranker scores against the ORIGINAL query — the E diagnosis showed
+        # the cross-encoder demotes kw-chunks when fed the long expanded text.
+        if arm == "F":
+            rerank_query = row["query"]
+        else:
+            rerank_query = row.get("expanded_query") or row["query"]
         pairs = [(rerank_query, text) for text in row["cands"]]
         scores = reranker.predict(pairs)
         order = sorted(range(len(scores)), key=lambda j: scores[j], reverse=True)
@@ -518,7 +529,7 @@ def stage_expand(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stage", required=True, choices=("pools", "rerank", "report", "expand"))
-    parser.add_argument("--arm", default="", choices=("", "A", "C", "E"))
+    parser.add_argument("--arm", default="", choices=("", "A", "C", "E", "F"))
     parser.add_argument("--corpus", default=str(PROJECT_ROOT / "data" / "uploads" / "aircargo"))
     parser.add_argument(
         "--cases", default=str(PROJECT_ROOT / "evaluation" / "curated_cases_aircargo.jsonl")
@@ -552,8 +563,8 @@ def main(argv: list[str] | None = None) -> int:
             args.arm, Path(args.corpus), Path(args.cases), out_dir, expansions=expansions
         )
     if args.stage == "rerank":
-        if args.arm not in ("A", "C", "E"):
-            parser.error("--stage rerank requires --arm A|C|E")
+        if args.arm not in ("A", "C", "E", "F"):
+            parser.error("--stage rerank requires --arm A|C|E|F")
         return stage_rerank(args.arm, out_dir)
     if args.stage == "expand":
         return stage_expand(
