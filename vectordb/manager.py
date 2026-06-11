@@ -150,6 +150,15 @@ def build_vector_store(
             chunk_size=chunk_size,
         )
 
+    # Ingestion-order stamp. Persisted with the collection so the BM25 corpus
+    # and parent-expansion neighbour order can be rebuilt after a process
+    # restart (see _restore_chunks_from_store) instead of silently degrading
+    # to vector-only retrieval.
+    for index, chunk in enumerate(chunks):
+        metadata = chunk.metadata if isinstance(chunk.metadata, dict) else {}
+        metadata["chunk_index"] = index
+        chunk.metadata = metadata
+
     if backend == "qdrant":
         build_qdrant = getattr(_base_manager, "_build_qdrant", None)
         if build_qdrant is None:
@@ -193,6 +202,81 @@ def build_vector_store(
         _retriever_cache.pop(tenant, None)
 
     return store, chunks
+
+
+def _restore_chunks_from_store(vector_store: Any, tenant: str) -> list[Document] | None:
+    """Rebuild the in-memory chunk list from a persisted Chroma collection.
+
+    The BM25 corpus and the parent-expansion neighbour order only live in
+    ``_chunks_cache`` (filled on upload). Without this restore, the first
+    ``get_retriever`` call after a process restart builds a HybridRetriever
+    with ``chunks=None`` — BM25 and parent-expansion silently turn off and the
+    measured production stack is no longer what actually runs.
+    """
+    collection = getattr(vector_store, "_collection", None)
+    if collection is None or not hasattr(collection, "get"):
+        return None
+    try:
+        payload = collection.get(include=["documents", "metadatas"])
+    except Exception as exc:
+        logger.warning("Chunk restore failed for tenant %s: %s", tenant, exc)
+        return None
+
+    texts = (payload or {}).get("documents") or []
+    metadatas = (payload or {}).get("metadatas") or []
+    if not texts:
+        return None
+
+    chunks = [
+        Document(page_content=str(text), metadata=dict(metadata or {}))
+        for text, metadata in zip(texts, metadatas, strict=False)
+    ]
+    if all(isinstance((chunk.metadata or {}).get("chunk_index"), int) for chunk in chunks):
+        chunks.sort(key=lambda chunk: int(chunk.metadata["chunk_index"]))
+    else:
+        # Legacy collection built before the chunk_index stamp. A stable sort
+        # by source keeps each document's chunks contiguous in their returned
+        # relative order — enough for parent-expansion's same-source window,
+        # though the exact ingest order is not guaranteed.
+        chunks.sort(key=lambda chunk: str((chunk.metadata or {}).get("source") or ""))
+        logger.warning(
+            "Tenant %s: restored %d chunks without chunk_index metadata "
+            "(legacy collection) — neighbour order is approximate. "
+            "Re-ingest to restore exact parent-expansion order.",
+            tenant,
+            len(chunks),
+        )
+    logger.info(
+        "Restored %d chunks for tenant %s from the persisted collection "
+        "(BM25 + parent-expansion re-enabled)",
+        len(chunks),
+        tenant,
+    )
+    return chunks
+
+
+def _report_bm25_state(retriever: Any, tenant: str) -> None:
+    """Expose whether the tenant retriever actually has a BM25 index."""
+    bm25_active = getattr(retriever, "_bm25", None) is not None
+    try:
+        from monitoring.prometheus import set_retriever_bm25_enabled  # noqa: PLC0415
+
+        set_retriever_bm25_enabled(tenant, bm25_active)
+    except Exception:
+        pass
+    if bm25_active:
+        return
+    settings = get_settings()
+    hybrid_expected = bool(getattr(settings, "hybrid_search", True)) and (
+        _base_manager._normalize_retrieval_strategy(settings) != "vector"
+    )
+    if hybrid_expected:
+        logger.warning(
+            "Tenant %s: retriever built WITHOUT BM25 index while hybrid search "
+            "is enabled — retrieval degraded to vector-only. "
+            "Usually means the chunk cache is empty and could not be restored.",
+            tenant,
+        )
 
 
 def retrieve(
@@ -249,7 +333,11 @@ def get_retriever(
         with _cache_lock:
             chunks = _chunks_cache.get(tenant)
 
+    if chunks is None and vector_store is not None:
+        chunks = _restore_chunks_from_store(vector_store, tenant)
+
     retriever = _base_manager.get_retriever(vector_store, chunks=chunks, k=k)
+    _report_bm25_state(retriever, tenant)
 
     with _cache_lock:
         if vector_store is not None:
