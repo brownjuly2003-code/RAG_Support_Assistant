@@ -121,6 +121,60 @@ def test_tenant_vector_store_uses_settings_chunk_defaults(
     assert chunks == split_documents
 
 
+def test_settings_env_fields_use_default_factory() -> None:
+    # F-13: env-driven Settings fields must read os.getenv lazily via
+    # default_factory. Import-time getenv snapshots the environment once at
+    # module import, so monkeypatch.setenv and later env changes are silently
+    # ignored (cost real debugging time — AGENT_STATE cont.15).
+    import ast
+    import inspect
+
+    import config.settings as settings_module
+
+    tree = ast.parse(inspect.getsource(settings_module))
+    settings_class = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "Settings"
+    )
+
+    offenders: list[str] = []
+    for stmt in settings_class.body:
+        if not isinstance(stmt, ast.AnnAssign) or stmt.value is None:
+            continue
+        lambda_nodes = [
+            sub for sub in ast.walk(stmt.value) if isinstance(sub, ast.Lambda)
+        ]
+        for sub in ast.walk(stmt.value):
+            if (
+                isinstance(sub, ast.Call)
+                and isinstance(sub.func, ast.Attribute)
+                and sub.func.attr == "getenv"
+            ):
+                in_lambda = any(
+                    any(sub is inner for inner in ast.walk(lam))
+                    for lam in lambda_nodes
+                )
+                if not in_lambda and isinstance(stmt.target, ast.Name):
+                    offenders.append(stmt.target.id)
+
+    assert offenders == []
+
+
+def test_settings_env_fields_react_to_env_after_import(monkeypatch) -> None:
+    from config.settings import Settings
+
+    monkeypatch.setenv("RAG_RERANKER_MODEL", "")
+    monkeypatch.setenv("QUALITY_THRESHOLD", "42")
+    monkeypatch.setenv("RAG_VECTOR_BACKEND", "QDRANT")
+
+    settings = Settings()
+
+    assert settings.reranker_model == ""
+    assert settings.quality_threshold == 42
+    assert settings.vector_backend == "qdrant"
+
+
 def test_build_retriever_uses_rrf_settings() -> None:
     doc = manager.Document(page_content="test content", metadata={})
     vector_store = MagicMock()

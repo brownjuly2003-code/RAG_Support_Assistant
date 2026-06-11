@@ -230,8 +230,12 @@ class Settings:
         default_factory=lambda: os.getenv("LLM_PROVIDER_PROFILE", "gracekelly-primary").strip()
         or "gracekelly-primary"
     )
-    ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    ollama_model_name: str = os.getenv("OLLAMA_MODEL_NAME", "qwen2.5:7b")
+    ollama_base_url: str = field(
+        default_factory=lambda: os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    )
+    ollama_model_name: str = field(
+        default_factory=lambda: os.getenv("OLLAMA_MODEL_NAME", "qwen2.5:7b")
+    )
     ollama_fast_model_name: str = field(
         default_factory=lambda: os.getenv(
             "OLLAMA_FAST_MODEL_NAME", "llama3.2:3b"
@@ -289,7 +293,9 @@ class Settings:
     # "BAAI/bge-m3"                           — лучший universal (100+ языков, 1024d, 570M)
     # "paraphrase-multilingual-MiniLM-L12-v2" — быстрый multilingual (50+ языков, 384d, 118M)
     # "all-MiniLM-L6-v2"                      — легковес (English-only, 384d, 22M)
-    embedding_model: str = os.getenv("RAG_EMBEDDING_MODEL", "BAAI/bge-m3")
+    embedding_model: str = field(
+        default_factory=lambda: os.getenv("RAG_EMBEDDING_MODEL", "BAAI/bge-m3")
+    )
 
     # --- Reranker (Cross-Encoder) ---
     # "BAAI/bge-reranker-v2-m3"               — multilingual (pairs с дефолтным BGE-M3); дефолт
@@ -297,28 +303,45 @@ class Settings:
     #                                           на RU-корпусе портит retrieval (Mac A/B: 100%→61%
     #                                           top-5 coverage, см. docs/operations/2026-05-30-mac-rag-retrieval-baseline.md)
     # ""                                      — отключить reranker
-    reranker_model: str = os.getenv("RAG_RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
+    reranker_model: str = field(
+        default_factory=lambda: os.getenv("RAG_RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
+    )
 
     # --- Inference device for embedder + reranker (SentenceTransformers) ---
     # "auto" — detect cuda → mps → cpu (safe fallback to cpu if torch is absent)
     # "cpu" / "cuda" / "cuda:0" / "mps" — force a specific device
     # Matters after the heavy multilingual bge-reranker-v2-m3 (568M): CPU rerank is slow.
-    rag_device: str = os.getenv("RAG_DEVICE", "auto")
+    rag_device: str = field(
+        default_factory=lambda: os.getenv("RAG_DEVICE", "auto")
+    )
 
     # --- Hybrid Search ---
     # Включить BM25 + vector hybrid search (Reciprocal Rank Fusion)
-    hybrid_search: bool = os.getenv("RAG_HYBRID_SEARCH", "true").strip().lower() in ("1", "true", "yes")
+    hybrid_search: bool = field(
+        default_factory=lambda: os.getenv("RAG_HYBRID_SEARCH", "true").strip().lower()
+        in ("1", "true", "yes")
+    )
     retrieval_strategy: str = field(
         default_factory=lambda: os.getenv("RAG_RETRIEVAL_STRATEGY", "hybrid").strip().lower()
         or "hybrid"
     )
 
     # Retrieval parameters
-    retrieval_top_k: int = int(os.getenv("RAG_RETRIEVAL_TOP_K", "20"))   # candidates before reranking
-    rerank_top_k: int = int(os.getenv("RAG_RERANK_TOP_K", "5"))          # final docs after reranking
-    rrf_k: int = int(os.getenv("RRF_K", "60"))
-    rrf_doc_key_chars: int = int(os.getenv("RRF_DOC_KEY_CHARS", "200"))
-    quality_threshold: int = int(os.getenv("QUALITY_THRESHOLD", "80"))
+    # candidates before reranking
+    retrieval_top_k: int = field(
+        default_factory=lambda: int(os.getenv("RAG_RETRIEVAL_TOP_K", "20"))
+    )
+    # final docs after reranking
+    rerank_top_k: int = field(
+        default_factory=lambda: int(os.getenv("RAG_RERANK_TOP_K", "5"))
+    )
+    rrf_k: int = field(default_factory=lambda: int(os.getenv("RRF_K", "60")))
+    rrf_doc_key_chars: int = field(
+        default_factory=lambda: int(os.getenv("RRF_DOC_KEY_CHARS", "200"))
+    )
+    quality_threshold: int = field(
+        default_factory=lambda: int(os.getenv("QUALITY_THRESHOLD", "80"))
+    )
     # 800/200 are MEASURED for this corpus, not arbitrary (Phase-0 co-occur gate,
     # docs/operations/2026-06-05-chunk-size-phase0-justification.md): cap=800 keeps
     # 98/100 curated kw-bundles within a single chunk; cap=1200/1600 recover exactly
@@ -327,18 +350,38 @@ class Settings:
     # (narrow sections losing context) is covered by parent-expansion (default ON).
     # Revisit only on corpus change or new "bundle split across chunks" MISS cases.
     # NOTE: graph_min_chunks below is calibrated for this chunk_size (~chars/800).
-    chunk_size: int = int(os.getenv("CHUNK_SIZE") or os.getenv("RAG_CHUNK_SIZE") or "800")
-    chunk_overlap: int = int(os.getenv("CHUNK_OVERLAP") or os.getenv("RAG_CHUNK_OVERLAP") or "200")
-    api_default_page_size: int = int(os.getenv("API_DEFAULT_PAGE_SIZE", "50"))
-    agent_max_tool_loops: int = int(os.getenv("AGENT_MAX_TOOL_LOOPS", "5"))
-    escalation_threshold: float = float(os.getenv("ESCALATION_THRESHOLD", "0.7"))
+    chunk_size: int = field(
+        default_factory=lambda: int(
+            os.getenv("CHUNK_SIZE") or os.getenv("RAG_CHUNK_SIZE") or "800"
+        )
+    )
+    chunk_overlap: int = field(
+        default_factory=lambda: int(
+            os.getenv("CHUNK_OVERLAP") or os.getenv("RAG_CHUNK_OVERLAP") or "200"
+        )
+    )
+    api_default_page_size: int = field(
+        default_factory=lambda: int(os.getenv("API_DEFAULT_PAGE_SIZE", "50"))
+    )
+    agent_max_tool_loops: int = field(
+        default_factory=lambda: int(os.getenv("AGENT_MAX_TOOL_LOOPS", "5"))
+    )
+    escalation_threshold: float = field(
+        default_factory=lambda: float(os.getenv("ESCALATION_THRESHOLD", "0.7"))
+    )
 
     # --- Level 2: Semantic Chunking ---
-    semantic_chunking: bool = os.getenv("RAG_SEMANTIC_CHUNKING", "true").strip().lower() in ("1", "true", "yes")
+    semantic_chunking: bool = field(
+        default_factory=lambda: os.getenv("RAG_SEMANTIC_CHUNKING", "true").strip().lower()
+        in ("1", "true", "yes")
+    )
     # --- Markdown-structural chunking (default ON since Phase 2 A/B 2026-06-05: split by markdown
     # headers, cap to chunk_size; production-stack validation showed top-5 coverage 82%->87%
     # (8 gains / 4 regressions, net +5), context_recall 0.855->0.905, faithfulness 0.875->0.909) ---
-    structural_chunking: bool = os.getenv("RAG_STRUCTURAL_CHUNKING", "true").strip().lower() in ("1", "true", "yes")
+    structural_chunking: bool = field(
+        default_factory=lambda: os.getenv("RAG_STRUCTURAL_CHUNKING", "true").strip().lower()
+        in ("1", "true", "yes")
+    )
     contextual_headers: bool = field(
         default_factory=lambda: os.getenv(
             "RAG_CONTEXTUAL_HEADERS", "true"
@@ -441,8 +484,12 @@ class Settings:
     )
 
     # --- Level 2: Self-RAG ---
-    self_rag_max_iterations: int = int(os.getenv("RAG_SELF_RAG_MAX_ITER", "2"))
-    self_rag_min_quality: int = int(os.getenv("RAG_SELF_RAG_MIN_QUALITY", "70"))
+    self_rag_max_iterations: int = field(
+        default_factory=lambda: int(os.getenv("RAG_SELF_RAG_MAX_ITER", "2"))
+    )
+    self_rag_min_quality: int = field(
+        default_factory=lambda: int(os.getenv("RAG_SELF_RAG_MIN_QUALITY", "70"))
+    )
     fact_verification_enabled: bool = field(
         default_factory=lambda: os.getenv(
             "FACT_VERIFICATION_ENABLED", "true"
@@ -515,8 +562,12 @@ class Settings:
         default_factory=lambda: int(os.getenv("CURATED_CASE_STALE_DAYS", "180"))
     )
 
-    slow_trace_threshold_ms: int = int(os.getenv("SLOW_TRACE_THRESHOLD_MS", "10000"))
-    threshold_analysis_min_labels: int = int(os.getenv("THRESHOLD_ANALYSIS_MIN_LABELS", "20"))
+    slow_trace_threshold_ms: int = field(
+        default_factory=lambda: int(os.getenv("SLOW_TRACE_THRESHOLD_MS", "10000"))
+    )
+    threshold_analysis_min_labels: int = field(
+        default_factory=lambda: int(os.getenv("THRESHOLD_ANALYSIS_MIN_LABELS", "20"))
+    )
     review_queue_enabled: bool = field(
         default_factory=lambda: os.getenv(
             "REVIEW_QUEUE_ENABLED", "true"
@@ -571,16 +622,24 @@ class Settings:
             "BACKLOG_EMAIL_ENABLED", "false"
         ).strip().lower() in ("1", "true", "yes")
     )
-    vector_backend: str = os.getenv("RAG_VECTOR_BACKEND", "chroma").strip().lower()
+    vector_backend: str = field(
+        default_factory=lambda: os.getenv("RAG_VECTOR_BACKEND", "chroma").strip().lower()
+    )
 
     # --- Куда слать эскалации (SupportSink) ---
     # "local" (LocalFileSupportSink) или "bitrix" (BitrixSupportSink)
-    support_sink_backend: str = os.getenv("SUPPORT_SINK_BACKEND", "local").strip().lower()
+    support_sink_backend: str = field(
+        default_factory=lambda: os.getenv("SUPPORT_SINK_BACKEND", "local").strip().lower()
+    )
 
     # Полный URL вебхука Bitrix24, например:
     # https://example.bitrix24.ru/rest/123/abcdefg123456/crm.timeline.comment.add.json
-    bitrix_webhook_url: Optional[str] = os.getenv("BITRIX_WEBHOOK_URL") or None
-    telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    bitrix_webhook_url: Optional[str] = field(
+        default_factory=lambda: os.getenv("BITRIX_WEBHOOK_URL") or None
+    )
+    telegram_bot_token: str = field(
+        default_factory=lambda: os.getenv("TELEGRAM_BOT_TOKEN", "")
+    )
     google_oidc_client_id: Optional[str] = field(
         default_factory=lambda: os.getenv("GOOGLE_OIDC_CLIENT_ID") or None
     )
@@ -702,32 +761,41 @@ class Settings:
     # --- Продакшн-режим ---
     # REQUIRE_OLLAMA=true → fail fast если Ollama недоступна при старте.
     # По умолчанию false; Ollama обязателен только для explicit local-first mode.
-    require_ollama: bool = os.getenv("REQUIRE_OLLAMA", "false").strip().lower() in ("1", "true", "yes")
-    circuit_breaker_enabled: bool = os.getenv(
-        "CIRCUIT_BREAKER_ENABLED", "true"
-    ).strip().lower() in ("1", "true", "yes")
-    circuit_breaker_failure_threshold: int = int(
-        os.getenv("CIRCUIT_BREAKER_FAILURE_THRESHOLD", "5")
+    require_ollama: bool = field(
+        default_factory=lambda: os.getenv("REQUIRE_OLLAMA", "false").strip().lower()
+        in ("1", "true", "yes")
     )
-    circuit_breaker_reset_timeout_sec: float = float(
-        os.getenv("CIRCUIT_BREAKER_RESET_TIMEOUT_SEC", "30")
+    circuit_breaker_enabled: bool = field(
+        default_factory=lambda: os.getenv(
+            "CIRCUIT_BREAKER_ENABLED", "true"
+        ).strip().lower() in ("1", "true", "yes")
     )
-    ollama_retry_max_attempts: int = int(
-        os.getenv("OLLAMA_RETRY_MAX_ATTEMPTS", "3")
+    circuit_breaker_failure_threshold: int = field(
+        default_factory=lambda: int(os.getenv("CIRCUIT_BREAKER_FAILURE_THRESHOLD", "5"))
     )
-    ollama_retry_base_delay_sec: float = float(
-        os.getenv("OLLAMA_RETRY_BASE_DELAY_SEC", "0.5")
+    circuit_breaker_reset_timeout_sec: float = field(
+        default_factory=lambda: float(os.getenv("CIRCUIT_BREAKER_RESET_TIMEOUT_SEC", "30"))
     )
-    ollama_retry_max_delay_sec: float = float(
-        os.getenv("OLLAMA_RETRY_MAX_DELAY_SEC", "5.0")
+    ollama_retry_max_attempts: int = field(
+        default_factory=lambda: int(os.getenv("OLLAMA_RETRY_MAX_ATTEMPTS", "3"))
     )
-    ollama_retry_jitter: bool = os.getenv(
-        "OLLAMA_RETRY_JITTER", "true"
-    ).strip().lower() in ("1", "true", "yes")
+    ollama_retry_base_delay_sec: float = field(
+        default_factory=lambda: float(os.getenv("OLLAMA_RETRY_BASE_DELAY_SEC", "0.5"))
+    )
+    ollama_retry_max_delay_sec: float = field(
+        default_factory=lambda: float(os.getenv("OLLAMA_RETRY_MAX_DELAY_SEC", "5.0"))
+    )
+    ollama_retry_jitter: bool = field(
+        default_factory=lambda: os.getenv(
+            "OLLAMA_RETRY_JITTER", "true"
+        ).strip().lower() in ("1", "true", "yes")
+    )
     ollama_request_timeout_sec: float = field(
         default_factory=lambda: float(os.getenv("OLLAMA_REQUEST_TIMEOUT_SEC", "60"))
     )
-    session_ttl_seconds: int = int(os.getenv("SESSION_TTL_SECONDS", "7200"))
+    session_ttl_seconds: int = field(
+        default_factory=lambda: int(os.getenv("SESSION_TTL_SECONDS", "7200"))
+    )
     trace_retention_days: int = field(
         default_factory=lambda: int(os.getenv("TRACE_RETENTION_DAYS", "90"))
     )
@@ -740,23 +808,31 @@ class Settings:
     audit_purge_interval_sec: int = field(
         default_factory=lambda: int(os.getenv("AUDIT_PURGE_INTERVAL_SEC", "86400"))
     )
-    request_timeout_sec: float = float(
-        os.getenv("REQUEST_TIMEOUT_SEC", "30")
+    request_timeout_sec: float = field(
+        default_factory=lambda: float(os.getenv("REQUEST_TIMEOUT_SEC", "30"))
     )
-    max_concurrent_pipelines: int = int(
-        os.getenv("MAX_CONCURRENT_PIPELINES", "8")
+    max_concurrent_pipelines: int = field(
+        default_factory=lambda: int(os.getenv("MAX_CONCURRENT_PIPELINES", "8"))
     )
-    pipeline_acquire_timeout_sec: float = float(
-        os.getenv("PIPELINE_ACQUIRE_TIMEOUT_SEC", "0.5")
+    pipeline_acquire_timeout_sec: float = field(
+        default_factory=lambda: float(os.getenv("PIPELINE_ACQUIRE_TIMEOUT_SEC", "0.5"))
     )
-    shutdown_ready_delay_sec: float = float(
-        os.getenv("SHUTDOWN_READY_DELAY_SEC", "5")
+    shutdown_ready_delay_sec: float = field(
+        default_factory=lambda: float(os.getenv("SHUTDOWN_READY_DELAY_SEC", "5"))
     )
-    api_key: str = os.getenv("API_KEY", "")
-    langfuse_public_key: str = os.getenv("LANGFUSE_PUBLIC_KEY", "")
-    langfuse_secret_key: str = os.getenv("LANGFUSE_SECRET_KEY", "")
-    langfuse_host: str = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
-    redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    api_key: str = field(default_factory=lambda: os.getenv("API_KEY", ""))
+    langfuse_public_key: str = field(
+        default_factory=lambda: os.getenv("LANGFUSE_PUBLIC_KEY", "")
+    )
+    langfuse_secret_key: str = field(
+        default_factory=lambda: os.getenv("LANGFUSE_SECRET_KEY", "")
+    )
+    langfuse_host: str = field(
+        default_factory=lambda: os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+    )
+    redis_url: str = field(
+        default_factory=lambda: os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    )
     db_encryption_key: SecretStr = field(
         default_factory=lambda: SecretStr(os.getenv("DB_ENCRYPTION_KEY", ""))
     )
