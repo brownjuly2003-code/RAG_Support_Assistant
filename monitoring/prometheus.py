@@ -28,14 +28,18 @@ __all__ = [
     "LLM_PROVIDER_FALLBACK_TOTAL",
     "LLM_CACHE_HITS",
     "LLM_CACHE_MISSES",
+    "MESSAGE_PERSIST_FAILURES",
     "OLLAMA_RETRY_EVENTS",
+    "ONLINE_EVALUATORS_DROPPED",
     "ONLINE_EVALUATOR_ERRORS_TOTAL",
     "ONLINE_EVALUATOR_RUNS_TOTAL",
     "ONLINE_EVALUATOR_SCORE",
     "PROMETHEUS_AVAILABLE",
     "PIPELINE_REJECTIONS",
     "QUALITY_SCORE",
+    "QUALITY_SCORE_SOURCE_TOTAL",
     "RATE_LIMIT_REJECTIONS",
+    "RETRIEVER_BM25_ENABLED",
     "REGRESSION_LAST_PASS_RATE",
     "REGRESSION_RUNS_DURATION",
     "REGRESSION_RUNS_TOTAL",
@@ -64,9 +68,12 @@ __all__ = [
     "record_db_pool_stats",
     "record_eval_drift",
     "record_circuit_breaker_change",
+    "record_message_persist_failure",
     "record_ollama_retry_event",
     "record_online_evaluator_error",
     "record_online_evaluator_run",
+    "record_online_evaluators_dropped",
+    "record_quality_score_source",
     "record_model_routing",
     "record_pipeline_rejection",
     "record_regression_run",
@@ -76,6 +83,7 @@ __all__ = [
     "set_review_queue_oldest_pending",
     "set_review_queue_pending",
     "set_regression_last_pass_rate",
+    "set_retriever_bm25_enabled",
     "record_stale_important_docs",
     "record_traces_purged",
 ]
@@ -159,6 +167,10 @@ except ImportError:
     EVAL_DRIFT = _NoopMetric()
     CURATED_DATASET_SIZE = _NoopMetric()
     CURATED_DATASET_LAST_BUILD_TIMESTAMP_SECONDS = _NoopMetric()
+    RETRIEVER_BM25_ENABLED = _NoopMetric()
+    QUALITY_SCORE_SOURCE_TOTAL = _NoopMetric()
+    MESSAGE_PERSIST_FAILURES = _NoopMetric()
+    ONLINE_EVALUATORS_DROPPED = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     REGISTRY = CollectorRegistry()
@@ -468,6 +480,36 @@ else:
         registry=REGISTRY,
     )
 
+    RETRIEVER_BM25_ENABLED = Gauge(
+        "rag_retriever_bm25_enabled",
+        "1 when the tenant retriever has an active BM25 index (hybrid search), "
+        "0 when it silently degraded to vector-only (e.g. chunks lost on restart)",
+        ["tenant"],
+        registry=REGISTRY,
+    )
+
+    QUALITY_SCORE_SOURCE_TOTAL = Counter(
+        "rag_quality_score_source_total",
+        "Answers by quality_score provenance: llm (self-eval), heuristic "
+        "(streaming length check), fixed (hardcoded agentic constants)",
+        ["source"],
+        registry=REGISTRY,
+    )
+
+    MESSAGE_PERSIST_FAILURES = Counter(
+        "rag_message_persist_failures_total",
+        "Conversation messages that failed to persist to Postgres (history gap)",
+        ["operation"],
+        registry=REGISTRY,
+    )
+
+    ONLINE_EVALUATORS_DROPPED = Counter(
+        "rag_online_evaluators_dropped_total",
+        "Online evaluator runs dropped before persisting (timeout or error)",
+        ["reason"],
+        registry=REGISTRY,
+    )
+
     for _reason in ("thumbs_down", "low_quality", "escalated", "fact_fail", "slow_trace", "manual"):
         REVIEW_QUEUE_PENDING_TOTAL.labels(reason=_reason).set(0)
     for _verdict in ("good", "bad"):
@@ -622,3 +664,19 @@ def set_curated_dataset_size(verdict: str, tenant: str, count: int) -> None:
 
 def set_curated_dataset_last_build_timestamp(timestamp: float) -> None:
     CURATED_DATASET_LAST_BUILD_TIMESTAMP_SECONDS.set(max(0.0, float(timestamp)))
+
+
+def set_retriever_bm25_enabled(tenant: str, enabled: bool) -> None:
+    RETRIEVER_BM25_ENABLED.labels(tenant=tenant or "default").set(1 if enabled else 0)
+
+
+def record_quality_score_source(source: str) -> None:
+    QUALITY_SCORE_SOURCE_TOTAL.labels(source=source or "unknown").inc()
+
+
+def record_message_persist_failure(operation: str) -> None:
+    MESSAGE_PERSIST_FAILURES.labels(operation=operation or "unknown").inc()
+
+
+def record_online_evaluators_dropped(reason: str) -> None:
+    ONLINE_EVALUATORS_DROPPED.labels(reason=reason or "unknown").inc()
