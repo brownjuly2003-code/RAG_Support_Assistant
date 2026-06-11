@@ -1,5 +1,9 @@
 # Project Closure Today
 
+> ⚠️ **УСТАРЕЛО (ранняя линия работ).** «Закрыто/запушено/backlog пуст» здесь НЕ
+> отражает текущее состояние. Актуальное состояние и следующий шаг — `AGENT_STATE.md`
+> (блок «START HERE» сверху). НЕ использовать для онбординга или решения «что дальше».
+
 ## Goal
 Close all currently open RAG Support Assistant questions today, including the GraceKelly/Mistral live validation lane, without leaving ambiguous "manual later" work.
 

@@ -1,5 +1,9 @@
 # Next Session: Current Backlog Handoff
 
+> ⚠️ **УСТАРЕЛО (ранняя линия работ).** «No backlog remains» здесь НЕ отражает текущее
+> состояние. Актуальный handoff — `next-session-fable-hardening.md`; общий старт —
+> `AGENT_STATE.md` («START HERE»). НЕ использовать для онбординга.
+
 ## Goal
 Continue from the merged Colab remote benchmark handoff. No non-live
 autopilot-safe product backlog remains; do not start GraceKelly, Docker,
