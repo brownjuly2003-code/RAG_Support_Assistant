@@ -1380,6 +1380,26 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error("Startup validation failed: %s", exc)
         raise SystemExit(1) from exc
 
+    # Single-worker / single-replica invariant: session history, pending
+    # confirm-actions, the LLM/retriever caches and the circuit breaker live in
+    # process memory and are not shared. Best-effort warning for the env-driven
+    # worker count (does not catch an explicit `uvicorn --workers N` flag). See
+    # README "Deployment topology".
+    import os  # noqa: PLC0415
+
+    try:
+        web_concurrency = int(os.environ.get("WEB_CONCURRENCY", "1"))
+    except ValueError:
+        web_concurrency = 1
+    if web_concurrency > 1:
+        logger.warning(
+            "WEB_CONCURRENCY=%d but this app keeps session/confirm-action state "
+            "in process memory and must run with a single worker/replica; "
+            "multi-worker breaks confirm-action and session continuity until "
+            "that state is externalised (Redis/Postgres).",
+            web_concurrency,
+        )
+
     await asyncio.get_running_loop().run_in_executor(None, _run_alembic_upgrade)
 
     try:

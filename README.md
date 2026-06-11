@@ -969,6 +969,28 @@ git and back it up separately from database backups.
 
 ## Deployment and Migrations
 
+### Deployment topology
+
+**Run exactly one worker and one replica.** Session history, pending
+confirm-actions (the human-approval step for irreversible actions such as
+`create_ticket`), the LLM/retriever/store caches, the regression-job registry
+and the circuit breaker all live in process memory and are **not** shared across
+workers or replicas. With more than one process:
+
+- a confirm-action started on process A is invisible to process B, so the user
+  is re-prompted forever and the action never completes;
+- session continuity and in-memory caches diverge per process;
+- queued regression jobs can appear stuck.
+
+The SQLite trace DB uses WAL + `busy_timeout` and tolerates concurrent access,
+but that does **not** make the application multi-worker safe. Defaults reflect
+the invariant: `Dockerfile` runs `--workers 1`, and the Helm chart ships
+`replicaCount: 1` with `autoscaling.enabled: false`. A startup warning fires
+when `WEB_CONCURRENCY > 1` (best-effort; it does not catch an explicit
+`uvicorn --workers N` flag). Scaling out requires first externalising session
+state and pending confirm-actions to Redis/Postgres (the `Message`/`Session`
+models exist; `pending_action` and server-side history do not yet).
+
 Deployment artifacts added in arc `102-122` include:
 
 - `deploy/helm/templates/cronjob.yaml` for nightly eval and KB-gap jobs

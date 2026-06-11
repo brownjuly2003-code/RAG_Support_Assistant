@@ -119,8 +119,12 @@ def _get_connection():
     """Контекстный менеджер для подключения к SQLite.
 
     Каждый вызов открывает новое соединение и гарантированно его закрывает.
-    WAL + busy_timeout позволяют корректно работать в multi-worker сценарии
-    (uvicorn --workers 2): несколько reader'ов и один writer без блокировок.
+    WAL + busy_timeout делают ЭТУ SQLite-трейс-БД устойчивой к конкурентному
+    доступу (несколько reader'ов + один writer без блокировок). Это НЕ значит,
+    что приложение поддерживает >1 worker/replica: session history, pending
+    confirm-actions, LLM/retriever-кэши и circuit breaker живут в памяти
+    процесса и не шарятся. Инвариант «1 worker / 1 replica» — см. README
+    "Deployment topology".
     """
     db_path = _get_db_path()
     conn = sqlite3.connect(db_path)

@@ -1,4 +1,9 @@
-replicaCount: 2
+# Single replica by design. Session history, pending confirm-actions, the
+# LLM/retriever caches and the circuit breaker are in-process and NOT shared
+# across replicas/workers, so >1 replica breaks confirm-action flows and
+# session continuity. Do NOT raise this (and keep autoscaling disabled) until
+# that state moves to Redis/Postgres. See README "Deployment topology".
+replicaCount: 1
 
 image:
   repository: rag-support-assistant
@@ -28,10 +33,12 @@ resources:
     cpu: 2000m
     memory: 4Gi
 
+# Disabled until session/confirm-action state is externalised (see replicaCount
+# note). The HPA would otherwise scale to multiple in-process-state replicas.
 autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 8
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
   targetCPUUtilizationPercentage: 70
 
 # Public, non-sensitive env. Goes into ConfigMap, visible via `kubectl get configmap`.
