@@ -1,7 +1,7 @@
 # Free R7 baseline — retrieval quality measured, LLM-judged metrics blocked (no budget)
 
 - Дата: 2026-06-03
-- Цель: измерить качество RAG (audit `audit_claude_03_06_26.md` §11 #0, R7) **бесплатно**, без платных API и без heavy-железа.
+- Цель: измерить качество RAG (audit `docs/audits/audit_claude_03_06_26.md` §11 #0, R7) **бесплатно**, без платных API и без heavy-железа.
 - Корпус/датасет: aircargo, 100 RU curated-кейсов (`evaluation/curated_cases_aircargo.jsonl`).
 - Контексты: **закэшированы** на iMac (`/tmp/ab_candidates.json`, скопированы в `.tmp/`) —
   per-case RRF top-5 кандидаты (fixed 800/200 чанкинг, БЕЗ production-реранка bge-reranker-v2-m3,

@@ -3,7 +3,7 @@
 **HEAD:** `8e4cab2` (master, после docs commit)
 **Pinned snapshot:** числа в этом файле зафиксированы на момент `8e4cab2`. Если в репо новые коммиты после `8e4cab2` — `git log ff7948f..HEAD` покажет реальный список.
 **Стартовый baseline:** `ff7948f`
-**Аудиторы:** Codex CLI (`audit_codex_27_04_26`) + Claude Opus 4.7 (`audit_opus_27_04_26.md`)
+**Аудиторы:** Codex CLI (`docs/audits/audit_codex_27_04_26`) + Claude Opus 4.7 (`docs/audits/audit_opus_27_04_26.md`)
 **Реализатор:** Claude Opus 4.7 (1M context)
 **12 коммитов** между `ff7948f..8e4cab2` (11 hardening + 1 docs).
 
@@ -105,4 +105,4 @@ python -c "from api.app import app as a; import main as m; print(a is m.app, len
 
 ## Audit baseline
 
-`audit_codex_27_04_26` и `audit_opus_27_04_26.md` остаются в репо как **исторический snapshot** baseline `ff7948f` (frozen-in-time). Не редактировать. Следующая сессия может перегенерировать аудит на текущий HEAD при необходимости.
+`docs/audits/audit_codex_27_04_26` и `docs/audits/audit_opus_27_04_26.md` остаются в репо как **исторический snapshot** baseline `ff7948f` (frozen-in-time). Не редактировать. Следующая сессия может перегенерировать аудит на текущий HEAD при необходимости.

@@ -177,7 +177,7 @@ def test_precommit_repo_wide_hooks_skip_tracked_legacy_outputs() -> None:
     excluded_paths = {
         "trailing-whitespace": [
             "archive-legacy/rag_poc_architecture.md",
-            "audit_opus_27_04_26.md",
+            "docs/audits/audit_opus_27_04_26.md",
         ],
         "end-of-file-fixer": [
             "archive-legacy/prompt_for_github.md",

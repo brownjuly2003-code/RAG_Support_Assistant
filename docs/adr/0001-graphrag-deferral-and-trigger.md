@@ -2,7 +2,7 @@
 
 - Статус: Accepted (defer-with-seam)
 - Дата: 2026-05-30
-- Контекст-аудиты: `audit_claude_30_05_26.md` (§3.1 — GraphRAG отсутствует, обоснованно отложен), `docs/research/rag-landscape-2026.md` (§2 — GraphRAG «для корпусного понимания»)
+- Контекст-аудиты: `docs/audits/audit_claude_30_05_26.md` (§3.1 — GraphRAG отсутствует, обоснованно отложен), `docs/research/rag-landscape-2026.md` (§2 — GraphRAG «для корпусного понимания»)
 - Связано: демо-корпус `data/uploads/aircargo/` (201 док, ~7K чанков), `docs/plans/2026-05-30-demo-corpus-and-rag-grounding.md`
 
 ## Контекст

@@ -8,7 +8,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 def _active_markdown_docs() -> list[Path]:
     return [
         PROJECT_ROOT / "README.md",
-        PROJECT_ROOT / "next-session-3-subagents.md",
         *(PROJECT_ROOT / "docs").rglob("*.md"),
         *(PROJECT_ROOT / "codex-tasks").glob("*.md"),
     ]
@@ -74,9 +73,9 @@ def test_backlog_parallel_prompt_does_not_reopen_closed_mock_guardrails() -> Non
 
 
 def test_next_session_handoff_points_at_live_batch_n_decision_only() -> None:
-    content = (PROJECT_ROOT / "next-session-3-subagents.md").read_text(
-        encoding="utf-8"
-    )
+    content = (
+        PROJECT_ROOT / "docs" / "sessions" / "next-session-3-subagents.md"
+    ).read_text(encoding="utf-8")
 
     assert "Live Batch N benchmark decision" in content
     assert "A11y/performance verification" not in content.split("## Remaining Work", 1)[1]
@@ -140,7 +139,7 @@ def test_live_gracekelly_docs_require_explicit_user_opt_in() -> None:
 def test_top_level_backlog_notes_are_historical_pointers() -> None:
     backlog = (PROJECT_ROOT / "BACKLOG.md").read_text(encoding="utf-8")
     non_live_backlog = (
-        PROJECT_ROOT / "2026-05-02-non-live-backlog.md"
+        PROJECT_ROOT / "docs" / "sessions" / "2026-05-02-non-live-backlog.md"
     ).read_text(encoding="utf-8")
     historical_notes = {
         "BACKLOG.md": backlog.split("## Historical Safe Tasks", 1)[1].split(

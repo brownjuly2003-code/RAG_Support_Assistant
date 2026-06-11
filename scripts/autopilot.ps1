@@ -460,7 +460,7 @@ function Test-DocsOnlyChange {
         if ($path -eq "tests/test_docs_quality.py" -or $path -eq "tests/test_quickstart_docs.py") {
             continue
         }
-        if ($path -eq "BACKLOG.md" -or $path -eq "2026-05-02-non-live-backlog.md") {
+        if ($path -eq "BACKLOG.md") {
             continue
         }
         if ($path.StartsWith("docs/") -and $path.EndsWith(".md")) {
@@ -693,9 +693,9 @@ function Invoke-LocalBacklogGuardTask {
 
 def test_top_level_backlog_notes_are_historical() -> None:
     backlog = (PROJECT_ROOT / "BACKLOG.md").read_text(encoding="utf-8")
-    non_live = (PROJECT_ROOT / "2026-05-02-non-live-backlog.md").read_text(
-        encoding="utf-8"
-    )
+    non_live = (
+        PROJECT_ROOT / "docs" / "sessions" / "2026-05-02-non-live-backlog.md"
+    ).read_text(encoding="utf-8")
 
     assert "Historical safe-task snapshot" in backlog
     assert "Historical completion note" in non_live

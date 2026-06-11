@@ -10,7 +10,7 @@
 > opt-in only, and is not an active local backlog item.
 > 2026-05-30 branch note: Colab remote benchmark setup is merged to `master`
 > through PR #1 at `415d4c8`; current state is in `AGENT_STATE.md` and
-> `next-session-3-subagents.md`. Master CI and Pages deploy passed. No
+> `docs/sessions/next-session-3-subagents.md`. Master CI and Pages deploy passed. No
 > additional local backlog item is open.
 > 2026-05-30 live opt-in note: commit `7b0d9ee` closed a runtime quality
 > blocker by failing closed on incompatible Chroma embedding dimensions. A

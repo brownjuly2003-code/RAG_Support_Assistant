@@ -2,7 +2,7 @@
 
 - Дата: 2026-05-30
 - Автор: Claude (Opus 4.8)
-- Опирается на: `audit_claude_30_05_26.md` (R1–R7), `audit_codex_30_05_26.md`,
+- Опирается на: `docs/audits/audit_claude_30_05_26.md` (R1–R7), `docs/audits/audit_codex_30_05_26.md`,
   `docs/research/rag-landscape-2026.md`, ADR `docs/adr/0001-graphrag-deferral-and-trigger.md`
 - Жёсткое ограничение среды: на Windows-ноуте и Mac **нельзя запускать процессы > ~1 ГБ RAM**.
   Любой шаг с эмбеддером (BGE-M3 ~2.3 ГБ), реранкером, Docker, RAGAS — **только Colab/remote**.

@@ -188,7 +188,7 @@ Focus suite (17 файлов, 85 тестов) — pass. cxkm review CLEAR (CX 2
 
 ### Контекст
 
-После закрытия task-177/178/179 проведён глубокий аудит проекта (Claude Opus 4.7 1M context). Результат — `audit_opus_2026-04-26.md` с прогрессивной самооценкой 7.8/10 для local / 6.9/10 для commercial. По roadmap-у аудита выполнены 4 итерации hardening работы (22 задачи, 18 — production fixes + 4 — docs).
+После закрытия task-177/178/179 проведён глубокий аудит проекта (Claude Opus 4.7 1M context). Результат — `docs/audits/audit_opus_2026-04-26.md` с прогрессивной самооценкой 7.8/10 для local / 6.9/10 для commercial. По roadmap-у аудита выполнены 4 итерации hardening работы (22 задачи, 18 — production fixes + 4 — docs).
 
 ### Что сделано
 
@@ -237,7 +237,7 @@ Focus suite (17 файлов, 85 тестов) — pass. cxkm review CLEAR (CX 2
 - 64 endpoints вынесены из 5288-LOC монолита, `api/app.py` теперь 2128 LOC.
 
 **Documentation (Phase 5):**
-- `audit_opus_2026-04-26.md` — секция 12 «Implementation log» с полной таблицей 22 задач, метриками до/после, обновлённой самооценкой (8.7/10 local, 7.7/10 commercial).
+- `docs/audits/audit_opus_2026-04-26.md` — секция 12 «Implementation log» с полной таблицей 22 задач, метриками до/после, обновлённой самооценкой (8.7/10 local, 7.7/10 commercial).
 - `docs/SESSION-NOTES-2026-04-26-audit.md` — handover для новой сессии.
 - `DEPRECATIONS.md` — обновлены секции «Done», «Next splits», «Type-checking debt», «Pattern для split sub-router-ов».
 
@@ -254,7 +254,7 @@ Focus suite (17 файлов, 85 тестов) — pass. cxkm review CLEAR (CX 2
 - ✅ Operability: auto-migrate, SQLite WAL, корректный host default.
 - ✅ Code hygiene: 0 TODO/FIXME, 0 deprecation shims в корне, mypy strict для auth/db core.
 - ✅ Architecture: 64 endpoints в sub-router модулях, паттерн доказан.
-- 📋 Карта остатков — в `audit_opus_2026-04-26.md` секции 12.5 + `DEPRECATIONS.md`.
+- 📋 Карта остатков — в `docs/audits/audit_opus_2026-04-26.md` секции 12.5 + `DEPRECATIONS.md`.
 
 ---
 

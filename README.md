@@ -77,7 +77,7 @@ User / Email / Widget
 - `scripts/` — operational CLIs (regression eval, KB builders, chunking eval, nightly tasks).
 
 > For a complete audit and an implementation log of recent hardening work,
-> see `audit_opus_2026-04-26.md` (especially section 12) and
+> see `docs/audits/audit_opus_2026-04-26.md` (especially section 12) and
 > `DEPRECATIONS.md`. Quick handover for new sessions:
 > `docs/SESSION-NOTES-2026-04-26-audit.md`.
 

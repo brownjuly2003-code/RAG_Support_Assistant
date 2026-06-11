@@ -86,9 +86,9 @@ default off) должен их восстановить. Проверено те
 
 Сопутствующе (обе нарезки): в логе ingest массовый `Contextual header exceeded chunk_size;
 truncating chunk` — статичный doc-header длиннее `chunk_size=800`, чанк режется. По аудиту
-`audit_claude_03_06_26.md` §10 это **качественный долг, не баг** (отложено), а не приоритетный фикс.
+`docs/audits/audit_claude_03_06_26.md` §10 это **качественный долг, не баг** (отложено), а не приоритетный фикс.
 
-## Дальше (по `audit_claude_03_06_26.md` §11, не вкатывать вслепую)
+## Дальше (по `docs/audits/audit_claude_03_06_26.md` §11, не вкатывать вслепую)
 
 1. ~~Full-corpus reranker A/B~~ — **СДЕЛАНО**, дефолт `bge-reranker-v2-m3` подтверждён (80% > 74% OFF > 42% англ.).
 2. ~~chunk-size / structural A/B~~ — **СДЕЛАНО**, recall-нейтрально, дефолт не меняем.

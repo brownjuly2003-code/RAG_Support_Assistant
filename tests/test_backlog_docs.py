@@ -15,7 +15,9 @@ def test_active_backlog_prompts_do_not_target_closed_agent_copilot_lane() -> Non
 
 
 def test_next_session_plan_avoids_closed_streaming_helm_and_a11y_lanes() -> None:
-    content = (PROJECT_ROOT / "next-session-3-subagents.md").read_text(encoding="utf-8")
+    content = (
+        PROJECT_ROOT / "docs" / "sessions" / "next-session-3-subagents.md"
+    ).read_text(encoding="utf-8")
 
     assert "streaming parity" not in content
     assert "Helm secret split" not in content
