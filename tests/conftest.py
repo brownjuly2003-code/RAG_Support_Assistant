@@ -195,6 +195,29 @@ def _reset_api_state():
 
 
 @pytest.fixture(autouse=True)
+def _reset_provider_runtime_caches():
+    # F-4 caches are keyed by providers.yml mtime / object ids; without a reset
+    # a runtime built for one test's settings leaks into the next test.
+    def _clear() -> None:
+        try:
+            from llm.providers.runtime import clear_provider_runtime_cache
+
+            clear_provider_runtime_cache()
+        except ImportError:
+            pass
+        try:
+            from agent.graph import clear_support_graph_cache
+
+            clear_support_graph_cache()
+        except ImportError:
+            pass
+
+    _clear()
+    yield
+    _clear()
+
+
+@pytest.fixture(autouse=True)
 def _reset_rate_limiter():
     limiter_storage = getattr(api_app.app.state.limiter, "_storage", None)
     if limiter_storage is not None and hasattr(limiter_storage, "reset"):

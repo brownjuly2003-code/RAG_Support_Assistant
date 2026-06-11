@@ -15,7 +15,9 @@ import inspect
 import json
 import logging
 import re
+import threading
 import time
+from collections import OrderedDict
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Literal, Optional, Protocol, cast
 
@@ -1784,6 +1786,25 @@ def _route_after_generate(state: GraphState) -> str:
 # ---------------------------------------------------------------------------
 
 
+# Compiled-graph cache (F-4): run_qa_pipeline used to rebuild and recompile the
+# StateGraph on every request. Cached only for the provider-runtime path, where
+# the runtime cache pins fast/strong instances: the cache value holds strong
+# references to retriever/llm objects, so the id()-based key cannot be reused
+# by a new object while its entry is alive (CPython ids are addresses).
+# Compiled LangGraph graphs carry no per-invoke state — state goes into
+# invoke() — so sharing one graph across to_thread workers is safe.
+_GRAPH_CACHE: OrderedDict[tuple[int, int, int, int, int], tuple[Any, tuple[Any, ...]]] = (
+    OrderedDict()
+)
+_GRAPH_CACHE_LOCK = threading.Lock()
+_GRAPH_CACHE_MAX = 16
+
+
+def clear_support_graph_cache() -> None:
+    with _GRAPH_CACHE_LOCK:
+        _GRAPH_CACHE.clear()
+
+
 def build_support_graph(
     retriever: Any,
     llm: SupportsInvoke | None = None,
@@ -1806,12 +1827,27 @@ def build_support_graph(
 
     llm_fast: SupportsInvoke
     llm_strong: SupportsInvoke
+    graph_cache_key: tuple[int, int, int, int, int] | None = None
     if llm is None:
         if build_provider_runtime is not None:
             runtime = build_provider_runtime(settings)
             llm_fast = runtime.fast
             llm_strong = runtime.strong
+            graph_cache_key = (
+                id(retriever),
+                id(llm_fast),
+                id(llm_strong),
+                int(min_quality),
+                int(max_iterations),
+            )
+            with _GRAPH_CACHE_LOCK:
+                cached = _GRAPH_CACHE.get(graph_cache_key)
+                if cached is not None:
+                    _GRAPH_CACHE.move_to_end(graph_cache_key)
+                    return cached[0]
         else:
+            # Per-call LocalOllamaLLM instances have no stable identity — do
+            # not cache a graph keyed on their ids.
             llm_strong = LocalOllamaLLM(model_name=settings.ollama_model_name)
             if getattr(settings, "model_routing_enabled", False):
                 llm_fast = LocalOllamaLLM(model_name=settings.ollama_fast_model_name)
@@ -1888,7 +1924,17 @@ def build_support_graph(
     workflow.add_edge("suggest_questions", "log")
     workflow.add_edge("log", END)
 
-    return workflow.compile()
+    compiled = workflow.compile()
+    if graph_cache_key is not None:
+        with _GRAPH_CACHE_LOCK:
+            # refs pin retriever/llm ids for the lifetime of the entry (see
+            # cache comment above); LRU cap bounds stale entries after a
+            # provider-runtime invalidation.
+            _GRAPH_CACHE[graph_cache_key] = (compiled, (retriever, llm_fast, llm_strong))
+            _GRAPH_CACHE.move_to_end(graph_cache_key)
+            while len(_GRAPH_CACHE) > _GRAPH_CACHE_MAX:
+                _GRAPH_CACHE.popitem(last=False)
+    return compiled
 
 
 # ---------------------------------------------------------------------------

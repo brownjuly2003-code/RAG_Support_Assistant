@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -251,14 +252,62 @@ def _enforce_daily_cost_limit(settings: Any, registry: Any, profile_name: str) -
         )
 
 
+# Runtime cache (F-4): providers.yml reload + provider instantiation happened
+# on EVERY /api/ask. Keyed by (resolved registry path, profile, registry file
+# mtime) so editing providers.yml invalidates naturally. The cache holds strong
+# references to the fast/strong ProviderBackedLLM instances — the compiled-graph
+# cache in agent/graph.py keys on their id()s and relies on them staying alive.
+_RUNTIME_CACHE: dict[tuple[str, str, int], tuple[Any, ProviderRuntime]] = {}
+_RUNTIME_CACHE_LOCK = threading.Lock()
+
+
+def clear_provider_runtime_cache() -> None:
+    with _RUNTIME_CACHE_LOCK:
+        _RUNTIME_CACHE.clear()
+
+
+def _runtime_cache_key(settings: Any, profile_name: str) -> tuple[str, str, int] | None:
+    try:
+        registry_path = Path(settings.provider_registry_path)
+        mtime_ns = registry_path.stat().st_mtime_ns
+        return (str(registry_path.resolve()), profile_name, mtime_ns)
+    except OSError:
+        return None
+
+
 def build_provider_runtime(settings: Any) -> ProviderRuntime:
-    registry = load_provider_registry(settings.provider_registry_path)
     profile_name = _active_profile_name(settings)
+    cache_key = _runtime_cache_key(settings, profile_name)
+
+    if cache_key is not None:
+        with _RUNTIME_CACHE_LOCK:
+            cached = _RUNTIME_CACHE.get(cache_key)
+        if cached is not None:
+            registry, runtime = cached
+            # Money-safety (F-4 trap #2): the daily spend cap is a per-request
+            # SQLite check and must run on every call, cache hit or not.
+            _enforce_daily_cost_limit(settings, registry, profile_name)
+            return runtime
+
+    registry = load_provider_registry(settings.provider_registry_path)
     _enforce_daily_cost_limit(settings, registry, profile_name)
     profile = registry.get_profile(profile_name)
     fallback_target = _load_profile_fallback(settings, profile_name)
-    return ProviderRuntime(
+    runtime = ProviderRuntime(
         profile_name=profile_name,
         fast=_build_provider(settings, profile_name, profile.fast.provider, profile.fast.model, fallback_target),
         strong=_build_provider(settings, profile_name, profile.strong.provider, profile.strong.model, fallback_target),
     )
+    if cache_key is not None:
+        with _RUNTIME_CACHE_LOCK:
+            # Drop entries for the same registry+profile with an older mtime so
+            # repeated config edits do not accumulate dead runtimes.
+            stale = [
+                key
+                for key in _RUNTIME_CACHE
+                if key[0] == cache_key[0] and key[1] == cache_key[1] and key != cache_key
+            ]
+            for key in stale:
+                del _RUNTIME_CACHE[key]
+            runtime = _RUNTIME_CACHE.setdefault(cache_key, (registry, runtime))[1]
+    return runtime

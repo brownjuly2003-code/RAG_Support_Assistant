@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import threading
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
@@ -253,7 +254,19 @@ class ProviderBackedLLM:
         self._fallback_cache_activate = fallback_cache_activate
         self._fallback_cache_ttl_sec = fallback_cache_ttl_sec
         self._on_fallback = on_fallback
-        self.last_response: LLMResponse | None = None
+        # Thread-local: a ProviderBackedLLM instance is shared across the
+        # asyncio.to_thread workers once the provider runtime is cached (F-4);
+        # usage/cost attribution reads last_response right after each invoke
+        # and must not see another request's response.
+        self._last_response_local = threading.local()
+
+    @property
+    def last_response(self) -> LLMResponse | None:
+        return getattr(self._last_response_local, "value", None)
+
+    @last_response.setter
+    def last_response(self, value: LLMResponse | None) -> None:
+        self._last_response_local.value = value
 
     @property
     def supports_tool_use(self) -> bool:
