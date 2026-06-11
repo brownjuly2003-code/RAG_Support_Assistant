@@ -1,12 +1,23 @@
 # Agent State
 
+## 2026-06-11 Update (Fable hardening, сессия 3) — fable_com.md ЗАКРЫТ ПОЛНОСТЬЮ: гигиен-спринт F-13/F-15/F-16 + F-4 (все 4 ловушки); push GATED
+
+> **START HERE.** Аудит `fable_com.md` (18 findings) закрыт целиком — открытых пунктов плана §5 НЕТ. Эта сессия: гигиен-спринт §5 п.8 (F-13/F-15/F-16), сопутствующий фикс F-3-регрессии и F-4 по спеке. Push НЕ делался (GATED, master ahead origin на 21 коммит — точный счёт `git log --oneline origin/master..`).
+>
+> **Актуальный детальный handoff — `next-session-fable-hardening.md` (блок «SESSION 3» сверху).** Stale-файлы прежних линий теперь в `docs/sessions/` и `docs/audits/` — при онбординге игнорировать.
+>
+> **Следующий заход:** бэклог Fable-hardening пуст. Кандидаты (НЕ блокеры): push 21 коммита (GATED, спрашивать явно); F-14-остаток (`_base_manager._project_root` двойник пути + warm-cache без ключа по модели) — LOW, по желанию.
+
+1. **F-13 (`ebf50a6`)**: все ~44 import-time `os.getenv`-поля Settings → `default_factory`; ast-guard `test_settings_env_fields_use_default_factory` + поведенческий тест setenv-после-импорта. Settings-suites **79 passed**, mypy/ruff clean. Гоча cont.15 (monkeypatch.setenv бессилен) больше не воспроизводится.
+2. **F-15 (`1e0384f`)**: per-request `inspect.signature` убран из `/api/ask`, `/ask/stream`, `_get_or_create_session`, rebuild-путей `api/app.py`. Контракты зафиксированы: `_get_or_create_session(session_id, tenant_id)` await напрямую; `session.ask` всегда получает `trace_id/tenant_id/confirm/user_id/session_id`; `get_retriever`/`build_vector_store` — с `tenant_id`. 18 файлов тестов приведены к реальным сигнатурам (async-фейки + `**kwargs`).
+3. **Фикс F-3-регрессии (`6326fdc`)**: стрим-self-eval ставил `quality_source="llm"` даже когда LLM не вернул число и скор упал на эвристику — llm-провенанс поднимал порог route с 70 до `quality_threshold` → route=human, suggested_questions пропадали (ловил integration test, фейл был и ДО F-15 — проверено stash-прогоном). Теперь "llm" только при реально распарсенном числе.
+4. **F-16 (`09a81ce`)**: 8 audit-файлов → `docs/audits/`; stale session-файлы → `docs/sessions/`; история AGENT_STATE 2026-06-02..06-05 (cont.2–16) → `docs/sessions/agent-state-archive-2026-06-02-to-06-05.md` (1184→659 строк); PNG-скриншоты и `.coverage` удалены; все ссылки/pre-commit regex/autopilot allowed-paths/docs-guard тесты обновлены (40 passed).
+5. **F-4 (`63a3ee4`)**: кэш provider runtime (ключ = resolved registry path + profile + mtime providers.yml) + кэш compiled graph (id-ключи, пришпиленные strong-ссылками, LRU 16). Все 4 ловушки спеки закрыты: `last_response` → `threading.local`; **`_enforce_daily_cost_limit` гоняется на КАЖДЫЙ вызов, включая cache hit** (тест-пин); id-reuse исключён strong-refs; провайдеры аудированы (per-call HTTP). `tests/test_provider_runtime_cache.py` **6/6**; autouse-фикстура conftest чистит оба кэша между тестами. Acceptance: provider/routing/online-eval/graph/failover/streaming **82 + 25 passed**.
+6. **Push — GATED, спрашивать явно.** Полный suite на этой машине только с `RAG_RERANKER_MODEL=""` (гоча cont.14 в силе).
+
 ## 2026-06-11 Update (Fable hardening, сессия 2) — аудит fable_com.md разрешён §5 пп.1-7 + гигиена #11; F-4 → спека; push GATED
 
-> **START HERE.** Аудит `fable_com.md` (18 findings) разрешён: §5 пп.1-6 (батч) + п.7 (multi-worker) сделаны и закоммичены локально; F-4 (п.5→оптимизация) вынесен в спеку Codex. Открытый остаток — гигиен-спринт §5 п.8 (F-13/F-15/F-16). Push НЕ делался (GATED).
->
-> **Актуальный детальный handoff — `next-session-fable-hardening.md` (блок «SESSION 2» сверху).** Файлы `docs/sessions/next-session-3-subagents.md`, `docs/sessions/project-closure-today.md`, `docs/sessions/2026-05-02-non-live-backlog.md`, `docs/sessions/rec.md`, `audit_*` — УСТАРЕЛИ для текущей линии работ, игнорировать при онбординге.
->
-> **Следующий заход — на выбор:** (a) F-4 по `codex-tasks/task-F4-cache-runtime-graph.md` (через Codex или аккуратно вручную с concurrency+cost-limit тестами); (b) гигиен-спринт F-13 (settings→default_factory), F-15 (убрать `inspect.signature` из hot path), F-16 (реорг audit/session-файлов корня).
+> Аудит `fable_com.md` (18 findings) разрешён: §5 пп.1-6 (батч) + п.7 (multi-worker) сделаны и закоммичены локально; F-4 (п.5→оптимизация) вынесен в спеку Codex. Открытый остаток — гигиен-спринт §5 п.8 (F-13/F-15/F-16) — закрыт сессией 3 выше. Push НЕ делался (GATED).
 
 **master ahead of origin на ~12 коммитов (`2ee78a8..` + предыдущий `55f1a42`; НЕ запушено — точный HEAD см. `git log --oneline`). Working tree чисто, кроме чужих untracked (`docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py`) — не трогать.**
 

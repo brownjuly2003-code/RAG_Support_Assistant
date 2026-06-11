@@ -1,5 +1,24 @@
 # Next Session: Fable hardening — продолжение (план)
 
+## SESSION 3 (2026-06-11) — fable_com.md ЗАКРЫТ ПОЛНОСТЬЮ ✅
+
+Гигиен-спринт §5 п.8 + F-4. Бэклог Fable-hardening пуст. 5 локальных коммитов
+(push GATED, по явному запросу):
+
+| Commit | Содержимое |
+|---|---|
+| `ebf50a6` | F-13: все env-поля Settings → `default_factory` + ast-guard + тест setenv-после-импорта |
+| `1e0384f` | F-15: `inspect.signature` убран из hot path; контракты зафиксированы; 18 тест-файлов → реальные сигнатуры |
+| `6326fdc` | фикс F-3-регрессии: `quality_source="llm"` только при реально распарсенном скоре (фейл был и до F-15) |
+| `09a81ce` | F-16: audits → `docs/audits/`, sessions → `docs/sessions/`, AGENT_STATE 1184→659 строк, ссылки/regex/guards обновлены |
+| `63a3ee4` | F-4: кэш runtime (profile+mtime) + compiled graph (id+strong refs, LRU 16); все 4 ловушки; `test_provider_runtime_cache.py` 6/6 |
+
+Верификация: settings 79 · docs/autopilot 40 · F-4 acceptance 82 + streaming/integration 25 — все passed; ruff/mypy/py_compile clean. Гочи: `RAG_RERANKER_MODEL=""` для full suite (cont.14); `| tail` маскирует exit code pytest.
+
+**Остаток (НЕ блокеры):** push 21 коммита (GATED); F-14-хвост — `_base_manager._project_root()` пишет «невидимый» стор в `vectordb/data/`, warm-cache `get_embeddings/get_reranker` не ключуется по имени модели (LOW).
+
+---
+
 ## SESSION 2 (2026-06-11) — батч §1-6 закоммичен, F-5/F-18 доделаны ✅
 
 Готовый батч верифицирован на этой машине и закоммичен **7 локальными коммитами на `master`** (НЕ запушено — push по явному запросу Юли):

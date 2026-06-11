@@ -1,5 +1,9 @@
 # Task F-4 — Cache provider runtime + compiled LangGraph graph (4 traps)
 
+> ✅ **IMPLEMENTED 2026-06-11 (Fable hardening, сессия 3), commit `63a3ee4`.**
+> All 4 traps handled; tests in `tests/test_provider_runtime_cache.py` (6/6).
+> Kept as the design record.
+
 > De-scoped from the 2026-06-11 Fable-Hardening batch **on purpose**: trap #2 below
 > is a money-safety regression and the change is concurrency-sensitive. Current
 > behaviour is correct (just rebuilds per request) — this is an optimization, not a
