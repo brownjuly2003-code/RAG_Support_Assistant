@@ -1398,6 +1398,13 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.warning("OTel initialization skipped: %s", exc)
 
     _shutting_down = False
+    # F-5: publish this loop so the synchronous RAG pipeline (running inside
+    # asyncio.to_thread) can persist online-evaluator results back onto the
+    # loop that owns the asyncpg pool, instead of an asyncio.run()+dispose
+    # per request. Cleared in the finally below.
+    from utils.event_loop import set_main_loop  # noqa: PLC0415
+
+    set_main_loop(asyncio.get_running_loop())
     initialize_vector_store()
     async def _cleanup_sessions() -> None:
         import time as _time
@@ -1473,6 +1480,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         yield
     finally:
         _shutting_down = True
+        set_main_loop(None)
         delay = float(getattr(settings, "shutdown_ready_delay_sec", 0.0))
         if delay > 0:
             logger.info(

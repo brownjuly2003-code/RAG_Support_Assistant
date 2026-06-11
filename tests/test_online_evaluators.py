@@ -544,3 +544,75 @@ def test_eval_daily_snapshot_writes_report_json(tmp_path: Path) -> None:
     assert payload["evaluators"]["citation_coverage"]["mean_score"] == 0.55
     assert payload["evaluators"]["citation_coverage"]["verdict_counts"]["low"] == 2
     assert payload["evaluators"]["citation_coverage"]["worst_traces"][0]["trace_id"] == "trace-2"
+
+
+def test_run_qa_pipeline_persists_via_main_loop_without_dispose(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-5: with a registered main loop, online-eval persistence is bridged onto
+    it via run_coroutine_threadsafe and the shared engine pool is NOT disposed."""
+    import threading
+
+    import agent.graph as graph
+    import db.engine as db_engine
+    from utils.event_loop import set_main_loop
+
+    class _CompiledGraph:
+        def invoke(self, initial_state):
+            return {**initial_state, "answer": "ready", "route": "auto", "quality_score": 91}
+
+    class _FakeEngine:
+        def __init__(self) -> None:
+            self.dispose_calls = 0
+
+        async def dispose(self) -> None:
+            self.dispose_calls += 1
+
+    fake_engine = _FakeEngine()
+    settings = type(
+        "Settings",
+        (),
+        {
+            "quality_threshold": 80,
+            "online_evaluators_enabled": True,
+            "online_evaluators_timeout_sec": 5.0,
+        },
+    )()
+    persisted: list[tuple[str, dict[str, object]]] = []
+
+    monkeypatch.setattr(graph, "get_settings", lambda: settings, raising=False)
+    monkeypatch.setattr(graph, "start_trace", lambda trace_id=None, tenant_id="default": "trace-loop")
+    monkeypatch.setattr(graph, "finish_trace", lambda trace_id, final_state: None)
+    monkeypatch.setattr(graph, "build_support_graph", lambda **kwargs: _CompiledGraph())
+    monkeypatch.setattr(db_engine, "engine", fake_engine, raising=False)
+    monkeypatch.setattr(
+        graph,
+        "run_online_evaluators",
+        lambda state: {"citation_coverage": {"score": 1.0, "verdict": "ok", "metadata": {}}},
+        raising=False,
+    )
+    monkeypatch.setattr(
+        graph,
+        "persist_online_evaluations",
+        lambda trace_id, results: persisted.append((trace_id, results)),
+        raising=False,
+    )
+
+    loop = asyncio.new_event_loop()
+    thread = threading.Thread(target=loop.run_forever, daemon=True)
+    thread.start()
+    try:
+        set_main_loop(loop)
+        result = graph.run_qa_pipeline(question="test", retriever=object(), llm=object())
+    finally:
+        set_main_loop(None)
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join(timeout=5)
+        loop.close()
+
+    assert result["answer"] == "ready"
+    assert persisted == [
+        ("trace-loop", {"citation_coverage": {"score": 1.0, "verdict": "ok", "metadata": {}}})
+    ]
+    # Bridged onto the main loop -> the shared asyncpg pool must survive.
+    assert fake_engine.dispose_calls == 0

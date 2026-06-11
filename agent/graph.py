@@ -1969,32 +1969,35 @@ def run_qa_pipeline(
             and run_online_evaluators is not None
             and persist_online_evaluations is not None
         ):
-            try:
-                trace_state = dict(final_state)
-                trace_state["trace_id"] = trace_id
+            timeout_sec = float(getattr(settings, "online_evaluators_timeout_sec", 1.0))
+            trace_state = dict(final_state)
+            trace_state["trace_id"] = trace_id
 
-                async def _persist_results() -> None:
-                    # Bug 4 fix: trace_id stub upsert is performed inside
-                    # persist_online_evaluations within the same engine.begin()
-                    # transaction as the trace_evaluations INSERTs, so the FK
-                    # constraint always holds. Doing a second engine.begin()
-                    # here would race with that one on the asyncpg pool
-                    # ("InterfaceError: another operation is in progress").
-                    try:
-                        results = await asyncio.wait_for(
-                            asyncio.to_thread(run_online_evaluators, trace_state),
-                            timeout=1.0,
-                        )
-                        persisted = persist_online_evaluations(trace_id, results)
-                        if inspect.isawaitable(persisted):
-                            await persisted
-                    finally:
-                        # Bug 2 fix: run_qa_pipeline wraps this in asyncio.run(),
-                        # which creates a fresh event loop each call. The async
-                        # engine pool caches asyncpg connections bound to the
-                        # previous loop -> "InterfaceError: another operation in
-                        # progress" on the next case. Dispose the pool here so
-                        # the next asyncio.run() gets fresh connections.
+            async def _persist_results(dispose_engine: bool) -> None:
+                # Bug 4 fix: trace_id stub upsert is performed inside
+                # persist_online_evaluations within the same engine.begin()
+                # transaction as the trace_evaluations INSERTs, so the FK
+                # constraint always holds. Doing a second engine.begin()
+                # here would race with that one on the asyncpg pool
+                # ("InterfaceError: another operation is in progress").
+                try:
+                    results = await asyncio.wait_for(
+                        asyncio.to_thread(run_online_evaluators, trace_state),
+                        timeout=timeout_sec,
+                    )
+                    persisted = persist_online_evaluations(trace_id, results)
+                    if inspect.isawaitable(persisted):
+                        await persisted
+                finally:
+                    # Bug 2 fix: the sync-script path wraps this in asyncio.run(),
+                    # which creates a fresh event loop each call. The async
+                    # engine pool caches asyncpg connections bound to the
+                    # previous loop -> "InterfaceError: another operation in
+                    # progress" on the next case. Dispose the pool here so the
+                    # next asyncio.run() gets fresh connections. When we instead
+                    # bridge onto the application's main loop (F-5), the pool
+                    # lives there across requests and must NOT be disposed.
+                    if dispose_engine:
                         try:
                             from db.engine import engine as _engine
                             await _engine.dispose()
@@ -2004,8 +2007,38 @@ def run_qa_pipeline(
                                 exc_info=True,
                             )
 
-                asyncio.run(_persist_results())
+            # F-5: when the API process registered its loop at startup, bridge
+            # this synchronous pipeline back onto the loop that owns the asyncpg
+            # pool via run_coroutine_threadsafe instead of an asyncio.run() +
+            # full engine.dispose() per request. Sync CLI scripts register no
+            # loop and keep the legacy path. F-18: the timeout is configurable
+            # and dropped runs are counted by reason.
+            from monitoring.prometheus import record_online_evaluators_dropped
+            from utils.event_loop import get_main_loop
+
+            try:
+                running_loop = asyncio.get_running_loop()
+            except RuntimeError:
+                running_loop = None
+            main_loop = get_main_loop()
+
+            try:
+                if main_loop is not None and main_loop is not running_loop:
+                    fut = asyncio.run_coroutine_threadsafe(
+                        _persist_results(False), main_loop
+                    )
+                    fut.result(timeout=timeout_sec + 10)
+                else:
+                    asyncio.run(_persist_results(True))
+            except TimeoutError:
+                record_online_evaluators_dropped("timeout")
+                logger.warning(
+                    "Online evaluators timed out after %.1fs",
+                    timeout_sec,
+                    extra={"trace_id": trace_id},
+                )
             except Exception as exc:
+                record_online_evaluators_dropped("error")
                 logger.warning(
                     "Online evaluators failed: %s",
                     exc,
