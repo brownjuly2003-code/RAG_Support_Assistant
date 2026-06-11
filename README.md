@@ -265,12 +265,16 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `RAG_GRAPH_CROSSDOC_SHARE` | unset | Measured probe value (`scripts/graph_probe.py`; 2026-06-06 corpus: **0.296**, gate passed); unset = probe not run, `auto` stays off |
 | `RAG_SELF_RAG_MAX_ITER` | `2` | Maximum Self-RAG iterations |
 | `RAG_SELF_RAG_MIN_QUALITY` | `70` | Minimum quality score to avoid retry/escalation |
+| `STREAMING_QUALITY_EVAL` | `true` | Streaming `/api/ask/stream` runs one cheap Self-RAG self-eval so streamed answers are quality-routed on par with non-streaming; set `false` to roll back to the legacy synthetic-score streaming path |
 | `FACT_VERIFICATION_ENABLED` | `true` | Run fact verification after generation |
 | `FACT_VERIFICATION_MIN_SCORE` | `70` | Minimum factuality score threshold |
+| `FACT_VERIFY_CONTEXT_MAX_DOCS` | `5` | Max retrieved docs used as evidence when verifying answer facts |
+| `FACT_VERIFY_CONTEXT_CHARS_PER_DOC` | `3600` | Chars per doc used as fact-verification evidence; aligned with `RAG_PARENT_EXPANSION_MAX_CHARS` so verification sees full parent-expanded chunks |
 | `SLOW_TRACE_THRESHOLD_MS` | `10000` | Trace-duration threshold for review queue collection |
 | `THRESHOLD_ANALYSIS_MIN_LABELS` | `20` | Minimum labeled traces required before suggesting a new threshold |
 | `REVIEW_QUEUE_ENABLED` | `true` | Enable review queue builder and admin endpoints |
 | `ONLINE_EVALUATORS_ENABLED` | `true` | Enable lightweight per-trace online evaluators, persistence, and admin views |
+| `ONLINE_EVALUATORS_TIMEOUT_SEC` | `1.0` | Per-trace online-evaluator wall-clock budget; runs that exceed it are dropped and counted in `rag_online_evaluators_dropped_total{reason}` |
 | `REGRESSION_GATE_MAX_REGRESSIONS` | `2` | Maximum allowed curated regressions before the gate fails |
 | `REGRESSION_GATE_MIN_PASS_RATE` | `0.85` | Minimum candidate pass rate required by the regression gate |
 | `RAG_VECTOR_BACKEND` | `chroma` | Vector store backend |
@@ -292,6 +296,8 @@ Resilience layers apply in this order:
 | `CIRCUIT_BREAKER_FAILURE_THRESHOLD` | `5` | Consecutive failures before the breaker opens |
 | `CIRCUIT_BREAKER_RESET_TIMEOUT_SEC` | `30` | Delay before half-open probing |
 | `REQUEST_TIMEOUT_SEC` | `30` | Wall-time limit for one `/api/ask` request |
+| `STREAMING_TIMEOUT_SEC` | `120` | Wall-clock budget for the SSE token loop in `/api/ask/stream` (separate from `REQUEST_TIMEOUT_SEC`) |
+| `DB_PERSIST_TIMEOUT_SEC` | `2.0` | Timeout for persisting one conversation message to Postgres before the write is dropped and counted in `rag_message_persist_failures_total{operation}` |
 | `MAX_CONCURRENT_PIPELINES` | `8` | Maximum concurrent `/api/ask` pipelines |
 | `PIPELINE_ACQUIRE_TIMEOUT_SEC` | `0.5` | How long to wait for a pipeline slot before returning `503` |
 | `SESSION_TTL_SECONDS` | `7200` | Session idle timeout in seconds |

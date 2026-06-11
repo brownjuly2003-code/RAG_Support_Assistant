@@ -2,6 +2,49 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Fable-Hardening] — 2026-06-11 — рантайм-харденинг по аудиту fable_com.md (8.7/10)
+
+- **F-2 (retrieval):** BM25/lexical-корпус восстанавливается из Chroma при старте
+  (`vectordb/manager.py`): штамп `chunk_index` при build, `_restore_chunks_from_store`
+  (сорт. по `chunk_index`; legacy-сторы — stable sort по source), gauge
+  `rag_retriever_bm25_enabled` + warning. Рестарт больше не теряет молча lexical-поиск.
+- **F-1a / F-11 (event loop):** upload (`write_bytes`/`load_documents`/categorizer/rebuild),
+  4 analytics-эндпоинта и `/admin/providers` ушли в `asyncio.to_thread` — open dashboard
+  и upload больше не блокируют event loop.
+- **F-3 / F-8 (streaming):** SSE-путь получил pipeline-семафор (busy-событие,
+  disconnect-safe release), дедлайн `STREAMING_TIMEOUT_SEC` в обоих токен-циклах и
+  дешёвую Self-RAG self-eval parity (`STREAMING_QUALITY_EVAL`, default on; route по
+  `QUALITY_THRESHOLD`, `quality_source` в SSE result). `graph_task`/`ask_args`
+  инициализируются до `try` в `ask_stream`.
+- **F-9a (observability):** `GraphState.quality_source` (`llm`/`fixed`/`heuristic`) +
+  counter `rag_quality_score_source_total{source}` в /ask и стриме.
+- **F-12 (factuality):** окно доказательств verify_facts вынесено в settings
+  (`FACT_VERIFY_CONTEXT_MAX_DOCS=5`, `FACT_VERIFY_CONTEXT_CHARS_PER_DOC=3600`) —
+  верификация видит полные parent-expanded чанки, а не первые 500 символов.
+- **F-7 / F-17 (cache/contract):** LLM-кэш читает+пишет только при пустой истории сессии;
+  `AskResponse.cached: bool` теперь в схеме (`/api/ask` всегда отдаёт `cached`).
+- **F-6 (persist):** db-persist timeout 0.5s → `DB_PERSIST_TIMEOUT_SEC` (2.0) во всех 4
+  местах + counter `rag_message_persist_failures_total{operation}`.
+- **F-5 / F-18 (sync→async мост):** `run_qa_pipeline` шлёт персист online-evaluators на
+  главный loop приложения через `run_coroutine_threadsafe` (`utils/event_loop`,
+  регистрация в `api/app` lifespan) вместо `asyncio.run()`+`engine.dispose()` на каждый
+  запрос; asyncpg-пул живёт между запросами, sync CLI-скрипты — legacy-путь. Timeout
+  online-эвалуаторов → `ONLINE_EVALUATORS_TIMEOUT_SEC`, дропы считаются
+  `rag_online_evaluators_dropped_total{reason}`.
+- **F-10:** evaluate-на-fast-модели подтверждён как намеренный trade-off (strong в
+  gracekelly-primary = ~60s orchestrate-вызов), оставлен и задокументирован;
+  suggest_questions переведён на fast.
+- Новые settings (все `default_factory`): `STREAMING_QUALITY_EVAL`, `STREAMING_TIMEOUT_SEC`,
+  `FACT_VERIFY_CONTEXT_MAX_DOCS`, `FACT_VERIFY_CONTEXT_CHARS_PER_DOC`,
+  `ONLINE_EVALUATORS_TIMEOUT_SEC`, `DB_PERSIST_TIMEOUT_SEC` — задокументированы в README и
+  `.env.example`. 4 новые Prometheus-метрики.
+- Verification: §2 стрим/кэш/analytics/graph **49 passed**; F-2+routing **13 passed**;
+  online-evaluators **19 passed** (incl. новый threadsafe-path тест); graph/routing/
+  conversation **17 passed**; `api.app`/`agent.graph` import OK; ruff clean. Закоммичено
+  7 локальными коммитами `2ee78a8..59df7c9` на `master` (не запушено).
+- Не входит в батч (отдельные циклы): F-4 (кэш runtime/compiled graph — ловушка
+  `last_response`), гигиена корня, multi-worker инвариант.
+
 ## [Docs-Health-Sync] — 2026-05-02 — active documentation status cleanup
 
 - README, active backlog, and next-session handoff now separate landed
