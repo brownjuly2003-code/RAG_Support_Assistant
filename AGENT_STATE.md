@@ -1,8 +1,14 @@
 # Agent State
 
-## 2026-06-11 Update (Fable hardening, сессия 2) — батч §1-6 верифицирован и ЗАКОММИЧЕН (7 коммитов), F-5/F-18 доделаны; push GATED
+## 2026-06-11 Update (Fable hardening, сессия 2) — аудит fable_com.md разрешён §5 пп.1-7 + гигиена #11; F-4 → спека; push GATED
 
-**master ahead of origin by ~11 (10 fable-коммитов `2ee78a8..` + предыдущий `55f1a42`; НЕ запушено). Working tree: чисто, кроме этого docs-апдейта + чужих untracked (`docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py`) — не трогать.**
+> **START HERE.** Аудит `fable_com.md` (18 findings) разрешён: §5 пп.1-6 (батч) + п.7 (multi-worker) сделаны и закоммичены локально; F-4 (п.5→оптимизация) вынесен в спеку Codex. Открытый остаток — гигиен-спринт §5 п.8 (F-13/F-15/F-16). Push НЕ делался (GATED).
+>
+> **Актуальный детальный handoff — `next-session-fable-hardening.md` (блок «SESSION 2» сверху).** Файлы `next-session-3-subagents.md`, `project-closure-today.md`, `2026-05-02-non-live-backlog.md`, `rec.md`, `audit_*` — УСТАРЕЛИ для текущей линии работ, игнорировать при онбординге.
+>
+> **Следующий заход — на выбор:** (a) F-4 по `codex-tasks/task-F4-cache-runtime-graph.md` (через Codex или аккуратно вручную с concurrency+cost-limit тестами); (b) гигиен-спринт F-13 (settings→default_factory), F-15 (убрать `inspect.signature` из hot path), F-16 (реорг audit/session-файлов корня).
+
+**master ahead of origin на ~12 коммитов (`2ee78a8..` + предыдущий `55f1a42`; НЕ запушено — точный HEAD см. `git log --oneline`). Working tree чисто, кроме чужих untracked (`docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py`) — не трогать.**
 
 1. **Верификация перед коммитом** (свежая сессия, evidence-before-commit): §2 стрим/кэш/analytics/graph **49 passed** (прошлый 47/1 — фейл был намеренный pin-тест, после отката чисто), F-2+routing **13 passed**, ruff clean.
 2. **Закоммичен готовый батч** — 7 локальных коммитов на `master` (нарезка файлово-когерентная, т.к. `git add -p` интерактивен и недоступен): `2ee78a8` metrics · `544c3fc` F-2 restore BM25 chunks · `5f9194f` F-1a/F-11 event-loop unblock · `defe216` F-9a/F-12 graph+settings · `f8cc015` F-3/F-8/F-7/F-17/F-6 streaming/cache/persist · `59df7c9` **F-5/F-18**.
