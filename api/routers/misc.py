@@ -5,6 +5,7 @@ stays in api.app so existing tests can keep monkeypatching app-level settings.
 """
 from __future__ import annotations
 
+import asyncio
 import json as _json
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -42,4 +43,6 @@ async def admin_list_providers(
 ) -> JSONResponse:
     _app = _app_module()
     tenant = _user.get("tenant") or get_current_tenant() or "default"
-    return JSONResponse(content=_app._load_provider_admin_snapshot(tenant))
+    # Registry YAML parse + SQLite usage scan are blocking — off the loop.
+    snapshot = await asyncio.to_thread(_app._load_provider_admin_snapshot, tenant)
+    return JSONResponse(content=snapshot)

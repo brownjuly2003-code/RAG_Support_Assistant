@@ -5,6 +5,7 @@ stays in api.app for now so existing tests can keep monkeypatching it there.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -17,8 +18,12 @@ from auth.dependencies import require_role
 router = APIRouter()
 
 
-def _load_recent_trace_summaries(tenant: str, days: int) -> list[dict[str, Any]]:
-    return _app_module()._load_recent_trace_summaries(tenant, days)
+async def _load_recent_trace_summaries(tenant: str, days: int) -> list[dict[str, Any]]:
+    # Blocking SQLite full scan + per-trace JSON parsing — keep it off the
+    # event loop (a dashboard load fires four of these back to back).
+    return await asyncio.to_thread(
+        _app_module()._load_recent_trace_summaries, tenant, days
+    )
 
 
 @router.get("/analytics/top-topics")
@@ -27,7 +32,7 @@ async def analytics_top_topics(
     _user: dict = Depends(require_role("admin", "agent")),
 ) -> JSONResponse:
     tenant = _user.get("tenant") or get_current_tenant() or "default"
-    summaries = _load_recent_trace_summaries(tenant, days)
+    summaries = await _load_recent_trace_summaries(tenant, days)
     grouped: dict[str, dict[str, float]] = {}
     for item in summaries:
         for category in item["categories"]:
@@ -52,7 +57,7 @@ async def analytics_resolution_rate(
     _user: dict = Depends(require_role("admin", "agent")),
 ) -> JSONResponse:
     tenant = _user.get("tenant") or get_current_tenant() or "default"
-    summaries = _load_recent_trace_summaries(tenant, days)
+    summaries = await _load_recent_trace_summaries(tenant, days)
     grouped: dict[str, dict[str, int]] = {}
     for item in summaries:
         for category in item["categories"]:
@@ -78,7 +83,7 @@ async def analytics_cost_summary(
     _user: dict = Depends(require_role("admin", "agent")),
 ) -> JSONResponse:
     tenant = _user.get("tenant") or get_current_tenant() or "default"
-    summaries = _load_recent_trace_summaries(tenant, days)
+    summaries = await _load_recent_trace_summaries(tenant, days)
     total_cost = round(sum(float(item["cost_usd"] or 0.0) for item in summaries), 6)
     per_category: dict[str, float] = {}
     per_model: dict[str, float] = {}
@@ -114,7 +119,7 @@ async def analytics_trends(
     _user: dict = Depends(require_role("admin", "agent")),
 ) -> JSONResponse:
     tenant = _user.get("tenant") or get_current_tenant() or "default"
-    summaries = _load_recent_trace_summaries(tenant, days)
+    summaries = await _load_recent_trace_summaries(tenant, days)
     grouped: dict[str, list[float]] = {}
     for item in summaries:
         bucket = item["created_at"].date().isoformat()

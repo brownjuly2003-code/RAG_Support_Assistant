@@ -1,6 +1,7 @@
 """Document upload and background task endpoints."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import re as _re
 from pathlib import Path
@@ -87,7 +88,7 @@ async def upload_document(
                     status_code=413,
                     detail=f"Upload exceeds limit of {upload_limit} bytes",
                 )
-        file_path.write_bytes(bytes(content))
+        await asyncio.to_thread(file_path.write_bytes, bytes(content))
     except HTTPException:
         raise
     except Exception as exc:
@@ -106,9 +107,13 @@ async def upload_document(
             from ingestion.categorizer import annotate_documents_with_categories
 
             loader = _app._DocumentLoader(recursive=False)
-            docs = loader.load_documents(str(upload_dir))
+            # Document parsing and LLM categorization are blocking — keep them
+            # off the event loop so concurrent /ask requests are not stalled.
+            docs = await asyncio.to_thread(loader.load_documents, str(upload_dir))
             if docs:
-                assigned_by_source = annotate_documents_with_categories(docs, tenant_id=tenant)
+                assigned_by_source = await asyncio.to_thread(
+                    annotate_documents_with_categories, docs, tenant_id=tenant
+                )
                 assigned_categories = list(assigned_by_source.get(safe_name) or [])
         except Exception as exc:
             logger.warning("Category pre-processing failed for %s: %s", safe_name, exc)
@@ -134,9 +139,14 @@ async def upload_document(
         try:
             if docs is None:
                 loader = _app._DocumentLoader(recursive=False)
-                docs = loader.load_documents(str(upload_dir))
+                docs = await asyncio.to_thread(loader.load_documents, str(upload_dir))
             if docs:
-                success = _app._rebuild_vector_store_from_docs(docs, tenant_id=tenant)
+                # Full re-embedding of the tenant corpus — minutes of CPU work.
+                # Must not run on the event loop (it would freeze every /ask
+                # and health probe for the duration of the rebuild).
+                success = await asyncio.to_thread(
+                    _app._rebuild_vector_store_from_docs, docs, tenant_id=tenant
+                )
                 if success:
                     if getattr(settings, "llm_cache_enabled", False):
                         deleted = _app.cache_delete_pattern(f"llm_resp:{tenant}:*")
