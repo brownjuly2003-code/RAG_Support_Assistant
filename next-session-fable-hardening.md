@@ -15,13 +15,15 @@
 
 Верификация: §2 стрим/кэш-suite **49 passed**, F-2+routing **13 passed**, online-eval **19 passed** (incl. новый threadsafe), graph/routing/conversation **17 passed**, `api.app`/`agent.graph` import OK, ruff clean.
 
-**Состояние дерева сейчас:** чисто, кроме `AGENT_STATE.md` (этот docs-коммит) и чужих untracked (`docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py`) — НЕ трогать.
+**Состояние дерева сейчас:** чисто, кроме чужих untracked (`docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py`) — НЕ трогать.
 
-### Осталось (§4 ниже, отдельные циклы, НЕ начато):
-- **F-4** — кэш compiled graph + provider runtime (ловушка `last_response` — см. §4).
-- **Гигиена** (#11): `.gitignore` += temp/coverage, мёртвый корневой `cache.py` → `archive-legacy/`, чистка `pytest-cache-files-*`.
-- README: env-таблица для 6 новых переменных + `STREAMING_QUALITY_EVAL` rollback; `docs/CHANGELOG.md`.
-- fable_com.md §5 пп.7-8 (multi-worker инвариант, F-13/F-15) — отдельные циклы.
+### Сделано дополнительно в сессии 2 (после батча):
+- **README + `.env.example` + `docs/CHANGELOG.md`** — 6 новых переменных задокументированы (+`STREAMING_QUALITY_EVAL` rollback-нота), [Fable-Hardening] CHANGELOG-блок. Коммит `1ed8efc`.
+- **Гигиена #11 ЗАКРЫТА:** `.gitignore` уже содержал temp/coverage-паттерны; мёртвый корневой `cache.py` (затенён пакетом `cache/`) + тест → `archive-legacy/` (коммит `84de8e2`, тест 7/7 при прямом запуске); 76× `tests/pytest-cache-files-*` + 7× `.pytest-tmp-*` удалены (untracked).
+
+### Осталось (отдельные циклы — требуют осторожности/решения, НЕ начато):
+- **F-4** — кэш compiled graph + provider runtime. **Ловушка** `ProviderBackedLLM.last_response` (читается в `agent/graph.py:557` `_capture_llm_usage` сразу после invoke): сегодня гонки нет (свой llm-инстанс на запрос), но глобальный кэш runtime/graph → шаринг инстанса между потоками (`run_qa_pipeline` в `asyncio.to_thread`) → перепутанный usage. Нужно: `threading.local` для `last_response` в `llm/providers/base.py` (6 set-мест + read в graph + тесты `test_provider_abstraction`), затем кэш runtime по (resolved profile, mtime `providers.yml`), затем кэш compiled graph по `(id(retriever), id(llm_fast), id(llm_strong), min_quality)` — внутри `build_support_graph`. Concurrency-sensitive → кандидат на второе мнение Codex (§7) + concurrency-тест.
+- **Multi-worker инвариант** (§3 аудита) — РЕШЕНИЕ: задокументировать «1 worker / 1 replica» (runbook + helm values + честная правка claim в `tracing/_base_trace.py` про «workers 2») ИЛИ перенести session-state/pending-actions в Redis/Postgres. Осторожно: жёсткий startup-assert на >1 worker сломает helm, который сейчас деплоит с воркерами — безопаснее warning + выравнивание манифестов.
 
 ---
 

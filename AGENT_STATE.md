@@ -2,13 +2,14 @@
 
 ## 2026-06-11 Update (Fable hardening, сессия 2) — батч §1-6 верифицирован и ЗАКОММИЧЕН (7 коммитов), F-5/F-18 доделаны; push GATED
 
-**HEAD = `59df7c9` (master, ahead of origin by 8 — 7 fable-коммитов + предыдущий `55f1a42`; НЕ запушено). Working tree: чисто, кроме `AGENT_STATE.md` (этот docs-апдейт) + чужих untracked (`docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py`) — не трогать.**
+**master ahead of origin by ~11 (10 fable-коммитов `2ee78a8..` + предыдущий `55f1a42`; НЕ запушено). Working tree: чисто, кроме этого docs-апдейта + чужих untracked (`docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py`) — не трогать.**
 
 1. **Верификация перед коммитом** (свежая сессия, evidence-before-commit): §2 стрим/кэш/analytics/graph **49 passed** (прошлый 47/1 — фейл был намеренный pin-тест, после отката чисто), F-2+routing **13 passed**, ruff clean.
 2. **Закоммичен готовый батч** — 7 локальных коммитов на `master` (нарезка файлово-когерентная, т.к. `git add -p` интерактивен и недоступен): `2ee78a8` metrics · `544c3fc` F-2 restore BM25 chunks · `5f9194f` F-1a/F-11 event-loop unblock · `defe216` F-9a/F-12 graph+settings · `f8cc015` F-3/F-8/F-7/F-17/F-6 streaming/cache/persist · `59df7c9` **F-5/F-18**.
 3. **F-5/F-18 ДОДЕЛАНЫ** (была in-flight): `utils/event_loop.py` подключён — loop регистрируется в `api/app.py` `_lifespan` (старт/finally), `run_qa_pipeline` шлёт персист online-eval через `run_coroutine_threadsafe` на main loop без per-request `engine.dispose()`; sync-скрипты → legacy `asyncio.run`+dispose. F-18: timeout из `online_evaluators_timeout_sec`, counter `rag_online_evaluators_dropped_total{reason=timeout|error}`. Тест threadsafe-пути добавлен — online-eval **19 passed**, graph/routing/conversation **17 passed**, импорт `api.app`/`agent.graph` OK.
-4. **НЕ начато (отдельные циклы)**: F-4 (кэш runtime/compiled graph — ловушка `last_response`), гигиена (#11: .gitignore/мёртвый `cache.py`/pytest-tmp), README env-таблица 6 переменных + `STREAMING_QUALITY_EVAL`, multi-worker инвариант (§3 аудита). Детали — `next-session-fable-hardening.md`.
-5. **Push — GATED, спрашивать явно.** Полный suite на этой машине только с `RAG_RERANKER_MODEL=""` (cont.14).
+4. **Docs + гигиена закрыты** (после батча): `1ed8efc` — README/`.env.example`/`docs/CHANGELOG.md` для 6 новых переменных (+`STREAMING_QUALITY_EVAL` rollback, [Fable-Hardening] блок); `84de8e2` — мёртвый корневой `cache.py` (затенён пакетом `cache/`) + тест → `archive-legacy/` (F-14); `.gitignore` уже содержал temp/coverage; 76× `pytest-cache-files-*` + 7× `.pytest-tmp-*` удалены.
+5. **НЕ начато (требуют осторожности/решения)**: F-4 (кэш runtime/compiled graph — ловушка `last_response`, читается `graph.py:557`; concurrency-sensitive, кандидат на Codex §7) и multi-worker инвариант (§3 — документ vs Redis; жёсткий assert сломает helm). Рецепты — `next-session-fable-hardening.md`.
+6. **Push — GATED, спрашивать явно.** Полный suite на этой машине только с `RAG_RERANKER_MODEL=""` (cont.14).
 
 ## 2026-06-11 Update (Fable hardening, сессия 1) — аудит fable_com.md + 11 из 18 findings в коде; ДЕРЕВО DIRTY НАМЕРЕННО, БЕЗ КОММИТОВ
 
