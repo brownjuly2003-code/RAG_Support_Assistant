@@ -698,8 +698,18 @@ async def ask_stream(
                     raw_eval = await asyncio.get_running_loop().run_in_executor(
                         None, eval_llm.invoke, eval_prompt
                     )
-                    quality = _parse_int_score(raw_eval, default=heuristic_quality)
-                    quality_source = "llm"
+                    # "llm" provenance only when the model actually returned a
+                    # numeric score; an unparseable reply keeps the heuristic
+                    # quality AND its routing threshold (quality_threshold only
+                    # applies to genuine LLM scores).
+                    parsed_eval = _parse_int_score(raw_eval, default=-1)
+                    if parsed_eval != -1:
+                        quality = parsed_eval
+                        quality_source = "llm"
+                    else:
+                        logger.warning(
+                            "Streaming self-eval returned no numeric score; keeping heuristic quality"
+                        )
                 except Exception as eval_exc:
                     logger.warning(
                         "Streaming self-eval failed, falling back to heuristic quality: %s",
