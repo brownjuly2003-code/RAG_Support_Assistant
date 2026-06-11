@@ -60,6 +60,7 @@ class AskResponse(BaseModel):
     suggested_questions: list[str] = Field(default_factory=list)
     requires_confirmation: bool = False
     action_summary: str = ""
+    cached: bool = False
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -92,8 +93,23 @@ async def ask(
 
     settings = _app.get_settings()
     cache_enabled = bool(getattr(settings, "llm_cache_enabled", False))
+    if cache_enabled:
+        # The cache key is tenant+question only. A follow-up inside a dialog
+        # ("а сколько это стоит?") depends on the conversation context, so
+        # caching it — or serving it from cache — would leak answers across
+        # unrelated dialogs. Cache applies to history-less first turns only.
+        session_history = (
+            getattr(session, "_history", None)
+            if hasattr(session, "_history")
+            else session.get("history") if isinstance(session, dict) else None
+        )
+        if session_history:
+            cache_enabled = False
     llm_cache_key = _app._cache_key(tenant, question)
     cache_hit = False
+    # Provenance for the QUALITY_SCORE metric; cached replays keep their
+    # original "llm" provenance, agentic answers report "fixed".
+    quality_source = "llm"
 
     if hasattr(session, "ask"):
         if cache_enabled:
@@ -157,6 +173,7 @@ async def ask(
                     session_id=session_id,
                     trace_id="",
                     suggested_questions=cached_payload.get("suggested_questions") or [],
+                    cached=True,
                 )
                 cache_hit = True
             else:
@@ -214,6 +231,7 @@ async def ask(
                     answer = result.get("answer") or ""
                     quality = result.get("quality_score") or 50
                     route = result.get("route") or "auto"
+                    quality_source = str(result.get("quality_source") or "llm")
 
                     sources_list = []
                     citations_list = []
@@ -380,10 +398,17 @@ async def ask(
                 session_uuid = uuid.UUID(session_id)
                 db.add(Message(session_id=session_uuid, role="user", content=question))
                 db.add(Message(session_id=session_uuid, role="assistant", content=response.answer))
-                await asyncio.wait_for(db.commit(), timeout=0.5)
+                await asyncio.wait_for(
+                    db.commit(),
+                    timeout=float(getattr(settings, "db_persist_timeout_sec", 2.0)),
+                )
                 _app._db_retry_after = 0.0
         except Exception as exc:
             _app._db_retry_after = time.monotonic() + 60.0
+            try:
+                prometheus_metrics.record_message_persist_failure("ask")
+            except Exception:
+                pass
             logger.warning("Failed to persist messages: %s", exc)
 
     await _app.log_audit(
@@ -401,16 +426,15 @@ async def ask(
     prometheus_metrics.REQUEST_COUNT.labels(route=response.route).inc()
     if response.quality_score:
         prometheus_metrics.QUALITY_SCORE.observe(response.quality_score)
+        try:
+            prometheus_metrics.record_quality_score_source(quality_source)
+        except Exception:
+            pass
     if response.route == "human":
         prometheus_metrics.ESCALATION_TOTAL.inc()
     prometheus_metrics.ACTIVE_SESSIONS.set(len(_app._sessions))
     if response.citations:
         spawn_tracked(_app._record_citation_stats(tenant, list(response.citations)))
-    if cache_hit:
-        return JSONResponse(
-            content={**response.model_dump(), "cached": True},
-            media_type="application/json; charset=utf-8",
-        )
     return JSONResponse(
         content=response.model_dump(),
         media_type="application/json; charset=utf-8",
@@ -473,9 +497,40 @@ async def ask_stream(
             ip_address=request.client.host if request.client else None,
         )
 
+        # The except-branch below reuses graph_task/ask_args; they must exist
+        # even when the failure happens before their full initialization,
+        # otherwise the fallback itself dies with NameError and the SSE stream
+        # ends without a result event.
+        graph_task: asyncio.Future | None = None
+        ask_args: tuple[Any, ...] = (question, get_request_id())
+
+        # Streaming consumes the same retriever/LLM resources as /api/ask —
+        # it must respect the same bounded-concurrency pool instead of
+        # bypassing it (fable_com.md F-3).
+        semaphore = _app._get_pipeline_semaphore()
+        acquire_timeout = float(
+            getattr(_app.get_settings(), "pipeline_acquire_timeout_sec", 0.5)
+        )
+        try:
+            await asyncio.wait_for(semaphore.acquire(), timeout=acquire_timeout)
+        except asyncio.TimeoutError:
+            try:
+                prometheus_metrics.record_pipeline_rejection("busy")
+            except Exception:
+                pass
+            yield "data: " + _json.dumps({
+                "type": "error",
+                "detail": "Server is busy processing other requests - retry in a moment",
+            }) + "\n\n"
+            return
+        try:
+            prometheus_metrics.INFLIGHT_PIPELINES.inc()
+        except Exception:
+            pass
         try:
             prompt = ""
             docs: list[Any] = []
+            plain_docs: list[dict[str, Any]] = []
             chat_history: list[dict[str, str]] = []
             ask_params = inspect.signature(session.ask).parameters if hasattr(session, "ask") else {}
             ask_args = (
@@ -510,7 +565,6 @@ async def ask_stream(
                 if hasattr(session, "_history")
                 else None
             )
-            graph_task: asyncio.Future | None = None
             if graph_parity_enabled and hasattr(session, "ask"):
                 loop = asyncio.get_running_loop()
                 graph_task = loop.run_in_executor(
@@ -573,6 +627,12 @@ async def ask_stream(
                             streaming_llm = candidate
                             break
 
+            # Wall-clock budget for the token loop: without it a wedged model
+            # holds the SSE connection (and now a pipeline slot) forever.
+            stream_deadline = time.monotonic() + float(
+                getattr(settings, "streaming_timeout_sec", 120.0)
+            )
+            stream_truncated = False
             yield "data: " + _json.dumps({"type": "token_start"}) + "\n\n"
             try:
                 if streaming_llm is not None and callable(getattr(streaming_llm, "generate_stream", None)):
@@ -584,6 +644,9 @@ async def ask_stream(
                             "type": "token",
                             "token": token,
                         }) + "\n\n"
+                        if time.monotonic() > stream_deadline:
+                            stream_truncated = True
+                            break
                 else:
                     async for token in _app._stream_ollama(
                         prompt,
@@ -595,10 +658,22 @@ async def ask_stream(
                             "type": "token",
                             "token": token,
                         }) + "\n\n"
+                        if time.monotonic() > stream_deadline:
+                            stream_truncated = True
+                            break
             except Exception as exc:
                 logger.warning("Streaming error in /ask/stream: %s", exc)
                 if not full_answer:
                     raise
+            if stream_truncated:
+                try:
+                    prometheus_metrics.record_request_timeout("/api/ask/stream")
+                except Exception:
+                    pass
+                logger.warning(
+                    "Streaming exceeded %.0fs budget; answer truncated",
+                    float(getattr(settings, "streaming_timeout_sec", 120.0)),
+                )
 
             if not full_answer:
                 raise RuntimeError("empty streaming answer")
@@ -639,8 +714,44 @@ async def ask_stream(
                     "excerpt": str(sources[-1]["page_content"] if sources else "")[:300],
                 })
 
-            quality = 70 if len(full_answer.strip()) > 20 or sources else 40
-            route = "auto" if quality >= 70 else "human"
+            # Cheap RAG parity (fable_com.md F-3): one self-eval call over the
+            # docs the stream actually used replaces the length heuristic, so
+            # streamed answers stop reporting a synthetic quality of 70/40.
+            heuristic_quality = 70 if len(full_answer.strip()) > 20 or sources else 40
+            quality = heuristic_quality
+            quality_source = "heuristic"
+            if bool(getattr(settings, "streaming_quality_eval", True)):
+                try:
+                    from agent.graph import LocalOllamaLLM, _parse_int_score  # noqa: PLC0415
+                    from agent.prompts import build_self_eval_prompt  # noqa: PLC0415
+
+                    eval_llm = getattr(session, "_llm", None)
+                    if eval_llm is None and callable(getattr(streaming_llm, "invoke", None)):
+                        eval_llm = streaming_llm
+                    if eval_llm is None:
+                        eval_llm = LocalOllamaLLM(model_name=settings.ollama_model_name)
+
+                    answer_for_eval = re.sub(r"\s*\[\d+\]", "", full_answer)
+                    answer_for_eval = re.sub(r"\s{2,}", " ", answer_for_eval).strip()
+                    eval_prompt = build_self_eval_prompt(
+                        question=question,
+                        answer=answer_for_eval,
+                        context_docs=plain_docs,
+                    )
+                    raw_eval = await asyncio.get_running_loop().run_in_executor(
+                        None, eval_llm.invoke, eval_prompt
+                    )
+                    quality = _parse_int_score(raw_eval, default=heuristic_quality)
+                    quality_source = "llm"
+                except Exception as eval_exc:
+                    logger.warning(
+                        "Streaming self-eval failed, falling back to heuristic quality: %s",
+                        eval_exc,
+                    )
+            if quality_source == "llm":
+                route = "auto" if quality >= int(getattr(settings, "quality_threshold", 80)) else "human"
+            else:
+                route = "auto" if quality >= 70 else "human"
             suggested_questions: list[str] = []
             if route == "auto":
                 try:
@@ -718,6 +829,7 @@ async def ask_stream(
             if isinstance(graph_result, dict) and graph_result:
                 if graph_result.get("quality_score") is not None:
                     quality = int(graph_result["quality_score"])
+                    quality_source = str(graph_result.get("quality_source") or "llm")
                 if graph_result.get("route"):
                     route = str(graph_result["route"])
                 if graph_result.get("trace_id"):
@@ -760,15 +872,27 @@ async def ask_stream(
                         session_uuid = uuid.UUID(session_id)
                         db.add(Message(session_id=session_uuid, role="user", content=question))
                         db.add(Message(session_id=session_uuid, role="assistant", content=full_answer))
-                        await asyncio.wait_for(db.commit(), timeout=0.5)
+                        await asyncio.wait_for(
+                            db.commit(),
+                            timeout=float(getattr(settings, "db_persist_timeout_sec", 2.0)),
+                        )
                         _app._db_retry_after = 0.0
                 except Exception as db_exc:
                     _app._db_retry_after = time.monotonic() + 60.0
+                    try:
+                        prometheus_metrics.record_message_persist_failure("stream")
+                    except Exception:
+                        pass
                     logger.warning("Failed to persist streaming messages: %s", db_exc)
+            try:
+                prometheus_metrics.record_quality_score_source(quality_source)
+            except Exception:
+                pass
             yield "data: " + _json.dumps({
                 "type": "result",
                 "answer": full_answer,
                 "quality_score": quality,
+                "quality_source": quality_source,
                 "route": route,
                 "session_id": session_id,
                 "sources": sources,
@@ -795,6 +919,7 @@ async def ask_stream(
                 if result is not None:
                     answer = result.get("answer") or "Не удалось получить ответ."
                     quality = result.get("quality_score") or 50
+                    quality_source = str(result.get("quality_source") or "llm")
                     route = result.get("route") or "auto"
                     raw_sources = result.get("graded_docs") or result.get("context_docs") or []
                     sources = []
@@ -842,6 +967,7 @@ async def ask_stream(
                     session["history"].append({"role": "user", "content": question})
                     session["history"].append({"role": "assistant", "content": answer})
                     quality, route, sources, citations, trace_id, suggested_questions = 0, "human", [], [], "", []
+                    quality_source = "heuristic"
 
                 if time.monotonic() >= _app._db_retry_after:
                     try:
@@ -852,16 +978,35 @@ async def ask_stream(
                             session_uuid = uuid.UUID(session_id)
                             db.add(Message(session_id=session_uuid, role="user", content=question))
                             db.add(Message(session_id=session_uuid, role="assistant", content=answer))
-                            await asyncio.wait_for(db.commit(), timeout=0.5)
+                            await asyncio.wait_for(
+                                db.commit(),
+                                timeout=float(
+                                    getattr(
+                                        _app.get_settings(), "db_persist_timeout_sec", 2.0
+                                    )
+                                ),
+                            )
                             _app._db_retry_after = 0.0
                     except Exception as db_exc:
                         _app._db_retry_after = time.monotonic() + 60.0
+                        try:
+                            prometheus_metrics.record_message_persist_failure(
+                                "stream_fallback"
+                            )
+                        except Exception:
+                            pass
                         logger.warning("Failed to persist streamed fallback messages: %s", db_exc)
 
+                try:
+                    if quality:
+                        prometheus_metrics.record_quality_score_source(quality_source)
+                except Exception:
+                    pass
                 yield "data: " + _json.dumps({
                     "type": "result",
                     "answer": answer,
                     "quality_score": quality,
+                    "quality_source": quality_source,
                     "route": route,
                     "session_id": session_id,
                     "sources": sources,
@@ -882,6 +1027,14 @@ async def ask_stream(
                     "trace_id": "",
                     "suggested_questions": [],
                 }) + "\n\n"
+        finally:
+            # Runs on normal completion, errors, and client disconnect
+            # (GeneratorExit) — the pipeline slot must never leak.
+            try:
+                prometheus_metrics.INFLIGHT_PIPELINES.dec()
+            except Exception:
+                pass
+            semaphore.release()
 
     return StreamingResponse(
         event_generator(),

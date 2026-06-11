@@ -955,11 +955,14 @@ async def _get_or_create_session(
             from db.engine import async_session
             from db.models import Message, Session as DBSession
 
+            db_timeout = float(
+                getattr(get_settings(), "db_persist_timeout_sec", 2.0)
+            )
             async with async_session() as db:
                 session_uuid = uuid.UUID(session_id)
                 result = await asyncio.wait_for(
                     db.execute(select(DBSession).where(DBSession.id == session_uuid)),
-                    timeout=0.5,
+                    timeout=db_timeout,
                 )
                 db_session = result.scalar_one_or_none()
                 if db_session is None:
@@ -968,7 +971,7 @@ async def _get_or_create_session(
                     db_session.last_access = datetime.now(timezone.utc)
                     if not db_session.tenant_id or db_session.tenant_id == "default":
                         db_session.tenant_id = tenant_id
-                await asyncio.wait_for(db.commit(), timeout=0.5)
+                await asyncio.wait_for(db.commit(), timeout=db_timeout)
 
                 history_result = await asyncio.wait_for(
                     db.execute(
@@ -976,7 +979,7 @@ async def _get_or_create_session(
                         .where(Message.session_id == session_uuid)
                         .order_by(Message.created_at)
                     ),
-                    timeout=0.5,
+                    timeout=db_timeout,
                 )
                 db_history = [
                     {"role": role, "content": content}
@@ -985,6 +988,10 @@ async def _get_or_create_session(
                 _db_retry_after = 0.0
         except Exception as exc:
             _db_retry_after = time.monotonic() + 60.0
+            try:
+                prometheus_metrics.record_message_persist_failure("session_lookup")
+            except Exception:
+                pass
             logger.warning("DB session fallback to memory: %s", exc)
 
     session_retriever = _retriever

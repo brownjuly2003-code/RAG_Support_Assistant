@@ -178,7 +178,9 @@ def test_cache_miss_invokes_pipeline_and_stores(
 
     assert response.status_code == 200
     assert response.json()["answer"] == "Download it from the customer portal."
-    assert response.json().get("cached") is None
+    # cached is now part of the AskResponse schema (fable_com.md F-17):
+    # uncached answers carry an explicit false instead of omitting the key.
+    assert response.json().get("cached") is False
     assert captured["ask_calls"] == 1
     assert captured["get_key"] == api_app._cache_key("default", "Where can I download X?")
     assert captured["set_key"] == captured["get_key"]
