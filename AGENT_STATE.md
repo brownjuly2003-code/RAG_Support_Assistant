@@ -1,5 +1,27 @@
 # Agent State
 
+## 2026-06-11 Update (Fable hardening, сессия 2) — батч §1-6 верифицирован и ЗАКОММИЧЕН (7 коммитов), F-5/F-18 доделаны; push GATED
+
+**HEAD = `59df7c9` (master, ahead of origin by 8 — 7 fable-коммитов + предыдущий `55f1a42`; НЕ запушено). Working tree: чисто, кроме `AGENT_STATE.md` (этот docs-апдейт) + чужих untracked (`docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py`) — не трогать.**
+
+1. **Верификация перед коммитом** (свежая сессия, evidence-before-commit): §2 стрим/кэш/analytics/graph **49 passed** (прошлый 47/1 — фейл был намеренный pin-тест, после отката чисто), F-2+routing **13 passed**, ruff clean.
+2. **Закоммичен готовый батч** — 7 локальных коммитов на `master` (нарезка файлово-когерентная, т.к. `git add -p` интерактивен и недоступен): `2ee78a8` metrics · `544c3fc` F-2 restore BM25 chunks · `5f9194f` F-1a/F-11 event-loop unblock · `defe216` F-9a/F-12 graph+settings · `f8cc015` F-3/F-8/F-7/F-17/F-6 streaming/cache/persist · `59df7c9` **F-5/F-18**.
+3. **F-5/F-18 ДОДЕЛАНЫ** (была in-flight): `utils/event_loop.py` подключён — loop регистрируется в `api/app.py` `_lifespan` (старт/finally), `run_qa_pipeline` шлёт персист online-eval через `run_coroutine_threadsafe` на main loop без per-request `engine.dispose()`; sync-скрипты → legacy `asyncio.run`+dispose. F-18: timeout из `online_evaluators_timeout_sec`, counter `rag_online_evaluators_dropped_total{reason=timeout|error}`. Тест threadsafe-пути добавлен — online-eval **19 passed**, graph/routing/conversation **17 passed**, импорт `api.app`/`agent.graph` OK.
+4. **НЕ начато (отдельные циклы)**: F-4 (кэш runtime/compiled graph — ловушка `last_response`), гигиена (#11: .gitignore/мёртвый `cache.py`/pytest-tmp), README env-таблица 6 переменных + `STREAMING_QUALITY_EVAL`, multi-worker инвариант (§3 аудита). Детали — `next-session-fable-hardening.md`.
+5. **Push — GATED, спрашивать явно.** Полный suite на этой машине только с `RAG_RERANKER_MODEL=""` (cont.14).
+
+## 2026-06-11 Update (Fable hardening, сессия 1) — аудит fable_com.md + 11 из 18 findings в коде; ДЕРЕВО DIRTY НАМЕРЕННО, БЕЗ КОММИТОВ
+
+**HEAD = `55f1a42` (master, origin синхронизирован). Working tree: 11 M + наши новые `fable_com.md`, `tests/test_chunks_restore.py`, `utils/event_loop.py`, `next-session-fable-hardening.md` — НЕ закоммичено (остался хвост: ruff + доделка F-5; нарезка коммитов в handoff §5). Чужие untracked параллельной сессии (`docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py`) — не трогать.**
+
+1. **Аудит `fable_com.md`** (18 findings, оценка 8.7/10): топ-3 — BM25/parent-expansion не переживают рестарт (F-2), upload блокирует event loop на полный re-embed (F-1), стрим обходит Self-RAG с синтетическим quality 70/40 (F-3). Сверка прошлых аудитов: F1/F2/H2/R1/R6/R7 подтверждены закрытыми.
+2. **Реализовано в коде** (детали и таблица верификации — `next-session-fable-hardening.md` §1): F-2 (restore chunks из Chroma + `chunk_index`-штамп + gauge `rag_retriever_bm25_enabled` — **тесты 6/6** ✅), F-1a (upload → to_thread), F-10 (см. ниже — разрешён как «намеренно»), F-12, F-8, F-7, F-17 (контракт: `/api/ask` теперь всегда отдаёт `cached: bool`), F-6, F-9a (`quality_source` llm/fixed/heuristic в state+метрика), F-3 (стрим: семафор+дедлайн+**дешёвая self-eval parity**, default ON, откат `STREAMING_QUALITY_EVAL=false`), F-11. +4 новые prometheus-метрики, +6 settings-полей.
+3. **Верификация СДЕЛАНА в конце сессии**: пакет стрим/кэш/analytics/graph — **47 passed / 1 failed**; единственный фейл вскрыл, что **F-10 был НАМЕРЕННЫМ** (пин-тест `test_build_support_graph_uses_fast_llm_for_evaluate_node`, коммит `7e266af`: strong в gracekelly-primary = ~60s orchestrate-вызов). Правка evaluate→strong **откатана** (оставлено `(llm_fast, llm_fast)` + комментарий в `build_support_graph`; suggest→fast оставлен), после отката **15 passed** (`test_magic_numbers_settings` + `test_model_routing`). Резолюция вписана в `fable_com.md`. Гоча: `tests/test_analytics_dashboard.py` НЕ существует (правильно `tests/test_analytics.py`) — из-за опечатки первый прогон молча не запустился («no tests ran», `| tail` маскирует exit code).
+4. **In flight**: F-5/F-18 — `utils/event_loop.py` создан, но НЕ подключён (lifespan + переписать online-eval блок в `run_qa_pipeline` на `run_coroutine_threadsafe`, убрать per-request `engine.dispose()`); пошаговый рецепт в §3. Не начато: F-4 (кэш runtime/graph — ловушка `last_response`, см. §4), гигиена, README env-таблица.
+5. **Гочи**: `manager.get_retriever(embeddings=None)` в тестах тянет реальный BGE-M3 — стабовать `manager.get_embeddings` (fixture в `tests/test_chunks_restore.py`); зависший python — `taskkill //F //FI "IMAGENAME eq python.exe"`; full suite только с `RAG_RERANKER_MODEL=""` (cont.14 в силе).
+
+**План и нарезка коммитов: `next-session-fable-hardening.md`. Push — GATED, спрашивать явно.**
+
 ## 2026-06-06 Update (cont. 18 ЗАКРЫТ) — плечо F NO-SHIP (95 < 96), цикл query-expansion ЗАКРЫТ; production = D2
 
 **HEAD = этот handoff-коммит (master). Origin = `eeb7cd0` — unpushed: `06b9d84`+`62a54cd`+`c8cd806`+`d9d205f` (утренняя половина) + отчёт F + этот. Push GATED.**
