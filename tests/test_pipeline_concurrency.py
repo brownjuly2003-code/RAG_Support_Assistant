@@ -12,8 +12,8 @@ api_app = importlib.import_module("api.app")
 
 
 def _fake_slow_session_factory(sleep_sec: float):
-    def _slow_ask(question: str, trace_id=None) -> dict:
-        _ = question, trace_id
+    def _slow_ask(question: str, trace_id=None, **kwargs) -> dict:
+        _ = question, trace_id, kwargs
         time.sleep(sleep_sec)
         return {"answer": "ok", "quality_score": 75, "route": "auto"}
 
@@ -22,6 +22,13 @@ def _fake_slow_session_factory(sleep_sec: float):
         _history: ClassVar[list] = []
 
     return FakeSession
+
+
+def _install_fake_session(monkeypatch: pytest.MonkeyPatch, fake_session) -> None:
+    async def _fake_get_or_create_session(session_id, tenant_id="default"):
+        return ("sid", fake_session())
+
+    monkeypatch.setattr(api_app, "_get_or_create_session", _fake_get_or_create_session)
 
 
 def _get_inflight_gauge_value() -> float | None:
@@ -68,11 +75,7 @@ def test_saturated_pool_returns_503(
     api_app._db_retry_after = time.monotonic() + 60.0
 
     fake_session = _fake_slow_session_factory(0.8)
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda session_id: ("sid", fake_session()),
-    )
+    _install_fake_session(monkeypatch, fake_session)
 
     statuses: list[int] = []
     errors: list[BaseException] = []
@@ -119,11 +122,7 @@ def test_rejection_counter_increments(
     api_app._db_retry_after = time.monotonic() + 60.0
 
     fake_session = _fake_slow_session_factory(0.5)
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda session_id: ("sid", fake_session()),
-    )
+    _install_fake_session(monkeypatch, fake_session)
 
     before = _get_rejection_counter_value("busy") or 0.0
 
@@ -156,11 +155,7 @@ def test_inflight_gauge_decrements_after_success(
     assert _get_inflight_gauge_value() == 0.0
 
     fake_session = _fake_slow_session_factory(0.1)
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda session_id: ("sid", fake_session()),
-    )
+    _install_fake_session(monkeypatch, fake_session)
 
     response = client.post("/api/ask", json={"question": "q"})
 
@@ -187,11 +182,7 @@ def test_inflight_gauge_decrements_after_timeout(
     assert _get_inflight_gauge_value() == 0.0
 
     fake_session = _fake_slow_session_factory(1.0)
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda session_id: ("sid", fake_session()),
-    )
+    _install_fake_session(monkeypatch, fake_session)
 
     response = client.post("/api/ask", json={"question": "q"})
 

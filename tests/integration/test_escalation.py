@@ -25,7 +25,7 @@ def test_low_quality_answer_can_be_escalated_to_ticket_and_inbox(
             self._tenant_id = tenant_id
             self._history: list[dict[str, str]] = []
 
-        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default") -> dict:
+        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default", **kwargs) -> dict:
             _ = question, trace_id, tenant_id
             return {
                 "answer": "Недостаточно данных для автоматического ответа.",

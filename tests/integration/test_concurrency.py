@@ -27,7 +27,7 @@ def test_parallel_requests_keep_sessions_isolated_by_tenant(
             self._tenant_id = tenant_id
             self._history: list[dict[str, str]] = []
 
-        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default") -> dict:
+        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default", **kwargs) -> dict:
             _ = trace_id
             return {
                 "answer": f"{tenant_id}:{question}",

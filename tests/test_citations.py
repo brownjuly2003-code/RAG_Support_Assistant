@@ -89,8 +89,8 @@ def test_ask_endpoint_returns_citations_and_ignores_orphans(
     client: TestClient,
 ) -> None:
     class FakeSession:
-        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default"):
-            _ = question, trace_id, tenant_id
+        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default", **kwargs):
+            _ = question, trace_id, tenant_id, kwargs
             return {
                 "answer": "Откройте раздел безопасности [1], затем проверьте несуществующую ссылку [3].",
                 "quality_score": 83,

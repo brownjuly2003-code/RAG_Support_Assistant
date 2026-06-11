@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
 import json as _json
 import logging
 import re
@@ -78,18 +77,7 @@ async def ask(
         raise HTTPException(status_code=400, detail="question is empty")
 
     tenant = get_current_tenant() or _user.get("tenant", "default")
-    session_params = inspect.signature(_app._get_or_create_session).parameters
-    if "tenant_id" in session_params or any(
-        param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
-        for param in session_params.values()
-    ):
-        session_result = _app._get_or_create_session(body.session_id, tenant)
-    else:
-        session_result = _app._get_or_create_session(body.session_id)
-    if asyncio.iscoroutine(session_result):
-        session_id, session = await session_result
-    else:
-        session_id, session = session_result
+    session_id, session = await _app._get_or_create_session(body.session_id, tenant)
 
     settings = _app.get_settings()
     cache_enabled = bool(getattr(settings, "llm_cache_enabled", False))
@@ -188,22 +176,13 @@ async def ask(
                 getattr(settings, "pipeline_acquire_timeout_sec", 0.5)
             )
             request_id = get_request_id()
-            ask_params = inspect.signature(session.ask).parameters
-            has_var_kwargs = any(
-                param.kind == inspect.Parameter.VAR_KEYWORD
-                for param in ask_params.values()
-            )
-            ask_kwargs: dict[str, Any] = {}
-            if "trace_id" in ask_params or has_var_kwargs:
-                ask_kwargs["trace_id"] = request_id
-            if "tenant_id" in ask_params or has_var_kwargs:
-                ask_kwargs["tenant_id"] = tenant
-            if "confirm" in ask_params or has_var_kwargs:
-                ask_kwargs["confirm"] = body.confirm
-            if "user_id" in ask_params or has_var_kwargs:
-                ask_kwargs["user_id"] = _user.get("sub", "anonymous")
-            if "session_id" in ask_params or has_var_kwargs:
-                ask_kwargs["session_id"] = session_id
+            ask_kwargs: dict[str, Any] = {
+                "trace_id": request_id,
+                "tenant_id": tenant,
+                "confirm": body.confirm,
+                "user_id": _user.get("sub", "anonymous"),
+                "session_id": session_id,
+            }
             semaphore = _app._get_pipeline_semaphore()
             try:
                 await asyncio.wait_for(semaphore.acquire(), timeout=acquire_timeout)
@@ -465,18 +444,7 @@ async def ask_stream(
         yield "data: " + _json.dumps({"type": "status", "node": "processing"}) + "\n\n"
 
         tenant = get_current_tenant() or _user.get("tenant", "default")
-        session_params = inspect.signature(_app._get_or_create_session).parameters
-        if "tenant_id" in session_params or any(
-            param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
-            for param in session_params.values()
-        ):
-            session_result = _app._get_or_create_session(body.session_id, tenant)
-        else:
-            session_result = _app._get_or_create_session(body.session_id)
-        if asyncio.iscoroutine(session_result):
-            session_id, session = await session_result
-        else:
-            session_id, session = session_result
+        session_id, session = await _app._get_or_create_session(body.session_id, tenant)
         question = (body.question or "").strip()
 
         if not question:
@@ -502,7 +470,7 @@ async def ask_stream(
         # otherwise the fallback itself dies with NameError and the SSE stream
         # ends without a result event.
         graph_task: asyncio.Future | None = None
-        ask_args: tuple[Any, ...] = (question, get_request_id())
+        ask_args: tuple[Any, ...] = (question, get_request_id(), tenant)
 
         # Streaming consumes the same retriever/LLM resources as /api/ask —
         # it must respect the same bounded-concurrency pool instead of
@@ -532,17 +500,6 @@ async def ask_stream(
             docs: list[Any] = []
             plain_docs: list[dict[str, Any]] = []
             chat_history: list[dict[str, str]] = []
-            ask_params = inspect.signature(session.ask).parameters if hasattr(session, "ask") else {}
-            ask_args = (
-                (question, get_request_id(), tenant)
-                if len(ask_params) >= 3
-                or any(
-                    param.kind == inspect.Parameter.VAR_POSITIONAL
-                    for param in ask_params.values()
-                )
-                else (question, get_request_id())
-            )
-
             # H1 parity: while we stream tokens for UX, run the full Self-RAG
             # graph in parallel so the final SSE event ships graph-level
             # route/quality/citations/trace_id rather than the stream-side

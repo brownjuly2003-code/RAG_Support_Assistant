@@ -32,7 +32,7 @@ def test_pipeline_exception_persists_escalated_ticket(
         _tenant_id = "tenant-x"
         _history: ClassVar[list[dict[str, str]]] = []
 
-        def ask(self, question, trace_id=None, tenant_id="default"):
+        def ask(self, question, trace_id=None, tenant_id="default", **kwargs):
             raise RuntimeError("simulated provider outage")
 
     async def _fake_get_or_create_session(session_id, tenant_id="default"):

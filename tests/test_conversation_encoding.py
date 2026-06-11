@@ -35,11 +35,10 @@ def test_ask_response_declares_utf8_for_cyrillic_payload(
         _history: ClassVar[list[dict[str, str]]] = []
 
     monkeypatch.setattr(api_app, "log_audit", _noop_log_audit)
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda sid: ("00000000-0000-0000-0000-000000000001", FakeSession()),
-    )
+    async def _fake_get_or_create_session(session_id, tenant_id="default"):
+        return ("00000000-0000-0000-0000-000000000001", FakeSession())
+
+    monkeypatch.setattr(api_app, "_get_or_create_session", _fake_get_or_create_session)
 
     response = client.post(
         "/api/ask",
@@ -88,11 +87,10 @@ def test_cached_ask_response_declares_utf8_for_cyrillic_payload(
     monkeypatch.setattr(api_app, "get_settings", lambda: settings)
     monkeypatch.setattr(api_app, "cache_json_get", _cache_json_get)
     monkeypatch.setattr(api_app, "log_audit", _noop_log_audit)
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda sid: ("00000000-0000-0000-0000-000000000002", FakeSession()),
-    )
+    async def _fake_get_or_create_session(session_id, tenant_id="default"):
+        return ("00000000-0000-0000-0000-000000000002", FakeSession())
+
+    monkeypatch.setattr(api_app, "_get_or_create_session", _fake_get_or_create_session)
 
     response = client.post(
         "/api/ask",

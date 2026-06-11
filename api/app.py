@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import inspect
 import json as _json
 import logging
 import sys
@@ -1000,12 +999,7 @@ async def _get_or_create_session(
     has_persisted_store = await asyncio.to_thread(_has_persisted_store, chroma_dir)
     if _get_retriever is not None and (_retriever is not None or _vector_store is not None or has_persisted_store):
         try:
-            retriever_params = inspect.signature(_get_retriever).parameters
-            if "tenant_id" in retriever_params or any(
-                param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
-                for param in retriever_params.values()
-            ):
-                session_retriever = _get_retriever(tenant_id=tenant_id)
+            session_retriever = _get_retriever(tenant_id=tenant_id)
         except Exception as exc:
             logger.warning("Failed to resolve retriever for tenant %s: %s", tenant_id, exc)
 
@@ -1124,14 +1118,7 @@ def initialize_vector_store() -> None:
                 _vector_store = vector_store
 
                 if _get_retriever is not None:
-                    retriever_params = inspect.signature(_get_retriever).parameters
-                    if "tenant_id" in retriever_params or any(
-                        param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
-                        for param in retriever_params.values()
-                    ):
-                        _retriever = _get_retriever(_vector_store, chunks=None, tenant_id="default")
-                    else:
-                        _retriever = _get_retriever(_vector_store, chunks=None)
+                    _retriever = _get_retriever(_vector_store, chunks=None, tenant_id="default")
                 else:
                     _retriever = _vector_store.as_retriever(search_kwargs={"k": 5})
 
@@ -1160,28 +1147,14 @@ def _rebuild_vector_store_from_docs(
                 "chunk_size": getattr(settings, "chunk_size", 800),
                 "chunk_overlap": getattr(settings, "chunk_overlap", 200),
             }
-            build_params = inspect.signature(_build_vector_store).parameters
-            if "tenant_id" in build_params or any(
-                param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
-                for param in build_params.values()
-            ):
-                _vector_store, _chunks = _build_vector_store(
-                    docs,
-                    chunk_config,
-                    tenant_id=tenant_id,
-                )
-            else:
-                _vector_store, _chunks = _build_vector_store(docs, chunk_config)
+            _vector_store, _chunks = _build_vector_store(
+                docs,
+                chunk_config,
+                tenant_id=tenant_id,
+            )
 
             if _get_retriever is not None:
-                retriever_params = inspect.signature(_get_retriever).parameters
-                if "tenant_id" in retriever_params or any(
-                    param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
-                    for param in retriever_params.values()
-                ):
-                    _retriever = _get_retriever(_vector_store, chunks=_chunks, tenant_id=tenant_id)
-                else:
-                    _retriever = _get_retriever(_vector_store, chunks=_chunks)
+                _retriever = _get_retriever(_vector_store, chunks=_chunks, tenant_id=tenant_id)
             elif hasattr(_vector_store, "as_retriever"):
                 _retriever = _vector_store.as_retriever(search_kwargs={"k": 5})
 

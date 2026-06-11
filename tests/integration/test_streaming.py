@@ -42,7 +42,7 @@ def test_streaming_endpoint_emits_tokens_and_final_result(
             self._retriever = FakeRetriever()
             self._llm = FakeQuestionLLM()
 
-        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default") -> dict:
+        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default", **kwargs) -> dict:
             _ = question, trace_id, tenant_id
             return {"answer": "fallback", "quality_score": 50, "route": "auto", "graded_docs": []}
 

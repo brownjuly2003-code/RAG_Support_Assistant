@@ -68,8 +68,8 @@ def test_ask_stream_content_type(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     class _FakeSession:
-        def ask(self, question: str) -> dict:
-            _ = question
+        def ask(self, question: str, *args, **kwargs) -> dict:
+            _ = question, args, kwargs
             return {
                 "answer": "streamed answer",
                 "quality_score": 80,
@@ -78,11 +78,10 @@ def test_ask_stream_content_type(
                 "trace_id": "trace-123",
             }
 
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda session_id: (session_id or "session-123", _FakeSession()),
-    )
+    async def _fake_get_or_create_session(session_id, tenant_id="default"):
+        return (session_id or "session-123", _FakeSession())
+
+    monkeypatch.setattr(api_app, "_get_or_create_session", _fake_get_or_create_session)
 
     resp = client.post(
         "/api/ask/stream",

@@ -28,7 +28,7 @@ def test_chat_alias_returns_sync_response(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     class _FakeSession:
-        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default") -> dict:
+        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default", **kwargs) -> dict:
             _ = question, trace_id, tenant_id
             return {
                 "answer": "chat alias answer",
@@ -38,11 +38,10 @@ def test_chat_alias_returns_sync_response(
                 "trace_id": "trace-chat-1",
             }
 
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda session_id, tenant_id="default": (session_id or "session-chat-1", _FakeSession()),
-    )
+    async def _fake_get_or_create_session(session_id, tenant_id="default"):
+        return (session_id or "session-chat-1", _FakeSession())
+
+    monkeypatch.setattr(api_app, "_get_or_create_session", _fake_get_or_create_session)
 
     response = client.post("/api/chat", json={"question": "test question"})
 
@@ -81,7 +80,7 @@ def test_chat_stream_uses_provider_streaming_llm(
             self._llm = _StreamingLLM()
             self.history: list[dict[str, str]] = []
 
-        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default") -> dict:
+        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default", **kwargs) -> dict:
             _ = question, trace_id, tenant_id
             return {
                 "answer": "fallback",
@@ -91,11 +90,10 @@ def test_chat_stream_uses_provider_streaming_llm(
                 "trace_id": "trace-chat-stream-fallback",
             }
 
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda session_id, tenant_id="default": (session_id or "session-chat-stream", _FakeSession()),
-    )
+    async def _fake_get_or_create_session(session_id, tenant_id="default"):
+        return (session_id or "session-chat-stream", _FakeSession())
+
+    monkeypatch.setattr(api_app, "_get_or_create_session", _fake_get_or_create_session)
 
     response = client.post(
         "/api/chat/stream",

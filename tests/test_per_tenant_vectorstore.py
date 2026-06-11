@@ -169,7 +169,7 @@ def test_ask_endpoint_passes_tenant_to_session_resolution(
         def __init__(self):
             self._retriever = object()
 
-        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default"):
+        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default", **kwargs):
             return {
                 "answer": question,
                 "quality_score": 90,

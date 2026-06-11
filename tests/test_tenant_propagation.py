@@ -133,8 +133,8 @@ def test_ask_endpoint_propagates_tenant_to_graph(
 ) -> None:
     seen: dict[str, str] = {}
 
-    def _spy_ask(question, trace_id=None, tenant_id="default"):
-        _ = question, trace_id
+    def _spy_ask(question, trace_id=None, tenant_id="default", **kwargs):
+        _ = question, trace_id, kwargs
         seen["tenant_id"] = tenant_id
         return {
             "answer": "ok",
@@ -147,11 +147,10 @@ def test_ask_endpoint_propagates_tenant_to_graph(
         ask = staticmethod(_spy_ask)
         _history: ClassVar[list] = []
 
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda sid: ("00000000-0000-0000-0000-000000000001", FakeSession()),
-    )
+    async def _fake_get_or_create_session(session_id, tenant_id="default"):
+        return ("00000000-0000-0000-0000-000000000001", FakeSession())
+
+    monkeypatch.setattr(api_app, "_get_or_create_session", _fake_get_or_create_session)
 
     response = client.post(
         "/api/ask",

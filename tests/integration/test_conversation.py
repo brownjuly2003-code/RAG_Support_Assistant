@@ -27,7 +27,7 @@ def test_multi_turn_conversation_persists_history(
         def history(self) -> list[dict[str, str]]:
             return self._history
 
-        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default") -> dict:
+        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default", **kwargs) -> dict:
             _ = trace_id, tenant_id
             turn = len(self._history) // 2 + 1
             previous = self._history[-1]["content"] if self._history else "нет истории"

@@ -44,8 +44,8 @@ def test_slow_pipeline_returns_504(
         lambda: settings_factory(request_timeout_sec=0.5),
     )
 
-    def _slow_ask(question: str, trace_id=None) -> dict:
-        _ = question, trace_id
+    def _slow_ask(question: str, trace_id=None, **kwargs) -> dict:
+        _ = question, trace_id, kwargs
         time.sleep(2.0)
         return {"answer": "never", "quality_score": 99, "route": "auto"}
 
@@ -53,11 +53,10 @@ def test_slow_pipeline_returns_504(
         ask = staticmethod(_slow_ask)
         _history: ClassVar[list] = []
 
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda session_id: ("test-sid", FakeSession()),
-    )
+    async def _fake_get_or_create_session(session_id, tenant_id="default"):
+        return ("test-sid", FakeSession())
+
+    monkeypatch.setattr(api_app, "_get_or_create_session", _fake_get_or_create_session)
 
     response = client.post("/api/ask", json={"question": "медленный вопрос"})
 
@@ -81,8 +80,8 @@ def test_timeout_counter_increments(
         lambda: settings_factory(request_timeout_sec=0.3),
     )
 
-    def _slow_ask(question: str, trace_id=None) -> dict:
-        _ = question, trace_id
+    def _slow_ask(question: str, trace_id=None, **kwargs) -> dict:
+        _ = question, trace_id, kwargs
         time.sleep(1.0)
         return {"answer": "x"}
 
@@ -90,11 +89,10 @@ def test_timeout_counter_increments(
         ask = staticmethod(_slow_ask)
         _history: ClassVar[list] = []
 
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda session_id: ("sid", FakeSession()),
-    )
+    async def _fake_get_or_create_session(session_id, tenant_id="default"):
+        return ("sid", FakeSession())
+
+    monkeypatch.setattr(api_app, "_get_or_create_session", _fake_get_or_create_session)
 
     before = _get_timeout_counter_value("/api/ask") or 0.0
 
@@ -117,8 +115,8 @@ def test_event_loop_not_blocked_during_pipeline(
     )
     api_app._db_retry_after = time.monotonic() + 60.0
 
-    def _sync_ask(question: str, trace_id=None) -> dict:
-        _ = question, trace_id
+    def _sync_ask(question: str, trace_id=None, **kwargs) -> dict:
+        _ = question, trace_id, kwargs
         time.sleep(0.4)
         return {"answer": "ok", "quality_score": 75, "route": "auto"}
 
@@ -126,11 +124,10 @@ def test_event_loop_not_blocked_during_pipeline(
         ask = staticmethod(_sync_ask)
         _history: ClassVar[list] = []
 
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda session_id: ("sid", FakeSession()),
-    )
+    async def _fake_get_or_create_session(session_id, tenant_id="default"):
+        return ("sid", FakeSession())
+
+    monkeypatch.setattr(api_app, "_get_or_create_session", _fake_get_or_create_session)
 
     results: dict[str, float | int] = {}
     errors: list[BaseException] = []

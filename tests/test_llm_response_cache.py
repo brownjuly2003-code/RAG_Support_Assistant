@@ -75,7 +75,7 @@ def test_cached_response_returns_without_pipeline(
         def __init__(self) -> None:
             self._history: list[dict[str, str]] = []
 
-        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default"):
+        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default", **kwargs):
             raise AssertionError("session.ask must not be called on cache hit")
 
     async def _fake_get_or_create_session(session_id: str | None, tenant_id: str = "default"):
@@ -137,7 +137,7 @@ def test_cache_miss_invokes_pipeline_and_stores(
         def __init__(self) -> None:
             self._history: list[dict[str, str]] = []
 
-        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default"):
+        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default", **kwargs):
             captured["ask_calls"] += 1
             captured["ask_question"] = question
             captured["ask_tenant"] = tenant_id
@@ -255,7 +255,7 @@ def test_cache_disabled_flag_skips_entirely(
     settings = settings_factory(llm_cache_enabled=False, llm_cache_ttl_seconds=123)
 
     class FakeSession:
-        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default"):
+        def ask(self, question: str, trace_id: str | None = None, tenant_id: str = "default", **kwargs):
             captured["ask_calls"] += 1
             return {
                 "answer": "Live answer",

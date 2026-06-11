@@ -54,11 +54,10 @@ class _StreamingLLM:
 
 
 def _install_session(monkeypatch: pytest.MonkeyPatch, session) -> None:
-    monkeypatch.setattr(
-        api_app,
-        "_get_or_create_session",
-        lambda session_id, tenant_id="default": (session_id or "session-stream", session),
-    )
+    async def _fake_get_or_create_session(session_id, tenant_id="default"):
+        return (session_id or "session-stream", session)
+
+    monkeypatch.setattr(api_app, "_get_or_create_session", _fake_get_or_create_session)
 
 
 def _enable_parity() -> None:
