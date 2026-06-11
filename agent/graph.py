@@ -1304,11 +1304,17 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
 
             answer = state.get("answer", "")
             docs = state.get("graded_docs") or state.get("context_docs") or []
+            # Verification evidence must cover the same context the answer was
+            # generated from: with parent-expansion ON chunks reach
+            # parent_expansion_max_chars (3600), so a tighter cap here would
+            # mark facts from chunk tails as unsupported.
+            max_docs = int(getattr(settings, "fact_verify_context_max_docs", 5))
+            chars_per_doc = int(getattr(settings, "fact_verify_context_chars_per_doc", 3600))
             context_text = "\n\n".join(
                 str(
                     d.get("page_content") if isinstance(d, dict) else getattr(d, "page_content", "")
-                )[:500]
-                for d in docs[:5]
+                )[:chars_per_doc]
+                for d in docs[:max_docs]
             )
 
             if not answer or not context_text:
@@ -1521,6 +1527,7 @@ def make_evaluate_node(
                 **state,
                 "quality_score": score,
                 "relevance_score": round(score / 100.0, 3),
+                "quality_source": "llm",
             }
             if usage_recorded:
                 new_state = _apply_llm_usage(new_state, usage)
@@ -1823,9 +1830,14 @@ def build_support_graph(
     workflow.add_node("grade_docs", make_grade_docs_node(llm_fast))
     workflow.add_node("generate", make_generate_node(llm_fast, llm_strong))
     workflow.add_node("verify_facts", make_verify_facts_node(llm_fast))
+    # evaluate deliberately gets the fast model for BOTH branches: in the
+    # gracekelly-primary profile the strong model is a ~60s orchestrate call,
+    # and self-eval on it would double complex-request latency (commit 7e266af;
+    # pinned by test_build_support_graph_uses_fast_llm_for_evaluate_node).
+    # suggest_questions is cosmetic follow-up text — fast is enough there too.
     workflow.add_node("evaluate", make_evaluate_node(llm_fast, llm_fast))
     workflow.add_node("route_or_retry", make_route_or_retry_node(min_quality=min_quality))
-    workflow.add_node("suggest_questions", make_suggest_questions_node(llm_strong))
+    workflow.add_node("suggest_questions", make_suggest_questions_node(llm_fast))
     workflow.add_node("rewrite_query", make_rewrite_query_node(llm_strong))
     workflow.add_node("log", make_log_node())
     workflow.add_node("handle_error", make_handle_error_node())
@@ -2138,6 +2150,7 @@ class ConversationSession:
                     "route": "agentic",
                     "quality_score": 85,
                     "relevance_score": 0.85,
+                    "quality_source": "fixed",
                     "tool_calls": tool_calls,
                     "requires_confirmation": False,
                     "action_summary": "",
@@ -2183,6 +2196,7 @@ class ConversationSession:
                         "route": "agentic",
                         "quality_score": 80,
                         "relevance_score": 0.8,
+                        "quality_source": "fixed",
                         "tool_calls": tool_calls + [tool_name],
                         "requires_confirmation": True,
                         "action_summary": action_summary,
@@ -2211,6 +2225,7 @@ class ConversationSession:
             "route": "agentic",
             "quality_score": 80,
             "relevance_score": 0.8,
+            "quality_source": "fixed",
             "tool_calls": tool_calls,
             "requires_confirmation": False,
             "action_summary": "",
@@ -2270,6 +2285,7 @@ class ConversationSession:
                         "route": "auto",
                         "quality_score": 90,
                         "relevance_score": 0.9,
+                        "quality_source": "fixed",
                         "tool_calls": ["create_ticket"],
                         "requires_confirmation": False,
                         "action_summary": "",
@@ -2286,6 +2302,7 @@ class ConversationSession:
                         "route": "auto",
                         "quality_score": 80,
                         "relevance_score": 0.8,
+                        "quality_source": "fixed",
                         "tool_calls": [],
                         "requires_confirmation": False,
                         "action_summary": "",
@@ -2301,6 +2318,7 @@ class ConversationSession:
                     "route": "agentic",
                     "quality_score": 80,
                     "relevance_score": 0.8,
+                    "quality_source": "fixed",
                     "tool_calls": [],
                     "requires_confirmation": True,
                     "action_summary": self._pending_action["action_summary"],
@@ -2336,6 +2354,7 @@ class ConversationSession:
                     "route": "agentic",
                     "quality_score": 80,
                     "relevance_score": 0.8,
+                    "quality_source": "fixed",
                     "tool_calls": ["create_ticket"],
                     "requires_confirmation": True,
                     "action_summary": action_summary,
@@ -2384,6 +2403,7 @@ class ConversationSession:
                 "route": "auto",
                 "quality_score": 85,
                 "relevance_score": 0.85,
+                "quality_source": "fixed",
                 "tool_calls": tool_calls,
                 "requires_confirmation": False,
                 "action_summary": "",

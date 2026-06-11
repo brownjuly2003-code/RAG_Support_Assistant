@@ -80,6 +80,10 @@ class GraphState(TypedDict, total=False):
     answer: Optional[str]
     relevance_score: Optional[float]
     quality_score: Optional[int]
+    # Provenance of quality_score: "llm" — real self-evaluation; "fixed" —
+    # hardcoded agentic-flow constants; "heuristic" — streaming length check.
+    # Keeps dashboards honest about which scores were actually measured.
+    quality_source: Optional[Literal["llm", "fixed", "heuristic"]]
     claims: list[dict]
     factuality_score: int
     fact_verification_skipped: bool

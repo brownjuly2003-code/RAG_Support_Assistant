@@ -369,6 +369,20 @@ class Settings:
         default_factory=lambda: os.getenv("STREAMING_RAG_PARITY", "false").strip().lower()
         in ("1", "true", "yes")
     )
+    # Cheap streaming parity (default ON): one extra self-eval LLM call after
+    # the stream replaces the length heuristic (quality 70/40) with a real
+    # quality score over the docs the stream actually used. Rollback:
+    # STREAMING_QUALITY_EVAL=false restores the heuristic.
+    streaming_quality_eval: bool = field(
+        default_factory=lambda: os.getenv("STREAMING_QUALITY_EVAL", "true").strip().lower()
+        in ("1", "true", "yes")
+    )
+    # Wall-clock budget for the SSE token loop. Separate from
+    # request_timeout_sec: local-model streams legitimately run far longer
+    # than the non-streaming pipeline budget.
+    streaming_timeout_sec: float = field(
+        default_factory=lambda: float(os.getenv("STREAMING_TIMEOUT_SEC", "120"))
+    )
 
     # --- Parent-Child Chunking ---
     parent_child: bool = field(
@@ -451,6 +465,15 @@ class Settings:
     fact_verification_min_score: int = field(
         default_factory=lambda: int(os.getenv("FACT_VERIFICATION_MIN_SCORE", "70"))
     )
+    # Evidence window for claim verification. chars_per_doc tracks
+    # parent_expansion_max_chars: with expansion ON chunks reach 3600 chars and
+    # a tighter cap produces false "unsupported" verdicts for chunk tails.
+    fact_verify_context_max_docs: int = field(
+        default_factory=lambda: int(os.getenv("FACT_VERIFY_CONTEXT_MAX_DOCS", "5"))
+    )
+    fact_verify_context_chars_per_doc: int = field(
+        default_factory=lambda: int(os.getenv("FACT_VERIFY_CONTEXT_CHARS_PER_DOC", "3600"))
+    )
 
     # --- Auto-rollback (task-155) ---
     auto_rollback_enabled: bool = field(
@@ -503,6 +526,15 @@ class Settings:
         default_factory=lambda: os.getenv(
             "ONLINE_EVALUATORS_ENABLED", "true"
         ).strip().lower() in ("1", "true", "yes")
+    )
+    online_evaluators_timeout_sec: float = field(
+        default_factory=lambda: float(os.getenv("ONLINE_EVALUATORS_TIMEOUT_SEC", "1.0"))
+    )
+    # Wall-clock budget for persisting conversation messages to Postgres.
+    # The previous hardcoded 0.5s treated ordinary latency tails as outages
+    # and tripped the global 60s persistence breaker.
+    db_persist_timeout_sec: float = field(
+        default_factory=lambda: float(os.getenv("DB_PERSIST_TIMEOUT_SEC", "2.0"))
     )
     regression_gate_max_regressions: int = field(
         default_factory=lambda: int(os.getenv("REGRESSION_GATE_MAX_REGRESSIONS", "2"))
