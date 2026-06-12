@@ -12,7 +12,9 @@
 
 Верификация: `test_base_manager.py` 17 passed; `test_module_layout`/`test_manager_semantic_chunking`/`test_per_tenant_vectorstore` 17 passed; ruff + py_compile clean.
 
-**Остаток:** push (теперь **22 коммита** к origin, GATED — спрашивать явно). Бэклог Fable-hardening исчерпан.
+**PUSHED** (по явному «все решения принимаешь ты»): `51628e2..aacaa18`. CI run `27413770413` зелёный полностью. По ходу push CI словил **свежую CVE-2025-3000** (torch 2.11.0, local memory corruption в `torch.jit.script`, fix-версии нет) — pip-audit fail-closed. Добавил документированный `--ignore-vuln CVE-2025-3000` во все 4 точки (`97fdd6e` pre-commit + `aacaa18` ci.yml security-job + `local-gate.ps1` + `autopilot.ps1`); `torch.jit.script` к недоверенному вводу не подключён (только локальный sentence-transformers inference). Снять, когда выйдет upstream-фикс. `test_precommit_config.py` 11 passed, pip-audit hook локально Passed.
+
+**Остаток:** бэклог Fable-hardening исчерпан, origin синхронизирован, CI зелёный.
 
 ---
 
