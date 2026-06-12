@@ -115,6 +115,41 @@ def test_local_dependency_gates_match_ci_pip_audit_exception_policy() -> None:
             assert arg in normalized_script
 
 
+# Every justified pip-audit suppression, with the reason it stays ignored.
+# Each entry is an unfixed upstream advisory whose affected code path is not
+# reachable in this app (verified 2026-06-12): torch.jit.script is never
+# called, and Chroma runs as an embedded PersistentClient, never the server
+# API. Drop an entry the moment an upstream fix is released.
+EXPECTED_PIP_AUDIT_IGNORES = {
+    "CVE-2026-45829",       # unfixed ChromaDB server advisory
+    "GHSA-f4j7-r4q5-qw2c",  # GHSA alias of the same ChromaDB advisory
+    "CVE-2025-3000",        # unfixed torch advisory (torch.jit.script memory corruption)
+}
+
+_IGNORE_VULN_RE = re.compile(r"--ignore-vuln[\"',\s]+([A-Za-z0-9-]+)")
+
+
+def test_pip_audit_ignore_set_is_synced_and_minimal() -> None:
+    # Every pip-audit invocation must carry EXACTLY the justified ignore set.
+    # This locks two things at once: (1) no silent suppression — adding an
+    # ignore forces an intentional update to EXPECTED_PIP_AUDIT_IGNORES with a
+    # reason; (2) no drift between the pre-commit hook, the CI security job,
+    # and the local gates — a desync previously shipped a red CI when only the
+    # pre-commit hook was updated.
+    for relative_path in (
+        ".pre-commit-config.yaml",
+        ".github/workflows/ci.yml",
+        "scripts/local-gate.ps1",
+        "scripts/autopilot.ps1",
+    ):
+        text = (PROJECT_ROOT / relative_path).read_text(encoding="utf-8")
+        found = set(_IGNORE_VULN_RE.findall(text))
+        assert found == EXPECTED_PIP_AUDIT_IGNORES, (
+            f"{relative_path}: pip-audit --ignore-vuln set is {sorted(found)}, "
+            f"expected {sorted(EXPECTED_PIP_AUDIT_IGNORES)}"
+        )
+
+
 def test_ci_tests_cover_docker_python_target_and_current_python() -> None:
     ci = yaml.safe_load(
         (PROJECT_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
