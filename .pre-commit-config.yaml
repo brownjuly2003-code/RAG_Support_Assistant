@@ -33,7 +33,7 @@ repos:
     rev: v2.10.0
     hooks:
       - id: pip-audit
-        args: ["--strict", "--disable-pip", "--require-hashes", "--timeout", "15", "--progress-spinner", "off", "--cache-dir", ".tmp/pip-audit-cache", "--ignore-vuln", "CVE-2026-45829", "--ignore-vuln", "GHSA-f4j7-r4q5-qw2c", "-r", "requirements.lock"]
+        args: ["--strict", "--disable-pip", "--require-hashes", "--timeout", "15", "--progress-spinner", "off", "--cache-dir", ".tmp/pip-audit-cache", "--ignore-vuln", "CVE-2026-45829", "--ignore-vuln", "GHSA-f4j7-r4q5-qw2c", "--ignore-vuln", "CVE-2025-3000", "-r", "requirements.lock"]
         files: ^(?:requirements(?:-dev)?\.(?:txt|lock)|\.pre-commit-config\.yaml)$
         pass_filenames: false
         # Audit the generated lock only. requirements.txt is intentionally
@@ -41,3 +41,7 @@ repos:
         # ignored cache to avoid hangs in the default pip cache location.
         # CVE-2026-45829/GHSA-f4j7-r4q5-qw2c has no fixed ChromaDB release yet;
         # the app does not expose the affected Chroma server API.
+        # CVE-2025-3000 (torch): local memory corruption in torch.jit.script,
+        # no fixed release as of 2026-06-12. torch is used only for local
+        # sentence-transformers inference; torch.jit.script is never fed
+        # untrusted input. Drop this ignore once an upstream fix ships.
