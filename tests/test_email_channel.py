@@ -277,7 +277,7 @@ def test_email_webhook_accepts_signed_payload_and_creates_ticket(
 
     response = client.post(
         "/webhook/email",
-        data=body,
+        content=body,
         headers={
             "Content-Type": "application/json",
             "X-Signature": signature,
@@ -309,7 +309,7 @@ def test_email_webhook_rejects_invalid_signature(
 
     response = client.post(
         "/webhook/email",
-        data=json.dumps({"from": "user@acme.com", "to": "support@acme.test", "subject": "Hi", "text": "Body"}),
+        content=json.dumps({"from": "user@acme.com", "to": "support@acme.test", "subject": "Hi", "text": "Body"}),
         headers={"X-Signature": "invalid"},
     )
 
