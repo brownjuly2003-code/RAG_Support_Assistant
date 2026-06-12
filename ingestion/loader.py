@@ -22,6 +22,7 @@ import csv
 import hashlib
 import io
 import json
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -51,6 +52,8 @@ try:
 except ImportError:
     DocxDocument = None  # type: ignore[assignment]
 
+
+logger = logging.getLogger(__name__)
 
 SUPPORTED_EXTENSIONS = {".txt", ".md", ".pdf", ".docx", ".json", ".csv", ".html", ".htm"}
 
@@ -104,9 +107,9 @@ class DocumentLoader:
                 docs = self._load_file(file_path)
                 documents.extend(docs)
             except Exception as exc:
-                print(f"[DocumentLoader] Error reading {file_path}: {exc}")
+                logger.warning("Failed to read %s: %s", file_path, exc)
 
-        print(f"[DocumentLoader] Loaded {len(documents)} document(s) from {base}")
+        logger.info("Loaded %d document(s) from %s", len(documents), base)
         return documents
 
     def load_single_file(self, path: str | Path) -> list[Document]:
