@@ -188,6 +188,23 @@ def _reset_settings():
 
 
 @pytest.fixture(autouse=True)
+def _disable_real_reranker_download(monkeypatch: pytest.MonkeyPatch):
+    # Default the cross-encoder reranker OFF for the whole test session so no
+    # retriever-building test accidentally pulls the ~2GB
+    # BAAI/bge-reranker-v2-m3 from HuggingFace. That download was the source of
+    # the CI HF 429 flakes (per-tenant tests) and of the local
+    # `RAG_RERANKER_MODEL=""` workaround. Tests that exercise reranking pass an
+    # explicit model_name and stub CrossEncoder, or mock get_settings, so they
+    # are unaffected; a test can opt back in by setting the env var itself.
+    monkeypatch.setenv("RAG_RERANKER_MODEL", "")
+    from vectordb import _base_manager
+
+    monkeypatch.setattr(_base_manager, "_cached_reranker", None)
+    yield
+    monkeypatch.setattr(_base_manager, "_cached_reranker", None)
+
+
+@pytest.fixture(autouse=True)
 def _reset_api_state():
     _clear_api_state()
     yield
