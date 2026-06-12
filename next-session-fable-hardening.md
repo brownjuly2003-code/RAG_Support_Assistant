@@ -1,5 +1,21 @@
 # Next Session: Fable hardening — продолжение (план)
 
+## SESSION 4 (2026-06-12) — F-14-хвост: path-дивергенция закрыта; warm-cache оставлен намеренно ✅
+
+Бэклог Fable-hardening пуст; закрыт остаток F-14 (LOW, «по желанию»).
+
+| Commit | Содержимое |
+|---|---|
+| `0a38756` | F-14 Issue 2: `_base_manager._project_root()` → корень репо (был папкой пакета). `_data_dir()`/`_build_chroma`/`_build_qdrant` писали «невидимый» стор в `vectordb/data/vectordb/`, отдельный от `settings.vectordb_chroma_dir` (`<root>/data/vectordb/chroma`). Выровнено с `config.settings.PROJECT_ROOT` и `mock_inbox._project_root`; guard-тест `test_data_dir_resolves_under_repo_root_not_package_internal` |
+
+**F-14 Issue 1 (warm-cache `get_embeddings`/`get_reranker` не ключуется по модели) — НЕ менял, осознанно.** Текущее поведение (после первой загрузки `model_name` игнорируется, возвращается единственный закэшированный объект) **закреплено тестами** `test_base_manager.py:87`/`:110` (`get_embeddings("other-model") is embeddings`) и правдоподобно намеренно: модели тяжёлые (BGE-M3 ~2GB), держать две резидентно в памяти нежелательно. Менять test-pinned контракт на LOW/опциональном пункте — scope creep. Рекомендация: трогать только если реально понадобится warm-serving нескольких моделей одновременно (тогда — single-slot+model-name guard, чтобы перезагружать при смене имени без удержания двух моделей; не dict-кэш).
+
+Верификация: `test_base_manager.py` 17 passed; `test_module_layout`/`test_manager_semantic_chunking`/`test_per_tenant_vectorstore` 17 passed; ruff + py_compile clean.
+
+**Остаток:** push (теперь **22 коммита** к origin, GATED — спрашивать явно). Бэклог Fable-hardening исчерпан.
+
+---
+
 ## SESSION 3 (2026-06-11) — fable_com.md ЗАКРЫТ ПОЛНОСТЬЮ ✅
 
 Гигиен-спринт §5 п.8 + F-4. Бэклог Fable-hardening пуст. 5 локальных коммитов

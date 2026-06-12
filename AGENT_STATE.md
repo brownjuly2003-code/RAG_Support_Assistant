@@ -1,5 +1,15 @@
 # Agent State
 
+## 2026-06-12 Update (Fable hardening, сессия 4) — F-14-хвост: path-дивергенция закрыта (`0a38756`); warm-cache оставлен намеренно; push GATED (22 коммита)
+
+> **START HERE.** Бэклог Fable-hardening пуст. Эта сессия закрыла остаток F-14 (LOW): `_base_manager._project_root()` возвращал папку пакета → `_data_dir()` писал «невидимый» Chroma/Qdrant-стор в `vectordb/data/vectordb/`, отдельный от продакшен-пути `settings.vectordb_chroma_dir`. Фикс `0a38756`: `_project_root()` → корень репо (как `config.settings.PROJECT_ROOT`/`mock_inbox`), + guard-тест. Второй пункт F-14 (warm-cache `get_embeddings/get_reranker` не ключуется по модели) **НЕ менялся осознанно** — закреплён тестами `test_base_manager.py:87/:110` и правдоподобно намеренный (тяжёлые модели, один резидентный объект). Детали и рекомендация — `next-session-fable-hardening.md` блок «SESSION 4».
+>
+> **Push GATED — master ahead origin на 22 коммита** (точный счёт `git rev-list --count origin/master..master`). Спрашивать явно.
+>
+> **Следующий заход:** открытых пунктов нет. Кандидат-блокер только push (GATED).
+
+Верификация сессии 4: `test_base_manager.py` 17 passed (incl. новый guard); `test_module_layout`/`test_manager_semantic_chunking`/`test_per_tenant_vectorstore` 17 passed; ruff + py_compile clean. Полный suite — только с `RAG_RERANKER_MODEL=""` (гоча cont.14 в силе).
+
 ## 2026-06-11 Update (Fable hardening, сессия 3) — fable_com.md ЗАКРЫТ ПОЛНОСТЬЮ: гигиен-спринт F-13/F-15/F-16 + F-4 (все 4 ловушки); push GATED
 
 > **START HERE.** Аудит `fable_com.md` (18 findings) закрыт целиком — открытых пунктов плана §5 НЕТ. Эта сессия: гигиен-спринт §5 п.8 (F-13/F-15/F-16), сопутствующий фикс F-3-регрессии и F-4 по спеке. Push НЕ делался (GATED, master ahead origin на 21 коммит — точный счёт `git log --oneline origin/master..`).
