@@ -14,6 +14,15 @@
 
 **PUSHED** (по явному «все решения принимаешь ты»): `51628e2..aacaa18`. CI run `27413770413` зелёный полностью. По ходу push CI словил **свежую CVE-2025-3000** (torch 2.11.0, local memory corruption в `torch.jit.script`, fix-версии нет) — pip-audit fail-closed. Добавил документированный `--ignore-vuln CVE-2025-3000` во все 4 точки (`97fdd6e` pre-commit + `aacaa18` ci.yml security-job + `local-gate.ps1` + `autopilot.ps1`); `torch.jit.script` к недоверенному вводу не подключён (только локальный sentence-transformers inference). Снять, когда выйдет upstream-фикс. `test_precommit_config.py` 11 passed, pip-audit hook локально Passed.
 
+### Харденинг к оценке 9.8 (та же сессия, после push)
+
+| Commit | Содержимое |
+|---|---|
+| `c8d9ea7` | autouse-фикстура `_disable_real_reranker_download` (`tests/conftest.py`): дефолтит reranker OFF на тестах. Виновник был `test_per_tenant_vectorstore::test_two_tenants_get_different_retrievers` (мокал Chroma/embeddings, не reranker → `get_retriever` тянул 2.3GB `bge-reranker-v2-m3` с HF). **Гоча `RAG_RERANKER_MODEL=""` УСТРАНЕНА В КОРНЕ** + де-флак CI HF-429. Полный unit-suite **862 passed / 4 skipped БЕЗ env-workaround** (17:47). |
+| `b785a07` | guard-тест `test_pip_audit_ignore_set_is_synced_and_minimal`: запирает pip-audit `--ignore-vuln` ровно на 3 CVE во всех 4 точках (pre-commit/ci.yml/local-gate.ps1/autopilot.ps1). Запрет тихих suppression + защита от рассинхрона (на котором я словила красный CI). Reachability: `torch.jit.script` не используется, Chroma — embedded `PersistentClient`. |
+
+**Гоча cont.14 БОЛЬШЕ НЕ В СИЛЕ:** полный suite гонять без `RAG_RERANKER_MODEL=""` — conftest сам отключает reranker. README:242 (env-таблица дефолта) — это продакшен-config, не тест-workaround, оставлен.
+
 **Остаток:** бэклог Fable-hardening исчерпан, origin синхронизирован, CI зелёный.
 
 ---

@@ -2,6 +2,28 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Fable-Hardening] — 2026-06-12 — закрытие хвоста F-14 + харденинг тестов/security-гейтов
+
+- **F-14 (vectordb):** `_base_manager._project_root()` указывал на папку пакета →
+  `_data_dir()`/`_build_chroma`/`_build_qdrant` писали «невидимый» стор в
+  `vectordb/data/vectordb/`, отдельно от продакшен-пути `settings.vectordb_chroma_dir`
+  (`<root>/data/vectordb/chroma`). Выровнено на корень репо (как
+  `config.settings.PROJECT_ROOT`/`integrations.mock_inbox`), + guard-тест.
+- **Тесты (reliability):** autouse-фикстура `_disable_real_reranker_download` в
+  `tests/conftest.py` дефолтит cross-encoder reranker OFF на время тестов — устранён
+  источник CI HF-429 флаков (`test_per_tenant_vectorstore` тянул ~2.3GB
+  `bge-reranker-v2-m3`) и локальный workaround `RAG_RERANKER_MODEL=""`. Полный
+  unit-suite (862 passed, 4 skipped) теперь идёт чисто без env-обходов.
+- **Security (governance):** guard-тест `test_pip_audit_ignore_set_is_synced_and_minimal`
+  запирает набор pip-audit `--ignore-vuln` ровно на 3 обоснованные unfixed-upstream CVE
+  (ChromaDB `CVE-2026-45829`/GHSA-алиас, torch `CVE-2025-3000`) во всех 4 точках
+  (pre-commit, CI security-job, `local-gate.ps1`, `autopilot.ps1`) — запрет тихих
+  suppression + защита от рассинхрона. Reachability проверена: `torch.jit.script` не
+  используется, Chroma — только embedded `PersistentClient`.
+- **CVE-2025-3000 (torch):** добавлен документированный `--ignore-vuln` (свежий advisory
+  без fix-версии; `torch.jit.script` к недоверенному вводу не подключён). Снять при выходе
+  upstream-фикса.
+
 ## [Fable-Hardening] — 2026-06-11 — рантайм-харденинг по аудиту fable_com.md (8.7/10)
 
 - **F-2 (retrieval):** BM25/lexical-корпус восстанавливается из Chroma при старте

@@ -9,9 +9,13 @@
 > 2. **F-14 Issue 1 (warm-cache по модели) — НЕ менялся осознанно**: закреплён тестами `test_base_manager.py:87/:110`, правдоподобно намеренный (тяжёлые модели, один резидентный объект). Рекомендация — `next-session-fable-hardening.md` «SESSION 4».
 > 3. **CVE-2025-3000 (torch) ignore** (`97fdd6e` pre-commit + `aacaa18` CI security-job + оба ps1-гейта): свежий advisory против torch 2.11.0 (local memory corruption в `torch.jit.script`, fix-версии нет) валил pip-audit на push. torch — только локальный inference sentence-transformers, `torch.jit.script` недостижим для недоверенного ввода. Снять ignore, когда выйдет upstream-фикс. Все 4 точки pip-audit (pre-commit/ci.yml/local-gate.ps1/autopilot.ps1) в синхроне.
 >
+> **Харденинг к 9.8 (после push):**
+> 4. **Reranker-гоча устранена в корне** (`c8d9ea7`): autouse-фикстура `_disable_real_reranker_download` в `tests/conftest.py` дефолтит cross-encoder OFF на тестах. Виновник — `test_per_tenant_vectorstore::test_two_tenants_get_different_retrievers` (тянул 2.3GB `bge-reranker-v2-m3` с HF). **Гоча cont.14 БОЛЬШЕ НЕ В СИЛЕ** — полный suite гонять без `RAG_RERANKER_MODEL=""`. Де-флак CI HF-429. Полный unit-suite **862 passed / 4 skipped БЕЗ env-workaround**.
+> 5. **CVE-suppression governance** (`b785a07`): guard-тест `test_pip_audit_ignore_set_is_synced_and_minimal` запирает pip-audit `--ignore-vuln` ровно на 3 обоснованные CVE во всех 4 точках (pre-commit/ci.yml/local-gate.ps1/autopilot.ps1) — запрет тихих suppression + защита от рассинхрона. Reachability проверена: `torch.jit.script` не используется, Chroma — embedded `PersistentClient`.
+>
 > **Следующий заход:** открытых пунктов Fable-hardening нет.
 
-Верификация сессии 4: `test_base_manager.py` 17 passed (incl. guard); `test_module_layout`/`test_manager_semantic_chunking`/`test_per_tenant_vectorstore` 17 passed; `test_precommit_config.py` 11 passed; pip-audit hook локально Passed; ruff + py_compile clean; **CI на origin зелёный полностью**. Полный suite локально — только с `RAG_RERANKER_MODEL=""` (гоча cont.14 в силе).
+Верификация сессии 4: `test_base_manager.py` 17 passed (incl. guard); `test_module_layout`/`test_manager_semantic_chunking`/`test_per_tenant_vectorstore` 17 passed; `test_precommit_config.py` 12 passed (incl. ignore-lock guard); **полный unit-suite 862 passed / 4 skipped БЕЗ env-workaround** (CI-команда); pip-audit hook локально Passed; ruff + py_compile clean; **CI на origin зелёный полностью**.
 
 ## 2026-06-11 Update (Fable hardening, сессия 3) — fable_com.md ЗАКРЫТ ПОЛНОСТЬЮ: гигиен-спринт F-13/F-15/F-16 + F-4 (все 4 ловушки); push GATED
 
