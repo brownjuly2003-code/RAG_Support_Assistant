@@ -23,6 +23,12 @@
 - **CVE-2025-3000 (torch):** добавлен документированный `--ignore-vuln` (свежий advisory
   без fix-версии; `torch.jit.script` к недоверенному вводу не подключён). Снять при выходе
   upstream-фикса.
+- **Гигиена (gap-sweep):** `ingestion/loader.py` `DocumentLoader` логирует ошибки чтения и
+  сводку через `logging` (был `print` в stdout); тест email-webhook шлёт raw-тело через
+  httpx `content=` вместо deprecated `data=`. Системный скан подтвердил чистоту: ruff/mypy
+  (gated scope) clean, нет TODO/FIXME-долга, нет bare-except, skipped-тесты — только
+  легитимные условные. LangChain `Ollama`-deprecation — артефакт неполного локального env,
+  не пробел: `langchain-ollama` уже в `requirements.txt`/lock и ставится в CI.
 
 ## [Fable-Hardening] — 2026-06-11 — рантайм-харденинг по аудиту fable_com.md (8.7/10)
 

@@ -12,8 +12,9 @@
 > **Харденинг к 9.8 (после push):**
 > 4. **Reranker-гоча устранена в корне** (`c8d9ea7`): autouse-фикстура `_disable_real_reranker_download` в `tests/conftest.py` дефолтит cross-encoder OFF на тестах. Виновник — `test_per_tenant_vectorstore::test_two_tenants_get_different_retrievers` (тянул 2.3GB `bge-reranker-v2-m3` с HF). **Гоча cont.14 БОЛЬШЕ НЕ В СИЛЕ** — полный suite гонять без `RAG_RERANKER_MODEL=""`. Де-флак CI HF-429. Полный unit-suite **862 passed / 4 skipped БЕЗ env-workaround**.
 > 5. **CVE-suppression governance** (`b785a07`): guard-тест `test_pip_audit_ignore_set_is_synced_and_minimal` запирает pip-audit `--ignore-vuln` ровно на 3 обоснованные CVE во всех 4 точках (pre-commit/ci.yml/local-gate.ps1/autopilot.ps1) — запрет тихих suppression + защита от рассинхрона. Reachability проверена: `torch.jit.script` не используется, Chroma — embedded `PersistentClient`.
+> 6. **Gap-sweep** (`76cf488`, `bd85893`): системный скан пробелов. Закрыто: `ingestion/loader.py` print→`logging`; тест email-webhook httpx `content=` вместо deprecated `data=`. Подтверждено чистым: ruff, mypy gated-scope, нет TODO/FIXME/bare-except, skipped-тесты легитимны. LangChain `Ollama`-deprecation — **не пробел** (артефакт неполного локального env; `langchain-ollama` в requirements.txt+lock, ставится в CI).
 >
-> **Следующий заход:** открытых пунктов Fable-hardening нет.
+> **Следующий заход:** открытых пунктов Fable-hardening нет. Единственный остаточный качественный пункт — retrieval-MISS `customs-clearance-fields` (требует staged Kaggle-runtime + новый research-подход; оба прежних рычага E/F отвергнуты данными — НЕ начинать без явной просьбы). Возможное будущее харденинг-направление (не пробел): расширить mypy strict-scope на остальные модули (крупный churn).
 
 Верификация сессии 4: `test_base_manager.py` 17 passed (incl. guard); `test_module_layout`/`test_manager_semantic_chunking`/`test_per_tenant_vectorstore` 17 passed; `test_precommit_config.py` 12 passed (incl. ignore-lock guard); **полный unit-suite 862 passed / 4 skipped БЕЗ env-workaround** (CI-команда); pip-audit hook локально Passed; ruff + py_compile clean; **CI на origin зелёный полностью**.
 
