@@ -485,7 +485,13 @@ def _normalize_retrieval_strategy(settings: Any) -> str:
 
 
 def _project_root() -> Path:
-    return Path(__file__).resolve().parent
+    # vectordb/_base_manager.py -> repository root (parent of the vectordb
+    # package), mirroring config.settings.PROJECT_ROOT and integrations.mock_inbox.
+    # Returning the package directory made _data_dir() resolve to
+    # vectordb/data/vectordb/, so _build_chroma/_build_qdrant wrote an invisible
+    # store that production (settings.vectordb_chroma_dir, under <root>/data/) never
+    # reads. (F-14 tail)
+    return Path(__file__).resolve().parent.parent
 
 def _data_dir() -> Path:
     root = _project_root()

@@ -110,6 +110,20 @@ def test_get_reranker_handles_disabled_dependency_and_caches(
     assert manager.get_reranker("reranker-c") is reranker
 
 
+def test_data_dir_resolves_under_repo_root_not_package_internal() -> None:
+    # _project_root must resolve to the repository root (parent of the vectordb
+    # package) so _data_dir() / _build_chroma write under the same <root>/data/
+    # that settings.vectordb_chroma_dir reads. A package-internal
+    # vectordb/data/vectordb store is invisible to production. (F-14 tail)
+    repo_root = Path(__file__).resolve().parents[1]
+    assert manager._project_root() == repo_root
+    assert manager._data_dir() == repo_root / "data" / "vectordb"
+    assert (
+        manager._data_dir() / "chroma"
+        == settings_module.PROJECT_ROOT / "data" / "vectordb" / "chroma"
+    )
+
+
 def test_resolve_device_passthrough_and_setting(monkeypatch: pytest.MonkeyPatch) -> None:
     # Explicit values are used as-is (normalized to lowercase).
     assert manager._resolve_device("cuda:0") == "cuda:0"
