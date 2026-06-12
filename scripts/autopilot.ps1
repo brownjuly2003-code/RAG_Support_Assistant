@@ -442,7 +442,7 @@ function Invoke-Gates {
     }
     if ($requirementsTouched) {
         if (Test-Tool "pip-audit") {
-            Invoke-Checked "pip-audit" "pip-audit" @("--strict", "--disable-pip", "--require-hashes", "--timeout", "15", "--progress-spinner", "off", "--cache-dir", ".tmp/pip-audit-cache", "--ignore-vuln", "CVE-2026-45829", "--ignore-vuln", "GHSA-f4j7-r4q5-qw2c", "-r", "requirements.lock")
+            Invoke-Checked "pip-audit" "pip-audit" @("--strict", "--disable-pip", "--require-hashes", "--timeout", "15", "--progress-spinner", "off", "--cache-dir", ".tmp/pip-audit-cache", "--ignore-vuln", "CVE-2026-45829", "--ignore-vuln", "GHSA-f4j7-r4q5-qw2c", "--ignore-vuln", "CVE-2025-3000", "-r", "requirements.lock")
         }
         else {
             Add-RuntimeGap "pip-audit is unavailable; skipped dependency audit gate."

@@ -247,6 +247,11 @@ jobs:
         # advisory (PyPI fixed_in is empty). This app uses embedded
         # PersistentClient, not an exposed Chroma server; keep Chroma latest and
         # retain a narrow ignore until upstream publishes a fixed release.
+        # CVE-2025-3000 is an unfixed torch advisory (local memory corruption in
+        # torch.jit.script, PyPI fixed_in empty). torch is used only for local
+        # sentence-transformers inference and torch.jit.script never receives
+        # untrusted input; drop the ignore once an upstream fix ships. Keep this
+        # list in sync with the pip-audit hook in .pre-commit-config.yaml.
         run: >
           pip-audit --strict --disable-pip --require-hashes
           --timeout 15
@@ -254,6 +259,7 @@ jobs:
           --cache-dir .tmp/pip-audit-cache
           --ignore-vuln CVE-2026-45829
           --ignore-vuln GHSA-f4j7-r4q5-qw2c
+          --ignore-vuln CVE-2025-3000
           -r requirements.lock
 
   regression-eval:
