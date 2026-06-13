@@ -13,9 +13,10 @@
 | `tasks/ingest_task.py` | `ingest_document(self: Task, …)` + `from celery import Task` |
 | `tests/test_precommit_config.py` | guard-тест `test_mypy_strict_scope_is_synced_across_gates` — идентичность strict-путей mypy в ci.yml/local-gate.ps1/autopilot.ps1 + пин модулей |
 | `.github/workflows/ci.yml`, `scripts/local-gate.ps1`, `scripts/autopilot.ps1` | strict-команда синхронно: `db/models.py db/engine.py` → `db`, +`tasks utils` |
-| `README.md`, `docs/CHANGELOG.md` | `db/` → «mypy --strict clean»; [Type-Hardening] CHANGELOG-блок |
+| `README.md`, `docs/CHANGELOG.md` | `db/` → «mypy --strict clean»; [Type-Hardening] + [Security] CHANGELOG-блоки |
+| `requirements.txt`, `requirements.lock`, `requirements-dev.lock` | security-фикс (2-й коммит): `pypdf` 6.10.2→**6.13.2** (CVE-2026-48155/48156, fix 6.12.0) + floor `>=6.12.0`; uv `--upgrade-package pypdf --generate-hashes`, diff только pypdf |
 
-**Верификация:** gated strict-mypy (новый scope) — **Success: no issues found in 30 source files, exit 0**; затронутые модули **66 passed / 3 skipped**; ruff clean. Гоча: `| tail` маскирует exit code mypy (первый «exit 0» был ложным) — гонять без `| tail`, читать `Found N errors`/`Success`.
+**Верификация:** gated strict-mypy (новый scope) — **Success: no issues found in 30 source files, exit 0**; затронутые модули **66 passed / 3 skipped**; ruff clean; pip-audit на обновлённом lock — «No known vulnerabilities found, 2 ignored»; loader/ingest/governance **30 passed**. Гоча: `| tail` маскирует exit code mypy (первый «exit 0» был ложным) — гонять без `| tail`, читать `Found N errors`/`Success`. Гоча CI: type-правки не трогали security, но push словил свежую diff-независимую `pypdf`-CVE (security+pre-commit job = один pip-audit hook) — чинить bump'ом, не ignore (fix есть).
 
 **Остаток (НЕ блокеры):** commit+push (GATED); `monitoring.*` (48) + `channels.*` (8) под strict — единый union/Protocol для `_NoopMetric` optional-dependency fallback (`try/except ImportError`), крупный churn → отдельный заход.
 

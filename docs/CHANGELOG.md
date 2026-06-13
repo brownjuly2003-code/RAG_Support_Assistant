@@ -2,6 +2,19 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Security] — 2026-06-13 — pypdf 6.10.2 → 6.13.2 (CVE-2026-48155 / CVE-2026-48156)
+
+- pip-audit (CI security job + pre-commit hook) упал на свежих advisory
+  **CVE-2026-48155** и **CVE-2026-48156** против `pypdf 6.10.2` (fix в 6.12.0).
+  pypdf парсит загружаемые PDF (`ingestion/loader.py`) — недоверенный ввод,
+  путь реачабелен. Поднят до **6.13.2** в `requirements.lock` и
+  `requirements-dev.lock` (uv `--upgrade-package pypdf --generate-hashes`; diff —
+  только pypdf, без транзитивных изменений) + security-floor `pypdf>=6.12.0` в
+  `requirements.txt`. `--ignore-vuln` НЕ использован: fix доступен, иначе нарушило
+  бы «minimal/unfixed»-политику governance-guard.
+- Верификация: `pip-audit … -r requirements.lock` → «No known vulnerabilities
+  found, 2 ignored» (ChromaDB/torch unfixed); loader/ingest тесты 30 passed.
+
 ## [Type-Hardening] — 2026-06-13 — расширение mypy strict-scope (db/tasks/utils) + governance guard
 
 - **mypy strict-scope расширен** на `db.*`, `tasks.*`, `utils.*` (был только
