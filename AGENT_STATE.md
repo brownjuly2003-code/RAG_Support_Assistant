@@ -20,6 +20,8 @@
 > **Pages-deploy = failure pre-existing** (docs-site esbuild npm-audit через astro — см. cont.2; вне scope).
 >
 > **Остаток (НЕ блокеры):** `customs-clearance-fields` retrieval-MISS (Kaggle, не Windows); дальнейший strict — остались **`api/`** (кроме app — но осторожно: api.app спец-обработан `--follow-imports=skip` из-за тяжёлого графа/таймаута; промоушн всего `api.*` в основную gated-команду может вернуть эту проблему) и **`vectordb/`** (тянет langchain/sentence-transformers — память Windows, риск зависания; гнать gated-командой осторожно). Обе — тяжелее/рискованнее сделанных; крупный кусок на исходе бюджета НЕ начинать.
+>
+> **ОТДЕЛЬНЫЙ workstream (PLANNED, не начато, не связан с type-hardening):** adaptive-retrieval router + Fact-Card (SFR) lane — план в `docs/plans/2026-06-13-adaptive-retrieval-factcard-plan.md` (research-обоснование `research_adaptive.md`). Безопасный первый шаг — Phase 0 (разметка eval + baseline, без нового индекса). Запуск отдельной сессией с явным указанием плана, НЕ через голое «продолжи».
 
 ## 2026-06-13 Update (cont.2, Type-hardening) — mypy strict-scope: tracing.* + ingestion.*; PUSHED, CI зелёный (origin=`a341b77`)
 
