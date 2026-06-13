@@ -77,7 +77,9 @@ def compute_drift(
     )
 
 
-async def fetch_mean_scores(session, *, experiment_id: Optional[str], window_size: int) -> dict[str, float]:
+async def fetch_mean_scores(
+    session: Any, *, experiment_id: Optional[str], window_size: int
+) -> dict[str, float]:
     """Mean evaluator score across recent traces.
 
     When `experiment_id` is None, the SQL mock session in tests filters by
@@ -118,7 +120,7 @@ async def fetch_mean_scores(session, *, experiment_id: Optional[str], window_siz
     return scores
 
 
-async def fetch_active_deployments(session) -> list[dict[str, Any]]:
+async def fetch_active_deployments(session: Any) -> list[dict[str, Any]]:
     from sqlalchemy import text as sql_text  # noqa: PLC0415
 
     result = await session.execute(
@@ -133,7 +135,7 @@ async def fetch_active_deployments(session) -> list[dict[str, Any]]:
 
 
 async def trigger_rollback(
-    session,
+    session: Any,
     *,
     experiment_id: str,
     regression_run_id: Optional[str],
@@ -193,7 +195,7 @@ async def default_notifier(experiment_id: str, reason: str) -> None:
 
 
 async def check_and_rollback(
-    session,
+    session: Any,
     *,
     notifier: Optional[Callable[[str, str], Awaitable[None]]] = None,
 ) -> list[dict[str, Any]]:

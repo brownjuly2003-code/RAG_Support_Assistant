@@ -15,6 +15,7 @@ import random
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -115,7 +116,7 @@ def _build_context(tc: TestCase) -> list[dict[str, str]]:
     return [{"page_content": context}]
 
 
-def _generate_answer(test_case: TestCase, profile: dict[str, object], seed: int) -> str:
+def _generate_answer(test_case: TestCase, profile: dict[str, Any], seed: int) -> str:
     rng = random.Random(seed + int(profile["seed_offset"]))
 
     included_keywords = _pick_terms(

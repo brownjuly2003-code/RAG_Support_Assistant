@@ -71,7 +71,7 @@ def run_online_evaluators(
     for evaluator_name, evaluator in ONLINE_EVALUATORS.items():
         elapsed_ms = (time.perf_counter() - started_at) * 1000
         if elapsed_ms > timeout_ms:
-            result = {"score": 0.0, "verdict": "timeout", "metadata": {}}
+            result: dict[str, Any] = {"score": 0.0, "verdict": "timeout", "metadata": {}}
             results[evaluator_name] = result
             record_online_evaluator_run(evaluator_name, "timeout", 0.0)
             continue

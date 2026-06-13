@@ -172,6 +172,7 @@ EXPECTED_MYPY_STRICT_PATHS = {
     "channels",
     "tracing",
     "ingestion",
+    "evaluation",
 }
 
 

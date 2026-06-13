@@ -158,6 +158,16 @@ module = ["tracing.*", "ingestion.*"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
+# evaluation.* — strict scope (2026-06-13). Offline/online eval framework.
+# Type-only fixes: bind dict.get() results to locals before isinstance so the
+# narrowing applies (online_evaluators), narrow None explicitly in drift, type
+# the heterogeneous profile/result dicts as dict[str, Any], and annotate the
+# duck-typed async `session` params (rollback_watcher) as Any.
+[[tool.mypy.overrides]]
+module = ["evaluation.*"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
 # agent modules — strict scope (Step 9).
 [[tool.mypy.overrides]]
 module = ["agent.state", "agent.prompts", "agent.prompt_registry", "agent.tools", "agent.graph"]

@@ -72,7 +72,7 @@ User / Email / Widget
 - `db/` — SQLAlchemy models, async engine, audit log, pgcrypto field. `mypy --strict` clean.
 - `llm/providers/` — Ollama / Mistral / GraceKelly providers + cost guard.
 - `vectordb/` — tenant-aware vector store factory (`vectordb.manager`) plus base implementation (`vectordb._base_manager`).
-- `evaluation/` — RAGAS metrics, online evaluators, regression framework.
+- `evaluation/` — RAGAS metrics, online evaluators, regression framework. `mypy --strict` clean.
 - `monitoring/` — Prometheus metrics (~50). `mypy --strict` clean. `tracing/` — Langfuse + OTel + SQLite trace store. `mypy --strict` clean.
 - `ingestion/` — loaders, pipeline, categorizer, contextual headers. `mypy --strict` clean.
 - `scripts/` — operational CLIs (regression eval, KB builders, chunking eval, nightly tasks).

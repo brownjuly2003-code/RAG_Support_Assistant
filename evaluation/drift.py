@@ -6,7 +6,7 @@ from monitoring import prometheus as prometheus_metrics
 
 
 def _relative_drift(current: float | None, baseline: float | None) -> float:
-    if current is None or baseline in (None, 0):
+    if current is None or baseline is None or baseline == 0:
         return 0.0
     return abs(current - baseline) / baseline
 

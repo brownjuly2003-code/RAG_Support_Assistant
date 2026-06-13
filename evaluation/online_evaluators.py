@@ -32,8 +32,10 @@ def _load_patterns() -> dict[str, Any]:
         if isinstance(loaded, dict):
             payload = loaded
 
-    refusal = payload.get("refusal") if isinstance(payload.get("refusal"), list) else []
-    pii = payload.get("pii") if isinstance(payload.get("pii"), dict) else {}
+    refusal_raw = payload.get("refusal")
+    refusal = refusal_raw if isinstance(refusal_raw, list) else []
+    pii_raw = payload.get("pii")
+    pii = pii_raw if isinstance(pii_raw, dict) else {}
     _PATTERNS_CACHE = {
         "refusal": [str(item).lower() for item in refusal if str(item).strip()],
         "pii": {
@@ -112,7 +114,8 @@ def evaluate_retrieval_hit_rate(trace_state: dict[str, Any]) -> dict[str, Any]:
     for doc in retrieved_docs:
         if not isinstance(doc, dict):
             continue
-        metadata = doc.get("metadata") if isinstance(doc.get("metadata"), dict) else {}
+        metadata_raw = doc.get("metadata")
+        metadata = metadata_raw if isinstance(metadata_raw, dict) else {}
         score = metadata.get("relevance_score")
         if score is None:
             continue
@@ -150,7 +153,8 @@ def evaluate_retrieval_hit_rate(trace_state: dict[str, Any]) -> dict[str, Any]:
 def evaluate_tool_use_efficiency(trace_state: dict[str, Any]) -> dict[str, Any]:
     answer_final_tokens = trace_state.get("answer_final_tokens")
     if answer_final_tokens is None:
-        tokens = trace_state.get("tokens") if isinstance(trace_state.get("tokens"), dict) else {}
+        tokens_raw = trace_state.get("tokens")
+        tokens = tokens_raw if isinstance(tokens_raw, dict) else {}
         answer_final_tokens = tokens.get("answer_final_tokens") or tokens.get("completion_tokens") or 0
     try:
         answer_final_tokens_value = float(answer_final_tokens or 0.0)

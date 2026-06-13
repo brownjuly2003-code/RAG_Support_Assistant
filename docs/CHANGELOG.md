@@ -2,6 +2,36 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Type-Hardening] — 2026-06-13 (cont.3) — mypy strict-scope: evaluation.*
+
+- Продолжено направление strict-scope: `evaluation.*` (было 16 mypy-ошибок)
+  доведён до strict. Только типовые правки — **рантайм не менялся**:
+  - `evaluation/online_evaluators.py` (4 union-attr): тернары вида
+    `payload.get(k) if isinstance(payload.get(k), dict) else {}` не сужались
+    (два независимых вызова `.get`). Результат `.get()` связан в локальную
+    переменную до `isinstance` → narrowing применяется (`refusal`/`pii` в
+    `_load_patterns`, `metadata`/`tokens` в hit-rate/tool-use). Поведение
+    идентично.
+  - `evaluation/drift.py` (2 operator): `baseline in (None, 0)` не сужает тип →
+    `baseline is None or baseline == 0` (эквивалентно, но mypy narrow'ит `float`).
+  - `evaluation/evaluator_runner.py` (1 arg-type): `result` собирается в 3
+    ветках → mypy сводит к `dict[str, object]`, `float(result["score"])` падал.
+    Первое присваивание аннотировано `result: dict[str, Any]`.
+  - `evaluation/simulate_model_benchmark.py` (3 arg-type + 2 call-overload):
+    `MODEL_PROFILES`-значения гетерогенны (`int`/`float`/`str` → `object`),
+    `int()/float()` их не принимали. Param `_generate_answer(profile: …)`
+    переведён `dict[str, object]` → `dict[str, Any]` (call-site совместим).
+  - `evaluation/benchmark_runner.py` (1 var-annotated):
+    `context_docs_list: list[list[str]]`.
+  - `evaluation/rollback_watcher.py` (4 no-untyped-def): duck-typed async
+    `session` (реальный AsyncSession или мок в тестах) аннотирован `session: Any`.
+- pyproject overrides + все 3 mypy-гейта + governance guard расширены на
+  `evaluation`. Полный strict-scope теперь 14 целей.
+- Верификация: полная gated strict-команда — **Success: no issues found in 57
+  source files**; целевые тесты (online-evaluators/simulate/benchmark-runner/
+  rollback-watcher/ragas/regression/nightly-eval/precommit-guard) — все passed;
+  ruff clean.
+
 ## [Type-Hardening] — 2026-06-13 (cont.2) — mypy strict-scope: tracing.* + ingestion.*
 
 - Продолжено направление strict-scope: `tracing.*` (было 18 mypy-ошибок) и

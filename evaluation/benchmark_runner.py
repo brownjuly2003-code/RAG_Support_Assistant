@@ -73,7 +73,7 @@ def main() -> None:
     )
 
     answers = [tc.expected_answer or "" for tc in test_cases]
-    context_docs_list = [[] for _ in test_cases]
+    context_docs_list: list[list[str]] = [[] for _ in test_cases]
 
     _print_safe(f"Running evaluation (use_embeddings={args.use_embeddings})...")
     results = evaluator.evaluate_batch(
