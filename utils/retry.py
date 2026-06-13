@@ -5,7 +5,7 @@ import logging
 import random
 import time
 from collections.abc import Callable
-from typing import Literal, TypeVar
+from typing import Any, Literal, TypeVar
 
 T = TypeVar("T")
 RetryEvent = Literal["attempt", "success", "retry", "exhausted"]
@@ -58,7 +58,7 @@ def retry_with_backoff(
         except Exception:
             logger.exception("retry on_event callback raised")
 
-    def wrapped(*args, **kwargs) -> T:
+    def wrapped(*args: Any, **kwargs: Any) -> T:
         last_exc: BaseException | None = None
         for attempt in range(max_attempts):
             _emit("attempt")

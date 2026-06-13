@@ -1,5 +1,21 @@
 # Agent State
 
+## 2026-06-13 Update (Type-hardening) — mypy strict-scope расширен на db/tasks/utils + governance guard; LOCAL, push GATED
+
+> **START HERE.** Бэклог Fable-hardening пуст; это инкрементальный type-hardening-заход по запросу «доработай проект, решай сам». **Дерево было чисто (HEAD=origin=`cbba12f`)**; добавлены ТОЛЬКО типовые правки (поведение не менялось) + governance guard. **НЕ закоммичено и НЕ запушено — push/commit GATED.** Чужие untracked `docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py` — не трогать.
+>
+> **Сделано:**
+> 1. **mypy strict-scope расширен** на `db.*`, `tasks.*`, `utils.*` (был только `db.models`). `pyproject.toml` overrides. Правки кода = только аннотации:
+>    - `utils/retry.py`, `utils/circuit_breaker.py`: `*args: Any, **kwargs: Any` у proxy-декораторов.
+>    - `db/crypto.py`: `encrypt`/`decrypt`/`EncryptedText.{bind,column}_expression` → `ColumnElement[Any]` (override-совместимо с `TypeDecorator`).
+>    - `db/audit.py`: `purge_old_audit` rowcount через `getattr` (base `Result` не объявляет `rowcount`; DELETE даёт `CursorResult`).
+>    - `tasks/ingest_task.py`: `ingest_document(self: Task, …)` + `from celery import Task`.
+> 2. **Governance guard** `test_mypy_strict_scope_is_synced_across_gates` (`tests/test_precommit_config.py`): запирает идентичность strict-путей mypy в 3 точках (ci.yml / local-gate.ps1 / autopilot.ps1) + пинит модули. Все 3 команды обновлены синхронно (`db/models.py db/engine.py` → `db`, +`tasks utils`).
+>
+> **Верификация:** полная gated strict-команда (новый scope) — **Success: no issues found in 30 source files, exit 0**; затронутые модули (circuit_breaker/retry/audit/encryption/ingest_task/pii/background_tasks/precommit) — **66 passed / 3 skipped**; ruff clean на изменённых файлах. `api.app` проверяется отдельной командой (`--follow-imports=skip`) — «unused section api.app» в основной команде ожидаем.
+>
+> **Следующий заход (НЕ блокеры):** commit+push этого захода (GATED, спросить); `monitoring.*` (48 ошибок) + `channels.*` (8) под strict — требуют единого union/Protocol-решения для optional-dependency `_NoopMetric`-fallback (`try/except ImportError`, `Counter`/`Gauge` vs `_NoopMetric`), крупный churn — отдельный заход. Retrieval-MISS `customs-clearance-fields` — без явной просьбы НЕ начинать (нужен Kaggle-runtime, не на Windows).
+
 ## 2026-06-12 Update (Fable hardening, сессия 4) — F-14-хвост закрыт + PUSHED; CI зелёный (origin=`aacaa18`)
 
 > **START HERE.** Бэклог Fable-hardening пуст. Origin синхронизирован — **PUSHED по явному «все решения принимаешь ты»**: `51628e2..aacaa18` (26 коммитов). CI run `27413770413` **success полностью** (pre-commit/security/test-unit×2/test-integration×2/lint/type-check/migrations/helm; regression-eval skipped — PR-гейт). Дерево чисто, кроме 2 чужих untracked (`docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py`) — не трогать.

@@ -150,6 +150,60 @@ def test_pip_audit_ignore_set_is_synced_and_minimal() -> None:
         )
 
 
+# The strict-scope mypy command is duplicated across three gates: the CI
+# type-check job, the local gate, and the autopilot gate. They MUST list the
+# identical module path set, or a module keeps strict enforcement on one path
+# while silently losing it on another. This guard locks the scope in sync and
+# pins the promoted modules so a path cannot be dropped by accident — the same
+# desync-prevention rationale as the pip-audit ignore-set guard above.
+EXPECTED_MYPY_STRICT_PATHS = {
+    "auth",
+    "db",
+    "llm/providers/",
+    "config/settings.py",
+    "agent/state.py",
+    "agent/prompts.py",
+    "agent/prompt_registry.py",
+    "agent/tools.py",
+    "agent/graph.py",
+    "tasks",
+    "utils",
+}
+
+
+def _mypy_strict_scope_paths(text: str) -> set[str]:
+    # Locate the strict-scope mypy invocation — the one carrying
+    # --no-incremental and --show-error-codes but NOT --follow-imports=skip
+    # (that flag marks the separate api.app command) — and return its module
+    # path arguments (the tokens between `mypy` and `--no-incremental`).
+    for line in text.splitlines():
+        if (
+            "mypy" in line
+            and "--no-incremental" in line
+            and "--show-error-codes" in line
+            and "follow-imports" not in line
+        ):
+            tokens = re.findall(r"[\w./-]+", line)
+            end = tokens.index("--no-incremental")
+            mypy_idx = max(i for i, tok in enumerate(tokens[:end]) if tok == "mypy")
+            return set(tokens[mypy_idx + 1 : end])
+    raise AssertionError("strict-scope mypy command not found")
+
+
+def test_mypy_strict_scope_is_synced_across_gates() -> None:
+    for relative_path in (
+        ".github/workflows/ci.yml",
+        "scripts/local-gate.ps1",
+        "scripts/autopilot.ps1",
+    ):
+        text = (PROJECT_ROOT / relative_path).read_text(encoding="utf-8")
+        paths = _mypy_strict_scope_paths(text)
+        assert paths == EXPECTED_MYPY_STRICT_PATHS, (
+            f"{relative_path}: mypy strict scope is {sorted(paths)}, "
+            f"expected {sorted(EXPECTED_MYPY_STRICT_PATHS)}"
+        )
+
+
 def test_ci_tests_cover_docker_python_target_and_current_python() -> None:
     ci = yaml.safe_load(
         (PROJECT_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")

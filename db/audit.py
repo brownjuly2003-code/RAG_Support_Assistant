@@ -72,7 +72,9 @@ async def purge_old_audit(
                 stmt = stmt.where(AuditLog.tenant_id == tenant_id)
             result = await db.execute(stmt)
             await db.commit()
-            return result.rowcount or 0
+            # DELETE yields a CursorResult with rowcount; the base Result type
+            # mypy infers from execute() does not expose it.
+            return getattr(result, "rowcount", 0) or 0
     except Exception as exc:
         logger.warning("Audit purge failed: %s", exc)
         return 0

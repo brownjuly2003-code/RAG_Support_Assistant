@@ -120,8 +120,20 @@ module = ["llm.providers.*"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
+# db.* — strict scope. Promoted from db.models alone to the whole package
+# (2026-06-13): db.engine/db.audit/db.crypto annotated (pgcrypto TypeDecorator
+# returns ColumnElement; audit purge reads rowcount via getattr off the base
+# Result type). Security-sensitive layer; keep it strict-clean.
 [[tool.mypy.overrides]]
-module = ["db.models"]
+module = ["db.*"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+# tasks.* and utils.* — strict scope (2026-06-13). Small infra/utility modules
+# with full type coverage; promoted after annotating the *args/**kwargs proxies
+# in utils.retry / utils.circuit_breaker. Expand as more modules converge.
+[[tool.mypy.overrides]]
+module = ["tasks.*", "utils.*"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 

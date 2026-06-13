@@ -1,8 +1,10 @@
 """Transparent pgcrypto helpers for SQLAlchemy models."""
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy import String, Text, bindparam, cast, func, literal_column
-from sqlalchemy.sql.elements import ClauseElement
+from sqlalchemy.sql.elements import ClauseElement, ColumnElement
 from sqlalchemy.types import LargeBinary, TypeDecorator
 
 from config.settings import get_settings
@@ -23,7 +25,7 @@ def _get_encryption_key() -> str:
     return key
 
 
-def encrypt(plaintext: ClauseElement) -> ClauseElement:
+def encrypt(plaintext: ClauseElement) -> ColumnElement[Any]:
     return func.pgp_sym_encrypt(
         cast(plaintext, Text()),
         bindparam(
@@ -36,7 +38,7 @@ def encrypt(plaintext: ClauseElement) -> ClauseElement:
     )
 
 
-def decrypt(ciphertext: ClauseElement) -> ClauseElement:
+def decrypt(ciphertext: ClauseElement) -> ColumnElement[Any]:
     return func.pgp_sym_decrypt(
         ciphertext,
         bindparam(
@@ -52,8 +54,8 @@ class EncryptedText(TypeDecorator):
     impl = LargeBinary
     cache_ok = True
 
-    def bind_expression(self, bindvalue):
+    def bind_expression(self, bindvalue: ClauseElement) -> ColumnElement[Any]:
         return encrypt(bindvalue)
 
-    def column_expression(self, col):
+    def column_expression(self, col: ClauseElement) -> ColumnElement[Any]:
         return decrypt(col)

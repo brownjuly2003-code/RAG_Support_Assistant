@@ -2,6 +2,34 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Type-Hardening] — 2026-06-13 — расширение mypy strict-scope (db/tasks/utils) + governance guard
+
+- **mypy strict-scope расширен** на `db.*`, `tasks.*`, `utils.*` (был только
+  `db.models` из пакета `db`). Промоушен в `pyproject.toml` через
+  `[[tool.mypy.overrides]]`. Правки кода — только аннотации, без изменения
+  поведения:
+  - `utils/retry.py`, `utils/circuit_breaker.py` — аннотированы `*args: Any,
+    **kwargs: Any` у прозрачных декораторов-проксей (`wrapped`, `CircuitBreaker.call`).
+  - `db/crypto.py` — `encrypt`/`decrypt`/`EncryptedText.bind_expression`/
+    `column_expression` возвращают `ColumnElement[Any]` (совместимо с базовым
+    `TypeDecorator`, чьи методы дают `ColumnElement[Any] | None`); pgcrypto-функции
+    фактически и возвращают `ColumnElement`.
+  - `db/audit.py` — `purge_old_audit` читает `rowcount` через `getattr` (базовый
+    `Result`, который mypy выводит из `execute()`, не объявляет `rowcount`; его
+    несёт `CursorResult` от DELETE — поведение идентично).
+  - `tasks/ingest_task.py` — `ingest_document(self: Task, …)` (celery bound task).
+- **Governance:** guard-тест `test_mypy_strict_scope_is_synced_across_gates`
+  запирает идентичность списка strict-путей mypy во всех 3 точках (CI type-check
+  job, `local-gate.ps1`, `autopilot.ps1`) и пинит промоутнутые модули — защита от
+  тихого рассинхрона (тот же подход, что у pip-audit ignore-set guard). Все 3
+  команды обновлены синхронно: `db/models.py db/engine.py` → `db`, добавлены
+  `tasks utils`.
+- **monitoring/channels — осознанно НЕ в scope:** их метрики используют
+  optional-dependency fallback (`Counter`/`Gauge` vs `_NoopMetric` в
+  `try/except ImportError`), из-за чего mypy видит 48 (monitoring) + 8 (channels)
+  конфликтов присваивания. Чистый strict требует единого union/Protocol-решения
+  для `_NoopMetric` — отдельный будущий заход (крупный churn).
+
 ## [Fable-Hardening] — 2026-06-12 — закрытие хвоста F-14 + харденинг тестов/security-гейтов
 
 - **F-14 (vectordb):** `_base_manager._project_root()` указывал на папку пакета →

@@ -4,13 +4,15 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from celery import Task
+
 from tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
 
 @celery_app.task(bind=True, name="tasks.ingest_document")
-def ingest_document(self, file_path: str) -> dict:
+def ingest_document(self: Task, file_path: str) -> dict:
     """Load and index documents from the upload directory."""
     self.update_state(state="PROCESSING", meta={"step": "loading"})
 

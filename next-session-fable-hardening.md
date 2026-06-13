@@ -1,5 +1,26 @@
 # Next Session: Fable hardening — продолжение (план)
 
+## SESSION 5 (2026-06-13) — type-hardening: mypy strict-scope расширен (db/tasks/utils) + governance guard; LOCAL, push GATED ✅
+
+Заход по «доработай проект, решай сам». Бэклог Fable-hardening пуст — взято следующее названное направление (расширение mypy strict-scope). Только типовые правки (поведение не менялось). **НЕ закоммичено, push/commit GATED.**
+
+| Файл | Правка |
+|---|---|
+| `pyproject.toml` | `[[overrides]]`: `db.models` → `db.*`; новый блок `tasks.*`/`utils.*` (disallow_untyped_defs + disallow_incomplete_defs) |
+| `utils/retry.py`, `utils/circuit_breaker.py` | `*args: Any, **kwargs: Any` у proxy-декораторов (`wrapped`, `CircuitBreaker.call`) |
+| `db/crypto.py` | `encrypt`/`decrypt`/`EncryptedText.{bind,column}_expression` → `ColumnElement[Any]` (override-совместимо с базовым `TypeDecorator` → `ColumnElement[Any] \| None`) |
+| `db/audit.py` | `purge_old_audit`: `getattr(result, "rowcount", 0) or 0` (base `Result` из `execute()` не объявляет `rowcount`; DELETE даёт `CursorResult`) |
+| `tasks/ingest_task.py` | `ingest_document(self: Task, …)` + `from celery import Task` |
+| `tests/test_precommit_config.py` | guard-тест `test_mypy_strict_scope_is_synced_across_gates` — идентичность strict-путей mypy в ci.yml/local-gate.ps1/autopilot.ps1 + пин модулей |
+| `.github/workflows/ci.yml`, `scripts/local-gate.ps1`, `scripts/autopilot.ps1` | strict-команда синхронно: `db/models.py db/engine.py` → `db`, +`tasks utils` |
+| `README.md`, `docs/CHANGELOG.md` | `db/` → «mypy --strict clean»; [Type-Hardening] CHANGELOG-блок |
+
+**Верификация:** gated strict-mypy (новый scope) — **Success: no issues found in 30 source files, exit 0**; затронутые модули **66 passed / 3 skipped**; ruff clean. Гоча: `| tail` маскирует exit code mypy (первый «exit 0» был ложным) — гонять без `| tail`, читать `Found N errors`/`Success`.
+
+**Остаток (НЕ блокеры):** commit+push (GATED); `monitoring.*` (48) + `channels.*` (8) под strict — единый union/Protocol для `_NoopMetric` optional-dependency fallback (`try/except ImportError`), крупный churn → отдельный заход.
+
+---
+
 ## SESSION 4 (2026-06-12) — F-14-хвост: path-дивергенция закрыта; warm-cache оставлен намеренно ✅
 
 Бэклог Fable-hardening пуст; закрыт остаток F-14 (LOW, «по желанию»).

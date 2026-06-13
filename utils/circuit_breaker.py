@@ -8,7 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
-from typing import Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 T = TypeVar("T")
 
@@ -55,7 +55,7 @@ class CircuitBreaker:
         self._emit_state_change(old_state, new_state)
         return new_state
 
-    def call(self, fn: Callable[..., T], *args, **kwargs) -> T:
+    def call(self, fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
         old_state: CircuitState
         new_state: CircuitState
         with self._lock:
@@ -88,7 +88,7 @@ class CircuitBreaker:
 
     def decorate(self, fn: Callable[..., T]) -> Callable[..., T]:
         @wraps(fn)
-        def wrapped(*args, **kwargs) -> T:
+        def wrapped(*args: Any, **kwargs: Any) -> T:
             return self.call(fn, *args, **kwargs)
 
         return wrapped

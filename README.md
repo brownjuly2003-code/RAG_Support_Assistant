@@ -69,7 +69,7 @@ User / Email / Widget
   of adding a new local wrapper or importing `api.app` at module load time.
 - `agent/` — LangGraph pipeline + state + prompts.
 - `auth/` — JWT, X-API-Key, OIDC, RBAC. `mypy --strict` clean.
-- `db/` — SQLAlchemy models, async engine, audit log, pgcrypto field.
+- `db/` — SQLAlchemy models, async engine, audit log, pgcrypto field. `mypy --strict` clean.
 - `llm/providers/` — Ollama / Mistral / GraceKelly providers + cost guard.
 - `vectordb/` — tenant-aware vector store factory (`vectordb.manager`) plus base implementation (`vectordb._base_manager`).
 - `evaluation/` — RAGAS metrics, online evaluators, regression framework.
