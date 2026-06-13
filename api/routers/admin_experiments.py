@@ -136,7 +136,7 @@ def _deployed_experiment_runtime_path() -> Path:
 
 
 def _write_deployed_experiment_runtime_file(experiment_id: str) -> None:
-    import yaml as _yaml  # noqa: PLC0415
+    import yaml as _yaml  # type: ignore[import-untyped]  # noqa: PLC0415
 
     path = _deployed_experiment_runtime_path()
     path.parent.mkdir(parents=True, exist_ok=True)
