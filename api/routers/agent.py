@@ -28,12 +28,12 @@ router = APIRouter()
 _WORD_RE = re.compile(r"\w+", re.UNICODE)
 
 
-def _async_session():
+def _async_session() -> Any:
     """Indirection to keep monkeypatch.setattr('db.engine.async_session', ...) effective."""
     return _db_engine.async_session()
 
 
-async def _log_audit(**kwargs):
+async def _log_audit(**kwargs: Any) -> Any:
     """Indirection so test monkeypatch on api.app.log_audit takes effect."""
     _app = _app_module()
     return await _app.log_audit(**kwargs)

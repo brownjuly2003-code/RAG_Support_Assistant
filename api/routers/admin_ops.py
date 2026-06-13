@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import re
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -17,11 +18,11 @@ from monitoring import prometheus as prometheus_metrics
 router = APIRouter()
 
 
-def _async_session():
+def _async_session() -> Any:
     return _db_engine.async_session()
 
 
-async def _log_audit(**kwargs):
+async def _log_audit(**kwargs: Any) -> Any:
     return await _app_module().log_audit(**kwargs)
 
 

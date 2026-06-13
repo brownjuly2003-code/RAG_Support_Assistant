@@ -111,16 +111,20 @@ jobs:
         # Strict modules (auth, db.*, llm.providers, config/settings.py,
         # agent/state.py, agent/prompts.py, agent/prompt_registry.py,
         # agent/tools.py, agent/graph.py, tasks.*, utils.*, monitoring.*,
-        # channels.*, tracing.*, ingestion.*, evaluation.*, api/app.py) must
-        # remain green. Codex audit 2026-04-27 H3 + next-steps Steps 6, 9 +
+        # channels.*, tracing.*, ingestion.*, evaluation.*, api/app.py +
+        # api/_shared.py, api/correlation.py, api/rate_limit.py, api/routers/*)
+        # must remain green. Codex audit 2026-04-27 H3 + next-steps Steps 6, 9 +
         # api.app strict promotion 2026-04-28 + db/tasks/utils 2026-06-13 +
         # monitoring/channels 2026-06-13 + tracing/ingestion 2026-06-13 +
-        # evaluation 2026-06-13.
-        # Path list is kept in sync across this job, scripts/local-gate.ps1, and
-        # scripts/autopilot.ps1 by test_mypy_strict_scope_is_synced_across_gates.
+        # evaluation 2026-06-13 + api routers/helpers 2026-06-14.
+        # The first (main) path list is kept in sync across this job,
+        # scripts/local-gate.ps1, and scripts/autopilot.ps1 by
+        # test_mypy_strict_scope_is_synced_across_gates. The second command keeps
+        # --follow-imports=skip because api/_shared.py transitively imports
+        # api.app, whose full FastAPI graph times out under mypy.
         run: |
           python -m mypy auth db llm/providers/ config/settings.py agent/state.py agent/prompts.py agent/prompt_registry.py agent/tools.py agent/graph.py tasks utils monitoring channels tracing ingestion evaluation --no-incremental --show-error-codes
-          python -m mypy api/app.py --no-incremental --follow-imports=skip --show-error-codes
+          python -m mypy api/app.py api/_shared.py api/correlation.py api/rate_limit.py api/routers --no-incremental --follow-imports=skip --show-error-codes
 
   test-unit:
     runs-on: ubuntu-latest

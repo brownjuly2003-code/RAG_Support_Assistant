@@ -185,6 +185,20 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 warn_return_any = true
 warn_unused_ignores = true
+
+# api routers + helpers — strict scope (2026-06-14). The thin-shell modules
+# extracted from api.app (Phase 2 / Step 8 refactor). Type-only pass: annotated
+# the _async_session()/_log_audit() monkeypatch-indirection helpers and a few
+# endpoint return types, narrowed None before .isoformat(), cast the
+# object-typed analytics sort keys, annotated the rate_limit ImportError fallback
+# stubs. Checked with --follow-imports=skip in the gates (these transitively
+# import api.app via api._shared, whose full graph times out under mypy — same
+# reason api.app itself uses that flag). No warn_return_any here: SSO endpoints
+# return authlib's Any-typed redirect, which that flag would reject spuriously.
+[[tool.mypy.overrides]]
+module = ["api._shared", "api.correlation", "api.rate_limit", "api.routers.*"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
 no_implicit_optional = true
 
 # ---------------------------------------------------------------------------

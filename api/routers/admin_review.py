@@ -29,7 +29,7 @@ from db import engine as _db_engine
 router = APIRouter()
 
 
-def _async_session():
+def _async_session() -> Any:
     """Indirection to keep monkeypatch.setattr('db.engine.async_session', ...) effective."""
     return _db_engine.async_session()
 

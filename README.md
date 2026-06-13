@@ -62,11 +62,15 @@ User / Email / Widget
   `admin_experiments.py`, `admin_evaluations.py`, `analytics.py`,
   `auth_sso.py`, `conversation.py`, `feedback.py`, `misc.py`,
   `session_auth.py`, and `upload.py`. New endpoint groups are added here,
-  not in `api/app.py`.
-- `api/_shared.py` — lazy `app_module()` accessor for routers that need
-  compatibility access to `api.app` globals patched by tests. Prefer
+  not in `api/app.py`. `mypy --strict` clean (checked with
+  `--follow-imports=skip`, since these transitively import `api.app`).
+- `api/_shared.py`, `api/correlation.py`, `api/rate_limit.py` — lazy
+  `app_module()` accessor for routers that need compatibility access to
+  `api.app` globals patched by tests, request-correlation context, and the
+  rate-limit primitives. Prefer
   `from api._shared import app_module as _app_module` inside routers instead
   of adding a new local wrapper or importing `api.app` at module load time.
+  `mypy --strict` clean.
 - `agent/` — LangGraph pipeline + state + prompts.
 - `auth/` — JWT, X-API-Key, OIDC, RBAC. `mypy --strict` clean.
 - `db/` — SQLAlchemy models, async engine, audit log, pgcrypto field. `mypy --strict` clean.

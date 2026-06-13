@@ -2,6 +2,32 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Type-Hardening] — 2026-06-14 — mypy strict-scope: api routers + helpers
+
+- Продолжено направление strict-scope: `api/_shared.py`, `api/correlation.py`,
+  `api/rate_limit.py` и `api/routers/*` доведены до strict (22 mypy-ошибки → 0).
+  Только типовые правки — **рантайм не менялся**:
+  - Аннотированы indirection-хелперы `_async_session()`/`_log_audit()`
+    (monkeypatch-проводка для тестов) в `agent`/`admin_ops`/`admin_review`/
+    `admin_kb`/`admin_evaluations`/`admin_experiments`/`feedback`.
+  - Return-типы эндпоинтов: `chat -> AskResponse`, `sso_login`/`sso_callback
+    -> RedirectResponse`; параметры `db: Any` в `_fetch_experiment_*_bucket`.
+  - `admin_experiments`: `value is not None` перед `.isoformat()` (union-attr).
+  - `analytics`: sort-key по `object`-значениям dict — `cast(int, …)` для count,
+    `str(…)` для category.
+  - `api/rate_limit.py`: аннотированы stub-классы `ImportError`-fallback'а
+    (`Limiter`/`RateLimitExceeded`/`decorator`); `Callable` из `collections.abc`.
+- Проверяются отдельной командой `--follow-imports=skip` (как `api.app`):
+  `api/_shared.py` транзитивно импортирует `api.app`, чей полный FastAPI-граф
+  таймаутит mypy. Без `warn_return_any` (SSO-эндпоинты отдают Any-typed redirect
+  от authlib — флаг ругался бы ложно).
+- pyproject override + все 3 mypy-гейта (ci.yml/local-gate.ps1/autopilot.ps1)
+  расширены на api-модули; guard `test_mypy_strict_scope_is_synced_across_gates`
+  не тронут (он пинит только основную команду, api идёт в skip-команду).
+- Верификация: gate-команда `mypy api/app.py api/_shared.py api/correlation.py
+  api/rate_limit.py api/routers --follow-imports=skip` — **Success, 20 файлов**;
+  `tests/test_precommit_config.py` 13 passed; ruff clean.
+
 ## [Type-Hardening] — 2026-06-13 (cont.3) — mypy strict-scope: evaluation.*
 
 - Продолжено направление strict-scope: `evaluation.*` (было 16 mypy-ошибок)

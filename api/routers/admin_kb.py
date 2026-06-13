@@ -8,6 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
@@ -24,7 +25,7 @@ from utils.background_tasks import spawn_tracked
 router = APIRouter()
 
 
-def _async_session():
+def _async_session() -> Any:
     """Indirection to keep monkeypatch.setattr('db.engine.async_session', ...) effective."""
     return _db_engine.async_session()
 

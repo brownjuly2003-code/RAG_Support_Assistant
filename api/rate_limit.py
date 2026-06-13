@@ -1,6 +1,9 @@
 """Shared request rate limiting primitives."""
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
+
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
@@ -11,17 +14,17 @@ try:
     from slowapi.errors import RateLimitExceeded
     from slowapi.util import get_remote_address
 except ImportError:
-    class RateLimitExceeded(Exception):
+    class RateLimitExceeded(Exception):  # type: ignore[no-redef]
         pass
 
     class Limiter:  # type: ignore[no-redef]
-        def __init__(self, key_func):
+        def __init__(self, key_func: Callable[..., str]) -> None:
             self.key_func = key_func
 
-        def limit(self, value: str):
+        def limit(self, value: str) -> Callable[[Any], Any]:
             _ = value
 
-            def decorator(func):
+            def decorator(func: Any) -> Any:
                 return func
 
             return decorator

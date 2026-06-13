@@ -426,7 +426,7 @@ async def chat(
     request: Request,
     body: AskRequest,
     _user: dict = Depends(get_current_user),
-):
+) -> AskResponse:
     return await ask(request, body, _user)
 
 

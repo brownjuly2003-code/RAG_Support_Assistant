@@ -1,5 +1,23 @@
 # Agent State
 
+## 2026-06-14 Update (Type-hardening) — mypy strict-scope: api routers + helpers
+
+> **START HERE (type-hardening линия).** Заход `/auto продолжи` (после R1 ниже; адаптивные шаги R2/F2 за гейтом/Mac) → продолжена mypy strict-серия. **НЕ запушено на момент записи — коммит готовится, см. финальный статус.** Отдельный workstream от adaptive-retrieval.
+>
+> **Сделано:** `api/_shared.py`, `api/correlation.py`, `api/rate_limit.py`, `api/routers/*` → strict (22 mypy-ошибки → 0), всё type-only:
+> - indirection-хелперы `_async_session() -> Any` / `_log_audit(**kwargs: Any) -> Any` (monkeypatch-проводка) в agent/admin_ops/admin_review/admin_kb/admin_evaluations/admin_experiments/feedback.
+> - return-типы: `chat -> AskResponse`, `sso_login`/`sso_callback -> RedirectResponse`; `db: Any` в `_fetch_experiment_{live,staged}_bucket`.
+> - `admin_experiments`: `value is not None and hasattr(...)` перед `.isoformat()` (union-attr; поведенчески идентично — None и так не имеет isoformat).
+> - `analytics`: sort-key по `object`-значениям dict → `cast(int, item["count"])` (int(object) не overload!) + `str(item["category"])`.
+> - `rate_limit.py`: аннотированы stub'ы ImportError-fallback'а (`Limiter`/`RateLimitExceeded # type: ignore[no-redef]`/`decorator`); `Callable` из `collections.abc` (ruff UP035).
+>
+> **🔴 Гоча/решение:** api-модули **транзитивно тянут `api.app`** (через ленивый `from api import app` в `api/_shared.py:32`; mypy следует импортам даже внутри функций) → полный FastAPI-граф таймаутит mypy. Поэтому проверяются **отдельной командой `--follow-imports=skip`** (как сам `api.app`), НЕ в основной gated-команде. Pyproject-override для них **без `warn_return_any`** (в отличие от api.app): SSO-эндпоинты возвращают Any-typed redirect от authlib — флаг ругался бы ложно. Guard `test_mypy_strict_scope_is_synced_across_gates` НЕ тронут — он пинит только основную команду (skip-команда вне его охвата, как и раньше для app).
+>
+> **Верификация:** scoped strict (CLI `--disallow-untyped-defs`) Success 19 files; **точная gate-команда (override-driven, без CLI-флагов) `mypy api/app.py api/_shared.py api/correlation.py api/rate_limit.py api/routers --follow-imports=skip` → Success 20 files**; `tests/test_precommit_config.py` 13 passed (guard зелёный); целевые роутер-тесты (analytics/conversation/agent/admin×2/rate_limit×2) **32 passed**; ruff All checks passed. Основная gated-команда не менялась (была Success 60).
+> Изменены: pyproject + 3 гейта (ci.yml/local-gate.ps1/autopilot.ps1, skip-команда) + README + CHANGELOG + 11 api-файлов.
+>
+> **Остаток type-hardening:** последний крупный — `vectordb/` (тянет langchain/sentence-transformers, **риск памяти на Windows** — гнать осторожно/на Mac). `customs-clearance-fields` MISS — Kaggle. Обе — без явной просьбы не начинать.
+
 ## 2026-06-14 Update (adaptive-retrieval Track R / R1) — lightweight router classifier; Verify ПРЕВЫШЕН
 
 > **START HERE (этот workstream).** Заход `/auto RAG_Support_Assistant продолжи` → «решай сам» → взят **Track R / R1** (Windows-friendly, обратимо, без нового индекса; F2 оставлен владельцу — нужен Mac). Сделан целиком, верифицирован.

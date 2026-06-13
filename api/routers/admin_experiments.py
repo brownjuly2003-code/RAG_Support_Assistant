@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _async_session():
+def _async_session() -> Any:
     """Indirection to keep monkeypatch.setattr('db.engine.async_session', ...) effective."""
     return _db_engine.async_session()
 
@@ -50,7 +50,7 @@ def _empty_experiment_bucket(experiment_id: str | None) -> dict[str, Any]:
     }
 
 
-async def _fetch_experiment_live_bucket(db, experiment_id: str) -> dict[str, Any]:
+async def _fetch_experiment_live_bucket(db: Any, experiment_id: str) -> dict[str, Any]:
     bucket = _empty_experiment_bucket(experiment_id)
     try:
         result = await db.execute(
@@ -83,7 +83,7 @@ async def _fetch_experiment_live_bucket(db, experiment_id: str) -> dict[str, Any
     return bucket
 
 
-async def _fetch_experiment_staged_bucket(db, experiment_id: str) -> dict[str, Any]:
+async def _fetch_experiment_staged_bucket(db: Any, experiment_id: str) -> dict[str, Any]:
     bucket = _empty_experiment_bucket(experiment_id)
     try:
         result = await db.execute(
@@ -486,7 +486,7 @@ async def admin_list_experiment_assignments(
     for row in rows:
         record = dict(row)
         value = record.get("rolled_out_at")
-        if hasattr(value, "isoformat"):
+        if value is not None and hasattr(value, "isoformat"):
             record["rolled_out_at"] = value.isoformat()
         assignments.append(record)
     return JSONResponse(content={"assignments": assignments})

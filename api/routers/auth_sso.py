@@ -21,7 +21,7 @@ async def sso_providers() -> dict[str, list[dict[str, str]]]:
 
 
 @router.get("/auth/sso/{provider}/login")
-async def sso_login(provider: str, request: Request):
+async def sso_login(provider: str, request: Request) -> RedirectResponse:
     _app = _app_module()
     try:
         client = _app.get_oidc_client(provider)
@@ -35,7 +35,7 @@ async def sso_login(provider: str, request: Request):
 
 
 @router.get("/auth/sso/{provider}/callback", name="sso_callback")
-async def sso_callback(provider: str, request: Request):
+async def sso_callback(provider: str, request: Request) -> RedirectResponse:
     from auth.jwt_handler import (
         ACCESS_TOKEN_TTL,
         REFRESH_TOKEN_TTL,

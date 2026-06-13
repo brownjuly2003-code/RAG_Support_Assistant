@@ -4,7 +4,7 @@ from __future__ import annotations
 import json as _json
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -30,7 +30,7 @@ class EscalateRequest(BaseModel):
     reason: str = Field(default="user_request", max_length=200)
 
 
-async def _log_audit(**kwargs) -> None:
+async def _log_audit(**kwargs: Any) -> None:
     await _app_module().log_audit(**kwargs)
 
 

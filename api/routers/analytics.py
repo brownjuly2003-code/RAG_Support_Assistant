@@ -6,7 +6,7 @@ stays in api.app for now so existing tests can keep monkeypatching it there.
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
@@ -47,7 +47,7 @@ async def analytics_top_topics(
         }
         for category, values in grouped.items()
     ]
-    topics.sort(key=lambda item: (-item["count"], item["category"]))
+    topics.sort(key=lambda item: (-cast(int, item["count"]), str(item["category"])))
     return JSONResponse(content={"topics": topics[:10]})
 
 
@@ -73,7 +73,7 @@ async def analytics_resolution_rate(
         }
         for category, values in grouped.items()
     ]
-    payload.sort(key=lambda item: item["category"])
+    payload.sort(key=lambda item: str(item["category"]))
     return JSONResponse(content={"topics": payload})
 
 
