@@ -1,8 +1,10 @@
 # Agent State
 
-## 2026-06-13 Update (Type-hardening) — mypy strict-scope расширен на db/tasks/utils + governance guard; LOCAL, push GATED
+## 2026-06-13 Update (Type-hardening + security) — mypy strict-scope расширен (db/tasks/utils/monitoring/channels) + pypdf-CVE; PUSHED, CI зелёный (origin=`46991dc`)
 
-> **START HERE.** Бэклог Fable-hardening пуст; это инкрементальный type-hardening-заход по запросу «доработай проект, решай сам». **Дерево было чисто (HEAD=origin=`cbba12f`)**; добавлены ТОЛЬКО типовые правки (поведение не менялось) + governance guard. **НЕ закоммичено и НЕ запушено — push/commit GATED.** Чужие untracked `docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py` — не трогать.
+> **START HERE.** Заход по «доработай проект, решай сам» → «продолжи». Бэклог Fable-hardening был пуст; взято направление расширения mypy strict-scope (+ по ходу закрыта свежая pypdf-CVE). **PUSHED — 3 коммита `cbba12f..46991dc`, origin синхронизирован, дерево чисто, CI run `27458721233` success полностью** (type-check/security/pre-commit/test-unit×2/test-integration×2/lint/migrations/helm; regression-eval skipped PR-гейт). Все правки кода — типовые/security (поведение не менялось). mypy strict-scope теперь **11 целей**: auth, db.\*, llm.providers.\*, config.settings, 5×agent, api.app, tasks.\*, utils.\*, monitoring.\*, channels.\*. Чужие untracked `docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py` — не трогать.
+>
+> **3 коммита:** `310f303` strict→db.\*/tasks.\*/utils.\* + governance guard · `fef03ad` security pypdf 6.10.2→6.13.2 (CVE-2026-48155/48156) · `46991dc` strict→monitoring.\*/channels.\* (type-only `_NoopMetric` решение). Детали по каждому — ниже.
 >
 > **Сделано:**
 > 1. **mypy strict-scope расширен** на `db.*`, `tasks.*`, `utils.*` (был только `db.models`). `pyproject.toml` overrides. Правки кода = только аннотации:

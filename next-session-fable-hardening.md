@@ -1,6 +1,8 @@
 # Next Session: Fable hardening — продолжение (план)
 
-## SESSION 5 (2026-06-13) — type-hardening: mypy strict-scope расширен (db/tasks/utils) + governance guard; LOCAL, push GATED ✅
+## SESSION 5 (2026-06-13) — type-hardening (db/tasks/utils + monitoring/channels) + pypdf-CVE; PUSHED, CI зелёный (origin=`46991dc`) ✅
+
+> Итог: 3 коммита `cbba12f..46991dc`, CI run `27458721233` success полностью. mypy strict-scope = 11 целей. `310f303` (db/tasks/utils + guard) · `fef03ad` (security pypdf 6.10.2→6.13.2) · `46991dc` (monitoring/channels). Детали — таблица ниже + блоки «Продолжение».
 
 Заход по «доработай проект, решай сам». Бэклог Fable-hardening пуст — взято следующее названное направление (расширение mypy strict-scope). Только типовые правки (поведение не менялось). **НЕ закоммичено, push/commit GATED.**
 
