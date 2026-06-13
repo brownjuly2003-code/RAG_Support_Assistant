@@ -1,5 +1,19 @@
 # Agent State
 
+## 2026-06-14 Update (adaptive-retrieval Track F / F1) — LLM fact-card экстрактор + Verify PASS на Mac; коммит+push
+
+> **START HERE (этот workstream).** Заход по «запусти след шаг на мак» (после Phase 0 ниже). Сделан **Track F / F1** = LLM-экстрактор fact-cards + verify на 3 customs-доках. Тяжёлый/LLM-шаг гонялся **на Mac** (`deproject-mac` 192.168.1.133, SSH key-based; репо `~/RAG_Support_Assistant`, venv py3.11, ff-pull до origin; профиль `external-mistral`, ключ Mistral передан в `/tmp/mk.env` на прогон и удалён). Код написан/залинчен на Windows, прогон — на Mac.
+>
+> **Сделано:**
+> - `ingestion/factcard_extractor.py` — `FactCard{topic,fields,required_docs,conditions,source}` (pydantic) + `extract_fact_cards(doc, source, llm)` через `SupportsInvoke` (контракт `invoke(prompt)->str`, как в graph). **mypy strict ✓ (ingestion.* в scope) + ruff ✓.**
+> - `scripts/factcard_verify.py` — F1 verify-харнесс (extract + проверка сохранности полей).
+> - **Verify PASS** на 3 customs-доках (clearance/broker/representative: 23/18/22 поля). **Карта clearance-дока содержит `declaration_number` + `customs_code`** — ровно kws остаточного MISS `customs-clearance-fields`, которые D2-реранк терял → fact-card механизм закрывает enumeration-дыру. Подтверждено grep'ом сохранённого `/tmp/f1_verify.out`.
+> - **🔴 Гоча F1:** полный док (~17k симв) → runaway-вывод LLM → read-timeout (даже при 180s); короткий промпт = 1s (ключ/сеть ок). `ProviderBackedLLM.invoke(prompt)` НЕ прокидывает `max_tokens`/kwargs в `generate()`. Фикс F1: `max_chars=6000` (таблица «Обязательные поля» в первых ~5k симв → поля целы, ~13s). Полнодокументное покрытие late-секций — F2 (chunk-aware / bounded `max_tokens` через `generate()`).
+>
+> **Верификация:** ruff All checks passed; mypy `Success: no issues` (ingestion strict scope); verify RESULT PASS на Mac (external-mistral, 3/3 [OK]).
+>
+> **Следующий шаг (НЕ начато):** F2 — коллекция `<prefix>_factcards` + запись карт при ingest (тяжёлый embed → Mac). Затем F3 (`get_factcard_documents`), F4 (`_RETRIEVAL_STRATEGIES`+`Literal`+`make_retrieve_node` ветка). Track R/R1 (классификатор) — независим, можно Windows. По явному запросу.
+
 ## 2026-06-13 Update (adaptive-retrieval Phase 0) — разметка+baseline+ГЕЙТ; ГЕЙТ PASS обоими треками; PUSHED, CI зелёный (origin=`7c31904`+этот sync)
 
 > **START HERE (этот workstream).** Заход по `/auto` «RAG_Support_Assistant — adaptive-retrieval: выполни Phase 0 из docs/plans/2026-06-13-adaptive-retrieval-factcard-plan.md». **Отдельный workstream, НЕ связан с mypy-strict-линией (cont.1-3 ниже).** Phase 0 закрыт целиком: T0.1 разметка + T0.2 baseline + ГЕЙТ. **PUSHED по «все решения за тобой, про коммиты и пуши тоже»: master FF `176335d→7c31904` (Phase 0) + plan-коммит `176335d` уехал заодно; origin синхронизирован. Основной CI run `27477349393` = success полностью** (type-check со свежим `evaluation.adaptive_retrieval` / unit×2 / integration×2 / lint / security / pre-commit / migrations / helm; regression-eval запустился — eval-path тронут). **Pages-deploy = failure pre-existing** (docs-site esbuild npm-audit через astro — cont.2/cont.3, вне scope, не моя регрессия). Отчёт: `docs/operations/2026-06-13-adaptive-retrieval-phase0.md`.
