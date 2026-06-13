@@ -1,5 +1,27 @@
 # Next Session: Fable hardening — продолжение (план)
 
+## SESSION 6 (2026-06-13) — type-hardening (tracing.* + ingestion.*); PUSHED, CI зелёный (origin=`a341b77`) ✅
+
+> Итог: 1 коммит `a341b77`, основной CI run `27460154092` success полностью. mypy strict-scope = 13 целей (+`tracing.*`, `ingestion.*`). Заход по `/auto` «продолжи» при пустом бэклоге — продолжена линия SESSION 5.
+
+| Файл | Правка (type-only, рантайм нетронут) |
+|---|---|
+| `tracing/otel.py` | 9 optional-opentelemetry-глобалов → `Any` (стартуют `None`, rebind в `_ensure_dependencies()`); return/param `_NoopSpan.__enter__`/`__exit__` (`Literal[False]`+`TracebackType`), `start_as_current_span`, `get_tracer`, `init_otel` |
+| `tracing/_base_trace.py` | `_get_connection -> Iterator[sqlite3.Connection]`, `_batch -> Iterator[list[str]]` (+ import `Iterator`) |
+| `tracing/langfuse_trace.py` | `get_langfuse -> Any`; fallback `langfuse.otel import Langfuse` → `# type: ignore[no-redef]` |
+| `ingestion/loader.py` | `changes: dict[str, list[str]]` (var-annotated) |
+| `ingestion/pipeline.py` | `build_vector_store: Callable[..., tuple[Any, list[Document]]]` (×2 присваивания) + import `Callable` |
+| `pyproject.toml` | `[[overrides]]` блок `tracing.*`/`ingestion.*` |
+| `.github/workflows/ci.yml`, `scripts/local-gate.ps1`, `scripts/autopilot.ps1` | strict-команда +`tracing ingestion` |
+| `tests/test_precommit_config.py` | `EXPECTED_MYPY_STRICT_PATHS` +`tracing`/`ingestion` |
+| `README.md`, `docs/CHANGELOG.md` | strict-clean пометки + [Type-Hardening] cont.2 блок |
+
+**Верификация:** gated strict-mypy — **Success, 46 source files** (21→0); целевые тесты **52 passed**; docs-guards 20; ruff clean. **Гоча:** `[no-redef]` в langfuse_trace показался ТОЛЬКО в полной gated-команде (с agent.graph в графе), не в `mypy tracing` изолированно → верифицировать полной командой. **Pages-deploy = failure pre-existing** (docs-site esbuild npm-audit, транзитивно astro; падал и на `be85be3`; вне scope).
+
+**Остаток:** дальнейший strict — `api/` (кроме app), `evaluation/`, `vectordb/` (последний тянет langchain/sentence-transformers — память Windows, осторожно). `customs-clearance-fields` MISS — Kaggle, без явной просьбы не начинать.
+
+---
+
 ## SESSION 5 (2026-06-13) — type-hardening (db/tasks/utils + monitoring/channels) + pypdf-CVE; PUSHED, CI зелёный (origin=`46991dc`) ✅
 
 > Итог: 3 коммита `cbba12f..46991dc`, CI run `27458721233` success полностью. mypy strict-scope = 11 целей. `310f303` (db/tasks/utils + guard) · `fef03ad` (security pypdf 6.10.2→6.13.2) · `46991dc` (monitoring/channels). Детали — таблица ниже + блоки «Продолжение».

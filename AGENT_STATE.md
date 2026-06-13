@@ -1,5 +1,22 @@
 # Agent State
 
+## 2026-06-13 Update (cont.2, Type-hardening) — mypy strict-scope: tracing.* + ingestion.*; PUSHED, CI зелёный (origin=`a341b77`)
+
+> **START HERE.** Заход по `/auto` «RAG_Support_Assistant продолжи». Бэклог Fable-hardening пуст; продолжена линия расширения mypy strict-scope (тот же прецедент, что SESSION 5). **PUSHED — 1 коммит `a341b77`, origin синхронизирован, дерево чисто** (кроме 2 чужих untracked `docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py` — не трогать). **Основной CI run `27460154092` = success полностью** (type-check со свежим scope / security-pip-audit / pre-commit / test-unit×2 / test-integration×2 / lint / migrations / helm; regression-eval skipped — PR-гейт). Все правки — типовые, поведение не менялось. **mypy strict-scope теперь 13 целей** (+`tracing.*`, `ingestion.*`).
+>
+> **Сделано (`a341b77`):** `tracing.*` (было 18 mypy-ошибок) + `ingestion.*` (3) → strict.
+> - `tracing/otel.py`: 9 optional-opentelemetry-глобалов (`trace`/`OTLPSpanExporter`/`TracerProvider`/инструментаторы) стартуют `None`, перепривязываются в `_ensure_dependencies()` → аннотированы `Any` (та же суть, что `_NoopMetric`-union в monitoring; `ignore_missing_imports` всё равно делает реальные символы `Any`). + return/param-аннотации `_NoopSpan.__enter__/__exit__` (`Literal[False]` + `TracebackType`), `start_as_current_span`, `get_tracer`, `init_otel`.
+> - `tracing/_base_trace.py`: return-типы генераторов `_get_connection` (`Iterator[sqlite3.Connection]`), `_batch` (`Iterator[list[str]]`).
+> - `tracing/langfuse_trace.py`: `get_langfuse -> Any`; fallback `from langfuse.otel import Langfuse` → `# type: ignore[no-redef]` (тот же идиом, что fallback Document в `ingestion/pipeline.py`). **Гоча:** `[no-redef]` НЕ воспроизводится в изолированном `mypy tracing` (показался только в полной gated-команде с agent.graph в графе) — верифицировать ВСЕГДА полной gated-командой, не одним пакетом.
+> - `ingestion/loader.py`: `changes: dict[str, list[str]]`. `ingestion/pipeline.py`: `build_vector_store: Callable[..., tuple[Any, list[Document]]]` (держит tenant-aware 5-арг ИЛИ legacy 4-арг, диспетчер через `inspect.signature`; аннотация на обоих присваиваниях — `ingest` и `add_document`).
+> - pyproject overrides + 3 mypy-гейта (ci.yml/local-gate.ps1/autopilot.ps1) + guard `test_mypy_strict_scope_is_synced_across_gates` расширены на `tracing`/`ingestion`. README + CHANGELOG обновлены.
+>
+> **Верификация:** полная gated strict-mypy — **Success: no issues found in 46 source files** (21→0); целевые тесты (otel/langfuse/trace-retention/provider-cost/metrics/loader/categorizer/pipeline×2/precommit-guard) — **52 passed**; docs-guards 20 passed; ruff clean.
+>
+> **Pages-deploy `27460154087` = failure — pre-existing, НЕ моя регрессия:** docs-site `npm audit --audit-level=moderate` валится на esbuild high-severity (GHSA-gv7w-rqvm-qjhr / GHSA-g7r4-m6w7-qqqr, транзитивно через astro). Падал уже на `be85be3` (docs-only коммит до меня). Фикс = `npm audit fix --force` → astro breaking change на работающем docs-site — отдельная задача, вне scope type-hardening, без явной просьбы не трогать.
+>
+> **Остаток (НЕ блокеры):** `customs-clearance-fields` retrieval-MISS (Kaggle, не Windows); дальнейший strict — остались `api/` (кроме app), `evaluation/`, `vectordb/` (последний тянет тяжёлый langchain/sentence-transformers граф — память на Windows; гнать gated-командой осторожно).
+
 ## 2026-06-13 Update (Type-hardening + security) — mypy strict-scope расширен (db/tasks/utils/monitoring/channels) + pypdf-CVE; PUSHED, CI зелёный (origin=`46991dc`)
 
 > **START HERE.** Заход по «доработай проект, решай сам» → «продолжи». Бэклог Fable-hardening был пуст; взято направление расширения mypy strict-scope (+ по ходу закрыта свежая pypdf-CVE). **PUSHED — 3 коммита `cbba12f..46991dc`, origin синхронизирован, дерево чисто, CI run `27458721233` success полностью** (type-check/security/pre-commit/test-unit×2/test-integration×2/lint/migrations/helm; regression-eval skipped PR-гейт). Все правки кода — типовые/security (поведение не менялось). mypy strict-scope теперь **11 целей**: auth, db.\*, llm.providers.\*, config.settings, 5×agent, api.app, tasks.\*, utils.\*, monitoring.\*, channels.\*. Чужие untracked `docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py` — не трогать.
