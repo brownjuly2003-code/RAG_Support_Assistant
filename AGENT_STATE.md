@@ -2,7 +2,9 @@
 
 ## 2026-06-14 Update (Type-hardening) — mypy strict-scope: api routers + helpers
 
-> **START HERE (type-hardening линия).** Заход `/auto продолжи` (после R1 ниже; адаптивные шаги R2/F2 за гейтом/Mac) → продолжена mypy strict-серия. **НЕ запушено на момент записи — коммит готовится, см. финальный статус.** Отдельный workstream от adaptive-retrieval.
+> **START HERE (type-hardening линия).** Заход `/auto продолжи` (после R1 ниже; адаптивные шаги R2/F2 за гейтом/Mac) → продолжена mypy strict-серия. **PUSHED: `9030706` (api strict) + `c4255be` (yaml-стаб CI-фикс), origin синхронизирован, CI run `27482448746` = success (type-check зелёный).** Отдельный workstream от adaptive-retrieval.
+>
+> **🔴 Поймана+починена yaml-гоча (стоила 1 красного CI, `c4255be`):** `9030706` локально зелёный (gate Success 20), но CI type-check упал — `api/routers/admin_experiments.py:139 import yaml` → «Library stubs not installed for yaml (types-PyYAML)». `ignore_missing_imports` НЕ глушит known-stub либы; CI без types-PyYAML, локальный venv с ним. Фикс = `# type: ignore[import-untyped]` (как `05dbe6c` для evaluation; types-PyYAML в deps НЕ добавлять). Проверено воспроизведением: временный деинсталл стаба → gate Success 20. **Урок повторно: strict-промоушн модуля с любым yaml-импортом (даже ленивым внутри функции) → СРАЗУ `# type: ignore[import-untyped]`.**
 >
 > **Сделано:** `api/_shared.py`, `api/correlation.py`, `api/rate_limit.py`, `api/routers/*` → strict (22 mypy-ошибки → 0), всё type-only:
 > - indirection-хелперы `_async_session() -> Any` / `_log_audit(**kwargs: Any) -> Any` (monkeypatch-проводка) в agent/admin_ops/admin_review/admin_kb/admin_evaluations/admin_experiments/feedback.
