@@ -2,6 +2,29 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Type-Hardening] — 2026-06-13 (cont.) — mypy strict-scope: monitoring.* + channels.*
+
+- Завершено отложенное направление: `monitoring.*` (было 48 mypy-ошибок) и
+  `channels.*` (8) доведены до strict. Решён в корне `_NoopMetric`
+  optional-dependency fallback — **без изменения рантайма**:
+  - `monitoring/prometheus.py`, `channels/email_channel.py`: каждый
+    metric-глобал привязан к реальному prometheus-классу при наличии зависимости
+    и к `_NoopMetric` иначе. mypy выводил тип по первой ветке (`_NoopMetric`) и
+    падал на присваивании `Counter`/`Gauge`/`Histogram`/`Summary`. Объявлен union
+    (`Counter | _NoopMetric` и т.п.) один раз в `TYPE_CHECKING`-блоке на модуль —
+    обе ветки проходят, рантайм нетронут. Все call-site используют метод, общий
+    для обеих частей union (`inc`/`observe`/`set`), сужения не требуется.
+  - `channels/email_channel.py`: `payload.decode` — narrow `get_payload(decode=True)`
+    до `bytes` через `isinstance`; imap `msg_data[0]` — narrow до `tuple` с явной
+    ошибкой при неожиданном ответе.
+  - `channels/telegram_bot.py`: `assert _session_class is not None` (инвариант
+    `_ensure_pipeline()`), снят false-positive «None not callable».
+- pyproject overrides + все 3 mypy-гейта (ci.yml/local-gate.ps1/autopilot.ps1) +
+  governance guard расширены на `monitoring`/`channels`. Полный strict-scope
+  теперь 11 целей.
+- Верификация: gated strict-mypy по каждой части (auth/db/llm/config/agent/tasks/
+  utils — 30 files; monitoring — 2; channels — 4) и полная команда — Success.
+
 ## [Security] — 2026-06-13 — pypdf 6.10.2 → 6.13.2 (CVE-2026-48155 / CVE-2026-48156)
 
 - pip-audit (CI security job + pre-commit hook) упал на свежих advisory

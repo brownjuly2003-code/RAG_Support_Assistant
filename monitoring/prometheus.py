@@ -1,7 +1,7 @@
 """Prometheus metrics для RAG Support Assistant."""
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 __all__ = [
     "ACTIVE_SESSIONS",
@@ -110,6 +110,73 @@ class _NoopMetric:
 
     def set(self, value: float) -> None:
         _ = value
+
+
+if TYPE_CHECKING:
+    from prometheus_client import Counter, Gauge, Histogram, Summary
+
+    # Each metric global below is bound to a real prometheus class when the
+    # optional dependency is installed (the `else` branch) and to a _NoopMetric
+    # otherwise (the `except` branch). Declare the union for both so mypy stops
+    # inferring the type from whichever assignment it sees first. Grouped by the
+    # prometheus metric kind; every call site uses a method present on both
+    # arms (inc/observe/set), so the union needs no per-call narrowing.
+    _CounterT = Counter | _NoopMetric
+    _GaugeT = Gauge | _NoopMetric
+    _HistogramT = Histogram | _NoopMetric
+    _SummaryT = Summary | _NoopMetric
+
+    REQUEST_COUNT: _CounterT
+    HTTP_REQUESTS: _CounterT
+    LLM_COST_USD_TOTAL: _CounterT
+    LLM_PROVIDER_FALLBACK_TOTAL: _CounterT
+    ESCALATION_TOTAL: _CounterT
+    FACT_VERIFICATION_CONSENSUS_TOTAL: _CounterT
+    FEEDBACK_COUNT: _CounterT
+    CIRCUIT_BREAKER_TRANSITIONS: _CounterT
+    OLLAMA_RETRY_EVENTS: _CounterT
+    ONLINE_EVALUATOR_RUNS_TOTAL: _CounterT
+    ONLINE_EVALUATOR_ERRORS_TOTAL: _CounterT
+    MODEL_ROUTING: _CounterT
+    RATE_LIMIT_REJECTIONS: _CounterT
+    REGRESSION_RUNS_TOTAL: _CounterT
+    REQUEST_TIMEOUTS: _CounterT
+    PIPELINE_REJECTIONS: _CounterT
+    LLM_CACHE_HITS: _CounterT
+    LLM_CACHE_MISSES: _CounterT
+    TRACES_PURGED: _CounterT
+    AUDIT_PURGED: _CounterT
+    AUTH_FAILURES: _CounterT
+    BODY_SIZE_REJECTIONS: _CounterT
+    QUALITY_SCORE_SOURCE_TOTAL: _CounterT
+    MESSAGE_PERSIST_FAILURES: _CounterT
+    ONLINE_EVALUATORS_DROPPED: _CounterT
+
+    REQUEST_DURATION: _HistogramT
+    HTTP_REQUEST_DURATION: _HistogramT
+    ONLINE_EVALUATOR_SCORE: _HistogramT
+    REGRESSION_RUNS_DURATION: _HistogramT
+
+    QUALITY_SCORE: _SummaryT
+    FACTUALITY_SCORE: _SummaryT
+
+    ACTIVE_SESSIONS: _GaugeT
+    VECTOR_STORE_DOCS: _GaugeT
+    CIRCUIT_BREAKER_STATE: _GaugeT
+    COMPONENT_UP: _GaugeT
+    DB_POOL_SIZE: _GaugeT
+    DB_POOL_CHECKED_OUT: _GaugeT
+    DB_POOL_OVERFLOW: _GaugeT
+    REGRESSION_LAST_PASS_RATE: _GaugeT
+    REVIEW_QUEUE_PENDING_TOTAL: _GaugeT
+    REVIEW_QUEUE_CONFIRMED_TOTAL: _GaugeT
+    REVIEW_QUEUE_OLDEST_PENDING_SECONDS: _GaugeT
+    STALE_IMPORTANT_DOCS: _GaugeT
+    INFLIGHT_PIPELINES: _GaugeT
+    EVAL_DRIFT: _GaugeT
+    CURATED_DATASET_SIZE: _GaugeT
+    CURATED_DATASET_LAST_BUILD_TIMESTAMP_SECONDS: _GaugeT
+    RETRIEVER_BM25_ENABLED: _GaugeT
 
 
 try:

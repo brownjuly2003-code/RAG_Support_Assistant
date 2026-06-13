@@ -137,6 +137,16 @@ module = ["tasks.*", "utils.*"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
+# monitoring.* and channels.* — strict scope (2026-06-13). The optional
+# prometheus_client dependency makes every metric global a "real class or
+# _NoopMetric" union; declared once in a TYPE_CHECKING block per module so the
+# import-present and import-absent assignment branches both type-check (no
+# runtime change). channels also got imap/email payload narrowing.
+[[tool.mypy.overrides]]
+module = ["monitoring.*", "channels.*"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
 # agent modules — strict scope (Step 9).
 [[tool.mypy.overrides]]
 module = ["agent.state", "agent.prompts", "agent.prompt_registry", "agent.tools", "agent.graph"]

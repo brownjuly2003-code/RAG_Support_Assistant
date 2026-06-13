@@ -116,7 +116,7 @@ foreach ($path in $changed) {
 $gates = New-Object System.Collections.Generic.List[object]
 Add-Gate $gates "git diff --check" "git" @("diff", "--check")
 Add-Gate $gates "ruff" "ruff" @("check", ".")
-Add-Gate $gates "mypy strict scope" "python" @("-m", "mypy", "auth", "db", "llm/providers/", "config/settings.py", "agent/state.py", "agent/prompts.py", "agent/prompt_registry.py", "agent/tools.py", "agent/graph.py", "tasks", "utils", "--no-incremental", "--show-error-codes")
+Add-Gate $gates "mypy strict scope" "python" @("-m", "mypy", "auth", "db", "llm/providers/", "config/settings.py", "agent/state.py", "agent/prompts.py", "agent/prompt_registry.py", "agent/tools.py", "agent/graph.py", "tasks", "utils", "monitoring", "channels", "--no-incremental", "--show-error-codes")
 Add-Gate $gates "mypy api.app" "python" @("-m", "mypy", "api/app.py", "--no-incremental", "--follow-imports=skip", "--show-error-codes")
 Add-Gate $gates "unit tests" "python" @("-m", "pytest", "tests/", "-q", "--ignore=tests/integration", "-p", "no:schemathesis", "-p", "no:cacheprovider", "--basetemp=.tmp/pytest")
 if ($helmTouched) {

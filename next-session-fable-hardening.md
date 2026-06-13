@@ -18,7 +18,9 @@
 
 **Верификация:** gated strict-mypy (новый scope) — **Success: no issues found in 30 source files, exit 0**; затронутые модули **66 passed / 3 skipped**; ruff clean; pip-audit на обновлённом lock — «No known vulnerabilities found, 2 ignored»; loader/ingest/governance **30 passed**. Гоча: `| tail` маскирует exit code mypy (первый «exit 0» был ложным) — гонять без `| tail`, читать `Found N errors`/`Success`. Гоча CI: type-правки не трогали security, но push словил свежую diff-независимую `pypdf`-CVE (security+pre-commit job = один pip-audit hook) — чинить bump'ом, не ignore (fix есть).
 
-**Остаток (НЕ блокеры):** commit+push (GATED); `monitoring.*` (48) + `channels.*` (8) под strict — единый union/Protocol для `_NoopMetric` optional-dependency fallback (`try/except ImportError`), крупный churn → отдельный заход.
+**Продолжение (по «продолжи», 3-й коммит):** `monitoring.*` (48) + `channels.*` (8) доведены до strict. `_NoopMetric` optional-dependency fallback решён **type-only**: union (`Counter|_NoopMetric` и т.п.) в `TYPE_CHECKING`-блоке на модуль — рантайм нетронут. channels: `payload.decode`→bytes narrow, imap `msg_data[0]`→tuple narrow, telegram `assert _session_class is not None`. pyproject+3 гейта+guard расширены (strict-scope = 11 целей). monitoring Success 2 files, channels Success 4 files. Гоча: mypy `--no-incremental` на channels тянет `agent.graph→langchain` граф, пик ~2.2GB (Windows-порог).
+
+**Остаток (НЕ блокеры):** `customs-clearance-fields` retrieval-MISS (Kaggle, не Windows); дальнейший strict (api/ кроме app, evaluation/, ingestion/, tracing/, vectordb/) — крупный churn.
 
 ---
 

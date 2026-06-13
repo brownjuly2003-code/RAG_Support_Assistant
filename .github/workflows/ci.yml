@@ -110,13 +110,14 @@ jobs:
       - name: Run mypy on strict scope
         # Strict modules (auth, db.*, llm.providers, config/settings.py,
         # agent/state.py, agent/prompts.py, agent/prompt_registry.py,
-        # agent/tools.py, agent/graph.py, tasks.*, utils.*, api/app.py) must
-        # remain green. Codex audit 2026-04-27 H3 + next-steps Steps 6, 9
-        # + api.app strict promotion 2026-04-28 + db/tasks/utils 2026-06-13.
+        # agent/tools.py, agent/graph.py, tasks.*, utils.*, monitoring.*,
+        # channels.*, api/app.py) must remain green. Codex audit 2026-04-27 H3
+        # + next-steps Steps 6, 9 + api.app strict promotion 2026-04-28
+        # + db/tasks/utils 2026-06-13 + monitoring/channels 2026-06-13.
         # Path list is kept in sync across this job, scripts/local-gate.ps1, and
         # scripts/autopilot.ps1 by test_mypy_strict_scope_is_synced_across_gates.
         run: |
-          python -m mypy auth db llm/providers/ config/settings.py agent/state.py agent/prompts.py agent/prompt_registry.py agent/tools.py agent/graph.py tasks utils --no-incremental --show-error-codes
+          python -m mypy auth db llm/providers/ config/settings.py agent/state.py agent/prompts.py agent/prompt_registry.py agent/tools.py agent/graph.py tasks utils monitoring channels --no-incremental --show-error-codes
           python -m mypy api/app.py --no-incremental --follow-imports=skip --show-error-codes
 
   test-unit:

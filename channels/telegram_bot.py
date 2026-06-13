@@ -70,6 +70,7 @@ async def _get_session(chat_id: int) -> Any:
 
     if chat_id not in _sessions:
         settings = get_settings()
+        assert _session_class is not None  # populated by _ensure_pipeline() above
         _sessions[chat_id] = _session_class(
             retriever=_retriever,
             llm=_llm,

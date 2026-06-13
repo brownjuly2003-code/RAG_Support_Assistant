@@ -168,6 +168,8 @@ EXPECTED_MYPY_STRICT_PATHS = {
     "agent/graph.py",
     "tasks",
     "utils",
+    "monitoring",
+    "channels",
 }
 
 

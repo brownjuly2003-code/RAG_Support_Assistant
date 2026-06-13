@@ -12,7 +12,7 @@ from collections.abc import Callable
 from email.message import EmailMessage, Message
 from email.utils import parseaddr
 from html import unescape
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from config.settings import get_settings
 
@@ -25,6 +25,16 @@ class _NoopMetric:
 
     def set(self, value: float) -> None:
         _ = value
+
+
+if TYPE_CHECKING:
+    from prometheus_client import Counter, Gauge
+
+    # Bound to a real prometheus class when the dependency is present, else to
+    # _NoopMetric; declare the union so mypy accepts both assignment branches.
+    EMAIL_POLLER_FETCHED_TOTAL: Counter | _NoopMetric
+    EMAIL_POLLER_ERRORS_TOTAL: Counter | _NoopMetric
+    EMAIL_POLLER_LAST_SUCCESS_TIMESTAMP: Gauge | _NoopMetric
 
 
 try:
@@ -79,7 +89,8 @@ def extract_plain_body(message: Message) -> str:
             if part.get_content_disposition() == "attachment":
                 continue
 
-            payload = part.get_payload(decode=True) or b""
+            raw_payload = part.get_payload(decode=True)
+            payload = raw_payload if isinstance(raw_payload, bytes) else b""
             charset = part.get_content_charset() or "utf-8"
             content = payload.decode(charset, errors="ignore")
             content_type = part.get_content_type()
@@ -91,7 +102,8 @@ def extract_plain_body(message: Message) -> str:
 
         return html_fallback
 
-    payload = message.get_payload(decode=True) or b""
+    raw_payload = message.get_payload(decode=True)
+    payload = raw_payload if isinstance(raw_payload, bytes) else b""
     charset = message.get_content_charset() or "utf-8"
     content = payload.decode(charset, errors="ignore")
     if message.get_content_type() == "text/html":
@@ -270,7 +282,10 @@ async def poll_once(
             if fetch_status != "OK" or not msg_data:
                 raise imaplib.IMAP4.error(f"failed to fetch message {item!r}")
 
-            message = email.message_from_bytes(msg_data[0][1])
+            raw_message = msg_data[0]
+            if not isinstance(raw_message, tuple):
+                raise imaplib.IMAP4.error(f"unexpected fetch response for {item!r}")
+            message = email.message_from_bytes(raw_message[1])
             await processor(message)
 
             store_status, _ = mailbox.store(item, "+FLAGS", "\\Seen")
