@@ -1,5 +1,20 @@
 # Agent State
 
+## 2026-06-13 Update (adaptive-retrieval Phase 0) — разметка+baseline+ГЕЙТ; ГЕЙТ PASS обоими треками; коммит на ветке (НЕ master), unpushed
+
+> **START HERE (этот workstream).** Заход по `/auto` «RAG_Support_Assistant — adaptive-retrieval: выполни Phase 0 из docs/plans/2026-06-13-adaptive-retrieval-factcard-plan.md». **Отдельный workstream, НЕ связан с mypy-strict-линией (cont.1-3 ниже).** Phase 0 закрыт целиком: T0.1 разметка + T0.2 baseline + ГЕЙТ. Работа на ветке `feat/adaptive-retrieval-phase0` (от `176335d`), **unpushed** (это документ/eval-only, CI его не гоняет; решение о merge/push за владельцем). Отчёт: `docs/operations/2026-06-13-adaptive-retrieval-phase0.md`.
+>
+> **Сделано:**
+> - **T0.1** — размечены 135 кейсов (aircargo 100 + curated 35): `query_class` (simple/factual/enumeration/multi-condition) + `needs_factcard`. Источник истины = `evaluation/adaptive_retrieval/build_phase0_labels.py` (ручные метки запинены, идемпотентно валидирует+печатает доли), материализация = `evaluation/adaptive_retrieval/phase0_labels.jsonl`. `needs_factcard`=TRUE только для перечня полей/документов/данных/доказательств/условий-эскалации (шаги/причины/действия → enumeration, но FALSE). **Доли: aircargo needs_factcard 44%** (enum 44/multi-cond 41/factual 9/simple 6); curated 6%; ALL 34%.
+> - **T0.2** — mock-harness `scripts/regression_eval.py --mock-experiment-runtime --no-persist` валиден (135/135 офлайн), НО mock строит ответ из `answer_contains` → pass-rate ≠ retrieval (не путать!). Реальный D2 (Kaggle, задокументирован в arm-e/f отчётах): **FULL 96/PART 3/MISS 1**. Среди needs_factcard: **1 MISS** = `aircargo-customs-clearance-fields` (enumeration), ≤3 PART (D2-PART id'ы локально вычищены), ≥40 FULL.
+> - **ГЕЙТ → PASS обоими треками (eligible).** Fact-Card: needs_factcard 44% ≫ 10% И MISS на needs_factcard-кейсе. Router: выраженный mixed-complexity. **Дисциплина:** headroom мал (D2 уже FULL 96/100) → любая постройка обязана пройти Phase-5 NO-SHIP; router = про cost (заменить per-query LLM-classify на TF-IDF+SVM/MiniLM), не recall. E/F (query-expansion) этот MISS не закрыли — Fact-Card другой механизм (отдельная коллекция, целая карта, реранк не усекает).
+>
+> **Верификация:** `python evaluation/adaptive_retrieval/build_phase0_labels.py` → 135 строк, доли как выше; mock-regression обоих датасетов exit 0, 100/35 кейсов pass, 0 infra-fail; ruff на новых .py чисто.
+>
+> **Следующий шаг (НЕ в scope Phase 0, отдельной сессией по явному запросу):** Track R/R1 (lightweight-классификатор на `phase0_labels.jsonl`) — лёгкий, **можно Windows**, ближайший автономный кандидат. Track F/F1 (LLM-экстрактор fact-cards, ingest) — **тяжёлый, только Mac**. Решение о запуске за владельцем — Phase 0 их НЕ запускает.
+>
+> **НЕ трогала:** 2 чужих untracked (`docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py`). Транзитивные mock-отчёты `reports/regression/20260613T1933*` НЕ коммичены (throwaway).
+
 ## 2026-06-13 Update (cont.3, Type-hardening) — mypy strict-scope: evaluation.*; PUSHED, CI зелёный (origin=`05dbe6c`)
 
 > **START HERE.** Заход по `/auto` «продолжай» (та же сессия, что cont.2). Продолжена линия расширения mypy strict-scope. **PUSHED — 2 коммита `a14c023` (evaluation strict, 16→0) + `05dbe6c` (CI-фикс yaml-стаба), origin синхронизирован, дерево чисто** (кроме 2 чужих untracked — не трогать). **CI run `27460976521` (на `05dbe6c`) = success полностью**, type-check зелёный. **mypy strict-scope теперь 14 целей** (+`evaluation.*`).

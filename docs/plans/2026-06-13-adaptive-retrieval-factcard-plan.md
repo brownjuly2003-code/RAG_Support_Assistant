@@ -64,9 +64,12 @@ Per-query выбор лучшего ретривера (router-first multi-lane)
 ## План (eval-gated)
 
 ### Phase 0 — Измерение + train-набор роутера (ГЕЙТ; безопасно, без нового индекса)
-- [ ] T0.1: Разметить `evaluation/curated_cases_aircargo.jsonl` (+`curated_cases.jsonl`): метка `query_class` (simple/factual/enumeration/multi-condition) и флаг `needs_factcard` → **Verify:** доли посчитаны.
-- [ ] T0.2: Baseline D2 на размеченном срезе через `scripts/regression_eval.py` (mock-runtime, без paid-API) → **Verify:** известно сколько `needs_factcard`-кейсов сейчас FULL/PART/MISS.
-- [ ] **ГЕЙТ:** Fact-Card-трек запускать только если `needs_factcard` ≳10% И на них есть MISS/PART. Router-трек — если есть заметный mixed-complexity. Иначе STOP → NO-SHIP, остаёмся на D2.
+> **DONE 2026-06-13.** Отчёт: `docs/operations/2026-06-13-adaptive-retrieval-phase0.md`.
+> Артефакты: `evaluation/adaptive_retrieval/build_phase0_labels.py` (разметка) +
+> `evaluation/adaptive_retrieval/phase0_labels.jsonl` (135 кейсов / train-набор).
+- [x] T0.1: Разметить `evaluation/curated_cases_aircargo.jsonl` (+`curated_cases.jsonl`): метка `query_class` (simple/factual/enumeration/multi-condition) и флаг `needs_factcard` → **Verify:** доли посчитаны. **РЕЗ:** 135 кейсов размечены. aircargo: needs_factcard **44%** (enum 44 / multi-cond 41 / factual 9 / simple 6). curated: needs_factcard 6% (в осн. simple/factual). ALL: needs_factcard 34%.
+- [x] T0.2: Baseline D2 на размеченном срезе через `scripts/regression_eval.py` (mock-runtime, без paid-API) → **Verify:** известно сколько `needs_factcard`-кейсов сейчас FULL/PART/MISS. **РЕЗ:** mock-harness валиден (135/135 кейсов, офлайн), но mock строит ответ из `answer_contains` → pass-rate ≠ retrieval. Реальный D2 (Kaggle, задокументирован): **FULL 96 / PART 3 / MISS 1**. Среди needs_factcard: **1 MISS** = `customs-clearance-fields` (enumeration), ≤3 PART (D2-PART id'ы локально не восстановимы), ≥40 FULL.
+- [x] **ГЕЙТ → PASS обоими треками (eligible).** Fact-Card: needs_factcard 44% ≫ 10% И есть MISS (`customs-clearance-fields`) на needs_factcard-кейсе. Router: выраженный mixed-complexity (44/41/9/6). **Дисциплина:** headroom мал (D2 уже FULL 96/100) — любая постройка обязана пройти Phase-5 NO-SHIP; router-трек = про cost, не recall. Исполнение Track R (R1, можно Windows) / Track F (F1, только Mac) — отдельной сессией по явному запросу, НЕ в scope Phase 0.
 
 ### Track R (router cost) — Lightweight-классификатор [если есть mixed-complexity]
 - [ ] R1: Обучить TF-IDF+SVM (или MiniLM) на Phase-0-разметке; сравнить с LLM `classify_complexity` по macro-F1 **и** по токенам/latency → **Verify:** F1 не хуже + экономия per-query вызова.
