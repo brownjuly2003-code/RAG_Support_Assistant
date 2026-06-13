@@ -13,6 +13,8 @@
 > **Верификация:** ruff All checks passed; mypy `Success: no issues` (ingestion strict scope); verify RESULT PASS на Mac (external-mistral, 3/3 [OK]).
 >
 > **Следующий шаг (НЕ начато):** F2 — коллекция `<prefix>_factcards` + запись карт при ingest (тяжёлый embed → Mac). Затем F3 (`get_factcard_documents`), F4 (`_RETRIEVAL_STRATEGIES`+`Literal`+`make_retrieve_node` ветка). Track R/R1 (классификатор) — независим, можно Windows. По явному запросу.
+>
+> **Mac-прогон recipe (для F2 и любого LLM/тяжёлого шага этого workstream):** SSH `deproject-mac` (192.168.1.133, key-based, репо `~/RAG_Support_Assistant`, venv `.venv` py3.11). Перед прогоном: `cd ~/RAG_Support_Assistant && git pull --ff-only`. Ключ Mistral — по глобальной конвенции из `D:\TXT\Mistral_API.txt` (32-симв токен, отдельной строкой); передавать БЕЗ печати значения: `key=$(grep -oE '[A-Za-z0-9_-]{28,}' /d/TXT/Mistral_API.txt | head -1); printf 'export MISTRAL_API_KEY=%s\n' "$key" | ssh deproject-mac 'cat > /tmp/mk.env && chmod 600 /tmp/mk.env'`, затем на Mac `set -a && . /tmp/mk.env && set +a && OLLAMA_REQUEST_TIMEOUT_SEC=120 LLM_PROVIDER_PROFILE=external-mistral .venv/bin/python <script>`, после — `rm /tmp/mk.env`. Run-пример F1 также в docstring `scripts/factcard_verify.py`. `OLLAMA_REQUEST_TIMEOUT_SEC` (дефолт 60s) = таймаут и Mistral-вызова тоже.
 
 ## 2026-06-13 Update (adaptive-retrieval Phase 0) — разметка+baseline+ГЕЙТ; ГЕЙТ PASS обоими треками; PUSHED, CI зелёный (origin=`7c31904`+этот sync)
 
