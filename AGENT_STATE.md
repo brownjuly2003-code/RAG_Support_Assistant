@@ -1,5 +1,26 @@
 # Agent State
 
+## 2026-06-13 Update (cont.3, Type-hardening) — mypy strict-scope: evaluation.*; PUSHED, CI зелёный (origin=`05dbe6c`)
+
+> **START HERE.** Заход по `/auto` «продолжай» (та же сессия, что cont.2). Продолжена линия расширения mypy strict-scope. **PUSHED — 2 коммита `a14c023` (evaluation strict, 16→0) + `05dbe6c` (CI-фикс yaml-стаба), origin синхронизирован, дерево чисто** (кроме 2 чужих untracked — не трогать). **CI run `27460976521` (на `05dbe6c`) = success полностью**, type-check зелёный. **mypy strict-scope теперь 14 целей** (+`evaluation.*`).
+>
+> **Сделано (`a14c023`):** `evaluation.*` (16 ошибок) → strict, всё type-only:
+> - `online_evaluators.py` (4 union-attr): тернар `payload.get(k) if isinstance(payload.get(k), dict) else {}` не сужался (2 независимых `.get`) → `.get()` связан в локал до isinstance (`refusal`/`pii`/`metadata`/`tokens`).
+> - `drift.py` (2 operator): `baseline in (None, 0)` → `baseline is None or baseline == 0` (эквивалентно, mypy narrow'ит float).
+> - `evaluator_runner.py` (1 arg-type): `result` (3 ветки → `dict[str, object]`) → первое присваивание `result: dict[str, Any]`.
+> - `simulate_model_benchmark.py` (3 arg-type+2 call-overload): `_generate_answer(profile: dict[str, object]→dict[str, Any])` (MODEL_PROFILES-значения гетерогенны; call-site совместим).
+> - `benchmark_runner.py` (1 var-annotated): `context_docs_list: list[list[str]]`.
+> - `rollback_watcher.py` (4 no-untyped-def): duck-typed async `session: Any`.
+> - pyproject+3 гейта+guard+README+CHANGELOG расширены на `evaluation`.
+>
+> **🔴 ВАЖНАЯ ГОЧА (`05dbe6c`):** локальный gated-mypy = **Success 57 files**, но CI type-check УПАЛ: «Library stubs not installed for yaml (types-PyYAML)» в `online_evaluators.py`/`experiment_schema.py`. Причина: `ignore_missing_imports` НЕ глушит known-stub либы (yaml); **CI не ставит types-PyYAML, а локальный venv — ставит** → локально не воспроизводится. Фикс = `import yaml  # type: ignore[import-untyped]` (конвенция репо: так уже в `config/settings.py`/`agent/prompt_registry.py`/`llm/providers/runtime.py`; `types-PyYAML` в deps НЕ добавляют; `warn_unused_ignores` для evaluation off → ignore безвреден локально). **Урок: при strict-промоушене модуля с top-level `import yaml` (или иной known-stub либой) СРАЗУ ставить `# type: ignore[import-untyped]` — локальный mypy это не поймает.** tracing/ingestion не имели top-level yaml → не всплыло в cont.2.
+>
+> **Верификация:** gated strict-mypy **Success 57 files** (16→0); целевые тесты (online-evaluators/simulate/benchmark-runner/rollback-watcher/ragas/regression/nightly-eval/precommit-guard) **74 passed**; docs-guards 20; ruff clean; CI на `05dbe6c` зелёный.
+>
+> **Pages-deploy = failure pre-existing** (docs-site esbuild npm-audit через astro — см. cont.2; вне scope).
+>
+> **Остаток (НЕ блокеры):** `customs-clearance-fields` retrieval-MISS (Kaggle, не Windows); дальнейший strict — остались **`api/`** (кроме app — но осторожно: api.app спец-обработан `--follow-imports=skip` из-за тяжёлого графа/таймаута; промоушн всего `api.*` в основную gated-команду может вернуть эту проблему) и **`vectordb/`** (тянет langchain/sentence-transformers — память Windows, риск зависания; гнать gated-командой осторожно). Обе — тяжелее/рискованнее сделанных; крупный кусок на исходе бюджета НЕ начинать.
+
 ## 2026-06-13 Update (cont.2, Type-hardening) — mypy strict-scope: tracing.* + ingestion.*; PUSHED, CI зелёный (origin=`a341b77`)
 
 > **START HERE.** Заход по `/auto` «RAG_Support_Assistant продолжи». Бэклог Fable-hardening пуст; продолжена линия расширения mypy strict-scope (тот же прецедент, что SESSION 5). **PUSHED — 1 коммит `a341b77`, origin синхронизирован, дерево чисто** (кроме 2 чужих untracked `docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py` — не трогать). **Основной CI run `27460154092` = success полностью** (type-check со свежим scope / security-pip-audit / pre-commit / test-unit×2 / test-integration×2 / lint / migrations / helm; regression-eval skipped — PR-гейт). Все правки — типовые, поведение не менялось. **mypy strict-scope теперь 13 целей** (+`tracing.*`, `ingestion.*`).

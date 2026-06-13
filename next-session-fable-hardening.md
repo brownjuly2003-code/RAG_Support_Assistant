@@ -1,5 +1,28 @@
 # Next Session: Fable hardening — продолжение (план)
 
+## SESSION 7 (2026-06-13) — type-hardening (evaluation.*); PUSHED, CI зелёный (origin=`05dbe6c`) ✅
+
+> Итог: `a14c023` (evaluation strict, 16→0) + `05dbe6c` (CI-фикс yaml-стаба). CI run `27460976521` success. mypy strict-scope = 14 целей (+`evaluation.*`). Заход `/auto` «продолжай».
+
+| Файл | Правка (type-only) |
+|---|---|
+| `online_evaluators.py` | 4 union-attr: `.get()` в локал до isinstance (`refusal`/`pii`/`metadata`/`tokens`); +yaml ignore |
+| `drift.py` | `baseline in (None,0)` → `baseline is None or baseline == 0` |
+| `evaluator_runner.py` | `result: dict[str, Any]` (3 ветки → object) |
+| `simulate_model_benchmark.py` | `_generate_answer(profile: dict[str, Any])` (+import Any) |
+| `benchmark_runner.py` | `context_docs_list: list[list[str]]` |
+| `rollback_watcher.py` | 4× `session: Any` (duck-typed async) |
+| `experiment_schema.py` | yaml `# type: ignore[import-untyped]` |
+| pyproject/3 гейта/guard/README/CHANGELOG | +`evaluation` |
+
+**Верификация:** gated mypy **Success 57 files** (16→0); тесты **74 passed**; docs-guards 20; ruff clean.
+
+**🔴 ГОЧА (стоила 1 красного CI):** локальный gated-mypy зелёный, но CI type-check падает на «Library stubs not installed for yaml» — `ignore_missing_imports` не глушит known-stub либы; CI без types-PyYAML, локальный venv с ним. **При strict-промоушене модуля с top-level `import yaml`/иной known-stub либой → СРАЗУ `# type: ignore[import-untyped]`** (конвенция: config/settings, agent/prompt_registry, llm/providers/runtime). Локальный mypy НЕ ловит — проверять либо CI, либо временным деинсталлом стабов.
+
+**Остаток:** `api/` (кроме app — осторожно, api.app спец-обработан `--follow-imports=skip` из-за таймаута тяжёлого графа), `vectordb/` (langchain/sentence-transformers — память Windows). Обе тяжелее; крупный кусок на исходе бюджета не начинать. `customs-clearance-fields` MISS — Kaggle.
+
+---
+
 ## SESSION 6 (2026-06-13) — type-hardening (tracing.* + ingestion.*); PUSHED, CI зелёный (origin=`a341b77`) ✅
 
 > Итог: 1 коммит `a341b77`, основной CI run `27460154092` success полностью. mypy strict-scope = 13 целей (+`tracing.*`, `ingestion.*`). Заход по `/auto` «продолжи» при пустом бэклоге — продолжена линия SESSION 5.
