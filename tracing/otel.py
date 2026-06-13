@@ -2,26 +2,37 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from types import TracebackType
+from typing import Any, Literal
 
-trace = None
-OTLPSpanExporter = None
-Resource = None
-TracerProvider = None
-BatchSpanProcessor = None
-FastAPIInstrumentor = None
-HTTPXClientInstrumentor = None
-SQLAlchemyInstrumentor = None
-RedisInstrumentor = None
+# Optional opentelemetry dependency: these module globals start as None and are
+# rebound to the real classes by _ensure_dependencies() when the packages are
+# installed. Typed as Any so the strict-scope type checker treats them as
+# callable/attr-bearing in both the import-present and import-absent states
+# (ignore_missing_imports makes the real symbols Any anyway). Runtime unchanged.
+trace: Any = None
+OTLPSpanExporter: Any = None
+Resource: Any = None
+TracerProvider: Any = None
+BatchSpanProcessor: Any = None
+FastAPIInstrumentor: Any = None
+HTTPXClientInstrumentor: Any = None
+SQLAlchemyInstrumentor: Any = None
+RedisInstrumentor: Any = None
 
 _OTEL_INITIALIZED = False
 
 
 class _NoopSpan:
-    def __enter__(self):
+    def __enter__(self) -> _NoopSpan:
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> bool:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> Literal[False]:
         return False
 
     def set_attribute(self, key: str, value: object) -> None:
@@ -32,7 +43,7 @@ class _NoopSpan:
 
 
 class _NoopTracer:
-    def start_as_current_span(self, name: str):
+    def start_as_current_span(self, name: str) -> _NoopSpan:
         return _NoopSpan()
 
 
@@ -104,7 +115,7 @@ def _build_server_request_hook(
     return hook
 
 
-def get_tracer(name: str = "rag-support-assistant"):
+def get_tracer(name: str = "rag-support-assistant") -> Any:
     if trace is None:
         return _NoopTracer()
     return trace.get_tracer(name)
@@ -118,7 +129,7 @@ def init_otel(
     app: Any | None = None,
     sqlalchemy_engine: Any | None = None,
     request_id_getter: Callable[[], str | None] | None = None,
-):
+) -> Any:
     global _OTEL_INITIALIZED
 
     if not enabled:

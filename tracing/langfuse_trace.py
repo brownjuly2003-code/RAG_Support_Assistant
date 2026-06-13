@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 _langfuse = None
 
 
-def get_langfuse():
+def get_langfuse() -> Any:
     """Lazy init Langfuse client. Returns None if not configured."""
     global _langfuse
     if _langfuse is not None:
@@ -25,7 +25,7 @@ def get_langfuse():
         try:
             from langfuse import Langfuse
         except ImportError:
-            from langfuse.otel import Langfuse
+            from langfuse.otel import Langfuse  # type: ignore[no-redef]
         _langfuse = Langfuse(
             public_key=settings.langfuse_public_key,
             secret_key=settings.langfuse_secret_key,

@@ -14,6 +14,7 @@ import inspect
 import json
 import logging
 import time
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -115,7 +116,9 @@ class IngestPipeline:
         else:
             settings = get_settings()
 
-        build_vector_store = tenant_manager.build_vector_store
+        build_vector_store: Callable[..., tuple[Any, list[Document]]] = (
+            tenant_manager.build_vector_store
+        )
         if legacy_manager.build_vector_store is not _ORIGINAL_LEGACY_BUILD_VECTOR_STORE:
             build_vector_store = legacy_manager.build_vector_store
 
@@ -259,7 +262,9 @@ class IngestPipeline:
                 "chunk_overlap": getattr(settings, "chunk_overlap", 200),
             }
 
-        build_vector_store = tenant_manager.build_vector_store
+        build_vector_store: Callable[..., tuple[Any, list[Document]]] = (
+            tenant_manager.build_vector_store
+        )
         if legacy_manager.build_vector_store is not _ORIGINAL_LEGACY_BUILD_VECTOR_STORE:
             build_vector_store = legacy_manager.build_vector_store
 

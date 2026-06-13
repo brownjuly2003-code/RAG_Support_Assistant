@@ -170,6 +170,8 @@ EXPECTED_MYPY_STRICT_PATHS = {
     "utils",
     "monitoring",
     "channels",
+    "tracing",
+    "ingestion",
 }
 
 

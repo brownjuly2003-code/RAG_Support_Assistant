@@ -147,6 +147,17 @@ module = ["monitoring.*", "channels.*"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
+# tracing.* and ingestion.* — strict scope (2026-06-13). Observability +
+# ingestion infra. tracing.otel follows the same optional-dependency shape as
+# monitoring: the opentelemetry globals start as None and are rebound by
+# _ensure_dependencies(), so they are typed Any (type-only, runtime unchanged).
+# ingestion.pipeline's build_vector_store holds either the tenant-aware or the
+# legacy callable (dispatched via inspect.signature), typed Callable[..., ...].
+[[tool.mypy.overrides]]
+module = ["tracing.*", "ingestion.*"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
 # agent modules — strict scope (Step 9).
 [[tool.mypy.overrides]]
 module = ["agent.state", "agent.prompts", "agent.prompt_registry", "agent.tools", "agent.graph"]

@@ -366,7 +366,7 @@ class DocumentChangeTracker:
             if key:
                 current[key] = meta.get("content_hash", "")
 
-        changes = {"new": [], "modified": [], "deleted": []}
+        changes: dict[str, list[str]] = {"new": [], "modified": [], "deleted": []}
 
         for key, content_hash in current.items():
             previous = previous_state.get(key)

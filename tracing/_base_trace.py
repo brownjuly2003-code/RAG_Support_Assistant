@@ -74,6 +74,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -115,7 +116,7 @@ def _get_db_path() -> Path:
 
 
 @contextmanager
-def _get_connection():
+def _get_connection() -> Iterator[sqlite3.Connection]:
     """Контекстный менеджер для подключения к SQLite.
 
     Каждый вызов открывает новое соединение и гарантированно его закрывает.
@@ -658,7 +659,7 @@ def purge_old_traces(
         if not old_trace_ids:
             return {"traces_deleted": 0, "steps_deleted": 0, "feedback_deleted": 0}
 
-        def _batch(seq: list[str], size: int = 500):
+        def _batch(seq: list[str], size: int = 500) -> Iterator[list[str]]:
             for index in range(0, len(seq), size):
                 yield seq[index:index + size]
 

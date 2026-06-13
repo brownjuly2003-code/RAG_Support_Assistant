@@ -2,6 +2,34 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Type-Hardening] — 2026-06-13 (cont.2) — mypy strict-scope: tracing.* + ingestion.*
+
+- Продолжено направление strict-scope: `tracing.*` (было 18 mypy-ошибок) и
+  `ingestion.*` (3) доведены до strict. Только типовые правки — **рантайм
+  не менялся**:
+  - `tracing/otel.py`: 9 optional-dependency глобалов (opentelemetry `trace`,
+    `OTLPSpanExporter`, `TracerProvider`, инструментаторы) стартуют как `None` и
+    перепривязываются в `_ensure_dependencies()` → аннотированы `Any` (та же
+    суть, что `_NoopMetric`-union в monitoring; `ignore_missing_imports` делает
+    реальные символы `Any` в любом случае). Плюс return/param-аннотации
+    `_NoopSpan.__enter__/__exit__` (`Literal[False]` + `TracebackType`),
+    `_NoopTracer.start_as_current_span`, `get_tracer`, `init_otel`.
+  - `tracing/_base_trace.py`: return-типы генераторов `_get_connection`
+    (`Iterator[sqlite3.Connection]`) и `_batch` (`Iterator[list[str]]`).
+  - `tracing/langfuse_trace.py`: return-тип `get_langfuse` (`Any`); fallback
+    `from langfuse.otel import Langfuse` помечен `# type: ignore[no-redef]`
+    (тот же идиом, что для fallback-импорта Document в `ingestion/pipeline.py`).
+  - `ingestion/loader.py`: `changes: dict[str, list[str]]` (var-annotated).
+  - `ingestion/pipeline.py`: `build_vector_store` держит либо tenant-aware
+    (5 арг), либо legacy (4 арг) callable — диспетчеризуется через
+    `inspect.signature` — аннотирован `Callable[..., tuple[Any, list[Document]]]`.
+- pyproject overrides + все 3 mypy-гейта (ci.yml/local-gate.ps1/autopilot.ps1) +
+  governance guard расширены на `tracing`/`ingestion`. Полный strict-scope
+  теперь 13 целей.
+- Верификация: полная gated strict-команда — **Success: no issues found in 46
+  source files**; целевые тесты (otel/langfuse/trace-retention/cost/metrics/
+  loader/categorizer/pipeline×2/precommit-guard) — **52 passed**; ruff clean.
+
 ## [Type-Hardening] — 2026-06-13 (cont.) — mypy strict-scope: monitoring.* + channels.*
 
 - Завершено отложенное направление: `monitoring.*` (было 48 mypy-ошибок) и

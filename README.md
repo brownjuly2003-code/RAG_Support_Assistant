@@ -73,7 +73,8 @@ User / Email / Widget
 - `llm/providers/` — Ollama / Mistral / GraceKelly providers + cost guard.
 - `vectordb/` — tenant-aware vector store factory (`vectordb.manager`) plus base implementation (`vectordb._base_manager`).
 - `evaluation/` — RAGAS metrics, online evaluators, regression framework.
-- `monitoring/` — Prometheus metrics (~50). `mypy --strict` clean. `tracing/` — Langfuse + OTel + SQLite trace store.
+- `monitoring/` — Prometheus metrics (~50). `mypy --strict` clean. `tracing/` — Langfuse + OTel + SQLite trace store. `mypy --strict` clean.
+- `ingestion/` — loaders, pipeline, categorizer, contextual headers. `mypy --strict` clean.
 - `scripts/` — operational CLIs (regression eval, KB builders, chunking eval, nightly tasks).
 
 > For a complete audit and an implementation log of recent hardening work,
