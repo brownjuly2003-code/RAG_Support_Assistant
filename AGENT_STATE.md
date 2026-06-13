@@ -1,5 +1,21 @@
 # Agent State
 
+## 2026-06-14 Update (adaptive-retrieval Track R / R1) — lightweight router classifier; Verify ПРЕВЫШЕН
+
+> **START HERE (этот workstream).** Заход `/auto RAG_Support_Assistant продолжи` → «решай сам» → взят **Track R / R1** (Windows-friendly, обратимо, без нового индекса; F2 оставлен владельцу — нужен Mac). Сделан целиком, верифицирован.
+>
+> **Сделано:**
+> - `evaluation/adaptive_retrieval/train_router_classifier.py` — TF-IDF (word 1-2 + char_wb 3-5) → `LinearSVC(class_weight=balanced)`, stratified 5-fold CV. Мишени: `query_class` (4-class), **`route`** (binary: shipped-решение router'а), `needs_factcard` (binary). + live-сравнение с LLM `classify_complexity` (prompt+parse скопированы verbatim из `agent/prompts.py`/`agent.graph`).
+> - Live LLM-baseline: **ministral-3b** через `external-mistral` (это fast-tier classify-модель в mixed/external профилях; default `gracekelly-primary` юзает sonar-2 браузерный — 135 сабмитов тяжело/флапает на Windows, потому ministral). 135/135, 0 ошибок. Ключ Mistral из `D:\TXT`, в env, не печатался.
+> - **РЕЗ (route, apples-to-apples):** lightweight **macro-F1 0.831** (acc 0.874) vs LLM **0.595** (acc 0.763), **Δ +0.237**. Cost: lightweight **0 токенов / 0.16 ms/query** vs LLM **~191 ток / 1091 ms (p95 1261)**. LLM сильно biased в hybrid (vector recall 0.21 — почти всё COMPLEX→hybrid). needs_factcard CV F1 0.871; 4-class F1 0.635 (`factual` слабый, n=18 — но на route simple/factual сливаются в vector, не вредит).
+> - **Verify ПРЕВЫШЕН:** план просил «F1 не хуже + экономия» → дешёвый классификатор **строго лучше по обеим осям**.
+>
+> **🔴 Главный caveat (в отчёте):** `model_routing_enabled=false` + `retrieval_strategy=hybrid` в дефолте → `classify_complexity` short-circuit'ит на `unknown` БЕЗ вызова LLM, router всегда hybrid (D2). Т.е. **per-query LLM-стоимости в текущем проде НЕТ** — экономия ~191 ток/query *потенциальная*, реализуется только если включить роутинг. R1 = делает включение бесплатным.
+>
+> **Верификация:** офлайн CV-прогон + live ministral-прогон сошлись (выше); ruff All passed; mypy strict (evaluation в gated-scope) Success; docs-quality/precommit guard зелёные. Артефакт `r1_router_results.json` + отчёт `docs/operations/2026-06-14-adaptive-retrieval-r1.md` + план обновлён (R1 [x]).
+>
+> **Следующий шаг (НЕ начато, GATED):** **R2** = врезать классификатор перед `_select_retrieval_strategy` — но только после **Phase-5** офлайн-дельты D2 vs D2+router (headroom мал, D2 уже FULL 96/100, мисроутинг = тихая регрессия; route-gold *выведен* из query_class, не из измеренного retrieval-выигрыша). NO-SHIP — допустимый исход. **F2** (Track F, fact-card коллекция+ingest) — тяжёлый embed, **только Mac**, за владельцем. Решение что запускать — за владельцем.
+
 ## 2026-06-14 Update (adaptive-retrieval Track F / F1) — LLM fact-card экстрактор + Verify PASS на Mac; коммит+push
 
 > **START HERE (этот workstream).** Заход по «запусти след шаг на мак» (после Phase 0 ниже). Сделан **Track F / F1** = LLM-экстрактор fact-cards + verify на 3 customs-доках. Тяжёлый/LLM-шаг гонялся **на Mac** (`deproject-mac` 192.168.1.133, SSH key-based; репо `~/RAG_Support_Assistant`, venv py3.11, ff-pull до origin; профиль `external-mistral`, ключ Mistral передан в `/tmp/mk.env` на прогон и удалён). Код написан/залинчен на Windows, прогон — на Mac.

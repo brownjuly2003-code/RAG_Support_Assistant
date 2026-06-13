@@ -1,0 +1,120 @@
+{
+  "n": 135,
+  "folds": 5,
+  "seed": 42,
+  "light_query_class": {
+    "macro_f1": 0.6345,
+    "accuracy": 0.6963,
+    "per_class": {
+      "enumeration": {
+        "precision": 0.78,
+        "recall": 0.75,
+        "f1": 0.765,
+        "support": 52
+      },
+      "factual": {
+        "precision": 0.556,
+        "recall": 0.278,
+        "f1": 0.37,
+        "support": 18
+      },
+      "multi-condition": {
+        "precision": 0.655,
+        "recall": 0.8,
+        "f1": 0.72,
+        "support": 45
+      },
+      "simple": {
+        "precision": 0.667,
+        "recall": 0.7,
+        "f1": 0.683,
+        "support": 20
+      }
+    }
+  },
+  "light_route": {
+    "macro_f1": 0.8313,
+    "accuracy": 0.8741,
+    "per_class": {
+      "hybrid": {
+        "precision": 0.877,
+        "recall": 0.959,
+        "f1": 0.916,
+        "support": 97
+      },
+      "vector": {
+        "precision": 0.862,
+        "recall": 0.658,
+        "f1": 0.746,
+        "support": 38
+      }
+    }
+  },
+  "light_needs_factcard": {
+    "macro_f1": 0.8712,
+    "accuracy": 0.8889,
+    "per_class": {
+      "factcard": {
+        "precision": 0.897,
+        "recall": 0.761,
+        "f1": 0.824,
+        "support": 46
+      },
+      "no": {
+        "precision": 0.885,
+        "recall": 0.955,
+        "f1": 0.919,
+        "support": 89
+      }
+    }
+  },
+  "llm_route": {
+    "macro_f1": 0.5946,
+    "accuracy": 0.763,
+    "scored_n": 135,
+    "model": "",
+    "profile": "external-mistral",
+    "errors": 0,
+    "input_tokens_mean": 190.9,
+    "input_tokens_total": 25774,
+    "latency_ms_mean": 1090.8,
+    "latency_ms_p95": 1261.0,
+    "per_class": {
+      "hybrid": {
+        "precision": 0.76,
+        "recall": 0.979,
+        "f1": 0.856,
+        "support": 97
+      },
+      "vector": {
+        "precision": 0.8,
+        "recall": 0.211,
+        "f1": 0.333,
+        "support": 38
+      }
+    }
+  },
+  "route_comparison": {
+    "light_route_macro_f1": 0.8313,
+    "llm_route_macro_f1": 0.5946,
+    "delta_light_minus_llm": 0.2367,
+    "light_tokens_per_query": 0,
+    "light_latency_ms_mean": 0.1594
+  },
+  "light_predict_ms_per_query": 0.1594,
+  "light_tokens_per_query": 0,
+  "dist_query_class": {
+    "enumeration": 52,
+    "simple": 20,
+    "multi-condition": 45,
+    "factual": 18
+  },
+  "dist_route": {
+    "hybrid": 97,
+    "vector": 38
+  },
+  "dist_needs_factcard": {
+    "factcard": 46,
+    "no": 89
+  }
+}
