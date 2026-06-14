@@ -1,5 +1,22 @@
 # Agent State
 
+## 2026-06-14 Update (adaptive-retrieval Track F / F2) — fact-card коллекция-билдер; Verify PASS на Mac; PUSHED (`bd82258`)
+
+> **START HERE (этот workstream).** Заход `/auto продолжи` (после закрытия type-hardening ниже). Type-hardening исчерпан → продолжен adaptive-retrieval; оба трека упираются в non-Windows-тяжёлое: Track R→R2 gated на Phase-5 (нужен Kaggle retrieval-delta), Track F→F2 (тяжёлый embed→Mac). Phase-0 гейт уже PASSED → постройка санкционирована (финальное ship-решение на Phase-5, NO-SHIP допустим). Взят **F2** = прямое продолжение F1.
+>
+> **Сделано (код на Windows, прогон на Mac):**
+> - `vectordb/manager.py`: `build_factcard_store(card_docs, embeddings, tenant)` — строит `<prefix>_<tenant>_factcards` Chroma-коллекцию, **карта = 1 Document целиком** (БЕЗ чанкинга/contextual-headers/BM25-stamp — суть lane: вернуть полный перечень, который D2-реранк усекает). Зеркалит Chroma-путь `build_vector_store` (delete-then-rebuild + persist). Chroma-only (Qdrant→NotImplementedError), метадата плоская (Chroma не берёт list/dict). + `_factcard_collection_name` (учитывает 63-симв лимит Chroma).
+> - `scripts/build_factcards.py`: extract (F1) → `factcard_to_document` (page_content=topic+fields+required_docs+conditions, плоская метадата) → `build_factcard_store` → `similarity_search` smoke. Дефолт = 3 customs-дока F1; `--docs-dir` для широкого корпуса. Heavy embed → Mac.
+> - `tests/test_factcard_store.py`: Windows-safe (fake Chroma + sentinel embeddings, БЕЗ реального embed) — карта хранится целиком, delete-then-rebuild, persist, лимит имени. **3 passed.**
+>
+> **Верификация:** Windows — `mypy …vectordb --follow-imports=skip` (vectordb в strict-scope) **Success 23 files**, ruff clean, pytest **3 passed**, import-граф скрипта резолвится. **Mac (BGE-M3 + Chroma, external-mistral, EXIT 0): RESULT PASS** — 3 карты (clearance/broker/representative) → коллекция `rag_docs_default_factcards`; запрос «какие поля и документы нужны для таможенной очистки» → **топ-хит `customs_clearance_air_cargo`** (= residual-MISS `customs-clearance-fields`). Acceptance «карты ищутся векторно» выполнен end-to-end. Ключ Mistral передан в `/tmp/mk.env` на прогон + удалён.
+>
+> **🔴 Наблюдение:** 2 из 3 карт получили один topic `customs_clearance_air_cargo` (clearance+representative — LLM-assigned snake_case, оба customs-домен). Не блокер F2 (карты различимы по source). Дубль-topic учесть при F3-дедупе если понадобится.
+>
+> **PUSHED:** код-коммит `bd82258` (`a5ac913..bd82258`), origin синхронизирован. CI-safe — `build_factcard_store` новая функция, в живой retrieval НЕ вшита; vectordb в strict-scope (skip) зелёный.
+>
+> **Следующий шаг (НЕ начато):** **F3** = `get_factcard_documents(query)` на ретривере (`vectordb/manager.py`/`_base_manager.py`) — читает коллекцию, возвращает карту как Document (можно Windows: код + unit с fake-store; реальная проверка — на Mac-коллекции). **F4** = `_RETRIEVAL_STRATEGIES`+`Literal`+`config/settings.py` `"factcard"` + ветка в `make_retrieve_node` (fallback→hybrid). Затем Phase 3 (lanes) → Phase 5 (офлайн-дельта, NO-SHIP-гейт). Прод-коллекция факткарт должна строиться prod-embedding'ом (BGE-M3) — F2-smoke это уже сделал дефолтом. Полнокорпусный build (`--docs-dir`) — когда Phase-3 потребует. R2 (router-врезка) независим, gated на Phase-5.
+
 ## 2026-06-14 Update (cont., Type-hardening) — mypy strict-scope: vectordb.*; ЛИНИЯ ЗАКРЫТА; PUSHED (origin=`c68bf8f`)
 
 > **START HERE (type-hardening линия — ФИНАЛ).** Заход `/auto RAG_Support_Assistant продолжи`. Бэклог Fable-hardening пуст; продолжена mypy strict-серия — взят **последний остававшийся модуль `vectordb/`**. **PUSHED: коммит `c68bf8f`, `4dd6f54..c68bf8f master->master`, origin синхронизирован.** Основной CI run `27483505212` запущен на `c68bf8f` (на момент записи in_progress; type-check — релевантный джоб). **Это ЗАКРЫВАЕТ линию type-hardening: в strict-scope теперь все продакшен-пакеты, кроме недостижимого Kaggle-MISS `customs-clearance-fields`.**
