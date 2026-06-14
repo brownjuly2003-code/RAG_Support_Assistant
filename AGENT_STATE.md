@@ -1,5 +1,20 @@
 # Agent State
 
+## 2026-06-14 Update (adaptive-retrieval Track F / F3) — get_factcard_documents read-path; Verify PASS на Mac; PUSHED (`8049e88`)
+
+> **START HERE (этот workstream).** Заход `/auto продолжи` (после F2 ниже). Взят **F3** = read-сторона fact-card lane. Windows-код + unit, реальная проверка против построенной F2-коллекции на Mac (только embed запроса + search, без LLM/Mistral-ключа).
+>
+> **Сделано (`vectordb/manager.py`):**
+> - `get_factcard_documents(query, tenant_id, k, embeddings) -> list[Document]` — открывает `<prefix>_<tenant>_factcards` (F2), `similarity_search`, возвращает карты как **whole Documents**. **Граждански-безопасно:** `[]` на пустой запрос / отсутствующую-пустую коллекцию / backend-исключение (логирует warning) → F4-диспетчер падает на hybrid, запрос не рушится.
+> - `get_factcard_store(tenant_id, embeddings) -> Any | None` — открывает коллекцию **per-call (без кэша)**: lane eval-gated и off hot-path, корректность/простота > микро-кэш (нет инвалидации при ребилде F2). Chroma-only.
+> - `tests/test_factcard_store.py`: +3 F3-кейса (returns cards / blank-query→[] / backend-error→[]) через instance-`similarity_search` фейка.
+>
+> **Верификация:** Windows — `mypy …vectordb --follow-imports=skip` **Success 23**, ruff clean, pytest **6 passed** (3 F2 + 3 F3). **Mac (real коллекция `rag_docs_default_factcards`, BGE-M3 query-embed):** `get_factcard_documents("какие поля и документы нужны для таможенной очистки", k=3)` → **3 hits, топ-2 = `customs_clearance_air_cargo` карты как Document** (= residual-MISS). Acceptance «возвращает карту как Document» выполнен end-to-end.
+>
+> **PUSHED:** код-коммит `8049e88` (`0c6ff18..8049e88`). CI-safe — новые функции, в живой retrieval НЕ вшиты (это F4); vectordb strict (skip) зелёный.
+>
+> **Следующий шаг (НЕ начато): F4** = `_RETRIEVAL_STRATEGIES` + `Literal` + `config/settings.py` `"factcard"` + ветка в `make_retrieve_node` (вызвать `get_factcard_documents`, fallback→hybrid при `[]`). Гейтить за strategy-флагом (НЕ дефолт) → существующее поведение не меняется; беречь graph-тесты (`test_model_routing.py` и др.). **Windows-doable** (код+unit с fake). Затем Phase 3 (lanes) → Phase 5 (офлайн-дельта D2 vs D2+factcard, NO-SHIP-гейт; **нужен Kaggle-runtime, не Windows**). R2 (router-врезка) независим, тоже gated на Phase-5. 🔴 dup-topic (2 карты `customs_clearance_air_cargo`) — учесть при дедупе в F4/Phase-3 если нужно.
+
 ## 2026-06-14 Update (adaptive-retrieval Track F / F2) — fact-card коллекция-билдер; Verify PASS на Mac; PUSHED (`bd82258`)
 
 > **START HERE (этот workstream).** Заход `/auto продолжи` (после закрытия type-hardening ниже). Type-hardening исчерпан → продолжен adaptive-retrieval; оба трека упираются в non-Windows-тяжёлое: Track R→R2 gated на Phase-5 (нужен Kaggle retrieval-delta), Track F→F2 (тяжёлый embed→Mac). Phase-0 гейт уже PASSED → постройка санкционирована (финальное ship-решение на Phase-5, NO-SHIP допустим). Взят **F2** = прямое продолжение F1.
