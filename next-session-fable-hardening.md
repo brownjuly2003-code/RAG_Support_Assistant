@@ -1,5 +1,25 @@
 # Next Session: Fable hardening — продолжение (план)
 
+## SESSION 8 (2026-06-14) — type-hardening (vectordb.*); ЛИНИЯ ЗАКРЫТА; PUSHED (origin=`c68bf8f`) ✅
+
+> Итог: 1 коммит `c68bf8f`, `4dd6f54..c68bf8f`. CI run `27483505212` (type-check релевантен). **Последний strict-модуль — линия type-hardening ЗАКРЫТА.** Заход `/auto продолжи`.
+
+**0 правок кода** — vectordb уже был полностью аннотирован (probe под skip = Success, 0 ошибок). Это ратчет, не фикс.
+
+| Файл | Правка |
+|---|---|
+| `pyproject.toml` | новый `[[overrides]]` `module = ["vectordb.*"]` (disallow_untyped_defs + disallow_incomplete_defs + no_implicit_optional; БЕЗ warn_return_any — langchain-возвраты под skip = Any) |
+| `.github/workflows/ci.yml`, `scripts/local-gate.ps1`, `scripts/autopilot.ps1` | skip-команда +`vectordb` (`…api/routers vectordb --follow-imports=skip`); ci.yml-комментарий +heavy-graph причина |
+| `README.md`, `docs/CHANGELOG.md` | `vectordb/` → mypy --strict clean + [Type-Hardening] cont. блок |
+
+**🟢 Решение — vectordb в skip-команду, НЕ в основную.** vectordb тянет langchain/sentence-transformers → полный граф раздувает память mypy (~2GB+, виснет Windows — ровно риск, которым флагали «без явной просьбы / на Mac»). `--follow-imports=skip` НЕ грузит эти импорты (memory-safe на Windows), проверяет аннотации самого vectordb. Тот же heavy-graph-приём, что у `api.app` (там таймаут, здесь память). Windows-риск снят.
+
+**Верификация:** `mypy …api/routers vectordb --follow-imports=skip` → **Success 23 files**; guard `test_precommit_config.py` **13 passed** (основная команда не менялась → guard вне охвата skip-команды, подтверждено `_mypy_strict_scope_paths`); `git diff --check` clean; 6 файлов (+49/−11), 0 .py-source. Основную strict-команду на Windows НЕ гоняла (langchain-память; мои правки её не меняют, лишь +1 косметич. unused-section warning, exit 0). **Pages-deploy fail = pre-existing** (esbuild npm-audit, падал и на `4dd6f54`).
+
+**Остаток: type-hardening ИСЧЕРПАН** — все продакшен-пакеты в strict-scope. Нестрогий остаток проекта — Kaggle-MISS `customs-clearance-fields` (адресует adaptive-retrieval workstream). Adaptive: F2 (Mac, владельцу), R2 (gated на Phase-5). Новых type-целей нет.
+
+---
+
 ## SESSION 7 (2026-06-13) — type-hardening (evaluation.*); PUSHED, CI зелёный (origin=`05dbe6c`) ✅
 
 > Итог: `a14c023` (evaluation strict, 16→0) + `05dbe6c` (CI-фикс yaml-стаба). CI run `27460976521` success. mypy strict-scope = 14 целей (+`evaluation.*`). Заход `/auto` «продолжай».

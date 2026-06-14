@@ -1,5 +1,23 @@
 # Agent State
 
+## 2026-06-14 Update (cont., Type-hardening) — mypy strict-scope: vectordb.*; ЛИНИЯ ЗАКРЫТА; PUSHED (origin=`c68bf8f`)
+
+> **START HERE (type-hardening линия — ФИНАЛ).** Заход `/auto RAG_Support_Assistant продолжи`. Бэклог Fable-hardening пуст; продолжена mypy strict-серия — взят **последний остававшийся модуль `vectordb/`**. **PUSHED: коммит `c68bf8f`, `4dd6f54..c68bf8f master->master`, origin синхронизирован.** Основной CI run `27483505212` запущен на `c68bf8f` (на момент записи in_progress; type-check — релевантный джоб). **Это ЗАКРЫВАЕТ линию type-hardening: в strict-scope теперь все продакшен-пакеты, кроме недостижимого Kaggle-MISS `customs-clearance-fields`.**
+>
+> **🟢 Ключевое решение — vectordb идёт в `--follow-imports=skip` команду, НЕ в основную.** Причина: vectordb тянет langchain/sentence-transformers, полный тип-граф раздувает память mypy (~2GB+, **виснет Windows** — ровно тот риск, которым прошлые сессии флагали vectordb «без явной просьбы не начинать, гнать осторожно/на Mac»). Под `skip` mypy НЕ загружает эти импорты (= memory-safe на Windows), но проверяет аннотации самого vectordb. Это тот же heavy-graph-приём, что у `api.app`/`api.routers` (там — таймаут FastAPI-графа, здесь — память). Так Windows-риск снят, а линия закрыта.
+>
+> **Сделано (0 правок кода!):** vectordb **уже был полностью аннотирован** — probe `mypy vectordb --follow-imports=skip --disallow-untyped-defs --disallow-incomplete-defs --no-implicit-optional` = **Success, 0 ошибок**. Так что это **ратчет** (фиксируем чистое состояние в гейте), не фикс:
+> - `pyproject.toml`: новый `[[overrides]]` блок `module = ["vectordb.*"]` (disallow_untyped_defs + disallow_incomplete_defs + no_implicit_optional; **БЕЗ warn_return_any** — под skip langchain-возвраты = Any, флаг ругался бы ложно, как у api.routers).
+> - skip-команда во **всех 3 гейтах** (ci.yml / local-gate.ps1 / autopilot.ps1): `…api/routers vectordb --follow-imports=skip`. + ci.yml-комментарий обновлён (heavy-graph причина для vectordb).
+> - README (`vectordb/` → mypy --strict clean) + CHANGELOG ([Type-Hardening] cont. блок).
+> - **guard `test_mypy_strict_scope_is_synced_across_gates` НЕ тронут** — он пинит только ОСНОВНУЮ команду (без skip-флага), skip-команда вне его охвата (подтверждено чтением `_mypy_strict_scope_paths`: ищет строку БЕЗ `follow-imports`). Значит sync skip-команды между 3 гейтами — ручной (как и для api.app).
+>
+> **Верификация:** точная (расширенная) skip-gate команда `mypy api/app.py api/_shared.py api/correlation.py api/rate_limit.py api/routers vectordb --no-incremental --follow-imports=skip` → **Success, 23 source files** (20 api + 3 vectordb); `tests/test_precommit_config.py` **13 passed** (guard зелёный — основная команда не менялась); `git diff --check` clean; diff = ровно 6 файлов (+49/−11), 0 .py-source. Основную strict-команду НЕ гоняла на Windows (тянет langchain через agent.graph → память; не менялась моими правками — добавился лишь 1 косметический unused-section warning по vectordb.*, exit 0).
+>
+> **Pages-deploy = failure (pre-existing, НЕ моя регрессия):** docs-site esbuild npm-audit через astro — падал и на прошлом коммите `4dd6f54` (run `27482552943`), вне scope (см. прошлые сессии).
+>
+> **Остаток type-hardening: ИСЧЕРПАН.** Все продакшен-пакеты в strict-scope. Единственный нестрогий остаток проекта — retrieval-MISS `customs-clearance-fields` (нужен Kaggle-runtime, не Windows; оба рычага E/F отвергнуты данными — fact-card/router workstream это адресует отдельно). Adaptive-retrieval: F2 (Mac/embed, владельцу), R2 (gated на Phase-5). Type-серия новых целей НЕ имеет.
+
 ## 2026-06-14 Update (Type-hardening) — mypy strict-scope: api routers + helpers
 
 > **START HERE (type-hardening линия).** Заход `/auto продолжи` (после R1 ниже; адаптивные шаги R2/F2 за гейтом/Mac) → продолжена mypy strict-серия. **PUSHED: `9030706` (api strict) + `c4255be` (yaml-стаб CI-фикс), origin синхронизирован, CI run `27482448746` = success (type-check зелёный).** Отдельный workstream от adaptive-retrieval.
