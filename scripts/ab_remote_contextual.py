@@ -173,13 +173,17 @@ def stage_pools(
         chunks = manager.add_contextual_headers(chunks, docs, chunk_size=settings.chunk_size)
     print(f"[pools/{arm}] {len(docs)} docs -> {len(chunks)} chunks", flush=True)
 
+    # Encode batch is env-tunable so memory-constrained runtimes (e.g. an 8 GB
+    # Mac whose MPS/unified pool is shared with other workloads) can shrink it;
+    # default 32 preserves the original behaviour.
+    embed_batch = int(os.environ.get("RAG_EMBED_BATCH", "32"))
     embeddings = get_embeddings()
     st_model = getattr(embeddings, "_model", None)
     texts = [c.page_content for c in chunks]
     t0 = time.time()
     if st_model is not None:
         mat = st_model.encode(
-            texts, normalize_embeddings=True, batch_size=32, show_progress_bar=True
+            texts, normalize_embeddings=True, batch_size=embed_batch, show_progress_bar=True
         ).astype(np.float32)
     else:  # pragma: no cover - fallback for exotic wrappers
         mat = np.asarray(embeddings.embed_documents(texts), dtype=np.float32)
@@ -197,7 +201,7 @@ def stage_pools(
     eff_queries = [expansions.get(c["case_id"], c["query"]) for c in cases]
     if st_model is not None:
         qmat = st_model.encode(
-            eff_queries, normalize_embeddings=True, batch_size=16
+            eff_queries, normalize_embeddings=True, batch_size=min(embed_batch, 16)
         ).astype(np.float32)
     else:  # pragma: no cover
         qmat = np.asarray(
@@ -275,6 +279,7 @@ def stage_rerank(arm: str, out_dir: Path) -> int:
         return 2
     print(f"[rerank/{arm}] model={settings.reranker_model}", flush=True)
 
+    rerank_batch = int(os.environ.get("RAG_RERANK_BATCH", "32"))
     t0 = time.time()
     for i, row in enumerate(rows, 1):
         # Arm E: the reranker scores against the expanded query, like the
@@ -287,7 +292,7 @@ def stage_rerank(arm: str, out_dir: Path) -> int:
         else:
             rerank_query = row.get("expanded_query") or row["query"]
         pairs = [(rerank_query, text) for text in row["cands"]]
-        scores = reranker.predict(pairs)
+        scores = reranker.predict(pairs, batch_size=rerank_batch)
         order = sorted(range(len(scores)), key=lambda j: scores[j], reverse=True)
         row["prerank_cands"] = row["cands"]
         row["prerank_sources"] = row.get("cand_sources", [])
