@@ -1,6 +1,21 @@
 # Agent State
 
-## 2026-06-14 Update (adaptive-retrieval Phase 5 — ИДЁТ НА MAC, результат ещё не получен) ⏳ START HERE
+## 2026-06-15 Update (adaptive-retrieval Phase 5 — ЗАВЕРШЁН: NO-SHIP, обоснован ДАННЫМИ) ✅ START HERE
+
+> **START HERE.** Заход `/auto RAG_Support_Assistant продолжи` → продолжил in-flight Phase-5-прогон (см. блок ниже «ИДЁТ НА MAC»). Прогон на Mac упал на MPS-OOM в embed-шаге стадии 4 (стадии 1–3 уже отработали). **Результат получен, workstream закрыт окончательно.**
+>
+> **🔧 Что сделал:**
+> 1. **Диагноз:** стадии 1–3 (pools/rerank/expand) успешно отработали на MPS → **D2 baseline FULL 97/PART 2/MISS 1** (residual-MISS `customs-clearance-fields`), артефакты в `.tmp/ab_candidates_phase2_D2.json` и т.д. OOM был ТОЛЬКО в стадии 4 (`build_factcards.py` embed). batch 32→8 оба падали (2 фейла) → **анти-зацикливание: не пробовал batch=4**, перешёл на принципиально другой метод — **CPU embed** (system RAM, без 6.8ГБ MPS-cap; та же скорость по хэндофу).
+> 2. **Робастность:** добавил resumable card-cache в `scripts/build_factcards.py` (коммит `3c757e9`, PUSHED) — извлечение (paid Mistral ~45мин) больше не теряется при сбое embed (`--cards-json`/дефолт `.tmp/factcards_<tenant>_cards.json`). Ruff+compile+pure-helper тест зелёные.
+> 3. **Перезапуск стадий 4+5 на Mac с `RAG_DEVICE=cpu`** (новый драйвер `/tmp/phase5_cpu.sh`, лог `.tmp/phase5_cpu.log`, маркеры `.tmp/phase5_cpu_{DONE,FAIL}`). Прошёл чисто: 747 карт из 201 док → коллекция `rag_docs_aircargo_factcards`, verification PASS; стадия 5 (CPU query-embed) → дельта. Прогон 23:49→00:45 MSK (~57мин).
+>
+> **📊 РЕЗУЛЬТАТ (`.tmp/phase5_factcard_delta.md` на Mac → закоммичен как `docs/operations/2026-06-15-phase5-factcard-delta.md`):** на потолке идеального gold-роутера композит «needs_factcard→factcard, иначе D2» = **FULL 79 vs D2 97 (Δ FULL −18)**; needs-срез (44): D2 **42/44 (95%)** vs factcard **24/44 (55%)** — **1 улучшение / 19 регрессий**; целевой `customs-clearance-fields` лишь **MISS→PART** (не закрыт до FULL); all-factcard без роутера Δ −56. **ВЕРДИКТ: NO-SHIP** — дистиллированные карты теряют точные `answer_contains`-формы, которые D2-чанки несут дословно → как **замена** D2 полоса строго хуже.
+>
+> **✅ Что обновлено (docs-only, код/рантайм НЕ тронут кроме cache-коммита `3c757e9`):** новый evidence-doc `2026-06-15-phase5-factcard-delta.md` · closure-doc (баннер + п.2 + п.4 + TL;DR + Done When исправлены: NO-SHIP теперь по ДАННЫМ, прежнее «harness отсутствует» помечено неверным) · план (статус-шапка + T5.1 `[x]` ПРОГНАН + R2/T3.1/T4 + Done When). `docs_quality` guard 12 passed. **Mac вычищен: `/tmp/mk.env` + `/tmp/phase5_*.sh` удалены (Mistral-ключ не остался).**
+>
+> **🏁 Workstream adaptive-retrieval ЗАКРЫТ ОКОНЧАТЕЛЬНО, обоснован прогнанной Phase-5-дельтой.** Opt-in lane (`RAG_RETRIEVAL_STRATEGY=factcard`) остаётся как был (механизм извлечения рабочий, но в дефолт не идёт). Реактивация — только по явному запросу владельца И при ином дизайне полосы (factcard как **аугментация** D2, не замена). Backlog проекта для автономной работы ПУСТ (type-hardening исчерпан, Fable-hardening пуст, adaptive-retrieval закрыт).
+
+## 2026-06-14 Update (adaptive-retrieval Phase 5 — ИДЁТ НА МАК, результат ещё не получен) — СУПЕРСЕДНУТ блоком 2026-06-15 выше ⏳
 
 > **START HERE.** Владелец поправил: «прогонял на кегл на маке» → моё допущение в closure «Phase-5 harness отсутствует в репо» **ФАКТИЧЕСКИ НЕВЕРНО**. Harness = `scripts/ab_remote_contextual.py` (стадии pools/rerank/expand, скоринг `_kw_status` по `answer_contains`). Kaggle-кернел просто его запускал. Корпус aircargo (201 .md) + kaggle-креды (`~/.kaggle/kaggle.json`) есть на Mac. → **Phase-5 запущен по-настоящему на Mac.**
 >
