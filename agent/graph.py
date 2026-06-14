@@ -940,17 +940,17 @@ def make_transform_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Gra
 # ---------------------------------------------------------------------------
 
 
-_RETRIEVAL_STRATEGIES = {"vector", "hybrid", "graph"}
+_RETRIEVAL_STRATEGIES = {"vector", "hybrid", "graph", "factcard"}
 
 
-def _normalize_retrieval_strategy(value: object) -> Literal["vector", "hybrid", "graph"]:
+def _normalize_retrieval_strategy(value: object) -> Literal["vector", "hybrid", "graph", "factcard"]:
     raw = str(value or "hybrid").strip().lower()
     if raw in _RETRIEVAL_STRATEGIES:
-        return cast(Literal["vector", "hybrid", "graph"], raw)
+        return cast(Literal["vector", "hybrid", "graph", "factcard"], raw)
     return "hybrid"
 
 
-def _select_retrieval_strategy(state: GraphState) -> Literal["vector", "hybrid", "graph"]:
+def _select_retrieval_strategy(state: GraphState) -> Literal["vector", "hybrid", "graph", "factcard"]:
     if get_settings is not None:
         settings = get_settings()
         configured = _normalize_retrieval_strategy(
@@ -962,6 +962,12 @@ def _select_retrieval_strategy(state: GraphState) -> Literal["vector", "hybrid",
     complexity = state.get("complexity", "unknown")
     if configured == "vector":
         return "vector"
+    # Fact-card lane (Track F) is opt-in via config only: when explicitly
+    # selected it serves every query (with an empty->hybrid fallback at dispatch).
+    # Per-query routing to factcard is deferred to Phase 3; keep it off the
+    # automatic path so default behaviour (hybrid/vector) is unchanged.
+    if configured == "factcard":
+        return "factcard"
     if complexity == "simple":
         return "vector"
     if configured == "graph" and complexity == "global":
@@ -987,7 +993,19 @@ def make_retrieve_node(retriever: Any) -> Callable[[GraphState], GraphState]:
                 span.set_attribute("rag.tenant_id", str(state.get("tenant_id", "default")))
                 span.set_attribute("rag.retrieval_strategy", requested_strategy)
                 try:
-                    if requested_strategy == "vector" and hasattr(retriever, "get_vector_documents"):
+                    if requested_strategy == "factcard":
+                        from vectordb.manager import get_factcard_documents
+
+                        tenant_id = str(state.get("tenant_id", "default"))
+                        cards = get_factcard_documents(query, tenant_id=tenant_id)
+                        if cards:
+                            docs = cards
+                        else:
+                            # No card matched (or collection missing) — degrade to
+                            # the hybrid lane so the request still gets an answer.
+                            effective_strategy = "hybrid"
+                            docs = retriever.get_relevant_documents(query)
+                    elif requested_strategy == "vector" and hasattr(retriever, "get_vector_documents"):
                         docs = retriever.get_vector_documents(query)
                     elif requested_strategy == "graph" and hasattr(retriever, "get_graph_documents"):
                         docs = retriever.get_graph_documents(query)

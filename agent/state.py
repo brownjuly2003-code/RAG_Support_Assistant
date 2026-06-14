@@ -88,7 +88,7 @@ class GraphState(TypedDict, total=False):
     factuality_score: int
     fact_verification_skipped: bool
     complexity: Literal["simple", "complex", "global", "unknown"]
-    retrieval_strategy: Literal["vector", "hybrid", "graph"]
+    retrieval_strategy: Literal["vector", "hybrid", "graph", "factcard"]
     route: Optional[Literal["auto", "human", "retry", "error", "error_escalation", "agentic"]]
     trace_id: str
     tenant_id: str

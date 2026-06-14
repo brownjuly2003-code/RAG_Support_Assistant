@@ -112,3 +112,61 @@ def test_get_factcard_documents_swallows_backend_error(fake_chroma, monkeypatch)
     fake_chroma.seeded = [_card_doc("x", ["y"])]
     # Errors degrade to [] so F4 can fall back to the hybrid lane.
     assert manager.get_factcard_documents("q", embeddings=object()) == []
+
+
+# --- F4: make_retrieve_node dispatch ---------------------------------------
+
+
+def test_select_retrieval_strategy_factcard_when_configured(monkeypatch):
+    from types import SimpleNamespace
+
+    import agent.graph as graph
+
+    monkeypatch.setattr(graph, "get_settings", lambda: SimpleNamespace(retrieval_strategy="factcard"))
+    # Opt-in factcard wins even for a simple query (per-query routing is Phase 3).
+    assert graph._select_retrieval_strategy({"complexity": "simple"}) == "factcard"
+
+
+def test_retrieve_node_factcard_uses_cards(monkeypatch):
+    import agent.graph as graph
+    from agent.state import create_initial_state
+    from vectordb import manager as vmgr
+
+    card = _card_doc("customs_clearance", ["declaration_number"])
+    monkeypatch.setattr(vmgr, "get_factcard_documents", lambda q, tenant_id="default", **kw: [card])
+    monkeypatch.setattr(graph, "_select_retrieval_strategy", lambda state: "factcard")
+    monkeypatch.setattr(graph, "log_step", lambda *a, **k: None)
+
+    class _Retriever:
+        called = False
+
+        def get_relevant_documents(self, query):
+            _Retriever.called = True
+            return []
+
+    node = graph.make_retrieve_node(_Retriever())
+    out = node(create_initial_state(question="какие поля", trace_id="t-fc"))
+    assert out["retrieval_strategy"] == "factcard"
+    assert "declaration_number" in out["context_docs"][0]["page_content"]
+    assert _Retriever.called is False  # cards found -> no hybrid fallback
+
+
+def test_retrieve_node_factcard_falls_back_to_hybrid_when_empty(monkeypatch):
+    import agent.graph as graph
+    from agent.state import create_initial_state
+    from vectordb import manager as vmgr
+
+    monkeypatch.setattr(vmgr, "get_factcard_documents", lambda q, tenant_id="default", **kw: [])
+    monkeypatch.setattr(graph, "_select_retrieval_strategy", lambda state: "factcard")
+    monkeypatch.setattr(graph, "log_step", lambda *a, **k: None)
+
+    hybrid_doc = _card_doc("fallback_topic", ["x"])
+
+    class _Retriever:
+        def get_relevant_documents(self, query):
+            return [hybrid_doc]
+
+    node = graph.make_retrieve_node(_Retriever())
+    out = node(create_initial_state(question="q", trace_id="t-fc2"))
+    assert out["retrieval_strategy"] == "hybrid"  # empty cards -> hybrid fallback
+    assert "fallback_topic" in out["context_docs"][0]["page_content"]
