@@ -75,7 +75,7 @@ User / Email / Widget
 - `auth/` — JWT, X-API-Key, OIDC, RBAC. `mypy --strict` clean.
 - `db/` — SQLAlchemy models, async engine, audit log, pgcrypto field. `mypy --strict` clean.
 - `llm/providers/` — Ollama / Mistral / GraceKelly providers + cost guard.
-- `vectordb/` — tenant-aware vector store factory (`vectordb.manager`) plus base implementation (`vectordb._base_manager`).
+- `vectordb/` — tenant-aware vector store factory (`vectordb.manager`) plus base implementation (`vectordb._base_manager`). `mypy --strict` clean (checked with `--follow-imports=skip`, since it pulls langchain/sentence-transformers — a heavy type graph that spikes mypy memory).
 - `evaluation/` — RAGAS metrics, online evaluators, regression framework. `mypy --strict` clean.
 - `monitoring/` — Prometheus metrics (~50). `mypy --strict` clean. `tracing/` — Langfuse + OTel + SQLite trace store. `mypy --strict` clean.
 - `ingestion/` — loaders, pipeline, categorizer, contextual headers. `mypy --strict` clean.

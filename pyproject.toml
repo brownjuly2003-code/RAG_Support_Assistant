@@ -201,6 +201,20 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 no_implicit_optional = true
 
+# vectordb.* — strict scope (2026-06-14). Vector-store managers. The package is
+# already fully annotated, so this override is a ratchet (lock in the clean
+# state), not a fix. Checked with --follow-imports=skip in the gates, alongside
+# api.app: vectordb pulls langchain and sentence-transformers, whose full type
+# graph spikes mypy memory (~2GB+, hangs low-RAM Windows boxes) — the same
+# heavy-graph reason api.app uses that flag (there it is a timeout, here memory).
+# Under skip those imports are Any, so warn_return_any is omitted: it would flag
+# the langchain-returning helpers spuriously, exactly as noted for api.routers.
+[[tool.mypy.overrides]]
+module = ["vectordb.*"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+
 # ---------------------------------------------------------------------------
 # Bandit — static security analysis. Run as `bandit -r . -c pyproject.toml`.
 # ---------------------------------------------------------------------------

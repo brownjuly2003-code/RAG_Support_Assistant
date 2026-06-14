@@ -2,6 +2,27 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Type-Hardening] — 2026-06-14 (cont.) — mypy strict-scope: vectordb.*
+
+- Завершено направление strict-scope: `vectordb.*` (`vectordb.manager`,
+  `vectordb._base_manager`) добавлен в strict-гейт. Пакет уже был полностью
+  аннотирован — **0 правок кода, 0 mypy-ошибок**; это ратчет (фиксируем чистое
+  состояние), не фикс.
+- Проверяется командой `--follow-imports=skip` (вместе с `api.app`): vectordb
+  тянет langchain/sentence-transformers, чей полный тип-граф раздувает память
+  mypy (~2GB+, виснет на low-RAM Windows) — та же причина heavy-graph, по которой
+  `api.app` использует этот флаг (там — таймаут, здесь — память). Под skip
+  внешние импорты = `Any`, поэтому `warn_return_any` не включён (ложные срабатывания
+  на langchain-возвращающих хелперах, как и в `api.routers`).
+- pyproject override (`vectordb.*`) + skip-команда во всех 3 mypy-гейтах
+  (ci.yml/local-gate.ps1/autopilot.ps1) расширены на `vectordb`; guard
+  `test_mypy_strict_scope_is_synced_across_gates` не тронут (он пинит только
+  основную команду; skip-команда вне его охвата).
+- Верификация: `mypy api/app.py api/_shared.py api/correlation.py
+  api/rate_limit.py api/routers vectordb --follow-imports=skip` — **Success**;
+  `tests/test_precommit_config.py` passed; ruff clean. Это закрывает линию
+  type-hardening: остаётся только Kaggle-MISS `customs-clearance-fields`.
+
 ## [Type-Hardening] — 2026-06-14 — mypy strict-scope: api routers + helpers
 
 - Продолжено направление strict-scope: `api/_shared.py`, `api/correlation.py`,
