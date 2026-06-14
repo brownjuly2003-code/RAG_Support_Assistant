@@ -57,6 +57,21 @@ def _collection_name(tenant_id: str) -> str:
     return f"{prefix}_{_sanitize_tenant(tenant_id)}"
 
 
+def _factcard_collection_name(tenant_id: str) -> str:
+    """Collection name for the fact-card lane (Track F): ``<prefix>_<tenant>_factcards``.
+
+    Mirrors ``_collection_name`` but reserves room for the ``_factcards`` suffix so
+    the whole name stays within Chroma's 63-character collection-name limit.
+    """
+    prefix = getattr(get_settings(), "vectordb_collection_prefix", "rag_docs")
+    suffix = "factcards"
+    sanitized = re.sub(r"[^a-zA-Z0-9._-]", "_", tenant_id or "default") or "default"
+    # prefix + "_" + tenant + "_" + suffix must be <= 63 chars.
+    max_tenant = max(1, 63 - len(prefix) - len(suffix) - 2)
+    tenant = sanitized[:max_tenant] or "default"
+    return f"{prefix}_{tenant}_{suffix}"
+
+
 def add_contextual_headers(
     chunks: list[Document],
     full_documents: Sequence[Document],
@@ -202,6 +217,66 @@ def build_vector_store(
         _retriever_cache.pop(tenant, None)
 
     return store, chunks
+
+
+def build_factcard_store(
+    card_docs: Sequence[Document],
+    embeddings: Any | None = None,
+    tenant_id: str = "default",
+) -> Any:
+    """Build the fact-card vector collection (adaptive-retrieval Track F / F2).
+
+    Each Document is one *whole* fact-card — no chunking, no contextual headers,
+    no BM25/chunk_index stamp: the whole point of the lane is to return a complete
+    enumeration that the main D2 reranker truncates (residual MISS
+    ``customs-clearance-fields``). Cards live in a sibling
+    ``<prefix>_<tenant>_factcards`` Chroma collection that F3
+    (``get_factcard_documents``) reads, kept separate from the chunk collection so
+    neither indexing path disturbs the other. Chroma backend only; the lane is
+    eval-gated (Phase 5) and not wired into live retrieval yet.
+
+    Mirrors ``build_vector_store``'s Chroma path (delete-then-rebuild,
+    persist-if-supported) and returns the store. Keep metadata flat (scalar) —
+    Chroma rejects list/dict metadata values.
+    """
+    if not card_docs:
+        raise ValueError("Fact-card document list is empty.")
+    tenant = tenant_id or "default"
+    if embeddings is None:
+        embeddings = get_embeddings()
+
+    settings = get_settings()
+    backend = getattr(settings, "vector_backend", "chroma")
+    if backend == "qdrant":
+        raise NotImplementedError(
+            "Fact-card lane supports the Chroma backend only (Track F is eval-gated)."
+        )
+
+    chroma_cls = _get_chroma()
+    persist_directory = str(settings.vectordb_chroma_dir)
+    collection_name = _factcard_collection_name(tenant)
+
+    try:
+        existing = chroma_cls(
+            persist_directory=persist_directory,
+            embedding_function=embeddings,
+            collection_name=collection_name,
+        )
+        delete_collection = getattr(existing, "delete_collection", None)
+        if callable(delete_collection):
+            delete_collection()
+    except Exception:
+        pass
+
+    store = chroma_cls.from_documents(
+        documents=list(card_docs),
+        embedding=embeddings,
+        persist_directory=persist_directory,
+        collection_name=collection_name,
+    )
+    if hasattr(store, "persist"):
+        store.persist()
+    return store
 
 
 def _restore_chunks_from_store(vector_store: Any, tenant: str) -> list[Document] | None:
