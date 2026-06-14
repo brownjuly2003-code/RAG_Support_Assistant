@@ -279,6 +279,60 @@ def build_factcard_store(
     return store
 
 
+def get_factcard_store(tenant_id: str = "default", embeddings: Any | None = None) -> Any | None:
+    """Open the persisted fact-card collection for reading (Track F / F3).
+
+    Returns the Chroma store for ``<prefix>_<tenant>_factcards`` (the collection
+    built by ``build_factcard_store``), or ``None`` if the backend is unavailable.
+    Opens the collection per call (no cache): the lane is eval-gated and off the
+    hot path, so correctness/simplicity beats a cache-invalidation surface.
+    """
+    settings = get_settings()
+    backend = getattr(settings, "vector_backend", "chroma")
+    if backend == "qdrant":
+        return None
+    try:
+        chroma_cls = _get_chroma()
+    except ImportError:
+        return None
+    if embeddings is None:
+        embeddings = get_embeddings()
+    return chroma_cls(
+        persist_directory=str(settings.vectordb_chroma_dir),
+        embedding_function=embeddings,
+        collection_name=_factcard_collection_name(tenant_id or "default"),
+    )
+
+
+def get_factcard_documents(
+    query: str,
+    tenant_id: str = "default",
+    k: int = 3,
+    embeddings: Any | None = None,
+) -> list[Document]:
+    """Return fact-cards relevant to ``query`` as whole Documents (Track F / F3).
+
+    Reads the ``<prefix>_<tenant>_factcards`` collection built by
+    ``build_factcard_store`` (F2). Returns ``[]`` if the query is blank, the
+    collection is missing/empty, or the backend errors — so the F4 dispatcher can
+    fall back to the hybrid lane instead of failing the request.
+    """
+    if not query or not query.strip():
+        return []
+    store = get_factcard_store(tenant_id, embeddings=embeddings)
+    if store is None:
+        return []
+    search = getattr(store, "similarity_search", None)
+    if not callable(search):
+        return []
+    try:
+        results = search(query, k=k)
+    except Exception:
+        logger.warning("Fact-card search failed for tenant %s", tenant_id, exc_info=True)
+        return []
+    return list(results)
+
+
 def _restore_chunks_from_store(vector_store: Any, tenant: str) -> list[Document] | None:
     """Rebuild the in-memory chunk list from a persisted Chroma collection.
 
