@@ -1,5 +1,25 @@
 # Agent State
 
+## 2026-06-14 Update (adaptive-retrieval Track F / F4) — factcard вшит в retrieve-dispatch; CI зелёный; PUSHED (`6589798`). 🏁 BUILDABLE LANE ЗАВЕРШЁН
+
+> **START HERE (этот workstream).** Заход `/auto продолжай` (после F3 ниже). Взят **F4** = вшить factcard-стратегию в граф. Завершает buildable fact-card lane (F1 extract + F2 build + F3 read + F4 wire).
+>
+> **Сделано:**
+> - `agent/graph.py`: `"factcard"` в `_RETRIEVAL_STRATEGIES` + во ВСЕ strategy-Literal'ы (`_normalize_retrieval_strategy`, `_select_retrieval_strategy`, и `GraphState.retrieval_strategy` в `agent/state.py`). Ветка в `make_retrieve_node`: при стратегии `factcard` — лениво `from vectordb.manager import get_factcard_documents`, `tenant_id` из state, карты есть → docs; **пусто/нет коллекции → `effective_strategy="hybrid"`, fallback на `retriever.get_relevant_documents`** (запрос не рушится).
+> - **Opt-in only:** `_select_retrieval_strategy` отдаёт `"factcard"` ТОЛЬКО при `RAG_RETRIEVAL_STRATEGY=factcard` (как `vector`); дефолт hybrid/vector НЕ меняется. Авто-роутинг needs_factcard→factcard = Phase 3 (НЕ здесь — eval-gated).
+> - `tests/test_factcard_store.py`: +3 F4-кейса (_select отдаёт factcard при конфиге; node юзает карты; node падает на hybrid при пустом).
+>
+> **Верификация:** Windows — ruff clean, pytest **16 passed** (9 factcard + 7 `test_model_routing` — без регрессий). **CI run `27485218944` (на `6589798`) = success полностью** — **type-check** (главная strict mypy команда incl. `agent.graph`/`state.py` на Linux — так проверена strict-чистота БЕЗ langchain-памяти Windows) + test-unit×2 + test-integration×2 + migrations + helm + lint + security + pre-commit. regression-eval skipped (push). **mypy main-scope НЕ гоняла на Windows** (тянет langchain через agent.graph → память; верифицировано через CI/Linux — осознанное решение).
+>
+> **PUSHED:** код-коммит `6589798` (`fe213c2..6589798`).
+>
+> **🏁 Buildable fact-card lane ЗАВЕРШЁН** (F1✅ F2✅ F3✅ F4✅, все верифицированы — F1/F2/F3 на Mac, F4 на CI). **Остаток Track F = за гейтами:**
+> - **Phase 3** (lanes + per-query авто-маршрутизация: `_select_retrieval_strategy` шлёт needs_factcard-класс в factcard) — **НЕ строить до Phase 5**: мисроутинг = тихая регрессия (D2 уже FULL 96/100), а выгода доказывается только офлайн-дельтой. Windows-codeable, но рискованно без данных.
+> - **Phase 5** (офлайн-дельта D2 vs D2+factcard на полном curated_cases; recall на needs_factcard ↑ без регрессий, токены/latency в норме → иначе NO-SHIP) — **нужен Kaggle-runtime (не Windows)**, это ship-гейт. NO-SHIP — допустимый исход.
+> - **R2** (router-врезка, Track R) — независим, тоже gated на Phase 5.
+> - 🔴 dup-topic (2 карты `customs_clearance_air_cargo`) — учесть при дедупе в Phase-3.
+> Прод-коллекция факткарт строится prod-embedding'ом (BGE-M3); полнокорпусный build (`scripts/build_factcards.py --docs-dir`) — когда Phase-3 потребует.
+
 ## 2026-06-14 Update (adaptive-retrieval Track F / F3) — get_factcard_documents read-path; Verify PASS на Mac; PUSHED (`8049e88`)
 
 > **START HERE (этот workstream).** Заход `/auto продолжи` (после F2 ниже). Взят **F3** = read-сторона fact-card lane. Windows-код + unit, реальная проверка против построенной F2-коллекции на Mac (только embed запроса + search, без LLM/Mistral-ключа).
