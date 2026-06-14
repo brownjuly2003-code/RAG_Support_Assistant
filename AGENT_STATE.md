@@ -1,5 +1,28 @@
 # Agent State
 
+## 2026-06-14 Update (adaptive-retrieval Phase 5 — ИДЁТ НА MAC, результат ещё не получен) ⏳ START HERE
+
+> **START HERE.** Владелец поправил: «прогонял на кегл на маке» → моё допущение в closure «Phase-5 harness отсутствует в репо» **ФАКТИЧЕСКИ НЕВЕРНО**. Harness = `scripts/ab_remote_contextual.py` (стадии pools/rerank/expand, скоринг `_kw_status` по `answer_contains`). Kaggle-кернел просто его запускал. Корпус aircargo (201 .md) + kaggle-креды (`~/.kaggle/kaggle.json`) есть на Mac. → **Phase-5 запущен по-настоящему на Mac.**
+>
+> **🔧 Что добавлено в репо (PUSHED, origin=`3a6f15a`):**
+> - `scripts/phase5_factcard_delta.py` (`e244c82`) — Phase-5 delta-скорер: переиспользует `_kw_status`, считает gold-routing composite (route needs_factcard→factcard иначе D2), ΔFULL на needs-срезе, матрицу переходов, закрытие residual-MISS, all-factcard misrouting-иллюстрацию, вердикт SHIP/NO-SHIP. **SHIP-iff:** `ΔFULL(needs) ≥ 0` (с gold-роутингом non-needs=D2 by construction → регрессия только если factcard<D2 на needs-кейсе) + MISS закрыт + 0 регрессий. Это ПОТОЛОК (идеальный роутер); реальный R1-классификатор (needs_factcard CV F1≈0.871) — отдельный дисконт.
+> - `ab_remote_contextual.py` (`3a6f15a`) — `RAG_EMBED_BATCH`/`RAG_RERANK_BATCH` env (дефолт 32, обратно совместимо) для memory-constrained рантаймов.
+>
+> **▶️ Прогон на Mac (`deproject-mac`, фон):** driver `/tmp/phase5_run3.sh` (nohup), лог `~/RAG_Support_Assistant/.tmp/phase5_run.log`, маркеры `.tmp/phase5_DONE`/`.tmp/phase5_FAIL`. Пайплайн: `pools C → rerank C → expand --label D2 --window 2 --max-chars 3600` (воспроизводит D2 baseline FULL 96/PART 3/MISS 1) → `build_factcards.py --docs-dir data/uploads/aircargo --tenant aircargo` (paid Mistral, `/tmp/mk.env`) → `phase5_factcard_delta.py --tenant aircargo` → `.tmp/phase5_factcard_delta.md`. **device=mps, RAG_EMBED_BATCH=8, RAG_RERANK_BATCH=8.**
+> - 🔴 **Гоча MPS-OOM:** batch=32 OOM'ит MPS (cap 6.8GB, ~3.69GB заняты др. процессами Mac — unified memory делится). Фикс — batch=8 (модель ~2.3GB + activations <0.6GB влезает). **НЕ ставить `PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0`** (риск подвесить Mac).
+> - 🔴 **Mac-GPU медленный:** ~1.9с/чанк (5589 чанков → embed ~3ч; CPU давал ту же скорость = упор в железо, старый iMac GPU). **Полный прогон ≈ 5-6ч** (как оригинальный Kaggle 6ч — почему проект и держит heavy на Kaggle).
+>
+> **📡 Поллер:** фоновый bash `b6hf077yf` (deadline 23000s, poll 120s) — вернёт ОДНО уведомление с `.tmp/phase5_factcard_delta.md` при DONE, либо лог-tail при FAIL/timeout.
+>
+> **➡️ КОГДА РЕЗУЛЬТАТ ПРИДЁТ (следующей сессии, если поллер не успел):**
+> 1. Проверить вручную: `ssh deproject-mac 'cd ~/RAG_Support_Assistant && cat .tmp/phase5_factcard_delta.md'` (+ `.tmp/phase5_run.log` если FAIL).
+> 2. **SHIP** (ΔFULL(needs)>0, MISS закрыт, 0 регрессий) → реализовать Phase 3 (авто-роутинг needs_factcard→factcard в `_select_retrieval_strategy`) + R2 + дисконтировать на R1 F1≈0.871; обновить план/closure/README на SHIP.
+> 3. **NO-SHIP / BORDERLINE** → оставить opt-in lane как есть, обновить closure-док реальными числами (вердикт NO-SHIP теперь обоснован ДАННЫМИ, а не ошибочным «harness отсутствует»).
+> 4. В ОБОИХ случаях: `ssh deproject-mac 'rm -f /tmp/mk.env /tmp/phase5_run*.sh'` (вычистить Mistral-ключ); обновить `docs/operations/2026-06-14-adaptive-retrieval-closure.md` (убрать неверный пункт #4 «harness отсутствует» → заменить реальным Phase-5-исходом).
+> - Если Mac-прогон провалился/слишком долгий → **Kaggle**: `pip install kaggle` в venv, обновить private-датасет `rag-phase2-ab-bundle` снапшотом репо, авторить кернел с factcard-плечом (тяжелее, но штатный путь проекта).
+>
+> **⚠️ closure-коммит `2fe2d16` («NO-SHIP, harness отсутствует») — ЧАСТИЧНО УСТАРЕЛ:** lane-факты верны (F1–F4 opt-in), но пункт «Phase-5 автономно не исполним / harness отсутствует» неверен — Phase-5 ИСПОЛНЯЕТСЯ. Финальный вердикт заменит этот док по результату.
+
 ## 2026-06-14 Update (adaptive-retrieval — WORKSTREAM ЗАКРЫТ) — opt-in lane shipped, default-флип NO-SHIP; docs PUSHED
 
 > **START HERE.** Заход `/auto RAG_Support_Assistant продолжи` → владелец: «закрывай все задачи, у тебя права админа». Все остальные линии уже закрыты (type-hardening исчерпан, Fable-hardening пуст). Оставался только adaptive-retrieval с гейченым остатком (Phase 3/R2/Phase 5). **Закрыт решением с правами админа.**

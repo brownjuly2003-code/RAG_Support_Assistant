@@ -1,5 +1,13 @@
 # Adaptive Retrieval Router + Fact-Card (SFR) — закрытие workstream (решение)
 
+> 🔴 **КОРРЕКЦИЯ 2026-06-14 (позже в тот же день): пункт §«NO-SHIP» #4 ниже — ФАКТИЧЕСКИ НЕВЕРЕН.**
+> Утверждение «реальный FULL/PART/MISS-харнесс отсутствует в репозитории / Phase-5 автономно не исполним»
+> ОШИБОЧНО: харнесс = `scripts/ab_remote_contextual.py` (скоринг `_kw_status`), корпус aircargo (201 .md) и
+> kaggle-креды есть на Mac. **Phase-5 запущен по-настоящему на Mac** (`scripts/phase5_factcard_delta.py`,
+> driver `/tmp/phase5_run3.sh`, ~5-6ч на медленном Mac-GPU). Lane-факты (F1–F4 opt-in, R1) остаются верны.
+> **Финальный ship/no-ship вердикт заменит этот док по результату прогона** (см. AGENT_STATE «Phase 5 — ИДЁТ
+> НА MAC» сверху). До получения чисел NO-SHIP-to-default действует как временный статус, НЕ как доказанный исход.
+
 > Дата: 2026-06-14. Тип: terminal decision record (ADR-стиль).
 > План: `docs/plans/2026-06-13-adaptive-retrieval-factcard-plan.md`.
 > Объяснение концепции: `rag_new_explanation.md`. Research: `research_adaptive.md`.
