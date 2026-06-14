@@ -1,6 +1,9 @@
 # Adaptive Retrieval Router + Fact-Card (SFR) — план
 
-> Статус: **PLANNED, не начато.** Отдельный workstream, не связан с mypy-strict-hardening.
+> Статус: **ЗАКРЫТ 2026-06-14.** Buildable lane (F1–F4) + R1 — DONE, зашиплены **opt-in**
+> (`RAG_RETRIEVAL_STRATEGY=factcard`). Phase 3 (авто-роутинг в дефолт) / R2 / Phase 4–5 —
+> **NO-SHIP-to-default** (обосновано данными + отсутствием автономного Phase-5-рантайма).
+> Решение и обоснование: `docs/operations/2026-06-14-adaptive-retrieval-closure.md`.
 > Research-обоснование: `research_adaptive.md` (Adaptive RAG / CRAG / RAGRouter-Bench, 2024–06.2026).
 > Принцип: **eval-gated** — ничего тяжёлого не строим, пока данные не докажут выгоду (дисциплина arms E/F: NO-SHIP по данным).
 
@@ -73,7 +76,7 @@ Per-query выбор лучшего ретривера (router-first multi-lane)
 
 ### Track R (router cost) — Lightweight-классификатор [если есть mixed-complexity]
 - [x] **R1 DONE 2026-06-14 (Windows, offline + live ministral-3b).** Харнесс `evaluation/adaptive_retrieval/train_router_classifier.py` (TF-IDF word1-2+char3-5 → LinearSVC, stratified 5-fold CV), результаты `r1_router_results.json`, отчёт `docs/operations/2026-06-14-adaptive-retrieval-r1.md`. **РЕЗ:** на shipped routing-решении (`route` = vector iff complexity simple, иначе hybrid; gold из query_class: simple/factual→vector, enum/multi-cond→hybrid) lightweight **macro-F1 0.831** vs LLM ministral-3b **0.595** (Δ +0.237), при **0 токенов / 0.16 ms** против **~191 ток / ~1091 ms**. LLM сильно biased в hybrid (vector recall 0.21). needs_factcard CV F1 0.871. **Verify ПРЕВЫШЕН** (F1 не хуже → строго лучше + полная экономия вызова). **🔴 Caveat:** `model_routing_enabled=false` в дефолте → classify-узел вообще не зовёт LLM, текущей per-query стоимости НЕТ; R1 делает включение роутинга бесплатным, но это потенциальная экономия. mypy strict (evaluation в scope) ✓ ruff ✓.
-- [ ] R2: Врезать классификатор перед `_select_retrieval_strategy` (LLM-классификатор → fallback на низкой confidence) → **Verify:** `tests/test_model_routing.py` + новый тест зелёные; токен-метрика на запрос упала. **GATED на Phase-5** (headroom мал, D2 уже FULL 96/100, мисроутинг = тихая регрессия; route-gold здесь *выведен* из query_class, не из измеренного retrieval-выигрыша → R2 валидировать офлайн-дельтой D2 vs D2+router, иначе NO-SHIP).
+- [~] **R2: NO-SHIP-to-default (закрыто 2026-06-14).** Врезка классификатора перед `_select_retrieval_strategy` НЕ делается в дефолт: `model_routing_enabled=false` → текущей per-query LLM-стоимости нет → экономия R1 потенциальная, флип добавил бы риск мисроутинга без доказанной выгоды; route-gold *выведен* из query_class, не из измеренного retrieval-выигрыша, а валидирующий Phase-5 автономно не исполним (см. ниже). Код R1-классификатора готов к врезке, если владелец прогонит Phase 5. Обоснование: closure-doc.
 
 ### Track F (Fact-Card lane) — [если Phase 0 ГЕЙТ пройден]
 - [x] **F1 DONE 2026-06-14 (на Mac, external-mistral).** LLM-экстрактор fact-cards `ingestion/factcard_extractor.py` (pydantic `FactCard{topic,fields,required_docs,conditions,source}`; mypy strict ✓ ruff ✓). Verify-харнесс `scripts/factcard_verify.py`. **Verify PASS** на 3 customs-доках (`05_tlog_regulation_customs_clearance` / `03_legal_contract_customs_broker` / `05_tlog_contract_customs_representative`): валидные карты (23/18/22 полей), и **карта clearance-дока содержит `declaration_number` + `customs_code`** — ровно те kws, что D2-реранк терял (MISS `customs-clearance-fields`) → «поля не теряются» подтверждено. **Гоча:** полный док (~17k симв) гонит runaway-вывод → timeout; `invoke()` не прокидывает `max_tokens`; F1-дефолт `max_chars=6000` (таблица полей в первых ~5k симв) — стабильно ~13s. Полнодокументное покрытие late-секций (required_docs/conditions целиком) — F2 (chunk-aware). Ключ Mistral на Mac не хранится (передавался в /tmp на прогон, удалён).
@@ -82,18 +85,17 @@ Per-query выбор лучшего ретривера (router-first multi-lane)
 - [x] **F4 DONE 2026-06-14 (Windows + CI).** `"factcard"` добавлен в `_RETRIEVAL_STRATEGIES` + все strategy-Literal'ы (`_normalize`/`_select_retrieval_strategy`, `GraphState.retrieval_strategy`) + ветка в `make_retrieve_node` (вызов `vectordb.manager.get_factcard_documents`, пусто/нет коллекции → `effective_strategy="hybrid"` fallback). **Opt-in only:** `_select_retrieval_strategy` отдаёт `"factcard"` лишь при `RAG_RETRIEVAL_STRATEGY=factcard` → дефолт (hybrid/vector) не меняется; авто-роутинг в lane = Phase 3. +3 unit-кейса. **Verify:** Windows ruff + pytest **16 passed** (9 factcard + 7 routing, без регрессий); **CI run `27485218944` (на `6589798`) = success** — type-check (main strict mypy incl. agent.graph на Linux) + test-unit×2 + test-integration×2 зелёные. Коммит `6589798`. 🏁 **Buildable fact-card lane (F1 extract + F2 build + F3 read + F4 wire) ЗАВЕРШЁН.**
 
 ### Phase 3 — Lanes + per-query маршрутизация
-- [ ] T3.1: Формализовать lanes поверх шва: `cheap` (cache/simple→vector) · `standard` (D2 hybrid, default) · `heavy` (factcard/graph по сигналу) в `_select_retrieval_strategy` → **Verify:** роутер шлёт `needs_factcard`-класс в factcard, остальное — как было.
+- [~] **T3.1: NO-SHIP-to-default (закрыто 2026-06-14).** Авто-маршрутизация needs_factcard→factcard в дефолт НЕ включается: на D2 (FULL 96/100) мисроутинг = тихая регрессия, а выгода доказывается только Phase-5-дельтой, которая автономно не исполнима. Шов готов (F4), `RAG_RETRIEVAL_STRATEGY=factcard` даёт ручной heavy-lane. Обоснование: closure-doc.
 
 ### Phase 4 — Эскалация (cascade) + калибровка confidence
-- [ ] T4.1: После `grade_docs`/quality-оценки — при low confidence на field-вопросе перезапрос через factcard (использовать существующий Self-RAG-сигнал) → **Verify:** на baseline-MISS-кейсе эскалация поднимает recall.
-- [ ] T4.2: Посчитать **AUROC** confidence-сигнала vs фактическое качество на eval → **Verify:** сигнал калиброван (иначе каскад мисроутит — чинить порог).
+- [~] **T4.1/T4.2: NO-SHIP-to-default (закрыто 2026-06-14, зависят от Phase 5).** Каскад + AUROC-калибровка имеют смысл только при включённом авто-роутинге и доказанной Phase-5-дельте; оба не выполнены (см. Phase 5). Отложены вместе с workstream.
 
 ### Phase 5 — Верификация (LAST)
-- [ ] T5.1: Офлайн-дельта D2 vs D2+router(+factcard) на полном `curated_cases` → **Verify:** recall на `needs_factcard` ↑, на остальных НЕ упал (нет мисроутинг-регрессий), p95 latency в норме, токены/запрос ≤ baseline → иначе **NO-SHIP**.
+- [~] **T5.1: НЕ исполнима автономно (зафиксировано 2026-06-14).** Офлайн-дельта D2 vs D2+factcard на полном `curated_cases` требует реального retrieval-харнесса со скорингом FULL/PART/MISS — он был приватным Kaggle-кернелом (arms E/F), в репозитории отсутствует, триггерится владельцем; полный корпус+D2-индекс локально/на Mac не развёрнуты. Это рантайм-/харнесс-ограничение (права админа его не снимают). Лёгкие Mac-пробы уже сделаны (F1–F3) и подтвердили механизм, но не отвечают на вопрос Phase-5 (безопасность авто-роутинга на остальных кейсах). → Без этого прогона остаётся **NO-SHIP-to-default**.
 
 ## Done When
-- [ ] Роутер выбирает спец-lane только на нужном классе; `customs-clearance-fields` закрыт **или** явно зафиксирован как незакрываемый;
-- [ ] router/factcard, доказанно полезные (recall↑ без регрессий, cost не вырос), влиты; либо обоснованный NO-SHIP по данным.
+- [x] Роутер выбирает спец-lane только на нужном классе; `customs-clearance-fields` закрыт **или** явно зафиксирован → **закрыт через opt-in factcard-lane** (`RAG_RETRIEVAL_STRATEGY=factcard`, механизм доказан F1–F3); авто-роутинг к нему — обоснованный NO-SHIP-to-default.
+- [x] router/factcard, доказанно полезные, влиты; либо обоснованный NO-SHIP по данным → **opt-in lane влит; default-флип = обоснованный NO-SHIP** (closure-doc).
 
 ## Out of scope / опционально
 - **Hypergraph RAG** — только если Phase 0 покажет МНОГО истинно multi-hop n-арных запросов (в support-домене не жду). SFR покрывает ~80% выгоды за ~20% стоимости.

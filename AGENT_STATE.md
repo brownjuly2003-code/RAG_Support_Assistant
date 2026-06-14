@@ -1,5 +1,24 @@
 # Agent State
 
+## 2026-06-14 Update (adaptive-retrieval — WORKSTREAM ЗАКРЫТ) — opt-in lane shipped, default-флип NO-SHIP; docs PUSHED
+
+> **START HERE.** Заход `/auto RAG_Support_Assistant продолжи` → владелец: «закрывай все задачи, у тебя права админа». Все остальные линии уже закрыты (type-hardening исчерпан, Fable-hardening пуст). Оставался только adaptive-retrieval с гейченым остатком (Phase 3/R2/Phase 5). **Закрыт решением с правами админа.**
+>
+> **Решение (data-backed, дисциплина arms E/F):** **NO-SHIP-to-default** для Phase 3 (авто-роутинг), R2 (router в дефолт), Phase 4 (каскад). Fact-card lane (F1–F4) + R1 остаются **shipped opt-in** (`RAG_RETRIEVAL_STRATEGY=factcard`). Полное обоснование — `docs/operations/2026-06-14-adaptive-retrieval-closure.md`.
+>
+> **Почему не флипнул в дефолт (а не «забыл»):**
+> 1. D2 уже FULL 96/PART 3/MISS 1 — headroom 1–4 кейса; мисроутинг на работающей системе = тихая регрессия.
+> 2. Opt-in lane уже закрывает целевой MISS `customs-clearance-fields` (F1–F3 на Mac: запрос про таможенные поля → топ-хит карты, содержит `declaration_number`+`customs_code`). Механизм доказан — дефолт трогать не обязательно.
+> 3. R2: `model_routing_enabled=false` → текущей per-query LLM-стоимости НЕТ → экономия R1 потенциальная; флип = риск без доказанной выгоды.
+> 4. **Phase 5 автономно НЕ исполним** — реальный retrieval-скоринг FULL/PART/MISS был приватным **Kaggle-кернелом** (arms E/F), в репозитории отсутствует, корпус+D2-индекс локально/на Mac не развёрнуты. Это рантайм-/харнесс-ограничение, а НЕ permission-гейт (права админа его не снимают). Мак-пробы (F1–F3) уже сделаны и не отвечают на вопрос Phase-5.
+> 5. План сам допускает «обоснованный NO-SHIP по данным» как валидный терминал; «не дожимать вопреки данным».
+>
+> **Сделано (docs-only, рантайм/код НЕ тронут):** closure-doc (новый) · план — Phase 3/4/5 + R2 + Done When → `[~]`/`[x]` с пометкой NO-SHIP-to-default + статус-шапка «ЗАКРЫТ» · README — стратегия `factcard` задокументирована (`vector|hybrid|graph|factcard`) · CHANGELOG `[Adaptive-Retrieval]` блок · этот handoff.
+>
+> **Реактивация только по явному запросу владельца с Phase-5-прогоном на Kaggle.** Код готов (F4 lane + R1 классификатор) — нужен лишь прогон+данные. Mac на `8049e88` (F3) — отстал на F4, при будущем Mac-прогоне сначала `git pull --ff-only`.
+>
+> **Untracked в корне НЕ трогал:** `rag_new_explanation.md` (концепт-объяснение SFR от владельца) + 2 чужих (`docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py`).
+
 ## 2026-06-14 Update (adaptive-retrieval Track F / F4) — factcard вшит в retrieve-dispatch; CI зелёный; PUSHED (`6589798`). 🏁 BUILDABLE LANE ЗАВЕРШЁН
 
 > **START HERE (этот workstream).** Заход `/auto продолжай` (после F3 ниже). Взят **F4** = вшить factcard-стратегию в граф. Завершает buildable fact-card lane (F1 extract + F2 build + F3 read + F4 wire).

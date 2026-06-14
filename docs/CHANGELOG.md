@@ -2,6 +2,27 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Adaptive-Retrieval] — 2026-06-14 — workstream закрыт (opt-in lane shipped, default-флип NO-SHIP)
+
+- **Закрыт** adaptive-retrieval router + Fact-Card (SFR) workstream
+  (план `docs/plans/2026-06-13-adaptive-retrieval-factcard-plan.md`). Решение и
+  обоснование — `docs/operations/2026-06-14-adaptive-retrieval-closure.md`.
+- **Зашиплено (opt-in):** fact-card lane F1–F4 (`ingestion/factcard_extractor.py`,
+  `vectordb/manager.py: build_factcard_store`/`get_factcard_documents`,
+  `agent/graph.py: make_retrieve_node` ветка) + R1 router-классификатор
+  (`evaluation/adaptive_retrieval/train_router_classifier.py`). Включается
+  `RAG_RETRIEVAL_STRATEGY=factcard`; при отсутствии коллекции — fallback на `hybrid`.
+  Документация стратегии в README обновлена (`vector|hybrid|graph|factcard`).
+- **NO-SHIP-to-default:** авто-роутинг (Phase 3), врезка router'а в дефолт (R2),
+  каскад/калибровка (Phase 4) — **не включены в дефолт**. Причины: D2-baseline уже
+  FULL 96/100 (headroom мал, мисроутинг = тихая регрессия); `model_routing_enabled=false`
+  → текущей per-query LLM-стоимости нет → экономия R1 потенциальная; валидирующий
+  Phase-5 (офлайн-дельта на полном `curated_cases`) **автономно не исполним** — реальный
+  retrieval-скоринг FULL/PART/MISS был приватным Kaggle-кернелом, в репозитории
+  отсутствует. Дефолтный стек остаётся **D2** без изменений.
+- `customs-clearance-fields` residual-MISS зафиксирован **закрытым через opt-in
+  factcard-lane** (механизм доказан F1–F3 на Mac), а не через флип дефолта.
+
 ## [Type-Hardening] — 2026-06-14 (cont.) — mypy strict-scope: vectordb.*
 
 - Завершено направление strict-scope: `vectordb.*` (`vectordb.manager`,
