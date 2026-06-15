@@ -71,6 +71,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--tenant", default="aircargo")
     parser.add_argument("--k", type=int, default=3, help="factcard top-k")
+    parser.add_argument(
+        "--mode",
+        choices=("replace", "augment"),
+        default="replace",
+        help="replace: route needs→factcard ONLY (the shipped lane). "
+        "augment: route needs→ D2 candidates ∪ factcard (card added to D2's context, "
+        "not instead of it — regression is impossible by construction since the arm ⊇ D2).",
+    )
     parser.add_argument("--out", default=str(PROJECT_ROOT / ".tmp" / "phase5_factcard_delta.md"))
     args = parser.parse_args(argv)
 
@@ -100,7 +108,10 @@ def main(argv: list[str] | None = None) -> int:
         query = case["query"] if case else row.get("query", "")
         fc_docs = get_factcard_documents(query, tenant_id=args.tenant, k=args.k)
         fc_texts = [getattr(d, "page_content", "") for d in fc_docs]
-        fc_status = _kw_status(kws, fc_texts)
+        # "augment" adds the card on top of D2's retrieved context (union); "replace"
+        # measures the card alone. The composite below routes needs-cases to this arm.
+        arm_texts = (list(row["cands"][:rerank_k]) + fc_texts) if args.mode == "augment" else fc_texts
+        fc_status = _kw_status(kws, arm_texts)
 
         if cid not in needs:
             missing_label += 1
@@ -113,10 +124,11 @@ def main(argv: list[str] | None = None) -> int:
     needs_rows = [p for p in per_case if p["needs_factcard"]]
     nn_rows = [p for p in per_case if not p["needs_factcard"]]
 
-    emit("# Phase 5 — offline delta: D2 vs D2+factcard (gold-routing ceiling)")
+    arm_desc = "D2 ∪ factcard (AUGMENT)" if args.mode == "augment" else "factcard (REPLACE)"
+    emit(f"# Phase 5 — offline delta: D2 vs D2+factcard (gold-routing ceiling) · mode={args.mode}")
     emit()
-    emit(f"- cases scored: **{n}** · needs_factcard (gold): **{len(needs_rows)}** · "
-         f"non-needs: {len(nn_rows)} · factcard top-k={args.k} · tenant={args.tenant}")
+    emit(f"- needs-arm = **{arm_desc}** · cases scored: **{n}** · needs_factcard (gold): "
+         f"**{len(needs_rows)}** · non-needs: {len(nn_rows)} · factcard top-k={args.k} · tenant={args.tenant}")
     if missing_label:
         emit(f"- ⚠ {missing_label} case(s) had no phase0 label → treated as non-needs")
     emit()
