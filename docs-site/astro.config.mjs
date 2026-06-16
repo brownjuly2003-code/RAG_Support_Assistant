@@ -108,7 +108,11 @@ export default defineConfig({
         { label: 'Try locally', translations: { ru: 'Запустить локально' }, slug: 'guides/quickstart' },
         { label: 'API', translations: { ru: 'API' }, slug: 'architecture/routes' },
       ],
-      customCss: ['./src/assets/custom.css'],
+      customCss: [
+        '@fontsource-variable/geist/index.css',
+        '@fontsource-variable/geist-mono/index.css',
+        './src/assets/custom.css',
+      ],
     }),
   ],
 });

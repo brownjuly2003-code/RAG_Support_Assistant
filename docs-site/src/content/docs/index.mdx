@@ -4,18 +4,18 @@ description: Customer-support RAG assistant docs with a seeded KB, LangGraph pat
 template: splash
 hero:
   tagline: |
-    A customer-support agent that retrieves product support documents, routes
-    each answer through LangGraph, and keeps responses grounded in known
-    sources. The docs prove the path with a three-document demo KB, a 12-case
-    fixture, and an E20 reproduction track.
+    A customer-support agent that retrieves product docs, routes every answer
+    through LangGraph, and keeps replies grounded in known sources.
   actions:
     - text: See the example
       link: /RAG_Support_Assistant/examples/
       variant: primary
     - text: Reproduce E20
       link: /RAG_Support_Assistant/reproduce-e20/
+      variant: secondary
     - text: GitHub
       link: https://github.com/brownjuly2003-code/RAG_Support_Assistant
+      variant: minimal
 ---
 
 ## Proof points
@@ -50,9 +50,52 @@ hero:
   </article>
 </div>
 
+### One question's path through LangGraph
+
+```mermaid
+flowchart LR
+  Q([Question]) --> CL[classify_complexity]
+  CL --> TR[transform_query]
+  TR --> RT[retrieve]
+  RT --> GR[grade_docs]
+  GR --> GE[generate]
+  GE --> VF[verify_facts]
+  VF --> EV[evaluate]
+  EV --> RO{route_or_retry}
+  RO -->|auto| OK([Answer + sources])
+  RO -.->|retry| TR
+```
+
+The full flowchart, with all 12 nodes and conditional transitions, is generated
+automatically from `agent/graph.py` on the
+[LangGraph state machine](/RAG_Support_Assistant/architecture/langgraph/) page.
+
+### What `/api/ask` returns for "How do I fix E20?"
+
+```json
+{
+  "answer": "Error E20 is a water-drainage problem. Likely causes: a clogged drain filter, a kinked drain hose, or a faulty drain pump [1].",
+  "sources": [
+    { "source": "errors_e10_e30.md", "page_content": "E20 — water drainage problem …" }
+  ],
+  "citations": [
+    { "index": 1, "doc_id": "errors_e10_e30.md", "title": "errors_e10_e30.md", "excerpt": "drain valve / filter …" }
+  ]
+}
+```
+
+The shape is fixed by the Pydantic models `AskResponse`, `SourceInfo`, and
+`Citation` in `api/routers/conversation.py`. For the full node-by-node
+walkthrough, see [What it does](/RAG_Support_Assistant/examples/).
+
 ## Start here
 
+<div class="q-next">
+
 - [What it does](/RAG_Support_Assistant/examples/) walks one E20 question through the graph.
-- [Reproduce E20](/RAG_Support_Assistant/reproduce-e20/) gives the deterministic trust path.
+- [Reproduce E20](/RAG_Support_Assistant/reproduce-e20/) gives the deterministic trust path: seed, ingest, ask, verify.
 - [Try locally](/RAG_Support_Assistant/guides/quickstart/) covers the local setup path.
+- [Evaluation](/RAG_Support_Assistant/evaluation/) covers what is measured, how, and where the limits are.
 - [GitHub](https://github.com/brownjuly2003-code/RAG_Support_Assistant) contains the source.
+
+</div>

@@ -1,20 +1,275 @@
+/* ============================================================
+   RAG Support Assistant — calm-modern Starlight theme
+   Type: Geist Variable / Geist Mono Variable (self-hosted via
+   @fontsource-variable, wired in astro.config customCss).
+   Single soft-blue accent, light-first, dark mode preserved.
+   ============================================================ */
+
+/* --- Type + design tokens --- */
 :root {
-  --sl-font: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --sl-font-system-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+  --sl-font: 'Geist Variable', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --sl-font-system-mono: 'Geist Mono Variable', 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+
+  --doc-radius: 14px;
+  --doc-radius-sm: 10px;
+  --doc-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --doc-dur: 220ms;
+
+  /* Primary button: one accessible blue for both themes
+     (white text ≈ 5.7:1 contrast, passes WCAG AA). */
+  --doc-btn: #0d63c7;
+  --doc-btn-hover: #0a52a6;
+  --doc-btn-text: #ffffff;
 }
 
 :root[data-theme='light'] {
-  --sl-color-accent-low: #e0f2fe;
-  --sl-color-accent: #0369a1;
-  --sl-color-accent-high: #0c4a6e;
+  --sl-color-accent-low: #dbeafe;
+  --sl-color-accent: #0b63c4;
+  --sl-color-accent-high: #0a3d7a;
+
+  --doc-accent: #0b63c4;
+  --doc-accent-soft: rgba(11, 99, 196, 0.10);
+  --doc-accent-border: rgba(11, 99, 196, 0.45);
+  --doc-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 28px -16px rgba(15, 23, 42, 0.22);
+  --doc-shadow-hover: 0 2px 6px rgba(15, 23, 42, 0.06), 0 22px 48px -20px rgba(10, 61, 122, 0.30);
 }
 
 :root[data-theme='dark'] {
-  --sl-color-accent-low: #082f49;
-  --sl-color-accent: #38bdf8;
-  --sl-color-accent-high: #bae6fd;
+  --sl-color-accent-low: #0b2744;
+  --sl-color-accent: #6cb4f7;
+  --sl-color-accent-high: #cfe6fd;
+
+  --doc-accent: #6cb4f7;
+  --doc-accent-soft: rgba(108, 180, 247, 0.14);
+  --doc-accent-border: rgba(108, 180, 247, 0.45);
+  --doc-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 12px 32px -16px rgba(0, 0, 0, 0.70);
+  --doc-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.50), 0 24px 52px -20px rgba(0, 0, 0, 0.80);
 }
 
+/* --- Global polish --- */
+::selection {
+  background: var(--doc-accent-soft);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ============================================================
+   Splash hero
+   ============================================================ */
+.hero {
+  position: relative;
+  padding-block: clamp(1rem, 4vw, 2.5rem);
+}
+
+/* Soft, single-accent calm wash behind the headline. Width is
+   capped to the hero box so it never causes horizontal scroll. */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -12%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(880px, 100%);
+  height: clamp(280px, 40vw, 440px);
+  background: radial-gradient(circle at 50% 0%, var(--doc-accent-soft), transparent 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hero h1 {
+  font-weight: 600;
+  font-size: clamp(2.3rem, 1.4rem + 4vw, 3.6rem);
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.hero .tagline {
+  margin-inline: auto;
+  max-width: 48ch;
+  font-size: clamp(1.05rem, 0.95rem + 0.6vw, 1.3rem);
+  line-height: 1.55;
+  color: var(--sl-color-gray-2);
+  text-wrap: pretty;
+}
+
+.hero .actions {
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.hero .sl-link-button {
+  border-radius: 999px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  padding-block: 0.7rem;
+  padding-inline: 1.4rem;
+  transition: transform var(--doc-dur) var(--doc-ease),
+    box-shadow var(--doc-dur) var(--doc-ease),
+    background-color var(--doc-dur) var(--doc-ease),
+    border-color var(--doc-dur) var(--doc-ease),
+    color var(--doc-dur) var(--doc-ease);
+}
+
+.hero .sl-link-button.primary {
+  background: var(--doc-btn);
+  border: 1px solid transparent;
+  color: var(--doc-btn-text);
+  box-shadow: var(--doc-shadow);
+}
+
+.hero .sl-link-button.primary:hover {
+  background: var(--doc-btn-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--doc-shadow-hover);
+}
+
+.hero .sl-link-button.secondary {
+  background: var(--sl-color-bg);
+  border: 1px solid var(--sl-color-gray-4);
+  color: var(--sl-color-white);
+}
+
+.hero .sl-link-button.secondary:hover {
+  border-color: var(--doc-accent);
+  color: var(--doc-accent);
+  transform: translateY(-2px);
+}
+
+.hero .sl-link-button.minimal {
+  color: var(--sl-color-text-accent);
+  padding-inline: 0.6rem;
+}
+
+.hero .sl-link-button.minimal:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.hero .sl-link-button:active {
+  transform: translateY(0);
+}
+
+.hero .sl-link-button:focus-visible {
+  outline: 2px solid var(--doc-accent);
+  outline-offset: 3px;
+}
+
+/* ============================================================
+   Proof / feature cards (site-wide: home, architecture,
+   evaluation, examples — EN + RU)
+   ============================================================ */
+.q-cardgrid {
+  display: grid;
+  gap: clamp(0.875rem, 2vw, 1.4rem);
+  grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
+  margin-block: clamp(1.25rem, 3vw, 2rem);
+}
+
+.q-card {
+  position: relative;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: var(--doc-radius);
+  background-color: var(--sl-color-black);
+  padding: clamp(1rem, 0.6rem + 1.4vw, 1.6rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  box-shadow: var(--doc-shadow);
+  transition: transform var(--doc-dur) var(--doc-ease),
+    box-shadow var(--doc-dur) var(--doc-ease),
+    border-color var(--doc-dur) var(--doc-ease);
+}
+
+.q-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--doc-shadow-hover);
+  border-color: var(--doc-accent-border);
+}
+
+.q-card .q-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--sl-text-h4);
+  color: var(--sl-color-white);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.q-card .q-label {
+  display: block;
+}
+
+.q-card .q-body {
+  margin: 0;
+  font-size: clamp(var(--sl-text-sm), calc(0.5rem + 0.5vw), var(--sl-text-body));
+  color: var(--sl-color-gray-2);
+  line-height: 1.55;
+}
+
+.q-card .q-body p {
+  margin: 0 0 0.5rem;
+}
+
+.q-card .q-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Single-accent variant (calm): one accent rail, not a rainbow. */
+.q-cardgrid--accent .q-card {
+  border-left: 3px solid var(--doc-accent);
+}
+
+/* ============================================================
+   "Start here" / next-steps — refined hairline list
+   ============================================================ */
+.q-next {
+  margin-block: clamp(1rem, 3vw, 1.75rem);
+}
+
+.q-next ul,
+.sl-markdown-content .q-next ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--sl-color-gray-5);
+}
+
+.q-next li,
+.sl-markdown-content .q-next li {
+  margin: 0;
+  padding: 0.85rem 0.25rem;
+  border-bottom: 1px solid var(--sl-color-gray-5);
+  line-height: 1.5;
+  color: var(--sl-color-gray-2);
+  transition: padding-inline-start var(--doc-dur) var(--doc-ease);
+}
+
+.q-next li:hover {
+  padding-inline-start: 0.7rem;
+}
+
+.q-next li a {
+  font-weight: 600;
+}
+
+.q-next li a:focus-visible {
+  outline: 2px solid var(--doc-accent);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   Markdown tables / API route catalog (preserved)
+   ============================================================ */
 .sl-markdown-content table {
   font-size: 0.875rem;
 }
@@ -33,10 +288,13 @@
   font-size: 0.8125rem;
 }
 
+/* HTTP method chips encode meaning (GET/POST/…), so they keep
+   their semantic colours — this is a functional palette, not a
+   second decorative accent. */
 .route-method {
   display: inline-block;
   padding: 0.125rem 0.4rem;
-  border-radius: 0.25rem;
+  border-radius: 0.3rem;
   font-weight: 600;
   text-transform: uppercase;
   font-size: 0.7rem;
@@ -61,26 +319,6 @@
   color: #991b1b;
 }
 
-.doc-accent-grid .card {
-  border-inline-start: 4px solid var(--doc-accent-color);
-}
-
-.doc-accent-grid .card:nth-of-type(1) {
-  --doc-accent-color: #7c3aed;
-}
-
-.doc-accent-grid .card:nth-of-type(2) {
-  --doc-accent-color: #d97706;
-}
-
-.doc-accent-grid .card:nth-of-type(3) {
-  --doc-accent-color: #059669;
-}
-
-.doc-accent-grid .card:nth-of-type(4) {
-  --doc-accent-color: #64748b;
-}
-
 :root[data-theme='dark'] .route-method-get {
   background: #064e3b;
   color: #a7f3d0;
@@ -99,7 +337,38 @@
   color: #fecaca;
 }
 
-/* Screenshot figures — responsive, async-decoded, subtle frame */
+/* Legacy accent grid (EN examples page only) — left as-is. */
+.doc-accent-grid .card {
+  border-inline-start: 4px solid var(--doc-accent-color);
+}
+.doc-accent-grid .card:nth-of-type(1) {
+  --doc-accent-color: #7c3aed;
+}
+.doc-accent-grid .card:nth-of-type(2) {
+  --doc-accent-color: #d97706;
+}
+.doc-accent-grid .card:nth-of-type(3) {
+  --doc-accent-color: #059669;
+}
+.doc-accent-grid .card:nth-of-type(4) {
+  --doc-accent-color: #64748b;
+}
+:root[data-theme='dark'] .doc-accent-grid .card:nth-of-type(1) {
+  --doc-accent-color: #c4b5fd;
+}
+:root[data-theme='dark'] .doc-accent-grid .card:nth-of-type(2) {
+  --doc-accent-color: #fbbf24;
+}
+:root[data-theme='dark'] .doc-accent-grid .card:nth-of-type(3) {
+  --doc-accent-color: #34d399;
+}
+:root[data-theme='dark'] .doc-accent-grid .card:nth-of-type(4) {
+  --doc-accent-color: #cbd5e1;
+}
+
+/* ============================================================
+   Screenshot figures — responsive, subtle frame (preserved)
+   ============================================================ */
 .sl-markdown-content figure {
   margin: 1.5rem 0;
 }
@@ -108,87 +377,56 @@
 .sl-markdown-content figure picture > img {
   max-width: 100%;
   height: auto;
-  border-radius: 6px;
-  box-shadow: 0 1px 2px rgba(15, 23, 41, 0.06),
-              0 4px 16px rgba(15, 23, 41, 0.08);
-  border: 1px solid var(--sl-color-gray-5, #e2e8f0);
+  border-radius: var(--doc-radius-sm);
+  box-shadow: var(--doc-shadow);
+  border: 1px solid var(--sl-color-gray-5);
 }
 
 .sl-markdown-content figure figcaption {
   font-size: 0.875rem;
-  color: var(--sl-color-gray-3, #64748b);
+  color: var(--sl-color-gray-3);
   margin-top: 0.5rem;
   line-height: 1.5;
 }
 
-:root[data-theme='dark'] .doc-accent-grid .card:nth-of-type(1) {
-  --doc-accent-color: #c4b5fd;
+/* ============================================================
+   Motion — calm, load-time only, reduced-motion safe
+   ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes doc-rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .hero h1 {
+    animation: doc-rise 0.6s var(--doc-ease) both;
+  }
+  .hero .tagline {
+    animation: doc-rise 0.6s var(--doc-ease) 0.07s both;
+  }
+  .hero .actions {
+    animation: doc-rise 0.6s var(--doc-ease) 0.14s both;
+  }
+
+  .q-cardgrid .q-card {
+    animation: doc-rise 0.55s var(--doc-ease) both;
+  }
+  .q-cardgrid .q-card:nth-of-type(1) {
+    animation-delay: 0.18s;
+  }
+  .q-cardgrid .q-card:nth-of-type(2) {
+    animation-delay: 0.24s;
+  }
+  .q-cardgrid .q-card:nth-of-type(3) {
+    animation-delay: 0.3s;
+  }
+  .q-cardgrid .q-card:nth-of-type(4) {
+    animation-delay: 0.36s;
+  }
 }
-
-:root[data-theme='dark'] .doc-accent-grid .card:nth-of-type(2) {
-  --doc-accent-color: #fbbf24;
-}
-
-:root[data-theme='dark'] .doc-accent-grid .card:nth-of-type(3) {
-  --doc-accent-color: #34d399;
-}
-
-:root[data-theme='dark'] .doc-accent-grid .card:nth-of-type(4) {
-  --doc-accent-color: #cbd5e1;
-}
-
-.q-cardgrid {
-  display: grid;
-  gap: clamp(0.875rem, 2vw, 1.5rem);
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  margin-block: clamp(1.25rem, 3vw, 2rem);
-}
-
-.q-card {
-  border: 1px solid var(--sl-color-gray-5);
-  border-left-width: 4px;
-  border-radius: 0.375rem;
-  background-color: var(--sl-color-black);
-  padding: clamp(0.875rem, calc(0.125rem + 2vw), 1.75rem);
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.q-card .q-title {
-  margin: 0;
-  font-weight: 600;
-  font-size: var(--sl-text-h4);
-  color: var(--sl-color-white);
-  line-height: 1.25;
-  letter-spacing: -0.005em;
-}
-
-.q-card .q-label {
-  display: block;
-}
-
-.q-card .q-body {
-  margin: 0;
-  font-size: clamp(var(--sl-text-sm), calc(0.5rem + 0.5vw), var(--sl-text-body));
-  color: var(--sl-color-gray-2);
-  line-height: 1.55;
-}
-
-.q-card .q-body p {
-  margin: 0 0 0.5rem;
-}
-
-.q-card .q-body p:last-child {
-  margin-bottom: 0;
-}
-
-.q-cardgrid--accent .q-card:nth-of-type(4n + 1) { border-left-color: #7c3aed; }
-.q-cardgrid--accent .q-card:nth-of-type(4n + 2) { border-left-color: #d97706; }
-.q-cardgrid--accent .q-card:nth-of-type(4n + 3) { border-left-color: #059669; }
-.q-cardgrid--accent .q-card:nth-of-type(4n + 4) { border-left-color: #0891b2; }
-
-:root[data-theme='dark'] .q-cardgrid--accent .q-card:nth-of-type(4n + 1) { border-left-color: #c4b5fd; }
-:root[data-theme='dark'] .q-cardgrid--accent .q-card:nth-of-type(4n + 2) { border-left-color: #fbbf24; }
-:root[data-theme='dark'] .q-cardgrid--accent .q-card:nth-of-type(4n + 3) { border-left-color: #34d399; }
-:root[data-theme='dark'] .q-cardgrid--accent .q-card:nth-of-type(4n + 4) { border-left-color: #67e8f9; }

@@ -4,18 +4,18 @@ description: "Публичная документация RAG Support Assistant:
 template: splash
 hero:
   tagline: |
-    Агент клиентской поддержки находит документы по продукту, проводит
-    каждый ответ через LangGraph и опирается только на известные источники.
-    Документация показывает этот путь на демо-базе из трёх документов,
-    наборе из 12 фикстурных вопросов и воспроизводимом сценарии E20.
+    Агент поддержки находит документы по продукту, проводит каждый ответ
+    через LangGraph и опирается только на известные источники.
   actions:
     - text: Смотреть пример
       link: /RAG_Support_Assistant/ru/examples/
       variant: primary
     - text: Воспроизвести E20
       link: /RAG_Support_Assistant/ru/reproduce-e20/
+      variant: secondary
     - text: GitHub
       link: https://github.com/brownjuly2003-code/RAG_Support_Assistant
+      variant: minimal
 ---
 
 ## Доказательства
@@ -88,8 +88,12 @@ flowchart LR
 
 ## Начать здесь
 
+<div class="q-next">
+
 - [Что делает ассистент](/RAG_Support_Assistant/ru/examples/) — один вопрос E20 проходит через весь граф.
 - [Воспроизвести E20](/RAG_Support_Assistant/ru/reproduce-e20/) — детерминированный путь доверия: засеять, загрузить, спросить, проверить.
 - [Запустить локально](/RAG_Support_Assistant/ru/guides/quickstart/) — как поднять стек локально.
 - [Оценка](/RAG_Support_Assistant/ru/evaluation/) — что измеряется, как, и где границы.
 - [GitHub](https://github.com/brownjuly2003-code/RAG_Support_Assistant) — исходный код.
+
+</div>
