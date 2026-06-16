@@ -1,5 +1,13 @@
 # Agent State
 
+## 2026-06-16 Update (docs-site E20 живой `/api/ask` → доку 9.8; CI dep-CVE red) ✅ START HERE
+
+> **START HERE (актуальный).** Заход `/auto RAG_Support_Assistant продолжи`. Единственная открытая задача из handoff — заменить seeded-fixture чат-скриншот на живой `/api/ask` — **ВЫПОЛНЕНА**. Прогон через **изолированный tenant `e20demo`** (прямой вызов `ConversationSession.ask`, профиль external-mistral, CPU, без HTTP/Celery/postgres) — корпус `default` (5589 чанков) НЕ тронут (build_vector_store создал только `rag_docs_e20demo`, удалён после). Живой ответ: 3-шаговый E20-fix, quality 95 / route auto / citation `errors_e10_e30.md`. Рендер на Windows через production `addMessage` (`docs-site/.tmp/chat_shot.mjs`), figcaption/alt EN+RU → «live /api/ask». **origin/master=`a00c1f4`, Deploy run 27647721938 = SUCCESS, live проверен. Mac вычищен полностью (ключ удалён, коллекция снесена, DataLens 9 контейнеров целы).**
+>
+> 🔴 **ОТКРЫТО (НЕ регрессия docs-коммита, отдельный dependency-security workstream):** на том же push CI-jobs `security`(pip-audit на requirements.lock) + `pre-commit` КРАСНЫЕ — **свежий батч CVE-advisory на locked-deps**, появившийся после последнего зелёного CI: `aiohttp 3.14.0`→8 CVE (CVE-2026-54273..54280, fix **3.14.1**), `cryptography 47.0.0`→GHSA-537c-gmf6-5ccf (fix **48.0.1**), всего **17 vulns в 5 пакетах** (`--ignore-vuln` уже на 3: CVE-2026-45829/GHSA-f4j7-r4q5-qw2c/CVE-2025-3000). Docs-Pages-deploy это НЕ блокирует. Тот же паттерн, что pypdf/torch-CVE прошлых сессий. **Чинить отдельным focused-коммитом:** uv lock-regen (`--upgrade-package aiohttp cryptography … --generate-hashes`) по обоим lock + 4-точечный sync `--ignore-vuln` (ci.yml/pre-commit/local-gate.ps1/autopilot.ps1) если что-то без fix. **Это единственный остаток Windows-backlog.**
+>
+> **docs-site — отдельный handoff** (не в этом файле): `docs-site/_start_next_session.md` (gitignored). Блок Phase-5 ниже («Backlog ПУСТ») верен для RAG-кода/adaptive-retrieval, но СУПЕРСЕДНУТ этим блоком по части backlog (есть dep-CVE).
+
 ## 2026-06-15 Update (adaptive-retrieval Phase 5 — ЗАВЕРШЁН: NO-SHIP, обоснован ДАННЫМИ) ✅ START HERE
 
 > **START HERE.** Заход `/auto RAG_Support_Assistant продолжи` → продолжил in-flight Phase-5-прогон (см. блок ниже «ИДЁТ НА MAC»). Прогон на Mac упал на MPS-OOM в embed-шаге стадии 4 (стадии 1–3 уже отработали). **Результат получен, workstream закрыт окончательно.**
