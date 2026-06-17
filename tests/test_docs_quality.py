@@ -98,9 +98,11 @@ def test_runbook_uses_api_trace_detail_endpoint() -> None:
     assert "/traces-ui" not in content
 
 
-def test_readme_provider_profiles_include_gracekelly_mixed() -> None:
-    content = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-    providers = content.split("## Providers", 1)[1].split("## Regression eval", 1)[0]
+def test_configuration_provider_profiles_include_gracekelly_mixed() -> None:
+    # The provider-profile reference moved from README to docs/CONFIGURATION.md
+    # during the README slim-down; this guards the content at its new home.
+    content = (PROJECT_ROOT / "docs" / "CONFIGURATION.md").read_text(encoding="utf-8")
+    providers = content.split("## Providers", 1)[1]
 
     assert "`gracekelly-mixed`" in providers
     assert "browser-backed strong answer generation" in providers
