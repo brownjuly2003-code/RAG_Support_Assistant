@@ -1,6 +1,6 @@
 # RAG Support Assistant
 
-[![CI](https://github.com/<user>/RAG_Support_Assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/<user>/RAG_Support_Assistant/actions/workflows/ci.yml)
+[![CI](https://github.com/brownjuly2003-code/RAG_Support_Assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/brownjuly2003-code/RAG_Support_Assistant/actions/workflows/ci.yml)
 
 Answers support questions against a knowledge base and decides whether a
 request can be resolved automatically or should be escalated to a human.
@@ -54,32 +54,22 @@ User / Email / Widget
 
 ### Module layout (high level)
 
-- `api/app.py` — FastAPI application construction, middleware, lifespan,
-  master router include, and compatibility re-exports used by older tests.
-  The 2a-2m endpoint split plus auth/session extraction are complete.
-- `api/routers/` — extracted sub-routers: `system.py`, `root_pages.py`,
-  `agent.py`, `admin_review.py`, `admin_ops.py`, `admin_kb.py`,
-  `admin_experiments.py`, `admin_evaluations.py`, `analytics.py`,
-  `auth_sso.py`, `conversation.py`, `feedback.py`, `misc.py`,
-  `session_auth.py`, and `upload.py`. New endpoint groups are added here,
-  not in `api/app.py`. `mypy --strict` clean (checked with
-  `--follow-imports=skip`, since these transitively import `api.app`).
-- `api/_shared.py`, `api/correlation.py`, `api/rate_limit.py` — lazy
-  `app_module()` accessor for routers that need compatibility access to
-  `api.app` globals patched by tests, request-correlation context, and the
-  rate-limit primitives. Prefer
-  `from api._shared import app_module as _app_module` inside routers instead
-  of adding a new local wrapper or importing `api.app` at module load time.
-  `mypy --strict` clean.
+- `api/app.py` + `api/routers/` — FastAPI app construction and the extracted
+  sub-routers (system, agent, admin_*, analytics, auth_sso, conversation,
+  feedback, upload, …). New endpoint groups land in `api/routers/`, not `app.py`.
+- `api/_shared.py`, `api/correlation.py`, `api/rate_limit.py` — lazy `app_module()`
+  accessor, request-correlation context, and rate-limit primitives.
 - `agent/` — LangGraph pipeline + state + prompts.
-- `auth/` — JWT, X-API-Key, OIDC, RBAC. `mypy --strict` clean.
-- `db/` — SQLAlchemy models, async engine, audit log, pgcrypto field. `mypy --strict` clean.
+- `auth/` — JWT, X-API-Key, OIDC, RBAC.
+- `db/` — SQLAlchemy models, async engine, audit log, pgcrypto field.
 - `llm/providers/` — Ollama / Mistral / GraceKelly providers + cost guard.
-- `vectordb/` — tenant-aware vector store factory (`vectordb.manager`) plus base implementation (`vectordb._base_manager`). `mypy --strict` clean (checked with `--follow-imports=skip`, since it pulls langchain/sentence-transformers — a heavy type graph that spikes mypy memory).
-- `evaluation/` — RAGAS metrics, online evaluators, regression framework. `mypy --strict` clean.
-- `monitoring/` — Prometheus metrics (~50). `mypy --strict` clean. `tracing/` — Langfuse + OTel + SQLite trace store. `mypy --strict` clean.
-- `ingestion/` — loaders, pipeline, categorizer, contextual headers. `mypy --strict` clean.
+- `vectordb/` — tenant-aware vector store factory + base implementation.
+- `evaluation/` — RAGAS metrics, online evaluators, regression framework.
+- `monitoring/` — Prometheus metrics (~50); `tracing/` — Langfuse + OTel + SQLite trace store.
+- `ingestion/` — loaders, pipeline, categorizer, contextual headers.
 - `scripts/` — operational CLIs (regression eval, KB builders, chunking eval, nightly tasks).
+
+All production packages are `mypy --strict` clean (CI-enforced).
 
 > For a complete audit and an implementation log of recent hardening work,
 > see `docs/audits/audit_opus_2026-04-26.md` (especially section 12) and
