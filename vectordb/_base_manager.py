@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import math
 import os
 import re
 import time
@@ -157,19 +158,126 @@ def _load_recursive_text_splitter() -> Any:
     return splitter_cls
 
 
+_PLACEHOLDER_API_KEYS = {"changeme", "change-me", "change_me", ""}
+
+
+class _RemoteEmbeddings:
+    """OpenAI/Mistral-compatible remote embedding backend.
+
+    POSTs ``{model, input: [...]}`` with Bearer auth to ``url`` and batches the
+    document list. Vectors are L2-normalized to match the local
+    SentenceTransformer path (``normalize_embeddings=True``) so cosine similarity
+    behaves identically across backends. The API key is read from the env var
+    *named* by ``api_key_env`` — it is never persisted in settings or logs.
+    """
+
+    def __init__(
+        self,
+        *,
+        url: str,
+        model: str,
+        api_key: str,
+        batch_size: int,
+        timeout_sec: float,
+    ) -> None:
+        self._url = url
+        self._model = model
+        self._api_key = api_key
+        self._batch_size = max(1, int(batch_size))
+        self._timeout_sec = float(timeout_sec)
+
+    @staticmethod
+    def _normalize(vector: list[float]) -> list[float]:
+        norm = math.sqrt(sum(component * component for component in vector))
+        if norm <= 0.0:
+            return vector
+        return [component / norm for component in vector]
+
+    def _embed(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        import httpx
+
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
+        out: list[list[float]] = []
+        for start in range(0, len(texts), self._batch_size):
+            batch = texts[start : start + self._batch_size]
+            response = httpx.post(
+                self._url,
+                headers=headers,
+                json={"model": self._model, "input": batch},
+                timeout=self._timeout_sec,
+            )
+            response.raise_for_status()
+            data = response.json()
+            # OpenAI/Mistral shape: {"data": [{"embedding": [...], "index": i}, ...]}
+            rows = sorted(
+                data.get("data") or [],
+                key=lambda item: int(item.get("index", 0)),
+            )
+            if len(rows) != len(batch):
+                raise RuntimeError(
+                    f"Remote embeddings returned {len(rows)} vectors for "
+                    f"{len(batch)} inputs"
+                )
+            for row in rows:
+                out.append(self._normalize([float(x) for x in row.get("embedding") or []]))
+        return out
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self._embed(list(texts))
+
+    def embed_query(self, text: str) -> list[float]:
+        vectors = self._embed([text])
+        return vectors[0] if vectors else []
+
+
+def _build_remote_embeddings(settings: Any) -> _RemoteEmbeddings:
+    api_key_env = str(getattr(settings, "embedding_remote_api_key_env", "MISTRAL_API_KEY"))
+    api_key = (os.getenv(api_key_env, "") or "").strip()
+    if api_key.lower() in _PLACEHOLDER_API_KEYS:
+        raise RuntimeError(
+            f"{api_key_env} is required for the remote embedding backend "
+            "(RAG_EMBEDDING_BACKEND=remote)"
+        )
+    url = str(getattr(settings, "embedding_remote_url", ""))
+    model = str(getattr(settings, "embedding_remote_model", "mistral-embed"))
+    logger.info("Using remote embedding backend: %s (model=%s)", url, model)
+    return _RemoteEmbeddings(
+        url=url,
+        model=model,
+        api_key=api_key,
+        batch_size=int(getattr(settings, "embedding_remote_batch", 32)),
+        timeout_sec=float(getattr(settings, "embedding_remote_timeout_sec", 60.0)),
+    )
+
+
 def get_embeddings(model_name: str | None = None) -> Any:
     """Создаёт LangChain-совместимый embedding объект.
 
-    Использует SentenceTransformers через LangChain обёртку.
-    Модель кешируется — повторный вызов возвращает тот же объект.
+    По умолчанию использует локальный SentenceTransformer; при
+    ``RAG_EMBEDDING_BACKEND=remote`` — удалённый OpenAI/Mistral-совместимый
+    backend (см. ``_RemoteEmbeddings``). Результат кешируется — повторный вызов
+    возвращает тот же объект.
     """
     global _cached_embeddings
     if _cached_embeddings is not None:
         return _cached_embeddings
 
+    # Remote backend is selected only when the caller did not pin a local model
+    # name explicitly (forcing a model name implies the local ST path).
     if model_name is None:
         from config.settings import get_settings
-        model_name = get_settings().embedding_model
+
+        settings = get_settings()
+        if str(getattr(settings, "embedding_backend", "local") or "local").strip().lower() == "remote":
+            remote = _build_remote_embeddings(settings)
+            _cached_embeddings = remote
+            return remote
+        model_name = settings.embedding_model
 
     logger.info("Loading embedding model: %s", model_name)
     start = time.time()

@@ -546,6 +546,62 @@ def test_eval_daily_snapshot_writes_report_json(tmp_path: Path) -> None:
     assert payload["evaluators"]["citation_coverage"]["worst_traces"][0]["trace_id"] == "trace-2"
 
 
+def test_run_qa_pipeline_dedups_online_evaluator_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Dogfood finding #2: with no Postgres reachable, persistence fails the same
+    way on every request. The first failure logs at WARNING, repeats at DEBUG —
+    so a standalone run produces one warning, not one per question."""
+    import logging
+
+    import agent.graph as graph
+
+    class _CompiledGraph:
+        def invoke(self, initial_state):
+            return {**initial_state, "answer": "ready", "route": "auto", "quality_score": 91}
+
+    settings = type(
+        "Settings",
+        (),
+        {
+            "quality_threshold": 80,
+            "online_evaluators_enabled": True,
+            "online_evaluators_timeout_sec": 5.0,
+        },
+    )()
+
+    monkeypatch.setattr(graph, "get_settings", lambda: settings, raising=False)
+    monkeypatch.setattr(graph, "start_trace", lambda trace_id=None, tenant_id="default": "trace-fail")
+    monkeypatch.setattr(graph, "finish_trace", lambda trace_id, final_state: None)
+    monkeypatch.setattr(graph, "build_support_graph", lambda **kwargs: _CompiledGraph())
+    monkeypatch.setattr(
+        graph,
+        "run_online_evaluators",
+        lambda state: {"citation_coverage": {"score": 1.0, "verdict": "ok", "metadata": {}}},
+        raising=False,
+    )
+
+    def _boom(trace_id, results):
+        raise RuntimeError('password authentication failed for user "rag"')
+
+    monkeypatch.setattr(graph, "persist_online_evaluations", _boom, raising=False)
+
+    # Fresh process state: no signatures seen yet.
+    graph._ONLINE_EVAL_WARNED.clear()
+
+    with caplog.at_level(logging.DEBUG, logger=graph.logger.name):
+        for _ in range(3):
+            result = graph.run_qa_pipeline(question="test", retriever=object(), llm=object())
+            assert result["answer"] == "ready"  # answer is unaffected by eval failure
+
+    failures = [r for r in caplog.records if "Online evaluators failed" in r.getMessage()]
+    warnings = [r for r in failures if r.levelno == logging.WARNING]
+    debugs = [r for r in failures if r.levelno == logging.DEBUG]
+    assert len(warnings) == 1, f"expected exactly one WARNING, got {len(warnings)}"
+    assert len(debugs) == 2, f"expected repeats at DEBUG, got {len(debugs)}"
+
+
 def test_run_qa_pipeline_persists_via_main_loop_without_dispose(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

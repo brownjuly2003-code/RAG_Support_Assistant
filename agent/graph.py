@@ -53,6 +53,27 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Online-evaluator failures are deduplicated per process: the first occurrence of
+# a given error signature logs at WARNING, repeats drop to DEBUG. In a standalone
+# graph run with no Postgres reachable, persistence fails identically on *every*
+# request (e.g. `password authentication failed for user "rag"`); logging that once
+# is signal, logging it per-request is noise that reads like a recurring outage.
+# New, distinct failures still surface at WARNING. (Dogfood finding #2, 2026-06-18.)
+_ONLINE_EVAL_WARN_LOCK = threading.Lock()
+_ONLINE_EVAL_WARNED: set[str] = set()
+_ONLINE_EVAL_WARNED_MAX = 64
+
+
+def _online_eval_first_time(signature: str) -> bool:
+    """Return True the first time ``signature`` is seen this process, else False."""
+    with _ONLINE_EVAL_WARN_LOCK:
+        if signature in _ONLINE_EVAL_WARNED:
+            return False
+        if len(_ONLINE_EVAL_WARNED) >= _ONLINE_EVAL_WARNED_MAX:
+            _ONLINE_EVAL_WARNED.clear()
+        _ONLINE_EVAL_WARNED.add(signature)
+        return True
+
 if TYPE_CHECKING:
     from utils.circuit_breaker import CircuitBreaker
 
@@ -2096,18 +2117,36 @@ def run_qa_pipeline(
                     asyncio.run(_persist_results(True))
             except TimeoutError:
                 record_online_evaluators_dropped("timeout")
-                logger.warning(
-                    "Online evaluators timed out after %.1fs",
-                    timeout_sec,
-                    extra={"trace_id": trace_id},
-                )
+                if _online_eval_first_time("timeout"):
+                    logger.warning(
+                        "Online evaluators timed out after %.1fs "
+                        "(further timeouts this process will log at DEBUG)",
+                        timeout_sec,
+                        extra={"trace_id": trace_id},
+                    )
+                else:
+                    logger.debug(
+                        "Online evaluators timed out after %.1fs",
+                        timeout_sec,
+                        extra={"trace_id": trace_id},
+                    )
             except Exception as exc:
                 record_online_evaluators_dropped("error")
-                logger.warning(
-                    "Online evaluators failed: %s",
-                    exc,
-                    extra={"trace_id": trace_id},
-                )
+                signature = f"{type(exc).__name__}:{str(exc)[:200]}"
+                if _online_eval_first_time(signature):
+                    logger.warning(
+                        "Online evaluators failed: %s "
+                        "(repeats of this error this process will log at DEBUG; "
+                        "if running standalone without Postgres this is expected)",
+                        exc,
+                        extra={"trace_id": trace_id},
+                    )
+                else:
+                    logger.debug(
+                        "Online evaluators failed: %s",
+                        exc,
+                        extra={"trace_id": trace_id},
+                    )
         return final_state
     finally:
         if experiment_token is not None and reset_current_experiment is not None:
@@ -2509,6 +2548,56 @@ class ConversationSession:
         finish_trace(active_trace_id, state)
         return state
 
+    def _timed_out_state(
+        self, question: str, budget_sec: float, trace_id: Optional[str], tenant_id: str
+    ) -> GraphState:
+        """Graceful degraded result when ``ask`` overruns its wall-budget."""
+        state = create_initial_state(question, trace_id=trace_id, tenant_id=tenant_id)
+        state["answer"] = (
+            "Извините, обработка запроса заняла слишком много времени и была "
+            "прервана. Пожалуйста, повторите попытку или обратитесь к специалисту "
+            "поддержки."
+        )
+        state["route"] = "timeout"
+        state["quality_score"] = 0
+        state["error"] = True
+        state["error_message"] = f"ask() exceeded wall-budget of {budget_sec:.1f}s"
+        state["error_node"] = "wall_budget"
+        return state
+
+    def _run_within_budget(
+        self,
+        fn: Callable[[], GraphState],
+        budget_sec: float,
+        question: str,
+        trace_id: Optional[str],
+        tenant_id: str,
+    ) -> GraphState:
+        """Run ``fn`` under a wall-clock budget (dogfood finding #3).
+
+        The graph runs synchronously and cannot be interrupted mid-flight, so on
+        timeout we mirror the HTTP path (``asyncio.wait_for`` over a worker
+        thread): return a degraded result and let the background run finish on its
+        own. ``RAG_ASK_BUDGET_SEC=0`` (default) keeps the original blocking call.
+        """
+        from concurrent.futures import ThreadPoolExecutor
+        from concurrent.futures import TimeoutError as FuturesTimeout
+
+        executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="ask-budget")
+        future = executor.submit(fn)
+        try:
+            return future.result(timeout=budget_sec)
+        except FuturesTimeout:
+            logger.warning(
+                "ConversationSession.ask exceeded wall-budget of %.1fs; returning a "
+                "degraded result (the background run is not cancellable)",
+                budget_sec,
+                extra={"trace_id": trace_id},
+            )
+            return self._timed_out_state(question, budget_sec, trace_id, tenant_id)
+        finally:
+            executor.shutdown(wait=False)
+
     def ask(
         self,
         question: str,
@@ -2522,28 +2611,37 @@ class ConversationSession:
         from config.settings import get_settings
 
         settings = get_settings()
-        if getattr(settings, "agentic_mode", False):
-            agentic_result = self._run_agentic_flow(
+        budget_sec = float(getattr(settings, "ask_budget_sec", 0.0) or 0.0)
+
+        def _run() -> GraphState:
+            if getattr(settings, "agentic_mode", False):
+                agentic_result = self._run_agentic_flow(
+                    question=question,
+                    trace_id=trace_id,
+                    tenant_id=tenant_id,
+                    user_id=user_id,
+                    session_id=session_id,
+                    confirm=confirm,
+                )
+                if agentic_result is not None:
+                    return agentic_result
+
+            return run_qa_pipeline(
                 question=question,
+                retriever=self._retriever,
+                llm=self._llm,
+                max_iterations=self._max_iterations,
+                chat_history=self._history,
                 trace_id=trace_id,
                 tenant_id=tenant_id,
-                user_id=user_id,
-                session_id=session_id,
-                confirm=confirm,
             )
-            if agentic_result is not None:
-                self._append_history(question, agentic_result.get("answer") or "")
-                return agentic_result
 
-        result = run_qa_pipeline(
-            question=question,
-            retriever=self._retriever,
-            llm=self._llm,
-            max_iterations=self._max_iterations,
-            chat_history=self._history,
-            trace_id=trace_id,
-            tenant_id=tenant_id,
-        )
+        if budget_sec > 0:
+            result = self._run_within_budget(
+                _run, budget_sec, question, trace_id, tenant_id
+            )
+        else:
+            result = _run()
 
         answer = result.get("answer") or ""
         self._append_history(question, answer)

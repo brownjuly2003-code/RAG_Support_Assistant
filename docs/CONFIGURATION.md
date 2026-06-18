@@ -41,7 +41,13 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 
 | Variable | Default | Description |
 |---|---|---|
-| `RAG_EMBEDDING_MODEL` | `BAAI/bge-m3` | Embedding model used for documents and queries |
+| `RAG_EMBEDDING_MODEL` | `BAAI/bge-m3` | Embedding model used for documents and queries (local backend) |
+| `RAG_EMBEDDING_BACKEND` | `local` | `local` = SentenceTransformer on `RAG_DEVICE`; `remote` = OpenAI/Mistral-compatible embeddings API. Remote frees ingest/search from loading the heavy local model (e.g. unblocks Windows under the 1-GiB/process rule). Remote vectors are L2-normalized to match the local path |
+| `RAG_EMBEDDING_REMOTE_URL` | `https://api.mistral.ai/v1/embeddings` | Remote embeddings endpoint (OpenAI-compatible `{model, input:[...]}`) |
+| `RAG_EMBEDDING_REMOTE_MODEL` | `mistral-embed` | Remote embedding model name |
+| `RAG_EMBEDDING_REMOTE_API_KEY_ENV` | `MISTRAL_API_KEY` | Name of the env var holding the remote API key (the key itself is never stored in settings/logs) |
+| `RAG_EMBEDDING_REMOTE_BATCH` | `32` | Inputs per remote embeddings request |
+| `RAG_EMBEDDING_REMOTE_TIMEOUT_SEC` | `60` | Timeout for a single remote embeddings request |
 | `RAG_RERANKER_MODEL` | `BAAI/bge-reranker-v2-m3` | Multilingual cross-encoder reranker (pairs with BGE-M3) |
 | `RAG_HYBRID_SEARCH` | `true` | Combine BM25 with vector retrieval |
 | `RAG_RETRIEVAL_STRATEGY` | `hybrid` | Retrieval strategy: `vector`, `hybrid`, `graph`, or `factcard`; `graph` and `factcard` fall back to `hybrid` when their store is absent. `factcard` (opt-in) serves whole fact-cards for enumeration queries (fields/documents/conditions) — closes the `customs-clearance-fields` recall gap; build the collection with `scripts/build_factcards.py`. Auto-routing into `factcard` is intentionally NOT default (NO-SHIP pending Phase-5 offline-delta — see `docs/operations/2026-06-14-adaptive-retrieval-closure.md`) |
@@ -54,7 +60,8 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `CHUNK_OVERLAP` | `200` | Default chunk overlap for ingestion |
 | `API_DEFAULT_PAGE_SIZE` | `50` | Default page size for list-style admin endpoints |
 | `RAG_SEMANTIC_CHUNKING` | `true` | Enable semantic chunking |
-| `RAG_CONTEXTUAL_HEADERS` | `true` | Prepend contextual headers during ingestion |
+| `RAG_CONTEXTUAL_HEADERS` | `true` | Prepend contextual headers during ingestion. Cheap by default (`build_vector_store` derives headers from chunk metadata — no LLM/network). The LLM-generated variant runs **only** when `INGESTION_BATCH_ENABLED=true`, and then per *document*, not per chunk |
+| `INGESTION_CONTEXTUAL_CONCURRENCY` | `4` | Bounded concurrency for the LLM contextual-header fallback (providers without a native batch API). `1` = strictly serial. Caps in-flight requests so a full-corpus ingest cannot fan out unbounded provider calls. Progress is logged as `[contextual_headers] i/N` |
 | `RAG_AGENTIC_MODE` | `false` | Enable the tool-calling agent graph |
 | `RAG_HYDE` | `false` | Enable Hypothetical Document Embeddings |
 | `RAG_PARENT_CHILD` | `false` | Enable parent-child chunking |
@@ -66,6 +73,7 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `RAG_GRAPH_MIN_CHUNKS` | `20000` | `auto`: minimal chunk count to consider the graph lane |
 | `RAG_GRAPH_MIN_CROSSDOC_SHARE` | `0.15` | `auto`: minimal cross-doc entity share (connectivity gate) |
 | `RAG_GRAPH_CROSSDOC_SHARE` | unset | Measured probe value (`scripts/graph_probe.py`; 2026-06-06 corpus: **0.296**, gate passed); unset = probe not run, `auto` stays off |
+| `RAG_ASK_BUDGET_SEC` | `0` | Optional wall-clock budget for a single `ConversationSession.ask()` outside the HTTP path (which already has `request_timeout_sec`). `0` = off (blocking). When >0 and exceeded, `ask()` returns a graceful degraded result (`route="timeout"`) instead of hanging on a flapping provider; the background run is not cancellable |
 | `RAG_SELF_RAG_MAX_ITER` | `2` | Maximum Self-RAG iterations |
 | `RAG_SELF_RAG_MIN_QUALITY` | `70` | Minimum quality score to avoid retry/escalation |
 | `STREAMING_QUALITY_EVAL` | `true` | Streaming `/api/ask/stream` runs one cheap Self-RAG self-eval so streamed answers are quality-routed on par with non-streaming; set `false` to roll back to the legacy synthetic-score streaming path |
@@ -76,7 +84,7 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `SLOW_TRACE_THRESHOLD_MS` | `10000` | Trace-duration threshold for review queue collection |
 | `THRESHOLD_ANALYSIS_MIN_LABELS` | `20` | Minimum labeled traces required before suggesting a new threshold |
 | `REVIEW_QUEUE_ENABLED` | `true` | Enable review queue builder and admin endpoints |
-| `ONLINE_EVALUATORS_ENABLED` | `true` | Enable lightweight per-trace online evaluators, persistence, and admin views |
+| `ONLINE_EVALUATORS_ENABLED` | `true` | Enable lightweight per-trace online evaluators, persistence, and admin views. When persistence fails (e.g. Postgres unreachable in a standalone graph run), the first failure logs at WARNING and identical repeats drop to DEBUG — one signal per process, not one per request; answers are unaffected |
 | `ONLINE_EVALUATORS_TIMEOUT_SEC` | `1.0` | Per-trace online-evaluator wall-clock budget; runs that exceed it are dropped and counted in `rag_online_evaluators_dropped_total{reason}` |
 | `REGRESSION_GATE_MAX_REGRESSIONS` | `2` | Maximum allowed curated regressions before the gate fails |
 | `REGRESSION_GATE_MIN_PASS_RATE` | `0.85` | Minimum candidate pass rate required by the regression gate |
@@ -130,6 +138,7 @@ Resilience layers apply in this order:
 | `ALLOW_ANONYMOUS_ADMIN` | `-` | Opt-in escape hatch when `API_KEY` is empty: set to `1`/`true` to permit anonymous admin (otherwise endpoints return HTTP 503). Local-dev only. Added 2026-04-26 audit. |
 | `HOST` | `127.0.0.1` (bare run) | Used only when launching via `python main.py`. Default Docker Compose is local-dev only and binds host ports to `127.0.0.1`. |
 | `PORT` | `8000` | Same — bare run only. |
+| `UVICORN_RELOAD` | `false` | `python main.py` only: enable uvicorn auto-reload. Default off is headless-safe — auto-reload restarts the API on any write under `data/`/`demo/`, which flaps headless ingest/eval runs. Set `true` for the local dev loop. |
 | `AUTO_MIGRATE` | `true` | Run `alembic upgrade head` in startup lifespan. In production, errors abort startup unless `AUTO_MIGRATE_FAIL_OPEN=true` is explicitly set. |
 | `AUTO_MIGRATE_FAIL_OPEN` | `false` | Production escape hatch for temporarily logging migration failures instead of aborting startup. |
 

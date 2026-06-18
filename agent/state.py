@@ -30,7 +30,7 @@ agent/state.py
     Оценка качества ответа по шкале 1–100 (чем выше, тем лучше). Эти
     значения выставляет узел evaluate (self-evaluation LLM).
 
-- route: Literal["auto","human","retry","error","error_escalation","agentic"] | None
+- route: Literal["auto","human","retry","error","error_escalation","agentic","timeout"] | None
     Решение маршрутизации:
         "auto"  → ответ достаточно хороший, можно отдать пользователю;
         "human" → лучше эскалировать на человека (оператор поддержки);
@@ -89,7 +89,9 @@ class GraphState(TypedDict, total=False):
     fact_verification_skipped: bool
     complexity: Literal["simple", "complex", "global", "unknown"]
     retrieval_strategy: Literal["vector", "hybrid", "graph", "factcard"]
-    route: Optional[Literal["auto", "human", "retry", "error", "error_escalation", "agentic"]]
+    route: Optional[
+        Literal["auto", "human", "retry", "error", "error_escalation", "agentic", "timeout"]
+    ]
     trace_id: str
     tenant_id: str
     error: bool

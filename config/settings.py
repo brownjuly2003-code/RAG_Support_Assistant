@@ -297,6 +297,34 @@ class Settings:
         default_factory=lambda: os.getenv("RAG_EMBEDDING_MODEL", "BAAI/bge-m3")
     )
 
+    # --- Embedding backend ---
+    # "local"  — SentenceTransformer(embedding_model) on rag_device (default).
+    # "remote" — OpenAI/Mistral-compatible POST {url} {model, input:[...]}; frees
+    #            ingest/search from loading the heavy local model (e.g. unblocks
+    #            Windows under the 1-GiB/process rule). Vectors are L2-normalized
+    #            to match the local path. The API key is read from the env var
+    #            *named* by embedding_remote_api_key_env (never stored here).
+    embedding_backend: str = field(
+        default_factory=lambda: os.getenv("RAG_EMBEDDING_BACKEND", "local").strip().lower()
+    )
+    embedding_remote_url: str = field(
+        default_factory=lambda: os.getenv(
+            "RAG_EMBEDDING_REMOTE_URL", "https://api.mistral.ai/v1/embeddings"
+        )
+    )
+    embedding_remote_model: str = field(
+        default_factory=lambda: os.getenv("RAG_EMBEDDING_REMOTE_MODEL", "mistral-embed")
+    )
+    embedding_remote_api_key_env: str = field(
+        default_factory=lambda: os.getenv("RAG_EMBEDDING_REMOTE_API_KEY_ENV", "MISTRAL_API_KEY")
+    )
+    embedding_remote_batch: int = field(
+        default_factory=lambda: max(1, int(os.getenv("RAG_EMBEDDING_REMOTE_BATCH", "32")))
+    )
+    embedding_remote_timeout_sec: float = field(
+        default_factory=lambda: float(os.getenv("RAG_EMBEDDING_REMOTE_TIMEOUT_SEC", "60"))
+    )
+
     # --- Reranker (Cross-Encoder) ---
     # "BAAI/bge-reranker-v2-m3"               — multilingual (pairs с дефолтным BGE-M3); дефолт
     # "cross-encoder/ms-marco-MiniLM-L-6-v2"  — быстрый на CPU (22M), но English-only:
@@ -390,6 +418,13 @@ class Settings:
     ingestion_batch_enabled: bool = field(
         default_factory=lambda: os.getenv("INGESTION_BATCH_ENABLED", "false").strip().lower()
         in ("1", "true", "yes")
+    )
+    # Bounded concurrency for the contextual-header LLM fallback at ingest
+    # (used only when ingestion_batch_enabled and the provider has no native
+    # batch API). 1 = strictly serial. Caps in-flight requests so a full-corpus
+    # ingest does not fan out an unbounded number of provider calls.
+    ingestion_contextual_concurrency: int = field(
+        default_factory=lambda: max(1, int(os.getenv("INGESTION_CONTEXTUAL_CONCURRENCY", "4")))
     )
     agentic_mode: bool = field(
         default_factory=lambda: os.getenv(
@@ -580,6 +615,13 @@ class Settings:
     )
     online_evaluators_timeout_sec: float = field(
         default_factory=lambda: float(os.getenv("ONLINE_EVALUATORS_TIMEOUT_SEC", "1.0"))
+    )
+    # Optional wall-clock budget for a single ConversationSession.ask() call when
+    # used outside the HTTP path (which already has request_timeout_sec). 0 = off
+    # (blocking, original behaviour). When >0 and exceeded, ask() returns a
+    # graceful degraded result instead of hanging on a flapping provider.
+    ask_budget_sec: float = field(
+        default_factory=lambda: float(os.getenv("RAG_ASK_BUDGET_SEC", "0") or 0.0)
     )
     # Wall-clock budget for persisting conversation messages to Postgres.
     # The previous hardcoded 0.5s treated ordinary latency tails as outages

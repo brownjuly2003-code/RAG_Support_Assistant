@@ -302,6 +302,43 @@ def test_ingest_pipeline_uses_provider_batch_for_contextual_headers(
     assert captured["docs"][0].page_content.startswith("[Контекст: Batch header]")
 
 
+def test_generate_headers_bounded_preserves_order_and_logs_progress(caplog) -> None:
+    """Dogfood finding #1: the contextual fallback must run with bounded
+    concurrency, preserve response order, and emit visible progress."""
+    import logging
+
+    from ingestion.pipeline import _generate_headers_bounded
+
+    class _IndexLLM:
+        def generate(self, messages, tools=None, **kwargs):
+            _ = tools, kwargs
+            # echo the per-batch marker so we can assert ordering
+            return SimpleNamespace(text=messages[0]["content"])
+
+    batches = [[{"role": "user", "content": f"doc-{i}"}] for i in range(12)]
+
+    with caplog.at_level(logging.INFO, logger="ingestion.pipeline"):
+        responses = _generate_headers_bounded(_IndexLLM(), batches, concurrency=4)
+
+    assert [r.text for r in responses] == [f"doc-{i}" for i in range(12)]
+    progress = [r.getMessage() for r in caplog.records if "[contextual_headers]" in r.getMessage()]
+    assert any("12/12" in line for line in progress), progress
+
+
+def test_generate_headers_bounded_empty_is_noop() -> None:
+    from ingestion.pipeline import _generate_headers_bounded
+
+    assert _generate_headers_bounded(object(), [], concurrency=4) == []
+
+
+def test_ingestion_contextual_concurrency_default(monkeypatch) -> None:
+    monkeypatch.delenv("INGESTION_CONTEXTUAL_CONCURRENCY", raising=False)
+
+    settings = Settings()
+
+    assert settings.ingestion_contextual_concurrency == 4
+
+
 def test_ingest_pipeline_falls_back_to_sequential_headers_when_batch_unsupported(
     monkeypatch,
     tmp_path,

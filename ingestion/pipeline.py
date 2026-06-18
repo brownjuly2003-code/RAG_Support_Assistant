@@ -40,6 +40,58 @@ from vectordb import _base_manager as legacy_manager
 
 logger = logging.getLogger(__name__)
 
+
+def _generate_headers_bounded(
+    llm: Any,
+    batches: list[list[dict[str, str]]],
+    *,
+    concurrency: int,
+    log_every: int = 0,
+) -> list[Any]:
+    """Run ``llm.generate`` over per-document batches with bounded concurrency.
+
+    The previous fallback was ``[llm.generate(m) for m in batches]`` — strictly
+    serial and silent. On a full-corpus ingest against a remote provider that is
+    N sequential round-trips with no progress signal, so a slow run was
+    indistinguishable from a hang (dogfood finding #1). This preserves response
+    order, caps in-flight requests, and emits ``[contextual_headers] i/N`` so the
+    operator can see forward progress.
+    """
+    total = len(batches)
+    if total == 0:
+        return []
+    workers = max(1, min(int(concurrency or 1), total))
+    if log_every <= 0:
+        log_every = max(1, total // 10)
+
+    if workers == 1:
+        responses: list[Any] = []
+        for index, messages in enumerate(batches, start=1):
+            responses.append(llm.generate(messages))
+            if index % log_every == 0 or index == total:
+                logger.info("[contextual_headers] %d/%d", index, total)
+        return responses
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    results: list[Any] = [None] * total
+    done = 0
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        future_to_index = {
+            executor.submit(llm.generate, messages): index
+            for index, messages in enumerate(batches)
+        }
+        from concurrent.futures import as_completed
+
+        for future in as_completed(future_to_index):
+            index = future_to_index[future]
+            results[index] = future.result()
+            done += 1
+            if done % log_every == 0 or done == total:
+                logger.info("[contextual_headers] %d/%d", done, total)
+    return results
+
+
 # ---------------------------------------------------------------------------
 # Resolve project paths
 # ---------------------------------------------------------------------------
@@ -163,6 +215,7 @@ class IngestPipeline:
                         for doc in docs
                     ]
                     started = time.perf_counter()
+                    concurrency = int(getattr(settings, "ingestion_contextual_concurrency", 4))
                     try:
                         if bool(getattr(llm, "supports_batch", False)) and callable(
                             getattr(llm, "generate_batch", None)
@@ -170,7 +223,16 @@ class IngestPipeline:
                             responses = llm.generate_batch(batches, purpose="contextual_headers")
                             mode = "provider_batch"
                         else:
-                            responses = [llm.generate(messages) for messages in batches]
+                            logger.info(
+                                "[contextual_headers] generating %d headers via %s "
+                                "(concurrency=%d)",
+                                len(batches),
+                                getattr(llm, "model_name", None) or "llm",
+                                concurrency,
+                            )
+                            responses = _generate_headers_bounded(
+                                llm, batches, concurrency=concurrency
+                            )
                             mode = "sequential_fallback"
                     except Exception as exc:
                         logger.warning("[IngestPipeline] Contextual header generation failed: %s", exc)

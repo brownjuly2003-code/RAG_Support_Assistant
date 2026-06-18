@@ -2,6 +2,41 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Dogfood-Findings] — 2026-06-18 — практические шероховатости внешнего дожфуда
+
+Закрыты 5 находок из дожфуда на чужом домене (Deckhouse/werf pain-cards,
+`FLANT_DOGFOOD_FINDINGS.md`). Все рычаги opt-in/без сети по умолчанию — поведение
+дефолта не меняется.
+
+- **Online-evaluators деградируют тихо** (`agent/graph.py`): при недоступном Postgres
+  в standalone-графе ошибка персистенса логируется WARNING **один раз на процесс**,
+  идентичные повторы — DEBUG (раньше — WARNING на каждый запрос). Новые/иные ошибки
+  по-прежнему всплывают на WARNING. Счётчик `rag_online_evaluators_dropped_total`
+  сохранён. Ответы графа не затронуты.
+- **Видимость прогресса ingest** (`vectordb/manager.py`, `ingestion/pipeline.py`):
+  `build_vector_store` логирует начало/длительность тяжёлого embed-шага
+  (`[index] embedding N chunks …` / `… built: N chunks in Ns`); LLM-fallback
+  contextual-заголовков теперь идёт с **bounded concurrency**
+  (`INGESTION_CONTEXTUAL_CONCURRENCY`, default 4) и прогресс-логом
+  `[contextual_headers] i/N`. «Медленно» больше не выглядит как «завис».
+  (Поправка к находке: прод-путь `build_vector_store` строит заголовки из metadata
+  без сети; LLM-вариант — только при `INGESTION_BATCH_ENABLED=true`, по документу.)
+- **Опц. wall-budget на `ConversationSession.ask`** (`RAG_ASK_BUDGET_SEC`, default
+  `0`=off): вне HTTP-пути (где уже есть `request_timeout_sec`) один залипший вызов
+  провайдера больше не растягивает запрос — по истечении бюджета возвращается
+  graceful degraded-результат (`route="timeout"`), фоновой прогон не прерывается
+  (зеркалит семантику API).
+- **Remote-embedding backend** (`RAG_EMBEDDING_BACKEND=remote`): OpenAI/Mistral-
+  совместимый `/v1/embeddings` (`vectordb/_base_manager.py: _RemoteEmbeddings`),
+  L2-нормировка под локальный путь, батчинг, ключ из env по имени. Снимает привязку
+  тяжёлого ingest/поиска к локальному BGE-M3 (разблокирует Windows под правилом
+  «1 GiB на процесс»). Дефолт — `local`, путь не тронут.
+- **Headless-safe reload** (`main.py`): авто-reload uvicorn вынесен за
+  `UVICORN_RELOAD` (default off) — больше не флапает API при записи в `data/`/`demo/`
+  во время headless-прогонов.
+
+План: `docs/plans/2026-06-18-dogfood-findings-fixes.md`.
+
 ## [Adaptive-Retrieval] — 2026-06-14 — workstream закрыт (opt-in lane shipped, default-флип NO-SHIP)
 
 - **Закрыт** adaptive-retrieval router + Fact-Card (SFR) workstream

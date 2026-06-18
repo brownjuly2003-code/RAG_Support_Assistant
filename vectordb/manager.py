@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
@@ -174,6 +175,22 @@ def build_vector_store(
         metadata["chunk_index"] = index
         chunk.metadata = metadata
 
+    # Embedding is the dominant cost here and runs synchronously inside the
+    # backend's from_documents() with no per-item callback. On CPU with a large
+    # local model (~1.3s/chunk for BGE-M3) a few-thousand-chunk corpus takes tens
+    # of minutes; without a start marker that is indistinguishable from a hang
+    # (dogfood finding #1). Bracket the heavy call with start/elapsed logs.
+    embed_started = time.time()
+    embed_device = getattr(get_settings(), "rag_device", None)
+    logger.info(
+        "[index] embedding %d chunks into '%s' (backend=%s, device=%s) — "
+        "this is the slow step on CPU",
+        len(chunks),
+        tenant,
+        backend,
+        embed_device or "auto",
+    )
+
     if backend == "qdrant":
         build_qdrant = getattr(_base_manager, "_build_qdrant", None)
         if build_qdrant is None:
@@ -204,6 +221,13 @@ def build_vector_store(
         )
         if hasattr(store, "persist"):
             store.persist()
+
+    logger.info(
+        "[index] collection '%s' built: %d chunks in %.0fs",
+        tenant,
+        len(chunks),
+        time.time() - embed_started,
+    )
 
     try:
         setattr(store, "_source_docs", list(docs))
