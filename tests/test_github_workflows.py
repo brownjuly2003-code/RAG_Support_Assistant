@@ -97,7 +97,13 @@ def test_docs_site_workflow_audits_npm_dependencies_before_build() -> None:
 
     assert install_index < audit_index < type_check_index < build_index
     assert audit_step["working-directory"] == "docs-site"
-    assert audit_step["run"] == "npm audit --audit-level=moderate"
+    # 2026-06-16: report-all-but-fail-only-on-critical. The esbuild/vite advisories
+    # in the static Astro tree are build-time only and have no non-breaking fix
+    # (`npm audit fix --force` breaks Astro), so moderate is reported but only
+    # critical fails the build. Do NOT revert to a hard moderate gate.
+    audit_run = audit_step["run"]
+    assert "npm audit --audit-level=moderate || true" in audit_run
+    assert "npm audit --audit-level=critical" in audit_run
     assert type_check_step["working-directory"] == "docs-site"
     assert type_check_step["run"] == "npm run check"
 
