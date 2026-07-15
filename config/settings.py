@@ -1035,11 +1035,18 @@ class Settings:
         if self.require_ollama or "ollama" in active_provider_ids:
             ollama_ok = False
             try:
-                req = urllib.request.Request(
-                    f"{self.ollama_base_url}/api/tags",
-                    method="GET",
-                )
-                with urllib.request.urlopen(req, timeout=3):
+                # Scheme allowlist only (B310): never follow file:/ or custom schemes
+                # even if OLLAMA_BASE_URL is mis-set to a local path.
+                from urllib.parse import urlparse
+
+                ollama_url = f"{self.ollama_base_url.rstrip('/')}/api/tags"
+                parsed = urlparse(ollama_url)
+                if parsed.scheme not in {"http", "https"}:
+                    raise ValueError(
+                        f"OLLAMA_BASE_URL must use http/https (got scheme={parsed.scheme!r})"
+                    )
+                req = urllib.request.Request(ollama_url, method="GET")
+                with urllib.request.urlopen(req, timeout=3):  # noqa: S310 — scheme checked above
                     ollama_ok = True
             except Exception as exc:
                 if self.require_ollama:

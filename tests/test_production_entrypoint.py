@@ -103,6 +103,16 @@ def test_production_auto_migrate_fail_open_requires_explicit_opt_in(
     app_module._run_alembic_upgrade()
 
 
+def _openapi_paths(app) -> set[str]:
+    """Collect route paths via OpenAPI — stable across FastAPI versions.
+
+    FastAPI 0.138+ may nest included routers as ``_IncludedRouter`` objects
+    without a top-level ``.path`` on ``app.routes``. OpenAPI still lists every
+    published path, so it is the version-proof inventory for smoke guards.
+    """
+    return set(app.openapi().get("paths", {}) or {})
+
+
 @pytest.mark.parametrize(
     "legacy_path",
     [
@@ -117,7 +127,9 @@ def test_production_auto_migrate_fail_open_requires_explicit_opt_in(
 def test_no_legacy_unauthenticated_endpoints(legacy_path: str):
     from api.app import app as api_app
 
-    paths = {getattr(r, "path", None) for r in api_app.routes}
+    paths = _openapi_paths(api_app)
+    # Also check flat app.routes for mounts / non-OpenAPI legacy handlers.
+    paths |= {getattr(r, "path", None) for r in api_app.routes if getattr(r, "path", None)}
     assert legacy_path not in paths, (
         f"Legacy unauthenticated endpoint {legacy_path!r} re-appeared on "
         "production app — these were removed because they bypassed auth, "
@@ -128,11 +140,8 @@ def test_no_legacy_unauthenticated_endpoints(legacy_path: str):
 def test_api_namespace_is_populated():
     from api.app import app as api_app
 
-    api_routes = [
-        r for r in api_app.routes
-        if hasattr(r, "path") and r.path.startswith("/api")
-    ]
-    assert len(api_routes) >= 60, (
-        f"/api namespace has only {len(api_routes)} routes — "
+    api_paths = [p for p in _openapi_paths(api_app) if p.startswith("/api")]
+    assert len(api_paths) >= 60, (
+        f"/api namespace has only {len(api_paths)} OpenAPI paths — "
         "expected >= 60 after Phase 2 router split."
     )

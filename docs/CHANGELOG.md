@@ -2,6 +2,27 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Security-Lock-Refresh] — 2026-07-16 — dep CVE batch + smoke-test hardening
+
+Focused security/ops pass from `audit_grok_16_07_26.md` (D1 + T1). Defaults and
+retrieval behaviour are unchanged.
+
+- **Lock CVE clear:** regenerated `requirements.lock` + `requirements-dev.lock`
+  (Python 3.11 / linux hashes) with floors for packages that had fixed advisories.
+  Notable pins: `aiohttp>=3.14.1`, `cryptography>=48.0.1` (lock `49.0.0`),
+  `starlette>=1.3.1`, `python-multipart>=0.0.31`, `pypdf>=6.13.3`,
+  `langsmith>=0.8.18`, `langchain>=1.3.9`, `setuptools>=83.0.0`, plus upgrades of
+  `joserfc`, `langchain-classic`, `langgraph-checkpoint`, `langgraph-sdk`,
+  `pydantic-settings`. `pip-audit --strict` on the lock: **no known vulns**
+  (documented ignores for chroma/torch no-fix advisories retained).
+- **OpenAPI-stable route smoke** (`tests/test_production_entrypoint.py`):
+  `/api` population and legacy-path absence are asserted via `app.openapi()` so
+  FastAPI 0.138+ nested `_IncludedRouter` layouts no longer false-fail.
+- **Ollama health scheme allowlist** (`config/settings.py`): `OLLAMA_BASE_URL`
+  health probe rejects non-`http`/`https` schemes before `urlopen` (B310).
+- **Docs:** official aircargo RAGAS baseline + precision target noted in
+  `docs/OPERATIONS.md`.
+
 ## [Dogfood-Findings] — 2026-06-18 — практические шероховатости внешнего дожфуда
 
 Закрыты 5 находок из дожфуда на чужом домене (Deckhouse/werf pain-cards,

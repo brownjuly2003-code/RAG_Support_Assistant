@@ -1,12 +1,25 @@
 # Agent State
 
-## 2026-06-16 Update (docs-site E20 живой `/api/ask` → доку 9.8; CI dep-CVE red) ✅ START HERE
+## 2026-07-16 Update (security lock refresh + audit follow-up) ✅ START HERE
 
-> **START HERE (актуальный).** Заход `/auto RAG_Support_Assistant продолжи`. Единственная открытая задача из handoff — заменить seeded-fixture чат-скриншот на живой `/api/ask` — **ВЫПОЛНЕНА**. Прогон через **изолированный tenant `e20demo`** (прямой вызов `ConversationSession.ask`, профиль external-mistral, CPU, без HTTP/Celery/postgres) — корпус `default` (5589 чанков) НЕ тронут (build_vector_store создал только `rag_docs_e20demo`, удалён после). Живой ответ: 3-шаговый E20-fix, quality 95 / route auto / citation `errors_e10_e30.md`. Рендер на Windows через production `addMessage` (`docs-site/.tmp/chat_shot.mjs`), figcaption/alt EN+RU → «live /api/ask». **origin/master=`a00c1f4`, Deploy run 27647721938 = SUCCESS, live проверен. Mac вычищен полностью (ключ удалён, коллекция снесена, DataLens 9 контейнеров целы).**
+> **START HERE.** Заход: глубокий аудит `audit_grok_16_07_26.md` + «доработай проект максимально, решения на тебе».
 >
-> 🔴 **ОТКРЫТО (НЕ регрессия docs-коммита, отдельный dependency-security workstream):** на том же push CI-jobs `security`(pip-audit на requirements.lock) + `pre-commit` КРАСНЫЕ — **свежий батч CVE-advisory на locked-deps**, появившийся после последнего зелёного CI: `aiohttp 3.14.0`→8 CVE (CVE-2026-54273..54280, fix **3.14.1**), `cryptography 47.0.0`→GHSA-537c-gmf6-5ccf (fix **48.0.1**), всего **17 vulns в 5 пакетах** (`--ignore-vuln` уже на 3: CVE-2026-45829/GHSA-f4j7-r4q5-qw2c/CVE-2025-3000). Docs-Pages-deploy это НЕ блокирует. Тот же паттерн, что pypdf/torch-CVE прошлых сессий. **Чинить отдельным focused-коммитом:** uv lock-regen (`--upgrade-package aiohttp cryptography … --generate-hashes`) по обоим lock + 4-точечный sync `--ignore-vuln` (ci.yml/pre-commit/local-gate.ps1/autopilot.ps1) если что-то без fix. **Это единственный остаток Windows-backlog.**
+> **Сделано (локально, ждать push):**
+> 1. **D1 dep-CVE batch** — `uv pip compile` (py3.11/linux hashes) обоих lock: `aiohttp 3.14.1`, `cryptography 49.0.0`, `starlette 1.3.1`, `python-multipart 0.0.32`, `pypdf 6.14.2`, `langsmith 0.10.5`, `langchain 1.3.13`, `setuptools 83.0.0`, joserfc/langgraph-*/pydantic-settings/langchain-classic и floors в `requirements.txt`. `pip-audit --strict` → **No known vulnerabilities found** (игноры chroma/torch no-fix оставлены).
+> 2. **T1** — `test_api_namespace_is_populated` / legacy paths через OpenAPI (FastAPI 0.138-proof).
+> 3. **B310** — scheme allowlist `http/https` для Ollama health `urlopen` + unit.
+> 4. **Docs** — official RAGAS baseline (context_precision 0.51 target) в `docs/OPERATIONS.md`; CHANGELOG; dogfood plan checkboxes closed.
 >
-> **docs-site — отдельный handoff** (не в этом файле): `docs-site/_start_next_session.md` (gitignored). Блок Phase-5 ниже («Backlog ПУСТ») верен для RAG-кода/adaptive-retrieval, но СУПЕРСЕДНУТ этим блоком по части backlog (есть dep-CVE).
+> **Верификация:** ruff clean на изменённых .py; pytest 44 targeted (entrypoint/settings secrets/precommit/docs_quality) green; pip-audit green.
+>
+> **Остаток (не Windows-heavy code):** context_precision A/B (Mac/Colab); multi-replica design; optional httpOnly admin cookies; push этого security-коммита на origin.
+>
+> Предыдущий блок 2026-06-16 (E20 live screenshot) — выполнен; dep-CVE red **снят** этим обновлением.
+
+## 2026-06-16 Update (docs-site E20 живой `/api/ask` → доку 9.8; CI dep-CVE red) — SUPERSEDED by 2026-07-16
+
+> **SUPERSEDED.** E20 live screenshot done. Dep-CVE backlog closed 2026-07-16 (see START HERE above).
+> Historical note: on push after `a00c1f4` CI security/pre-commit went red on aiohttp 3.14.0 + cryptography 47.0.0 and later expanded advisory set — fixed by lock regen 2026-07-16.
 
 ## 2026-06-15 Update (adaptive-retrieval Phase 5 — ЗАВЕРШЁН: NO-SHIP, обоснован ДАННЫМИ) ✅ START HERE
 

@@ -41,6 +41,31 @@ Admin endpoints:
 - `GET /api/admin/regression-runs/{run_id}`
 
 
+## Official RAG quality baseline (aircargo)
+
+Checked-in free-RAGAS run on the 100-case aircargo curated set
+(`reports/ragas/20260605T214926Z-e728353a-aircargo-ragas.md`, provider
+`mistral:mistral-small-latest`, mode `free-ragas`):
+
+| Metric | Score | Notes |
+| --- | ---: | --- |
+| faithfulness | 0.766 | Acceptable; not a ceiling |
+| answer_relevancy | 0.833 | Strong |
+| context_precision | **0.509** | Primary improvement target (noisy top-k) |
+| context_recall | 0.920 | Strong |
+
+Keyword retrieval baseline (D2 structural + parent-expansion + reranker) on the
+same family of cases is approximately **FULL 96–97 / PART 2–3 / MISS 1**
+(`customs-clearance-fields`). Fact-card lane remains **opt-in only** after a
+data-backed Phase-5 NO-SHIP (see
+`docs/operations/2026-06-14-adaptive-retrieval-closure.md`).
+
+CI `regression-eval` is still **informational / path-filtered** — it does not
+block merge on RAGAS floors. Prefer offline A/B against this baseline before
+changing default retrieval knobs. For non-HTTP runners, set
+`RAG_ASK_BUDGET_SEC` so a stuck provider cannot hang a process indefinitely
+(default `0` = off; HTTP already has `REQUEST_TIMEOUT_SEC`).
+
 ## Regression eval
 
 Curated regression runs compare a baseline against `current` or an experiment

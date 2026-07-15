@@ -64,6 +64,20 @@ def test_production_rejects_empty_admin_password_hash(monkeypatch: pytest.Monkey
         settings.validate()
 
 
+def test_ollama_health_rejects_non_http_scheme(monkeypatch: pytest.MonkeyPatch) -> None:
+    """file:/ and other schemes must not reach urllib.urlopen (B310)."""
+    monkeypatch.setenv("RAG_ENV", "development")
+    monkeypatch.setenv("REQUIRE_OLLAMA", "true")
+    monkeypatch.setenv("OLLAMA_BASE_URL", "file:///etc/passwd")
+    monkeypatch.setenv("LLM_PROVIDER_PROFILE", "local-first")
+    import config.settings as _s
+
+    _s._settings = None
+    settings = get_settings()
+    with pytest.raises(RuntimeError, match="http/https|scheme"):
+        settings.validate()
+
+
 def test_production_allows_explicit_dev_admin_optin(monkeypatch: pytest.MonkeyPatch) -> None:
     """ALLOW_DEV_ADMIN_LOGIN=1 documents the risk and unlocks empty hash."""
     monkeypatch.setenv("JWT_SECRET", _STRONG_SECRET)
