@@ -68,6 +68,17 @@ omit = [
 # Honest baseline: 70.02% verified 2026-04-29 against full pytest+coverage suite
 # (630 passed, 4 skipped). Gate raised after focused tests for
 # evaluation/ragas_eval, vectordb/_base_manager, and benchmark_runner.
+#
+# 2026-07-18 (audit N1): the gate had been inert since that measurement -- CI
+# ran pytest without --cov, so nothing enforced this number. Re-measured before
+# wiring it up: 73% over the unit scope (tests/ minus tests/integration,
+# 887 passed / 9812 statements). That figure is a LOWER bound for CI: it was
+# taken on Windows with 4 platform skips and 5 failures caused by a local
+# FastAPI 0.138 vs locked 0.136 drift (app.routes stops being flat once
+# include_router wraps children), all of which pass on Linux under the lock.
+# Threshold left at 70 rather than raised to 73 -- headroom is deliberate, so
+# ordinary changes do not trip the gate. Raise it only against a fresh CI
+# measurement, never a local one.
 fail_under = 70
 show_missing = true
 skip_covered = false

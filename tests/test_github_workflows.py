@@ -117,6 +117,42 @@ def test_regression_eval_filter_tracks_curated_dataset_changes() -> None:
     assert "evaluation/curated_cases.jsonl" in filters
 
 
+def test_regression_eval_runs_on_master_pushes_not_only_pull_requests() -> None:
+    # Audit 2026-07-18 (N2): the job was `if: github.event_name ==
+    # 'pull_request'` while the repository is worked via direct pushes to
+    # master, so the regression gate never ran between 2026-05-30 and
+    # 2026-07-18. Keep push coverage asserted so it cannot silently lapse again.
+    guard = _workflow("ci.yml")["jobs"]["regression-eval"]["if"]
+
+    assert "pull_request" in guard
+    assert "refs/heads/master" in guard
+
+
+def test_unit_tests_enforce_the_coverage_gate_on_one_matrix_leg() -> None:
+    # Audit 2026-07-18 (N1): pyproject carried
+    # [tool.coverage.report] fail_under = 70 while CI ran pytest without --cov,
+    # so the gate was inert and coverage went unmeasured for 2.5 months. This
+    # asserts the flag survives; the threshold itself stays in pyproject.
+    job = _workflow("ci.yml")["jobs"]["test-unit"]
+    pytest_steps = [
+        step for step in job["steps"] if "pytest" in str(step.get("run", ""))
+    ]
+    covered = [step for step in pytest_steps if "--cov" in step["run"]]
+
+    assert len(covered) == 1, "exactly one matrix leg should carry the coverage gate"
+    assert "3.13" in str(covered[0]["if"])
+    # No --cov-fail-under override: the threshold must come from pyproject only.
+    assert "--cov-fail-under" not in covered[0]["run"]
+    # Every leg still runs the suite -- coverage is added, not substituted.
+    assert len(pytest_steps) == len(job["strategy"]["matrix"]["python-version"])
+
+
+def test_coverage_gate_threshold_is_declared_in_pyproject() -> None:
+    pyproject = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert re.search(r"^fail_under\s*=\s*\d+", pyproject, re.MULTILINE)
+
+
 def test_weekly_report_schedule_delivers_and_manual_dispatch_dry_runs_by_default() -> None:
     workflow = _workflow("weekly-report.yml")
     trigger = workflow[True]
