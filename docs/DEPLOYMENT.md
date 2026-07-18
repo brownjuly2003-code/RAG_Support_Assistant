@@ -75,6 +75,32 @@ when `WEB_CONCURRENCY > 1` (best-effort; it does not catch an explicit
 state and pending confirm-actions to Redis/Postgres (the `Message`/`Session`
 models exist; `pending_action` and server-side history do not yet).
 
+### Reverse proxy and cookie authentication
+
+**The reverse proxy or ingress in front of the app must forward the
+original `Host` header unchanged** (e.g. `proxy_set_header Host $host;` in
+nginx terms) instead of rewriting it to an upstream/internal service name.
+The browser UIs (`static/admin.html`, `agent.html`, `analytics.html`)
+authenticate via the httpOnly `access_token` cookie instead of an explicit
+`Authorization` header: the `_cookie_auth_bridge` middleware in `api/app.py`
+copies the cookie into an `Authorization: Bearer` header on any request
+that doesn't already carry one. For state-changing methods —
+`POST`/`PUT`/`PATCH`/`DELETE`, tracked in `_COOKIE_AUTH_UNSAFE_METHODS` —
+`_cookie_auth_origin_ok()` only allows the bridge to fire when the
+browser's `Origin` header has the same netloc as the request's `Host`
+header (requests with no `Origin`, e.g. curl or other non-browser clients,
+are unaffected).
+
+If the proxy rewrites `Host` so it no longer matches the `Origin` the
+browser sends, the check fails and the bridge silently skips attaching
+`Authorization` — there is no error at that point. The request then
+reaches the normal auth dependency with no credentials and gets a `401`.
+Safe methods (`GET`/`HEAD`/`OPTIONS`) skip the origin check entirely, so
+pages keep loading; only state-changing calls from the admin/agent/
+analytics UI start failing. That combination — pages load fine, actions
+silently 401 — is the signature of a `Host`-forwarding misconfiguration
+in the proxy layer.
+
 Deployment artifacts added in arc `102-122` include:
 
 - `deploy/helm/templates/cronjob.yaml` for nightly eval and KB-gap jobs
