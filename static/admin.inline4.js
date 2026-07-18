@@ -1,5 +1,4 @@
   (function () {
-    var storageKey = "rag_admin_token";
     var button = document.getElementById("btn-load-review-queue");
     var statusInput = document.getElementById("review-queue-status");
     var reasonInput = document.getElementById("review-queue-reason");
@@ -9,12 +8,8 @@
     var statsOutput = document.getElementById("review-queue-stats");
 
     function headers() {
-      var token = (localStorage.getItem(storageKey) || "").trim();
-      var result = { "Content-Type": "application/json" };
-      if (token) {
-        result.Authorization = "Bearer " + token;
-      }
-      return result;
+      // Auth rides on the httpOnly cookie (see admin.js / cookie bridge).
+      return { "Content-Type": "application/json" };
     }
 
     async function loadStats() {

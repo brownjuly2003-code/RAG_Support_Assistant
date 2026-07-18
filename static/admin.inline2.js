@@ -1,16 +1,11 @@
   (function () {
-    var storageKey = "rag_admin_token";
     var button = document.getElementById("btn-load-kb-gaps");
     var output = document.getElementById("kb-gaps-output");
     var tableBody = document.querySelector("#kb-gaps-table tbody");
 
     function buildHeaders() {
-      var token = (localStorage.getItem(storageKey) || "").trim();
-      var headers = { "Content-Type": "application/json" };
-      if (token) {
-        headers.Authorization = "Bearer " + token;
-      }
-      return headers;
+      // Auth rides on the httpOnly cookie (see admin.js / cookie bridge).
+      return { "Content-Type": "application/json" };
     }
 
     async function loadKbGaps() {

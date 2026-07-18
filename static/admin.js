@@ -1,23 +1,33 @@
 (function () {
   "use strict";
 
-  var storageKey = "rag_admin_token";
+  var legacyStorageKey = "rag_admin_token";
   var tokenInput = document.getElementById("token");
   var tokenStatus = document.getElementById("token-status");
   var tracesTableBody = document.querySelector("#traces-table tbody");
   var auditTableBody = document.querySelector("#audit-table tbody");
 
-  function readToken() {
-    return localStorage.getItem(storageKey) || "";
+  // Graceful migration: purge any bearer token left in localStorage by an
+  // earlier build. Auth now rides on an httpOnly cookie (set via /api/auth/session)
+  // that JavaScript cannot read, so the XSS-theft surface is gone.
+  try {
+    localStorage.removeItem(legacyStorageKey);
+  } catch (_) {
+    /* localStorage may be unavailable; nothing to migrate. */
   }
 
   function buildHeaders() {
-    var token = readToken().trim();
-    var result = { "Content-Type": "application/json" };
-    if (token) {
-      result.Authorization = "Bearer " + token;
-    }
-    return result;
+    // No Authorization header: requests authenticate via the httpOnly cookie,
+    // copied into the Authorization header server-side by the cookie bridge.
+    return { "Content-Type": "application/json" };
+  }
+
+  async function establishSession(token) {
+    var response = await fetch("/api/auth/session", {
+      method: "POST",
+      headers: token ? { Authorization: "Bearer " + token } : {}
+    });
+    return response.ok;
   }
 
   async function api(method, path, body) {
@@ -47,11 +57,20 @@
     };
   }
 
-  tokenInput.value = readToken();
-
-  document.getElementById("save-token").addEventListener("click", function () {
-    localStorage.setItem(storageKey, tokenInput.value);
-    tokenStatus.textContent = "Token saved in localStorage.";
+  document.getElementById("save-token").addEventListener("click", async function () {
+    var token = tokenInput.value.trim();
+    if (!token) {
+      tokenStatus.textContent = "Enter a bearer token first.";
+      return;
+    }
+    tokenStatus.textContent = "Establishing session...";
+    var ok = await establishSession(token);
+    if (ok) {
+      tokenInput.value = "";
+      tokenStatus.textContent = "Session cookie set (httpOnly). Token is no longer stored in the browser.";
+    } else {
+      tokenStatus.textContent = "Authorization failed. Check the token and try again.";
+    }
   });
 
   document.querySelectorAll(".tabs button").forEach(function (button) {

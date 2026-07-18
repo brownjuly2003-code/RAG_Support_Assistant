@@ -1,5 +1,4 @@
   (function () {
-    var storageKey = "rag_admin_token";
     var draftButton = document.getElementById("btn-load-kb-drafts");
     var draftList = document.getElementById("kb-drafts-list");
     var draftOutput = document.getElementById("kb-drafts-output");
@@ -8,12 +7,8 @@
     var staleOutput = document.getElementById("stale-docs-output");
 
     function headers() {
-      var token = (localStorage.getItem(storageKey) || "").trim();
-      var result = { "Content-Type": "application/json" };
-      if (token) {
-        result.Authorization = "Bearer " + token;
-      }
-      return result;
+      // Auth rides on the httpOnly cookie (see admin.js / cookie bridge).
+      return { "Content-Type": "application/json" };
     }
 
     async function loadDrafts() {

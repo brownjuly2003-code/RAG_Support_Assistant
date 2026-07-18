@@ -13,7 +13,7 @@ import os
 import time
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from api._shared import app_module as _app_module
@@ -23,6 +23,47 @@ from monitoring import prometheus as prometheus_metrics
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _cookies_secure() -> bool:
+    """Mark auth cookies Secure only in production (mirrors auth_sso.py)."""
+    return bool(getattr(_app_module().get_settings(), "rag_env", "development") == "production")
+
+
+def _set_auth_cookie(response: Response, name: str, value: str, max_age: int) -> None:
+    """Set an httpOnly auth cookie.
+
+    SameSite=Strict (stronger than the SSO cookie's Lax): these operator
+    sessions are established via same-origin ``fetch`` from the admin/agent
+    pages, never via a cross-site top-level navigation, so Strict costs
+    nothing here. NOTE: ``auth_sso.py`` sets the same ``access_token`` cookie
+    name with SameSite=Lax (it must survive the IdP redirect), and the cookie
+    bridge authenticates whichever cookie is present — so SameSite alone bounds
+    the CSRF posture by the weakest writer. The bridge therefore additionally
+    enforces an Origin match on state-changing methods
+    (``api/app.py::_cookie_auth_origin_ok``). Max-Age is aligned with the JWT
+    TTL so a stale cookie cannot outlive its token by design.
+    """
+    response.set_cookie(
+        name,
+        value,
+        httponly=True,
+        secure=_cookies_secure(),
+        samesite="strict",
+        max_age=max_age,
+        path="/",
+    )
+
+
+def _clear_auth_cookie(response: Response, name: str) -> None:
+    """Expire an auth cookie (attributes must match the ones it was set with)."""
+    response.delete_cookie(
+        name,
+        path="/",
+        httponly=True,
+        secure=_cookies_secure(),
+        samesite="strict",
+    )
 
 
 class LoginRequest(BaseModel):
@@ -58,9 +99,20 @@ class HistoryResponse(BaseModel):
 
 @router.post("/auth/login", response_model=TokenResponse)
 @limiter.limit("5/minute")
-async def login(request: Request, body: LoginRequest) -> TokenResponse:
-    """Authenticate and return JWT tokens."""
-    from auth.jwt_handler import create_access_token, create_refresh_token  # noqa: PLC0415
+async def login(request: Request, body: LoginRequest, response: Response) -> TokenResponse:
+    """Authenticate and return JWT tokens.
+
+    Tokens are returned in the JSON body (unchanged contract for API clients and
+    tests) *and* mirrored into httpOnly Secure SameSite cookies so browser UIs no
+    longer need to keep the token in JS-readable localStorage. The cookie bridge
+    middleware authenticates subsequent requests from the cookie alone.
+    """
+    from auth.jwt_handler import (  # noqa: PLC0415
+        ACCESS_TOKEN_TTL,
+        REFRESH_TOKEN_TTL,
+        create_access_token,
+        create_refresh_token,
+    )
 
     _app = _app_module()
     admin_user = os.getenv("ADMIN_USERNAME", "admin")
@@ -84,9 +136,13 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
 
     if not admin_hash:
         if body.username == "admin" and body.password == "admin":
-            response = TokenResponse(
+            token_response = TokenResponse(
                 access_token=create_access_token("admin", "admin", login_tenant),
                 refresh_token=create_refresh_token("admin", "admin", login_tenant),
+            )
+            _set_auth_cookie(response, "access_token", token_response.access_token, ACCESS_TOKEN_TTL)
+            _set_auth_cookie(
+                response, "refresh_token", token_response.refresh_token, REFRESH_TOKEN_TTL
             )
             await _app.log_audit(
                 actor=body.username,
@@ -95,7 +151,7 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
                 detail={"tenant": login_tenant},
                 ip_address=client_ip,
             )
-            return response
+            return token_response
         await _record_failure("bad_credentials_dev")
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
@@ -109,10 +165,12 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
         await _record_failure("bad_password")
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    response = TokenResponse(
+    token_response = TokenResponse(
         access_token=create_access_token(body.username, "admin", login_tenant),
         refresh_token=create_refresh_token(body.username, "admin", login_tenant),
     )
+    _set_auth_cookie(response, "access_token", token_response.access_token, ACCESS_TOKEN_TTL)
+    _set_auth_cookie(response, "refresh_token", token_response.refresh_token, REFRESH_TOKEN_TTL)
     await _app.log_audit(
         actor=body.username,
         action="login",
@@ -120,13 +178,15 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
         detail={"tenant": login_tenant},
         ip_address=client_ip,
     )
-    return response
+    return token_response
 
 
 @router.post("/auth/refresh", response_model=TokenResponse)
-async def refresh_token(body: RefreshRequest) -> TokenResponse:
-    """Refresh access token."""
+async def refresh_token(body: RefreshRequest, response: Response) -> TokenResponse:
+    """Refresh access token (also rotates the httpOnly cookies)."""
     from auth.jwt_handler import (  # noqa: PLC0415
+        ACCESS_TOKEN_TTL,
+        REFRESH_TOKEN_TTL,
         create_access_token,
         create_refresh_token,
         verify_token,
@@ -136,7 +196,7 @@ async def refresh_token(body: RefreshRequest) -> TokenResponse:
     if payload is None:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
 
-    return TokenResponse(
+    token_response = TokenResponse(
         access_token=create_access_token(
             payload["sub"],
             payload.get("role", "viewer"),
@@ -148,6 +208,42 @@ async def refresh_token(body: RefreshRequest) -> TokenResponse:
             payload.get("tenant", "default"),
         ),
     )
+    _set_auth_cookie(response, "access_token", token_response.access_token, ACCESS_TOKEN_TTL)
+    _set_auth_cookie(response, "refresh_token", token_response.refresh_token, REFRESH_TOKEN_TTL)
+    return token_response
+
+
+@router.post("/auth/session")
+@limiter.limit("5/minute")
+async def establish_session(request: Request, response: Response) -> dict[str, str]:
+    """Exchange a validated Bearer access token for an httpOnly session cookie.
+
+    The admin/agent operator UIs let an operator paste a JWT access token. This
+    endpoint lets them move that token out of JS-readable ``localStorage`` and
+    into an httpOnly cookie: the pasted token is sent once in the Authorization
+    header, validated, and re-issued as the ``access_token`` cookie. The cookie
+    bridge middleware then authenticates every subsequent request with no token
+    in JavaScript. Header-based auth (API clients, curl) is untouched.
+    """
+    from auth.jwt_handler import ACCESS_TOKEN_TTL, verify_token  # noqa: PLC0415
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Bearer access token required")
+    token = auth_header[7:]
+    if verify_token(token, expected_type="access") is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    _set_auth_cookie(response, "access_token", token, ACCESS_TOKEN_TTL)
+    return {"status": "ok"}
+
+
+@router.post("/auth/logout")
+async def logout(response: Response) -> dict[str, str]:
+    """Clear the httpOnly auth cookies (browser-side logout)."""
+    _clear_auth_cookie(response, "access_token")
+    _clear_auth_cookie(response, "refresh_token")
+    return {"status": "ok"}
 
 
 def _try_parse_uuid(session_id: str) -> uuid.UUID | None:

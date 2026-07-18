@@ -1,16 +1,11 @@
   (function () {
-    var storageKey = "rag_admin_token";
     var button = document.getElementById("btn-load-providers");
     var tableBody = document.querySelector("#providers-table tbody");
     var output = document.getElementById("providers-output");
 
     function headers() {
-      var token = (localStorage.getItem(storageKey) || "").trim();
-      var result = { "Content-Type": "application/json" };
-      if (token) {
-        result.Authorization = "Bearer " + token;
-      }
-      return result;
+      // Auth rides on the httpOnly cookie (see admin.js / cookie bridge).
+      return { "Content-Type": "application/json" };
     }
 
     async function loadProviders() {

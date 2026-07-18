@@ -24,6 +24,7 @@ import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from urllib.parse import urlparse
 from collections.abc import AsyncGenerator
 
 import httpx
@@ -1804,11 +1805,33 @@ async def _tenant_context(request: Request, call_next: Any) -> Any:
         set_current_tenant(None)
 
 
+_COOKIE_AUTH_UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
+def _cookie_auth_origin_ok(request: Request) -> bool:
+    """CSRF gate for cookie-derived auth on state-changing methods.
+
+    Both cookie writers share the ``access_token`` cookie name but differ in
+    SameSite (session_auth.py sets Strict; auth_sso.py must stay Lax to survive
+    the IdP redirect), so the SameSite posture of the shared cookie is bounded
+    by the weakest writer: a cross-site top-level form POST may still carry the
+    Lax SSO cookie. Requiring a matching Origin on unsafe methods closes that
+    for every writer. Requests without an Origin header (curl, non-browser
+    clients) and explicit Authorization headers are unaffected.
+    """
+    if request.method not in _COOKIE_AUTH_UNSAFE_METHODS:
+        return True
+    origin = request.headers.get("origin")
+    if not origin:
+        return True
+    return bool(urlparse(origin).netloc == request.headers.get("host", ""))
+
+
 @app.middleware("http")
 async def _cookie_auth_bridge(request: Request, call_next: Any) -> Any:
     if "authorization" not in request.headers:
         access_token = request.cookies.get("access_token")
-        if access_token:
+        if access_token and _cookie_auth_origin_ok(request):
             headers = list(request.scope.get("headers", []))
             headers.append((b"authorization", f"Bearer {access_token}".encode("utf-8")))
             request.scope["headers"] = headers

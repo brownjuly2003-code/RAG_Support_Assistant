@@ -13,8 +13,13 @@
 
         let currentTicketId = null;
 
-        function getToken() {
-            return localStorage.getItem('agent_token') || '';
+        // Graceful migration: purge any bearer token left in localStorage by an
+        // earlier build. Auth now rides on an httpOnly cookie (set via
+        // /api/auth/session) that JavaScript cannot read.
+        try {
+            localStorage.removeItem('agent_token');
+        } catch (e) {
+            /* localStorage may be unavailable; nothing to migrate. */
         }
 
         function setStatus(message, isError) {
@@ -22,12 +27,18 @@
             agentStatus.classList.toggle('is-error', Boolean(isError));
         }
 
+        async function establishSession(token) {
+            const response = await fetch('/api/auth/session', {
+                method: 'POST',
+                headers: token ? { Authorization: 'Bearer ' + token } : {},
+            });
+            return response.ok;
+        }
+
         async function apiFetch(path, options) {
-            const token = getToken();
+            // No Authorization header: the httpOnly session cookie authenticates
+            // same-origin requests via the server-side cookie bridge.
             const headers = Object.assign({}, options && options.headers ? options.headers : {});
-            if (token) {
-                headers.Authorization = 'Bearer ' + token;
-            }
             if (!headers['Content-Type'] && options && options.body) {
                 headers['Content-Type'] = 'application/json';
             }
@@ -225,14 +236,24 @@
             }
         }
 
-        saveAgentTokenBtn.addEventListener('click', function() {
-            localStorage.setItem('agent_token', tokenInput.value.trim());
-            setStatus(tokenInput.value.trim() ? 'Токен сохранён.' : 'Токен очищен.', false);
-            loadTickets();
+        saveAgentTokenBtn.addEventListener('click', async function() {
+            const token = tokenInput.value.trim();
+            if (!token) {
+                setStatus('Введите токен.', true);
+                return;
+            }
+            setStatus('Устанавливаю сессию…', false);
+            const ok = await establishSession(token);
+            if (ok) {
+                tokenInput.value = '';
+                setStatus('Сессия установлена (httpOnly cookie). Токен больше не хранится в браузере.', false);
+                loadTickets();
+            } else {
+                setStatus('Не удалось авторизоваться. Проверьте токен.', true);
+            }
         });
 
         ticketStatusFilter.addEventListener('change', loadTickets);
         sendResponse.addEventListener('click', respondToTicket);
 
-        tokenInput.value = getToken();
         loadTickets();

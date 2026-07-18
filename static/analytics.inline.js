@@ -1,17 +1,16 @@
   (function () {
-    var storageKey = "rag_admin_token";
-
-    function headers() {
-      var token = (localStorage.getItem(storageKey) || "").trim();
-      var result = {};
-      if (token) {
-        result.Authorization = "Bearer " + token;
-      }
-      return result;
+    // Graceful migration: drop any legacy bearer token from localStorage. This
+    // read-only dashboard now authenticates via the httpOnly cookie established
+    // on the admin page (same-origin requests send it automatically; the cookie
+    // bridge copies it into the Authorization header server-side).
+    try {
+      localStorage.removeItem("rag_admin_token");
+    } catch (_) {
+      /* localStorage may be unavailable; nothing to migrate. */
     }
 
     async function loadJson(path) {
-      var response = await fetch(path, { headers: headers() });
+      var response = await fetch(path);
       return response.json();
     }
 
