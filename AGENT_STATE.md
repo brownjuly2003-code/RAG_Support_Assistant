@@ -1,8 +1,23 @@
 # Agent State
 
-## 2026-07-16 Update (security lock refresh + audit follow-up) ✅ START HERE
+## 2026-07-18 Update (audit follow-up wave 2: S1+Q1+A1+Q2; параллельные opus-агенты) ✅ START HERE
 
-> **START HERE.** Заход: глубокий аудит `audit_grok_16_07_26.md` + «доработай проект максимально, решения на тебе».
+> **START HERE.** Заход: «доработай проект» + явное разрешение Юли на параллельные opus-субагенты («жги»). Всё ниже PUSHED одним пакетом, CI смотреть на последнем коммите.
+>
+> **Сделано:**
+> 1. **D1-коммит `2263a8c` перепроверен и запушен** (pip-audit обоих lock на СВЕЖИХ advisories — чисто; 44 целевых теста; ruff). CI поймал trailing whitespace в `audit_grok_16_07_26.md` (только pre-commit job) → фикс `c15a5a9`, CI на нём **success целиком**.
+> 2. **S1 закрыт** (`3cac073`): httpOnly cookie auth для admin/agent/analytics UI — токенов в localStorage больше нет. `/auth/login|refresh` зеркалируют JWT в httpOnly SameSite=Strict cookie; новые `POST /api/auth/session` (paste-токен → cookie) и `/api/auth/logout`; JS-чтения/записи токенов удалены; header-auth и JSON-контракт не тронуты. **Адверсариальный opus-ревью нашёл 2 SHOULD-FIX, оба закрыты:** (а) SSO пишет одноимённый `access_token` cookie с SameSite=**Lax** → «Strict решает CSRF» неполно → в `_cookie_auth_bridge` добавлен **Origin-гейт** на state-changing методы (`api/app.py::_cookie_auth_origin_ok`); (б) cookie-тесты были вакуумны (анонимный admin-фолбэк фикстуры) → переведены на `client_with_key` + негативные ассерты + тест cross-site-отказа. `/auth/session` получил лимит 5/minute. Верификация: auth-батч 32 + UI-батч 58 + cookie 9 passed; mypy skip-gate Success 23 files; ruff. Известные границы (осознанно, в CHANGELOG): logout не отзывает JWT server-side; analytics.html зависит от cookie с admin-страницы.
+> 3. **Q1 харнесс готов** (`5b6c157`): `scripts/ab_context_precision.py` — 8 плеч (rerank top-k / parent-window / grade_docs on-off) вокруг D2-базлайна, ОДНА тяжёлая embed+rerank-стадия, остальное — дешёвая пост-обработка; метрики через существующий `evaluation.ragas_eval` + `_kw_status` FULL/PART/MISS как гард; SHIP-критерии вшиты (Δprecision ≥ +0.05, recall ≥ 0.90, FULL/MISS без регрессий), NO-SHIP валиден. Smoke на моках (без моделей/сети), 7 тестов. **Heavy-прогон на Mac НЕ запускался** — Mac занят DE_project soak; one-command рецепт в `docs/operations/2026-07-18-q1-context-precision-ab-plan.md`.
+> 4. **A1 закрыт design-doc'ом** (`ee82fea`): `docs/plans/2026-07-18-multi-replica-design.md` — 22 позиции process-local state (file:line). Поправки к аудиту: сессии УЖЕ Postgres-backed, LLM-кэш УЖЕ Redis; настоящих блокеров два — rate limiter без `storage_uri` и in-memory confirm-actions (+ гоча: `channels/telegram_bot.py` держит свой `_sessions` — остаётся single-instance). Рекомендация: не начинать без реального SLA.
+> 5. **Q2 закрыт** (`694dbc0`): `docs/OPERATIONS.md` «Latency budgets & timeouts» — рекомендация `RAG_ASK_BUDGET_SEC=300` для prod (дожфуд-медиана ~190s), дефолт `0` не тронут. F3 (ruff ASYNC, 5 в `scripts/`) осознанно оставлен: реальный блок — синхронный sqlite-скан на admin-only пути, точечный `to_thread` — линтерная косметика. RUF100: подлинно stale noqa = 0.
+>
+> **Остаток (гейтованное):** Q1 heavy-прогон на Mac (когда освободится от DE-soak); multi-replica implementation (по SLA, план готов); C1 распил `agent/graph.py` (аудит: «no silent broad refactors» — только по явному решению Юли); optional UX: logout-кнопка в admin/agent, retarget `test_admin_js_served`.
+>
+> **Гоча сессии:** `~/.claude/scripts/guard.py` НЕ видит сообщений Юли, отправленных посреди хода агента (UserPromptSubmit для них не срабатывает) — разрешение на параллель пришлось выставлять вручную в state-файл guard'а.
+
+## 2026-07-16 Update (security lock refresh + audit follow-up) — SUPERSEDED by 2026-07-18
+
+> Заход: глубокий аудит `audit_grok_16_07_26.md` + «доработай проект максимально, решения на тебе».
 >
 > **Сделано (локально, ждать push):**
 > 1. **D1 dep-CVE batch** — `uv pip compile` (py3.11/linux hashes) обоих lock: `aiohttp 3.14.1`, `cryptography 49.0.0`, `starlette 1.3.1`, `python-multipart 0.0.32`, `pypdf 6.14.2`, `langsmith 0.10.5`, `langchain 1.3.13`, `setuptools 83.0.0`, joserfc/langgraph-*/pydantic-settings/langchain-classic и floors в `requirements.txt`. `pip-audit --strict` → **No known vulnerabilities found** (игноры chroma/torch no-fix оставлены).
