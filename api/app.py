@@ -1693,12 +1693,39 @@ async def _log_requests(request: Request, call_next: Any) -> Any:
     return response
 
 
+def _route_mount_prefix(request: Request, route: Any) -> str:
+    """Return the prefix parent routers stripped before ``route`` matched.
+
+    FastAPI 0.138 stopped rewriting included routes into flat, prefixed copies
+    on the app: ``include_router`` keeps a wrapper and the leaf route holds only
+    its own relative path, so ``path_format`` alone reports ``/health/live``
+    where it used to report ``/api/health/live``.  That silently rewrites every
+    metric label and collapses same-named routes from different routers onto
+    one series.
+
+    Rebuilding the prefix from the request keeps a single code path for both
+    layouts: ``url_path_for`` resolves the route's own path, and on <= 0.137,
+    where the route already owns the full path, the reconstructed prefix is
+    empty and the result is byte-identical.
+    """
+    try:
+        own_path = str(route.url_path_for(route.name, **(request.scope.get("path_params") or {})))
+    except Exception:
+        return ""
+
+    actual_path = request.scope.get("path") or ""
+    if own_path and actual_path.endswith(own_path):
+        return actual_path[: len(actual_path) - len(own_path)]
+
+    return ""
+
+
 def _extract_route_template(request: Request) -> str:
     route = request.scope.get("route")
     if route is not None:
         path_format: str | None = getattr(route, "path_format", None)
         if path_format:
-            return path_format
+            return _route_mount_prefix(request, route) + path_format
 
         path: str | None = getattr(route, "path", None)
         if path:

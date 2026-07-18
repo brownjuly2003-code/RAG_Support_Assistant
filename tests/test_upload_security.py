@@ -7,6 +7,8 @@ from typing import ClassVar
 import pytest
 from fastapi.testclient import TestClient
 
+from tests._route_introspection import route_endpoint_module as _route_endpoint_module
+
 CLIENT_WITH_KEY_SETTINGS_OVERRIDES = {
     "project_root": "__tmp_path__",
 }
@@ -15,19 +17,6 @@ CLIENT_WITH_KEY_PATCHES = {
     "_DocumentLoader": None,
     "_build_vector_store": None,
 }
-
-
-def _route_endpoint_module(client: TestClient, path: str, method: str) -> str:
-    for route in client.app.routes:
-        if getattr(route, "path", None) != path:
-            continue
-        if method not in getattr(route, "methods", set()):
-            continue
-        endpoint = route.endpoint
-        while hasattr(endpoint, "__wrapped__"):
-            endpoint = endpoint.__wrapped__
-        return endpoint.__module__
-    raise AssertionError(f"Route not found: {method} {path}")
 
 
 def test_upload_routes_are_owned_by_upload_router(client_with_key: TestClient) -> None:

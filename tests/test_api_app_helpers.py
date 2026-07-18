@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -131,3 +132,43 @@ def test_extract_route_template_prefers_path_format_then_path() -> None:
 
     request = SimpleNamespace(scope={})
     assert app_module._extract_route_template(request) == "unknown"
+
+
+def test_extract_route_template_keeps_router_prefix() -> None:
+    """Metric labels must keep the prefix the parent router was mounted under.
+
+    The fake-route test above cannot see this: its `path_format` already
+    carries `/api`.  FastAPI 0.138 stopped rewriting included routes into flat
+    prefixed copies on the app, so a real leaf route now reports only its own
+    relative path and every label silently collapsed to `/sessions/...`.
+    Drive a real app so the assertion is about routing, not about the fake.
+    """
+    from fastapi import APIRouter, FastAPI, Request
+    from fastapi.testclient import TestClient
+
+    import api.app as app_module
+
+    probe_app = FastAPI()
+    leaf = APIRouter()
+
+    @leaf.get("/sessions/{sid}/history")
+    def _history(sid: str) -> dict[str, str]:
+        return {"sid": sid}
+
+    mounted = APIRouter(prefix="/api")
+    mounted.include_router(leaf)
+    probe_app.include_router(mounted)
+
+    labels: list[str] = []
+
+    @probe_app.middleware("http")
+    async def _capture(request: Request, call_next: Any) -> Any:
+        response = await call_next(request)
+        labels.append(app_module._extract_route_template(request))
+        return response
+
+    client = TestClient(probe_app)
+    client.get("/api/sessions/abc-42/history")
+    client.get("/no/such/route")
+
+    assert labels == ["/api/sessions/{sid}/history", "unknown"]

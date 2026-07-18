@@ -2,22 +2,10 @@ from fastapi.testclient import TestClient
 from starlette.routing import Match
 
 from auth.jwt_handler import create_access_token
+from tests._route_introspection import route_endpoint_module as _route_endpoint_module
 
 AGENT_HEADERS = {"Authorization": f"Bearer {create_access_token('op1', 'agent')}"}
 VIEWER_HEADERS = {"Authorization": f"Bearer {create_access_token('v1', 'viewer')}"}
-
-
-def _route_endpoint_module(client: TestClient, path: str, method: str) -> str:
-    for route in client.app.routes:
-        if getattr(route, "path", None) != path:
-            continue
-        if method not in getattr(route, "methods", set()):
-            continue
-        endpoint = route.endpoint
-        while hasattr(endpoint, "__wrapped__"):
-            endpoint = endpoint.__wrapped__
-        return endpoint.__module__
-    raise AssertionError(f"Route not found: {method} {path}")
 
 
 def test_root_routes_are_owned_by_root_pages_router(client_with_key: TestClient) -> None:
