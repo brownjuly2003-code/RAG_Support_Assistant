@@ -1,6 +1,16 @@
 # Agent State
 
-## 2026-07-18 Update (audit follow-up wave 2: S1+Q1+A1+Q2; параллельные opus-агенты) ✅ START HERE
+## 2026-07-18 Update-2 (Q1 heavy-прогон ВЫПОЛНЕН: NO-SHIP; UX logout) ✅ START HERE
+
+> **START HERE.** Заход: «продолжи» после волны-2. Mac освободился от DE-soak → выполнен гейтованный остаток.
+>
+> **Сделано:**
+> 1. **Q1 heavy-прогон ПРОГНАН на Mac** (run `20260718T173221Z-8c2fd13e`, полная форма `--build-pool --with-grade --with-judge`, external-mistral, ~7 ч). **Вердикт NO-SHIP по всем 7 плечам** — лучшее по precision плечо k3-grade (+0.071) роняет FULL 97→92 / MISS 1→3; no-expand роняет обе оси (−0.070 precision, FULL 87). Прод-дефолты не тронуты. Evidence: `docs/operations/2026-07-18-q1-context-precision-ab-results.md`; сырые отчёты в `reports/ragas/` (untracked по конвенции); rerank-пул `.tmp/ab_candidates_phase2_C.json` остался на Mac — детерминированный пересчёт из него за минуты. Каверзы: 25/~200 grade-вызовов упали transport-ошибками Mistral (вердикт робастен — деградация к prod-поведению не создаёт регрессий FULL); embed реально ~2.2 ч (5589 чанков, оценка плана «3–6 мин» была занижена). Mac вычищен: `/tmp/mk.env` + `/tmp/q1_run.sh` удалены.
+> 2. **UX-хвост закрыт** (`b5978f0`): logout-кнопки в admin («Logout») и agent («Выйти») → существующий `POST /api/auth/logout`; `test_admin_js_served` ретаргетирован со стейл-`localStorage` на cookie-ассерты (`/api/auth/session`, `/api/auth/logout`, отсутствие `localStorage.setItem`). Верификация: 63 passed (admin_ui/session_auth_cookie/agent_endpoints/a11y/csp), ruff clean.
+>
+> **Остаток (только гейтованное, Windows-backlog ПУСТ):** Q1b (nightly RAGAS drift + CI floor) — гейт «precision сдвинулся» НЕ выполнен; multi-replica impl (по SLA, план готов); C1 распил `agent/graph.py` — только по явному решению Юли.
+
+## 2026-07-18 Update (audit follow-up wave 2: S1+Q1+A1+Q2; параллельные opus-агенты) — SUPERSEDED by Update-2
 
 > **START HERE.** Заход: «доработай проект» + явное разрешение Юли на параллельные opus-субагенты («жги»). Всё ниже PUSHED одним пакетом, CI смотреть на последнем коммите.
 >

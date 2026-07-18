@@ -2,6 +2,17 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Q1-Result] — 2026-07-18 — context_precision A/B прогнан: NO-SHIP, дефолты не меняются
+
+Q1-харнесс (см. волну-2 ниже) прогнан целиком на Mac (run
+`20260718T173221Z-8c2fd13e`, 100 кейсов, 8 плеч, grade+judge через
+external-mistral). **Ни одно плечо не прошло SHIP-критерии**: каждый выигрыш
+context_precision (лучшее k3-grade +0.071) оплачен регрессией keyword
+FULL/MISS (97→92, 1→3); выключение parent-window роняет ОБЕ оси. Прод-дефолты
+(`rerank_top_k=5`, window 2/3600, grade off) остаются. Evidence:
+`docs/operations/2026-07-18-q1-context-precision-ab-results.md`. Q1b
+(nightly drift + CI floor) остаётся гейтованным — precision не сдвинулся.
+
 ## [Audit-Follow-Up-UX] — 2026-07-18 — logout-кнопки в admin/agent UI
 
 Хвост S1 (cookie-auth): оператору нужен способ завершить сессию из UI, а не
