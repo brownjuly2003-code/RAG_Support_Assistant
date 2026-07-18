@@ -229,6 +229,36 @@ python scripts/generate_improvement_backlog.py --tenant all --week 2026-W17 --ou
 ```
 
 
+## Latency budgets & timeouts
+
+Full-graph answers on CPU with an external provider are slow: dogfood measured a
+median of roughly **190 s** end-to-end, and a flapping provider can stall a call
+indefinitely when no wall-clock budget is set. Two independent budgets bound
+this, and they cover different entry points:
+
+- **HTTP path** — already covered by `REQUEST_TIMEOUT_SEC` (`request_timeout_sec`,
+  default `30`). Every answer served through the API is capped here, so a stuck
+  provider surfaces as a timeout rather than a hung connection. SSE token streams
+  use the separate, intentionally longer `streaming_timeout_sec` budget.
+- **Non-HTTP runners** — `RAG_ASK_BUDGET_SEC` (`ask_budget_sec`, default `0` =
+  off) is the wall-clock budget for a single `ConversationSession.ask()` invoked
+  outside the HTTP path: channel workers (Telegram/email), batch eval, and
+  scripted runs. With the default `0` these callers block until the provider
+  returns, so a hang is unbounded.
+
+**Recommended for production:** set `RAG_ASK_BUDGET_SEC=300`. Five minutes sits
+comfortably above the observed ~190 s median, so genuinely slow-but-completing
+answers still return, while capping the worst-case hang instead of blocking a
+worker forever. Tune per deployment — lower it for latency-sensitive channels,
+raise it only if a local model legitimately streams longer. When the budget is
+exceeded, `ask()` returns a graceful degraded result (route `"timeout"`) rather
+than hanging.
+
+This is a documentation recommendation only: the shipped default of
+`RAG_ASK_BUDGET_SEC=0` is unchanged, and turning the budget on is an operator
+decision.
+
+
 ## Review queue
 
 The review queue keeps weak or high-risk traces from being lost between

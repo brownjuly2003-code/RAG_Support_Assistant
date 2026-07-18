@@ -36,6 +36,14 @@
   история сессий уже в Postgres, LLM-кэш уже в Redis; настоящих блокеров два —
   in-memory rate limiter (без `storage_uri`) и pending confirm-actions.
   Рекомендация: не начинать без реального multi-replica SLA.
+- **Q2 — латентные бюджеты задокументированы** (`docs/OPERATIONS.md`, раздел
+  «Latency budgets & timeouts»): рекомендация `RAG_ASK_BUDGET_SEC=300` для
+  production (дожфуд-медиана ~190s full-graph на CPU+external), HTTP-путь уже
+  ограничен `request_timeout_sec`. Дефолт `0` не менялся — включение бюджета
+  остаётся решением оператора. Попутная ревизия: F3 (ruff ASYNC, 5 находок в
+  `scripts/`) осознанно оставлен — доминирующий event-loop-блок там синхронный
+  sqlite-скан на редком admin-only пути, обёртка Path-вызовов успокоила бы
+  линтер, не меняя поведения; RUF100 — подлинно неиспользуемых `noqa` ноль.
 
 ## [Security-Lock-Refresh] — 2026-07-16 — dep CVE batch + smoke-test hardening
 
