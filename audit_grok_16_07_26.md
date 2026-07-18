@@ -1,10 +1,10 @@
 # Аудит RAG_Support_Assistant — 16.07.26 (Grok)
 
-**Аудитор:** Grok 4.5 (xAI)  
-**Дата:** 2026-07-16  
-**HEAD:** `0b0234c` (`test(ci): align docs-site npm-audit assertion with critical-only gate`)  
-**Ветка:** `master` = `origin/master` (синхронизирована)  
-**Remote:** `https://github.com/brownjuly2003-code/RAG_Support_Assistant.git`  
+**Аудитор:** Grok 4.5 (xAI)
+**Дата:** 2026-07-16
+**HEAD:** `0b0234c` (`test(ci): align docs-site npm-audit assertion with critical-only gate`)
+**Ветка:** `master` = `origin/master` (синхронизирована)
+**Remote:** `https://github.com/brownjuly2003-code/RAG_Support_Assistant.git`
 **Последний коммит:** 2026-06-18 (~4 недели без новых code-коммитов на момент аудита)
 
 ---
@@ -27,9 +27,9 @@
 
 ### Что НЕ гонялось на этой Windows-машине (и почему)
 
-- Полный `pytest` / coverage / mypy strict на production-пакетах — **глобальный Python 3.13.7** без project venv; lock рассчитан на **Python 3.11 + Linux x86_64** (Docker/`python:3.11-slim`).  
-- `pip-audit` по lock — сетевой; состояние CVE берётся из `AGENT_STATE` + pinned versions в lock.  
-- Live RAGAS / full-corpus embed / rerank — **>1 GiB RAM**, запрещено локальным resource guard; heavy — Mac/Colab/Kaggle.  
+- Полный `pytest` / coverage / mypy strict на production-пакетах — **глобальный Python 3.13.7** без project venv; lock рассчитан на **Python 3.11 + Linux x86_64** (Docker/`python:3.11-slim`).
+- `pip-audit` по lock — сетевой; состояние CVE берётся из `AGENT_STATE` + pinned versions в lock.
+- Live RAGAS / full-corpus embed / rerank — **>1 GiB RAM**, запрещено локальным resource guard; heavy — Mac/Colab/Kaggle.
 - Источник истины для unit/integration/mypy — **CI** на Linux 3.11 + hashed locks.
 
 ### 0.1. Локальный env-mismatch (не баг продукта)
@@ -48,7 +48,7 @@
 
 Проект — **зрелый production-grade multi-tenant RAG support assistant** (FastAPI + LangGraph + Chroma + provider routing + Postgres/Redis + Helm). За 1.5 месяца с аудита 03.06.26 закрыты почти все code-level findings того аудита, прогнан data-backed adaptive-retrieval workstream (NO-SHIP), закрыт external dogfood (Deckhouse/Flant), docs-site доведён до live E20.
 
-**Самооценка: 8.9 / 10** (локальное инженерное качество).  
+**Самооценка: 8.9 / 10** (локальное инженерное качество).
 Потолок по-прежнему держит **доказанное end-to-end качество на live LLM + CI quality gate**, плюс **свежий dep-CVE backlog** (aiohttp/cryptography) и **single-worker topology** как архитектурный потолок scale-out.
 
 ### Топ-5 прямо сейчас
@@ -63,16 +63,16 @@
 
 ### Что изменилось к лучшему с 03.06
 
-- F1 fire-and-forget → `utils.background_tasks.spawn_tracked` + guard-тест.  
-- F2 CSP → shipped (`Content-Security-Policy` + inline JS → `/static/*.js`).  
-- R6 device → `RAG_DEVICE` / `_resolve_device()` (не hardcoded CPU).  
-- F6 lint ratchet → ruff select расширен (I, B904/B905/B009, RUF012, UP).  
-- R7 частично закрыт: free-RAGAS 100 aircargo cases (см. §7).  
-- Adaptive-retrieval F1–F4 + Phase-5: **opt-in factcard, default NO-SHIP по данным**.  
-- Dogfood 5 findings → code fixes (commit `1343323`), defaults unchanged.  
-- Type-hardening: почти все prod-пакеты в mypy strict-scope.  
-- Remote embeddings backend (`RAG_EMBEDDING_BACKEND=remote`).  
-- Ask wall-budget (`RAG_ASK_BUDGET_SEC`).  
+- F1 fire-and-forget → `utils.background_tasks.spawn_tracked` + guard-тест.
+- F2 CSP → shipped (`Content-Security-Policy` + inline JS → `/static/*.js`).
+- R6 device → `RAG_DEVICE` / `_resolve_device()` (не hardcoded CPU).
+- F6 lint ratchet → ruff select расширен (I, B904/B905/B009, RUF012, UP).
+- R7 частично закрыт: free-RAGAS 100 aircargo cases (см. §7).
+- Adaptive-retrieval F1–F4 + Phase-5: **opt-in factcard, default NO-SHIP по данным**.
+- Dogfood 5 findings → code fixes (commit `1343323`), defaults unchanged.
+- Type-hardening: почти все prod-пакеты в mypy strict-scope.
+- Remote embeddings backend (`RAG_EMBEDDING_BACKEND=remote`).
+- Ask wall-budget (`RAG_ASK_BUDGET_SEC`).
 - Headless-safe `main.py` (`UVICORN_RELOAD` default off).
 
 ---
@@ -119,12 +119,12 @@ User / Email / Widget / Telegram
 
 ### Сильные стороны дизайна
 
-1. **Retrieval stack 2026-уровня:** hybrid (vector+BM25+RRF), multilingual reranker `BAAI/bge-reranker-v2-m3`, structural/parent expansion (D2), semantic chunking default on, contextual headers, fact verification, Self-RAG with bounded iterations.  
-2. **Provider abstraction:** profiles (`gracekelly-primary`, `local-first`, `external-mistral`, `gracekelly-mixed`), daily cost limit, failover chain, changeme-key → missing.  
-3. **Tenant isolation:** JWT claim, per-tenant Chroma collections `rag_docs_{tenant}`, cache keys, admin filters — dogfood подтвердил чистую изоляцию.  
-4. **Production fail-fast:** `Settings.validate()` в production отвергает CORS `*`, dev JWT secret, short secrets, missing `DB_ENCRYPTION_KEY`.  
-5. **Ops maturity:** Helm chart + cronjobs (eval, review, backlog, backup, restore-verify, thresholds), graceful shutdown (ready→503 drain), liveness/readiness split, request-id, rate limits, circuit breaker.  
-6. **Knowledge loops:** nightly eval, online evaluators (7 checks), KB gap detector, KB builder drafts, review queue, improvement backlog, stale-doc freshness.  
+1. **Retrieval stack 2026-уровня:** hybrid (vector+BM25+RRF), multilingual reranker `BAAI/bge-reranker-v2-m3`, structural/parent expansion (D2), semantic chunking default on, contextual headers, fact verification, Self-RAG with bounded iterations.
+2. **Provider abstraction:** profiles (`gracekelly-primary`, `local-first`, `external-mistral`, `gracekelly-mixed`), daily cost limit, failover chain, changeme-key → missing.
+3. **Tenant isolation:** JWT claim, per-tenant Chroma collections `rag_docs_{tenant}`, cache keys, admin filters — dogfood подтвердил чистую изоляцию.
+4. **Production fail-fast:** `Settings.validate()` в production отвергает CORS `*`, dev JWT secret, short secrets, missing `DB_ENCRYPTION_KEY`.
+5. **Ops maturity:** Helm chart + cronjobs (eval, review, backlog, backup, restore-verify, thresholds), graceful shutdown (ready→503 drain), liveness/readiness split, request-id, rate limits, circuit breaker.
+6. **Knowledge loops:** nightly eval, online evaluators (7 checks), KB gap detector, KB builder drafts, review queue, improvement backlog, stale-doc freshness.
 7. **Evidence culture:** adaptive-retrieval закрыт **NO-SHIP по данным** (Phase-5), а не «забыли зашиппить» — это редкая и правильная дисциплина.
 
 ### Архитектурные ограничения (осознанные)
@@ -172,7 +172,7 @@ User / Email / Widget / Telegram
 | F1–F4 factcard lane | **SHIPPED opt-in** (`RAG_RETRIEVAL_STRATEGY=factcard`, hybrid fallback) |
 | R1 router classifier | **SHIPPED**, не в дефолте |
 | Phase 3 auto-route / R2 / Phase 4 | **NO-SHIP-to-default** |
-| Phase 5 delta | **ПРОГНАН:** composite FULL 79 vs D2 97 (Δ−18); needs-slice 19 regressions; augment safe but marginal |  
+| Phase 5 delta | **ПРОГНАН:** composite FULL 79 vs D2 97 (Δ−18); needs-slice 19 regressions; augment safe but marginal |
 | Residual MISS `customs-clearance-fields` | **зафиксирован** (MISS→PART only on keyword metric) |
 
 Вердикт корректен: не ломать работающий D2 (FULL 96–97) ради 1–4 кейсов.
@@ -205,16 +205,16 @@ User / Email / Widget / Telegram
 
 ### 6.1. Что сделано хорошо
 
-- JWT + refresh, OIDC Google/Microsoft, X-API-Key, RBAC roles.  
-- Production secret validation (JWT length, no dev default, encryption key required).  
-- CORS reject `*` in production.  
-- Security headers: nosniff, DENY frame, Referrer-Policy, Permissions-Policy, **CSP**, HSTS in production.  
-- Upload size limits, body size middleware, rate limits (ask/upload/login).  
-- pgcrypto column encryption + `DB_ENCRYPTION_KEY`.  
-- Docker non-root `USER app`, healthcheck, hashed lock install.  
-- Helm secrets via K8s Secret / existingSecret; no default production passwords.  
-- Compose ports bound to `127.0.0.1`.  
-- Bandit 0 high; SQL B608 sites use **placeholder IN (?,?)** patterns (false-positive class).  
+- JWT + refresh, OIDC Google/Microsoft, X-API-Key, RBAC roles.
+- Production secret validation (JWT length, no dev default, encryption key required).
+- CORS reject `*` in production.
+- Security headers: nosniff, DENY frame, Referrer-Policy, Permissions-Policy, **CSP**, HSTS in production.
+- Upload size limits, body size middleware, rate limits (ask/upload/login).
+- pgcrypto column encryption + `DB_ENCRYPTION_KEY`.
+- Docker non-root `USER app`, healthcheck, hashed lock install.
+- Helm secrets via K8s Secret / existingSecret; no default production passwords.
+- Compose ports bound to `127.0.0.1`.
+- Bandit 0 high; SQL B608 sites use **placeholder IN (?,?)** patterns (false-positive class).
 - Cost guard / paid API opt-in for benchmarks.
 
 ### 6.2. Открытые security findings
@@ -233,12 +233,12 @@ User / Email / Widget / Telegram
 
 #### S1 — Tokens in localStorage — **MEDIUM**
 
-Admin/agent UIs: `localStorage` stores bearer tokens. CSP mitigates inline XSS, but any future `innerHTML` regression or compromised third-party script (`cdn.jsdelivr.net` for Chart.js in CSP) elevates impact.  
+Admin/agent UIs: `localStorage` stores bearer tokens. CSP mitigates inline XSS, but any future `innerHTML` regression or compromised third-party script (`cdn.jsdelivr.net` for Chart.js in CSP) elevates impact.
 **Prefer:** httpOnly Secure SameSite cookies (cookie bridge middleware already exists for `access_token`).
 
 #### S2 — Bandit B608 / B310 residual — **LOW**
 
-- B608 in `api/_shared.py`, `tracing/_base_trace.py`, `api/app.py` — f-string SQL with **bound placeholders** (IDs from DB, not raw user SQL). Review once, keep pattern.  
+- B608 in `api/_shared.py`, `tracing/_base_trace.py`, `api/app.py` — f-string SQL with **bound placeholders** (IDs from DB, not raw user SQL). Review once, keep pattern.
 - B310 `urlopen` in `settings.validate` Ollama health — ensure scheme allowlist (`http`/`https` only).
 
 #### S3 — Dev defaults — **INFO (controlled)**
@@ -270,17 +270,17 @@ Confirm-action pending state in memory: restart loses pending confirmations; mul
 
 ### 7.2. Gaps
 
-1. **context_precision ~0.5** — rerank/top_k/grade_docs могут резать шум сильнее; нужен targeted A/B, не «ещё один retrieval strategy».  
-2. **No CI quality floor** — commercial plan RQ-2 (precision≥0.8, faithfulness≥0.85) **не реализован**.  
-3. **Live full-graph latency** (dogfood): median ~190s on CPU+external provider; worst hangs without budget — mitigated only if `RAG_ASK_BUDGET_SEC` set.  
-4. **Default fact verification / multi-step Self-RAG** = high LLM fan-out cost; model routing default **off**.  
+1. **context_precision ~0.5** — rerank/top_k/grade_docs могут резать шум сильнее; нужен targeted A/B, не «ещё один retrieval strategy».
+2. **No CI quality floor** — commercial plan RQ-2 (precision≥0.8, faithfulness≥0.85) **не реализован**.
+3. **Live full-graph latency** (dogfood): median ~190s on CPU+external provider; worst hangs without budget — mitigated only if `RAG_ASK_BUDGET_SEC` set.
+4. **Default fact verification / multi-step Self-RAG** = high LLM fan-out cost; model routing default **off**.
 5. Factcard path proven for list-style residual MISS but **loses exact keyword forms** when replacing D2 chunks.
 
 ### 7.3. Рекомендация по quality roadmap
 
-1. Зафиксировать RAGAS numbers в README/OPERATIONS как official baseline.  
-2. Working item: improve **context_precision** (rerank_k, grade threshold, parent-window chars) with offline A/B on same 100 cases.  
-3. Optional nightly RAGAS job (Helm cron already has eval snapshot pattern) with drift alert — not necessarily PR-blocking first.  
+1. Зафиксировать RAGAS numbers в README/OPERATIONS как official baseline.
+2. Working item: improve **context_precision** (rerank_k, grade threshold, parent-window chars) with offline A/B on same 100 cases.
+3. Optional nightly RAGAS job (Helm cron already has eval snapshot pattern) with drift alert — not necessarily PR-blocking first.
 4. Keep factcard opt-in; do not auto-route.
 
 ---
@@ -289,11 +289,11 @@ Confirm-action pending state in memory: restart loses pending confirmations; mul
 
 ### 8.1. Hygiene — excellent
 
-- 0 TODO/FIXME in production.  
-- Canonical layout (`agent/*`, routers extracted).  
-- Deprecations tracked (`DEPRECATIONS.md`).  
-- Magic numbers → `config/settings.py` (with tests).  
-- Guard tests for CI/pre-commit/mypy sync, docs quality, module layout.  
+- 0 TODO/FIXME in production.
+- Canonical layout (`agent/*`, routers extracted).
+- Deprecations tracked (`DEPRECATIONS.md`).
+- Magic numbers → `config/settings.py` (with tests).
+- Guard tests for CI/pre-commit/mypy sync, docs quality, module layout.
 - Changelog + AGENT_STATE discipline (dense, sometimes superseding — acceptable for autopilot).
 
 ### 8.2. Complexity debt — open
@@ -312,18 +312,18 @@ Confirm-action pending state in memory: restart loses pending confirmations; mul
 
 Wide ruff (`B,RUF,S110,ASYNC`) snapshot: **882** issues. Top clusters:
 
-- RUF001/002/003 — Cyrillic in strings/docs/comments (noise for RU project; don't auto-fix blindly).  
-- RUF100 ×162 — unused `# noqa` (safe cleanup).  
-- B008 ×119 — function calls in defaults (FastAPI `Depends()` — often intentional).  
-- S110 ×46 — try/except/pass.  
+- RUF001/002/003 — Cyrillic in strings/docs/comments (noise for RU project; don't auto-fix blindly).
+- RUF100 ×162 — unused `# noqa` (safe cleanup).
+- B008 ×119 — function calls in defaults (FastAPI `Depends()` — often intentional).
+- S110 ×46 — try/except/pass.
 - ASYNC240/230 — blocking path/open in async.
 
 **Recommendation:** autfix RUF100 only; treat B008 FastAPI Depends as baseline; gradually log critical-path silent `pass`.
 
 ### 8.4. Type system
 
-- Production packages largely **mypy strict** (auth, db, llm.providers, agent core, tasks, utils, monitoring, channels, tracing, ingestion, evaluation, api routers).  
-- `api.app` + `vectordb` via `--follow-imports=skip` — intentional memory/timeout tradeoff on Windows/CI.  
+- Production packages largely **mypy strict** (auth, db, llm.providers, agent core, tasks, utils, monitoring, channels, tracing, ingestion, evaluation, api routers).
+- `api.app` + `vectordb` via `--follow-imports=skip` — intentional memory/timeout tradeoff on Windows/CI.
 - Residual: integrations/ may be thinner; scripts/ excluded.
 
 ### 8.5. Test portfolio
@@ -340,14 +340,14 @@ Wide ruff (`B,RUF,S110,ASYNC`) snapshot: **882** issues. Top clusters:
 
 ## 9. Observability & operations — strongest pillar (~9.8/10)
 
-- ~50 Prometheus metrics, HTTP route templates, component health.  
-- OTel spans on graph nodes / LLM (provider, model, tokens, cost, duration).  
-- SQLite step traces + Langfuse optional.  
-- Alert rules, chaos drill script, backup/restore with integrity verify + encryption tests.  
-- Helm CronJobs: eval snapshot, review queue, improvement backlog, weekly report, threshold analysis, curated staleness, backup integrity.  
-- Circuit breaker + retry observability.  
-- Request correlation ID end-to-end.  
-- Online evaluators (citation coverage, length anomaly, hit rate, tool efficiency, refusals, PII, language mismatch) — no judge LLM.  
+- ~50 Prometheus metrics, HTTP route templates, component health.
+- OTel spans on graph nodes / LLM (provider, model, tokens, cost, duration).
+- SQLite step traces + Langfuse optional.
+- Alert rules, chaos drill script, backup/restore with integrity verify + encryption tests.
+- Helm CronJobs: eval snapshot, review queue, improvement backlog, weekly report, threshold analysis, curated staleness, backup integrity.
+- Circuit breaker + retry observability.
+- Request correlation ID end-to-end.
+- Online evaluators (citation coverage, length anomaly, hit rate, tool efficiency, refusals, PII, language mismatch) — no judge LLM.
 
 **Do not “improve” this area with drive-by refactors.** Focus remaining ops energy on **D1 CVE lock** and optional RAGAS drift job.
 
@@ -413,11 +413,11 @@ Wide ruff (`B,RUF,S110,ASYNC`) snapshot: **882** issues. Top clusters:
 
 **Autonomous work safe candidates (priority order):**
 
-1. Lock regen: aiohttp + cryptography (+ pip-audit green).  
-2. Harden `test_api_namespace_is_populated` to OpenAPI paths (FastAPI-version proof).  
-3. Document official RAGAS baseline + open precision workstream.  
-4. Optional: RUF100 noqa cleanup.  
-5. Optional: httpOnly cookie auth for admin UI (S1).  
+1. Lock regen: aiohttp + cryptography (+ pip-audit green).
+2. Harden `test_api_namespace_is_populated` to OpenAPI paths (FastAPI-version proof).
+3. Document official RAGAS baseline + open precision workstream.
+4. Optional: RUF100 noqa cleanup.
+5. Optional: httpOnly cookie auth for admin UI (S1).
 **Do not:** flip factcard to default; enable multi-worker; silent broad refactors of graph.py.
 
 ---
@@ -477,28 +477,28 @@ Wide ruff (`B,RUF,S110,ASYNC`) snapshot: **882** issues. Top clusters:
 
 ### This week (must)
 
-0. **D1** — lock bump `aiohttp` + `cryptography`, dual lock hashes, pip-audit green, push (CI security red is the only declared Windows backlog residue).  
+0. **D1** — lock bump `aiohttp` + `cryptography`, dual lock hashes, pip-audit green, push (CI security red is the only declared Windows backlog residue).
 1. **T1** — make namespace test OpenAPI-based (1h, prevents false red on FastAPI bump).
 
 ### This month
 
-2. **Q1a** — publish RAGAS baseline in OPERATIONS/README; open precision-focused A/B (rerank_k / grade / window) against same 100 cases.  
-3. **Q2** — recommend production `RAG_ASK_BUDGET_SEC` + provider read timeouts documentation; consider safer defaults for non-dev.  
-4. **S1** — cookie-based admin session (optional product work).  
+2. **Q1a** — publish RAGAS baseline in OPERATIONS/README; open precision-focused A/B (rerank_k / grade / window) against same 100 cases.
+3. **Q2** — recommend production `RAG_ASK_BUDGET_SEC` + provider read timeouts documentation; consider safer defaults for non-dev.
+4. **S1** — cookie-based admin session (optional product work).
 5. **L3** — RUF100 cleanup PR (auto-fix).
 
 ### Quarter
 
-6. **Q1b** — nightly RAGAS/drift job (Helm cron pattern exists) + alert.  
-7. **A1** — design doc for multi-replica: session store, confirm-actions, shared breaker/cache.  
-8. **C1** — split `agent/graph.py` into `agent/nodes/*` without behavior change.  
+6. **Q1b** — nightly RAGAS/drift job (Helm cron pattern exists) + alert.
+7. **A1** — design doc for multi-replica: session store, confirm-actions, shared breaker/cache.
+8. **C1** — split `agent/graph.py` into `agent/nodes/*` without behavior change.
 9. Evaluate PR quality gate only after precision moves above ~0.7 and variance understood.
 
 ### Explicit non-goals (unless new data)
 
-- Default-on factcard / auto-router.  
-- GraphRAG on by default below corpus thresholds.  
-- Multi-worker uvicorn without state externalization.  
+- Default-on factcard / auto-router.
+- GraphRAG on by default below corpus thresholds.
+- Multi-worker uvicorn without state externalization.
 - Broad “rewrite LangChain” initiatives.
 
 ---
@@ -509,12 +509,12 @@ Wide ruff (`B,RUF,S110,ASYNC`) snapshot: **882** issues. Top clusters:
 
 What keeps it from a clean 9.5+:
 
-1. **Dependency bitrot (D1)** after a 4-week code freeze — fixable in one focused PR.  
-2. **Retrieval precision / quality CI** — the product works, but precision ~0.5 and non-blocking eval mean regressions can merge quietly.  
-3. **Scale-out architecture** — honest single-replica design is correct today, but is a hard commercial ceiling.  
+1. **Dependency bitrot (D1)** after a 4-week code freeze — fixable in one focused PR.
+2. **Retrieval precision / quality CI** — the product works, but precision ~0.5 and non-blocking eval mean regressions can merge quietly.
+3. **Scale-out architecture** — honest single-replica design is correct today, but is a hard commercial ceiling.
 4. **Module size** — operable, but expensive for new contributors.
 
-**If only one thing is done after this audit:** clear **D1** (aiohttp + cryptography lock bump) and re-green security CI.  
+**If only one thing is done after this audit:** clear **D1** (aiohttp + cryptography lock bump) and re-green security CI.
 **If only one product bet is made:** attack **context_precision** with measured A/B on the existing 100-case aircargo harness — not new retrieval strategies without data.
 
 ---
