@@ -2,6 +2,41 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Audit-Follow-Up] — 2026-07-18 — S1 httpOnly cookie auth + Q1 precision A/B harness + A1 design
+
+Вторая волна по `audit_grok_16_07_26.md` (S1 реализован, Q1 подготовлен, A1
+задокументирован). Дефолты retrieval/latency не менялись.
+
+- **S1 — admin/agent UI без токенов в localStorage** (`api/routers/session_auth.py`,
+  `api/app.py`, `static/admin*.js`, `static/agent.inline.js`,
+  `static/analytics.inline.js`): `/auth/login` и `/auth/refresh` зеркалируют JWT в
+  httpOnly SameSite=Strict cookie (Secure в production, Max-Age = TTL токена);
+  новый `POST /api/auth/session` переводит вставленный оператором bearer-токен в
+  httpOnly cookie (paste-UX сохранён, в JS-хранилище токена больше нет), новый
+  `POST /api/auth/logout` чистит cookie. JSON-контракт логина и обычная
+  `Authorization`-заголовочная аутентификация не тронуты. По итогам
+  адверсариального ревью: cookie-bridge аутентифицирует state-changing методы
+  только при совпадении `Origin` с `Host` (SSO пишет одноимённый cookie с
+  SameSite=Lax — постура ограничена слабейшим писателем, Origin-гейт закрывает
+  это для всех), `/auth/session` получил тот же лимит `5/minute`, что и login.
+  Известные границы (задокументированы осознанно): logout не отзывает JWT
+  server-side (stateless, refresh ≤7d живёт до exp); `analytics.html` полагается
+  на cookie, установленный со страницы admin.
+- **Q1 — offline A/B-харнесс context_precision** (`scripts/ab_context_precision.py`,
+  план `docs/operations/2026-07-18-q1-context-precision-ab-plan.md`): 8 плеч
+  вокруг прод-базлайна D2 (rerank top-k / parent-window / grade_docs on-off),
+  одна тяжёлая embed+rerank-стадия, метрики через существующий
+  `evaluation.ragas_eval` + keyword FULL/PART/MISS как регрессионный гард.
+  SHIP-критерии вшиты (Δprecision ≥ +0.05, recall ≥ 0.90, FULL/MISS без
+  регрессии); NO-SHIP — валидный исход. Прогон — одной командой на Mac; на
+  Windows только mock-smoke без моделей. Дефолты не тронуты.
+- **A1 — design-doc multi-replica** (`docs/plans/2026-07-18-multi-replica-design.md`):
+  полная инвентаризация process-local state (22 позиции, file:line) и фазовый
+  план снятия инварианта «1 worker / 1 replica». Ключевые поправки к аудиту:
+  история сессий уже в Postgres, LLM-кэш уже в Redis; настоящих блокеров два —
+  in-memory rate limiter (без `storage_uri`) и pending confirm-actions.
+  Рекомендация: не начинать без реального multi-replica SLA.
+
 ## [Security-Lock-Refresh] — 2026-07-16 — dep CVE batch + smoke-test hardening
 
 Focused security/ops pass from `audit_grok_16_07_26.md` (D1 + T1). Defaults and

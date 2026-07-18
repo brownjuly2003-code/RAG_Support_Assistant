@@ -235,8 +235,10 @@ Open:
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/login` | `-` | Password login; returns JWT pair |
-| POST | `/api/auth/refresh` | `-` | Exchange a refresh token for a new token pair |
+| POST | `/api/auth/login` | `-` | Password login; returns JWT pair + sets httpOnly auth cookies |
+| POST | `/api/auth/refresh` | `-` | Exchange a refresh token for a new token pair (cookies rotated) |
+| POST | `/api/auth/session` | bearer | Re-issue a pasted bearer token as an httpOnly cookie (browser UIs) |
+| POST | `/api/auth/logout` | `-` | Clear the httpOnly auth cookies |
 | GET | `/api/auth/sso/providers` | `-` | List enabled SSO providers |
 | GET | `/api/auth/sso/{provider}/login` | `-` | Start Google or Azure AD OIDC login |
 | GET | `/api/auth/sso/{provider}/callback` | `-` | Finish OIDC login and set JWT cookies |
@@ -247,7 +249,14 @@ Open:
 | GET | `/metrics` | `-` | Prometheus exposition endpoint |
 
 **Rate limits:** `/api/ask` is limited to 60 req/min, `/api/upload` to
-10 req/min, and `/api/auth/login` to 5 req/min per client IP.
+10 req/min, and `/api/auth/login` / `/api/auth/session` to 5 req/min per
+client IP.
+
+**Browser auth:** the admin/agent/analytics pages authenticate via httpOnly
+`SameSite=Strict` cookies (no tokens in `localStorage`); a cookie bridge maps
+the cookie onto the `Authorization` header server-side and refuses
+cookie-derived auth for state-changing requests whose `Origin` does not match
+the host. Header-based bearer auth for API clients is unchanged.
 
 **Correlation ID:** Clients may send `X-Request-Id` matching
 `^[A-Za-z0-9_\\-:.]{1,128}$`. The server echoes it back, stores it in
