@@ -2,6 +2,20 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Audit-Follow-Up-UX] — 2026-07-18 — logout-кнопки в admin/agent UI
+
+Хвост S1 (cookie-auth): оператору нужен способ завершить сессию из UI, а не
+только через DevTools.
+
+- **Logout в admin/agent** (`static/admin.html`, `static/admin.js`,
+  `static/agent.html`, `static/agent.inline.js`): кнопка рядом с полем токена
+  зовёт существующий `POST /api/auth/logout` (чистит httpOnly cookie) и
+  показывает статус. Новых эндпоинтов и изменений контракта нет.
+- **Тест ретаргетирован** (`tests/test_admin_ui.py::test_admin_js_served`):
+  вместо стейл-ассерта `"localStorage"` (держался на legacy-purge строке)
+  теперь проверяются `/api/auth/session`, `/api/auth/logout` и отсутствие
+  `localStorage.setItem` в admin.js.
+
 ## [Audit-Follow-Up] — 2026-07-18 — S1 httpOnly cookie auth + Q1 precision A/B harness + A1 design
 
 Вторая волна по `audit_grok_16_07_26.md` (S1 реализован, Q1 подготовлен, A1

@@ -27,7 +27,11 @@ def test_admin_js_served(client: TestClient) -> None:
     response = client.get("/static/admin.js")
 
     assert response.status_code == 200
-    assert "localStorage" in response.text
+    # Cookie-based auth (S1): the UI establishes an httpOnly session and offers
+    # logout; tokens must never be persisted in JS-readable storage.
+    assert "/api/auth/session" in response.text
+    assert "/api/auth/logout" in response.text
+    assert "localStorage.setItem" not in response.text
     assert "fetch(" in response.text
 
 

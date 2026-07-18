@@ -1,5 +1,6 @@
         const tokenInput = document.getElementById('agentToken');
         const saveAgentTokenBtn = document.getElementById('saveAgentToken');
+        const agentLogoutBtn = document.getElementById('agentLogout');
         const agentStatus = document.getElementById('agentStatus');
         const ticketStatusFilter = document.getElementById('ticketStatusFilter');
         const ticketList = document.getElementById('ticketList');
@@ -250,6 +251,16 @@
                 loadTickets();
             } else {
                 setStatus('Не удалось авторизоваться. Проверьте токен.', true);
+            }
+        });
+
+        agentLogoutBtn.addEventListener('click', async function() {
+            setStatus('Выхожу…', false);
+            const response = await fetch('/api/auth/logout', { method: 'POST' });
+            if (response.ok) {
+                setStatus('Сессия сброшена, cookie очищен.', false);
+            } else {
+                setStatus('Не удалось выйти: HTTP ' + response.status, true);
             }
         });
 

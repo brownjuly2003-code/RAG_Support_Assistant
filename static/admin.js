@@ -73,6 +73,14 @@
     }
   });
 
+  document.getElementById("logout").addEventListener("click", async function () {
+    tokenStatus.textContent = "Logging out...";
+    var response = await fetch("/api/auth/logout", { method: "POST" });
+    tokenStatus.textContent = response.ok
+      ? "Logged out. Session cookie cleared."
+      : "Logout failed (HTTP " + response.status + ").";
+  });
+
   document.querySelectorAll(".tabs button").forEach(function (button) {
     button.addEventListener("click", function () {
       document.querySelectorAll(".tabs button").forEach(function (item) {
