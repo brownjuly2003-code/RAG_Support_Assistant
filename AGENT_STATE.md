@@ -16,8 +16,13 @@
 > | **L1 silent-except** | opportunistic only. |
 > | **fastapi lock** | **SHIP** — Update-6, push выполнен. |
 >
-> **Push Update-6:** `origin/master` включает `4bf68a8` (fastapi 0.139.2).
-> CI run на bump — см. ниже / gh.
+> **Push выполнен.** `origin/master = 2609a4e` (fastapi bump + gate docs +
+> trailing-ws fix).
+>
+> | Run | Result |
+> |-----|--------|
+> | CI fastapi bump `29797563409` | unit/security green; pre-commit failed only on trailing-ws in AGENT_STATE |
+> | CI head `29797798931` (`2609a4e`) | **success, все джобы** (вкл. pre-commit, coverage 72, fastapi 0.139.2) |
 >
 > **Windows non-gated backlog:** пуст. Дальше — только новые findings или
 > внешний trigger (SLA / SHIP-arm / feature в graph).
