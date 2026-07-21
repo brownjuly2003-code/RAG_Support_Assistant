@@ -2,6 +2,23 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Deps] — 2026-07-21 — fastapi 0.136.1 → 0.139.2 (lock)
+
+Мина `_route_mount_prefix` (коммит `41aea76`) снята; lock больше не
+держит устаревший pin, из‑за которого CI и runtime расходились.
+
+- **`requirements.txt`:** floor `fastapi>=0.138.1` (версия, на которой
+  воспроизводилась потеря префикса роутера в metric labels).
+- **`requirements.lock` / `requirements-dev.lock`:** единственный pin-bump
+  `fastapi==0.136.1` → `fastapi==0.139.2`; `starlette==1.3.1` без изменений.
+  Перекомпиляция: `uv pip compile … --generate-hashes --python-version 3.11
+  --python-platform linux`.
+- **`pip-audit --strict --require-hashes`:** оба lock — No known
+  vulnerabilities (ignore-list прежний: chroma/torch no-fix).
+- **Локальная верификация на 0.139.2:** 39 tests
+  (`test_http_metrics`, `test_api_app_helpers`, `test_root_routes`,
+  `test_upload_security`, `test_production_entrypoint`) — passed.
+
 ## [Security] — 2026-07-21 — `docs/sessions/` больше не публикуется на Pages
 
 Коммит `2ce9bc7` (N5-архив AGENT_STATE) перенёс handoff/архивы в

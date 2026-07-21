@@ -1,8 +1,29 @@
 # Agent State
 
-## 2026-07-21 Update-5 (утечка sessions/ снята с Pages; fail_under=72; push+CI green) ✅ START HERE
+## 2026-07-21 Update-6 (fastapi lock bump 0.136.1→0.139.2) ✅ START HERE
 
-> **START HERE.** Заход: «продолжи доработку» → «разрешаю» push.
+> **START HERE.** Заход: «продолжи работу» после Update-5. Windows-backlog был пуст;
+> выбран отложенный safe item: bump fastapi в lock (мина метрик уже снята).
+>
+> **Сделано локально (ждёт push):**
+> 1. `requirements.txt` floor `fastapi>=0.138.1`.
+> 2. Перекомпиляция обоих lock (uv, py3.11/linux hashes): **только**
+>    `fastapi==0.136.1` → `fastapi==0.139.2`; starlette 1.3.1 без изменений;
+>    никаких чужих pin-бамов.
+> 3. `pip-audit --strict --require-hashes` оба lock — clean (игноры прежние).
+> 4. Локально на 0.139.2: 39 targeted tests (metrics / routes / entrypoint) green.
+> 5. CHANGELOG Deps-блок.
+>
+> **Также ahead of origin:** handoff `2fd1a66` (Update-5 evidence) + этот коммит.
+>
+> **⏭️:** push → CI (coverage 72, unit/integration на lock 0.139.2) + pip-audit job.
+>
+> **Остаток — только гейты Юли:** N4 policy; Q1b; multi-replica по SLA; C1
+> распил `agent/graph.py`. Windows non-gated backlog снова пуст.
+
+## 2026-07-21 Update-5 (утечка sessions/ снята с Pages; fail_under=72; push+CI green) — SUPERSEDED by Update-6
+
+> **SUPERSEDED.** Заход: «продолжи доработку» → «разрешаю» push.
 >
 > **Push выполнен:** `origin/master = 85c330f` (`2ce9bc7..85c330f`, 2 коммита: metrics + sessions kitchen).
 >
@@ -19,7 +40,7 @@
 > 2. `fail_under` 70 → **72** + floor-тест `>= 72`.
 > 3. CHANGELOG Security-блок.
 >
-> **Остаток — только гейты Юли:** N4 policy (audits/ и прочая кухня в публичном репо); Q1b (precision-гейт не выполнен); multi-replica impl по SLA; C1 распил `agent/graph.py`. FastAPI bump 0.136→0.138 в lock — отдельно, не мешать.
+> **Остаток на тот момент:** N4 / Q1b / multi-replica / C1; fastapi bump — отдельно.
 
 ## 2026-07-19 Update-4 (push выполнен; мина fastapi обезврежена) — SUPERSEDED by Update-5
 

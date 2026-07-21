@@ -35,7 +35,11 @@ python-docx>=1.0.0
 langdetect>=1.0.9
 
 # === Web Framework ===
-fastapi>=0.100.0
+# Floor 0.138.1: include_router no longer flattens nested route path_format.
+# Metric labels used to drop the router prefix under 0.138+; production fix is
+# api/app.py::_route_mount_prefix (version-agnostic). Lock stayed on 0.136.1
+# until that fix landed; raise the floor so CI matches the verified runtime.
+fastapi>=0.138.1
 uvicorn[standard]>=0.20.0
 pydantic>=2.0.0
 jinja2>=3.1.0
