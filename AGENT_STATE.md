@@ -1,19 +1,23 @@
 # Agent State
 
-## 2026-07-21 Update-5 (утечка sessions/ остановлена локально; fail_under=72) ✅ START HERE
+## 2026-07-21 Update-5 (утечка sessions/ снята с Pages; fail_under=72; push+CI green) ✅ START HERE
 
-> **START HERE.** Заход: «продолжи доработку» после Update-4.
+> **START HERE.** Заход: «продолжи доработку» → «разрешаю» push.
 >
-> **Сделано локально (НЕ запушено — push = гейт Юли, но для остановки живой утечки push НУЖЕН срочно):**
-> 1. **Утечка `docs/sessions/` → Pages:** `'sessions/'` добавлен в `KITCHEN_DIR_PREFIXES` (`docs-site/scripts/sync-docs.mjs`). Локальный `node sync-docs.mjs`: 18 published / 55 kitchen, каталог `guides/sessions/` отсутствует. Guard: `test_sync_docs_keeps_sessions_out_of_public_pages`. `audits/` **не** трогали — N4 policy.
-> 2. **`fail_under` 70 → 72** в `pyproject.toml` против CI 73.30% (run 29660377386). Floor `>= 72` в `test_coverage_gate_threshold_is_declared_in_pyproject`.
-> 3. CHANGELOG Security-блок 2026-07-21.
+> **Push выполнен:** `origin/master = 85c330f` (`2ce9bc7..85c330f`, 2 коммита: metrics + sessions kitchen).
 >
-> **Ветка:** master ahead of origin by metrics-commit `41aea76` + этот коммит (после commit).
+> **CI run 29797076624 = success (все джобы).** Docs-site run 29797076612 = success.
+> - Coverage gate на 3.13 отработал с `fail_under=72` — зелёный.
+> - regression-eval skipped (paths-filter: входы не менялись) — ожидаемо.
 >
-> **⏭️ СРАЗУ:** `git push` + проследить CI + docs-site redeploy → страница
-> `/guides/sessions/agent-state-archive-2026-05-01-to-06-16/` должна уйти 404.
-> Поисковые кэши — не мгновенно.
+> **Утечка остановлена на живом сайте:**  
+> `https://…/guides/sessions/agent-state-archive-2026-05-01-to-06-16/` → **HTTP 404**.  
+> Index `/guides/sessions/` → **404**. Поисковые кэши могут держать старое ещё какое-то время.
+>
+> **Сделано в `85c330f`:**
+> 1. `'sessions/'` → `KITCHEN_DIR_PREFIXES` + guard-тест. `audits/` не трогали (N4).
+> 2. `fail_under` 70 → **72** + floor-тест `>= 72`.
+> 3. CHANGELOG Security-блок.
 >
 > **Остаток — только гейты Юли:** N4 policy (audits/ и прочая кухня в публичном репо); Q1b (precision-гейт не выполнен); multi-replica impl по SLA; C1 распил `agent/graph.py`. FastAPI bump 0.136→0.138 в lock — отдельно, не мешать.
 
