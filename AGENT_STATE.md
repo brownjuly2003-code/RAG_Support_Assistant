@@ -1,25 +1,35 @@
 # Agent State
 
-## 2026-07-21 Update-6 (fastapi lock bump 0.136.1→0.139.2) ✅ START HERE
+## 2026-07-21 Update-7 (все гейты закрыты решением; hybrid N4) ✅ START HERE
 
-> **START HERE.** Заход: «продолжи работу» после Update-5. Windows-backlog был пуст;
+> **START HERE.** Заход: «все гейты — на твоё решение».
+>
+> **Полный текст решений:** `docs/operations/2026-07-21-gate-decisions.md`
+> (kitchen — не на Pages).
+>
+> | Gate | Решение |
+> |------|---------|
+> | **N4** | **Hybrid.** Tracked kitchen остаётся (agent memory). Pages: kitchen dirs + sessions. Product `docs/audits/` — витрина. Без `git rm --cached`. Process audit/plan fable → `docs/operations/`. |
+> | **Q1b** | **DEFER** — Q1 NO-SHIP, нет shippable arm. |
+> | **multi-replica** | **DEFER** — нет SLA; design готов. |
+> | **C1 graph split** | **DEFER** — no silent broad refactors. |
+> | **L1 silent-except** | opportunistic only. |
+> | **fastapi lock** | **SHIP** — Update-6, push выполнен. |
+>
+> **Push Update-6:** `origin/master` включает `4bf68a8` (fastapi 0.139.2).
+> CI run на bump — см. ниже / gh.
+>
+> **Windows non-gated backlog:** пуст. Дальше — только новые findings или
+> внешний trigger (SLA / SHIP-arm / feature в graph).
+
+## 2026-07-21 Update-6 (fastapi lock bump 0.136.1→0.139.2) — SUPERSEDED by Update-7
+
+> **SUPERSEDED.** Заход: «продолжи работу» после Update-5. Windows-backlog был пуст;
 > выбран отложенный safe item: bump fastapi в lock (мина метрик уже снята).
 >
-> **Сделано локально (ждёт push):**
-> 1. `requirements.txt` floor `fastapi>=0.138.1`.
-> 2. Перекомпиляция обоих lock (uv, py3.11/linux hashes): **только**
->    `fastapi==0.136.1` → `fastapi==0.139.2`; starlette 1.3.1 без изменений;
->    никаких чужих pin-бамов.
-> 3. `pip-audit --strict --require-hashes` оба lock — clean (игноры прежние).
-> 4. Локально на 0.139.2: 39 targeted tests (metrics / routes / entrypoint) green.
-> 5. CHANGELOG Deps-блок.
->
-> **Также ahead of origin:** handoff `2fd1a66` (Update-5 evidence) + этот коммит.
->
-> **⏭️:** push → CI (coverage 72, unit/integration на lock 0.139.2) + pip-audit job.
->
-> **Остаток — только гейты Юли:** N4 policy; Q1b; multi-replica по SLA; C1
-> распил `agent/graph.py`. Windows non-gated backlog снова пуст.
+> **Сделано:** floor `fastapi>=0.138.1`; lock **только**
+> `fastapi==0.136.1` → `0.139.2`; pip-audit clean; 39 targeted tests green.
+> **Push:** `4bf68a8` (+ handoff `2fd1a66`).
 
 ## 2026-07-21 Update-5 (утечка sessions/ снята с Pages; fail_under=72; push+CI green) — SUPERSEDED by Update-6
 

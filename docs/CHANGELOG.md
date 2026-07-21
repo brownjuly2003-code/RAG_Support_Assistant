@@ -2,6 +2,15 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Process] — 2026-07-21 — gate decisions (N4 / Q1b / multi-replica / C1)
+
+Все оставшиеся «гейты Юли» делегированы агенту. Зафиксировано в
+`docs/operations/2026-07-21-gate-decisions.md` (kitchen, не на Pages):
+
+- **N4 hybrid:** kitchen tracked, но не на Pages; product audits — витрина.
+- **Q1b / multi-replica / C1:** DEFER с явными условиями открытия.
+- Process-аудиты fable → `docs/operations/` (не корневые untracked).
+
 ## [Deps] — 2026-07-21 — fastapi 0.136.1 → 0.139.2 (lock)
 
 Мина `_route_mount_prefix` (коммит `41aea76`) снята; lock больше не
