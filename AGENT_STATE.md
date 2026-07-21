@@ -1,8 +1,31 @@
 # Agent State
 
-## 2026-07-21 Update-8 (product backlog empty; presentation DoD verified) ✅ START HERE
+## 2026-07-21 Update-9 (решения делегированы; STOP — backlog empty) ✅ START HERE
 
-> **START HERE.** Заход: «RAG_Support_Assistant — продолжи» после Update-7.
+> **START HERE.** Заход: «все решения на тебе» после Update-8.
+>
+> ### Решения (агент, 2026-07-21)
+>
+> | Решение | Что |
+> |---------|-----|
+> | **Push handoff** | `a6fb989` → `origin/master` (docs-only Update-8). |
+> | **Product code** | **Не начинать** multi-replica / Q1b / C1 / default ask-budget flip — DEFER Update-7 остаётся рациональным. |
+> | **Dogfood FLANT** | Findings 1–3 **уже mitigated** в master; файл untracked помечен status-блоком, не коммитить. |
+> | **Presentation** | **Оставить untracked.** DoD почти закрыт (viewports + cites + reduced-motion + links). Публикация в git/Pages — нет (публичный репо, план §7.1). Axe/вычитка — non-blocking. |
+> | **Architecture diagram untracked** | Не трогать (чужой параллельный WIP). |
+> | **STOP** | Windows non-gated product backlog **пуст**. Дальше только внешний trigger. |
+>
+> **Origin:** `master` = `a6fb989` (после push). CI на push — смотреть latest run.
+>
+> **Presentation residual closed this turn:** Playwright `reducedMotion: reduce` —
+> typing off, answer visible, `.rv` opacity 1, night content readable, EN+cites OK.
+>
+> **Не делалось намеренно:** смена prod-дефолтов, live LLM, Celery/Docker, C1
+> split, multi-replica без SLA, commit untracked portfolio files.
+
+## 2026-07-21 Update-8 (product backlog empty; presentation DoD verified) — SUPERSEDED by Update-9
+
+> **SUPERSEDED.** Заход: «RAG_Support_Assistant — продолжи» после Update-7.
 >
 > **Product (Windows, non-gated):** по-прежнему **пуст**. `origin/master` синхронен
 > (ahead/behind 0/0). CI на `414a0a7` (docs stale-fix после N4) —
