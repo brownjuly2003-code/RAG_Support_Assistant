@@ -20,7 +20,17 @@ const ROOT_FILES = [
 // Internal/kitchen docs that must NOT be published or indexed by Pagefind.
 // Matched against the path relative to docs/ (slugified, forward slashes).
 // Anything under these directories or matching these filenames is skipped.
-const KITCHEN_DIR_PREFIXES = ['plans/', 'research/', 'operations/', 'a11y/', 'superpowers/'];
+// sessions/ holds agent handoffs and archives (IPs, host aliases, secret-file
+// paths). Publishing them turns repo-internal notes into indexable Pages.
+// audits/ stays publishable until N4 policy decides; do not pre-decide it here.
+const KITCHEN_DIR_PREFIXES = [
+  'plans/',
+  'research/',
+  'operations/',
+  'a11y/',
+  'superpowers/',
+  'sessions/',
+];
 const KITCHEN_FILE_RES = [
   /^session-notes-/i,
   /^rag_modernization_plan_/i,

@@ -52,6 +52,25 @@ def test_docs_site_404_content_is_not_published_as_docs_route() -> None:
     assert "\ndraft: true\n" in content
 
 
+def test_sync_docs_keeps_sessions_out_of_public_pages() -> None:
+    """docs/sessions handoffs must not ship to GitHub Pages.
+
+    2026-07-19: archiving AGENT_STATE into docs/sessions/ without adding
+    sessions/ to KITCHEN_DIR_PREFIXES published host aliases and secret-file
+    paths as indexable Pages. This guard pins the kitchen prefix so the
+    regression cannot recur silently.
+    """
+    sync_script = (
+        PROJECT_ROOT / "docs-site" / "scripts" / "sync-docs.mjs"
+    ).read_text(encoding="utf-8")
+
+    assert "const KITCHEN_DIR_PREFIXES" in sync_script
+    assert "'sessions/'" in sync_script or '"sessions/"' in sync_script
+    # Kitchen dirs must be consulted by isKitchen — not a dead constant.
+    assert "isKitchen" in sync_script
+    assert "KITCHEN_DIR_PREFIXES.some" in sync_script
+
+
 def test_roadmap_does_not_reopen_closed_lighthouse_work() -> None:
     roadmap = (PROJECT_ROOT / "codex-tasks" / "ROADMAP.md").read_text(
         encoding="utf-8"

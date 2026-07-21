@@ -148,9 +148,14 @@ def test_unit_tests_enforce_the_coverage_gate_on_one_matrix_leg() -> None:
 
 
 def test_coverage_gate_threshold_is_declared_in_pyproject() -> None:
+    # 2026-07-19: raised 70 -> 72 against live CI coverage 73.30%
+    # (run 29660377386). Keep a floor of 72 so the threshold cannot
+    # silently regress to the old inert 70.
     pyproject = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
-    assert re.search(r"^fail_under\s*=\s*\d+", pyproject, re.MULTILINE)
+    match = re.search(r"^fail_under\s*=\s*(\d+)", pyproject, re.MULTILINE)
+    assert match is not None, "fail_under must be declared in pyproject.toml"
+    assert int(match.group(1)) >= 72
 
 
 def test_weekly_report_schedule_delivers_and_manual_dispatch_dry_runs_by_default() -> None:

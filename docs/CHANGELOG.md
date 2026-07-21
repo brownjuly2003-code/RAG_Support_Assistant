@@ -2,6 +2,23 @@
 
 Все значимые изменения в проекте. Формат адаптирован под [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), но сгруппирован по аркам и батчам, а не по семантическим версиям.
 
+## [Security] — 2026-07-21 — `docs/sessions/` больше не публикуется на Pages
+
+Коммит `2ce9bc7` (N5-архив AGENT_STATE) перенёс handoff/архивы в
+`docs/sessions/`. `docs-site/scripts/sync-docs.mjs` рекурсивно публикует
+всё дерево `docs/`, кроме `KITCHEN_DIR_PREFIXES` — `sessions/` там не было,
+поэтому handoff'ы с host-alias, LAN-IP и путями к secret-файлам попали на
+публичный GitHub Pages как индексируемые страницы.
+
+- **`docs-site/scripts/sync-docs.mjs`:** `'sessions/'` добавлен в
+  `KITCHEN_DIR_PREFIXES`. Файлы остаются в репозитории, с сайта уходят после
+  push + redeploy. `audits/` намеренно не трогаем — это N4 (policy Юли).
+- **Guard:** `test_sync_docs_keeps_sessions_out_of_public_pages` — префикс
+  нельзя убрать молча.
+- **Coverage:** `fail_under` 70 → **72** против CI-замера 73.30%
+  (run 29660377386). Floor закреплён в
+  `test_coverage_gate_threshold_is_declared_in_pyproject` (`>= 72`).
+
 ## [Fix] — 2026-07-19 — метрики теряли префикс роутера на fastapi 0.138
 
 Отложенная поломка, спрятанная за пином `fastapi==0.136.1`: с 0.138
@@ -23,9 +40,7 @@
   юнит-тест на `SimpleNamespace`-фейке пропускал баг — у фейка префикс уже был
   вшит в `path_format`.
 - **Порог coverage:** решение поднять 70 → 72 против CI-замера 73.30% (run
-  29660377386) принято, но в этом коммите **не применено** (`fail_under`
-  остаётся 70) — см. AGENT_STATE Update-4. Прежние 70 стояли с 29.04 при
-  70.02%, вплотную к факту, то есть просадку гейт всё равно не поймал бы.
+  29660377386) — применено 2026-07-21 (см. блок Security выше).
 
 Бамп fastapi в lock намеренно не делался: мина снята, бамп теперь безопасен, но
 это отдельная работа (регенерация обоих lock под `--require-hashes` + pip-audit).
