@@ -1,8 +1,44 @@
 # Agent State
 
-## 2026-07-21 Update-7 (все гейты закрыты решением; hybrid N4) ✅ START HERE
+## 2026-07-21 Update-8 (product backlog empty; presentation DoD verified) ✅ START HERE
 
-> **START HERE.** Заход: «все гейты — на твоё решение».
+> **START HERE.** Заход: «RAG_Support_Assistant — продолжи» после Update-7.
+>
+> **Product (Windows, non-gated):** по-прежнему **пуст**. `origin/master` синхронен
+> (ahead/behind 0/0). CI на `414a0a7` (docs stale-fix после N4) —
+> **success, все джобы** (`29798106947`). `fail_under=72`, fastapi lock `0.139.2`.
+> Собрано pytest: **919** test functions. Issues/PR open: 0.
+>
+> **Гейты Update-7 без изменений:** N4 hybrid · Q1b DEFER · multi-replica DEFER ·
+> C1 DEFER · L1 opportunistic · fastapi SHIP. Полный текст:
+> `docs/operations/2026-07-21-gate-decisions.md`.
+>
+> **Untracked presentation WIP (не продукт, не в git):**
+> - `presentation.html` + `plan_for_pres.md` + `_ref_presentation3.html`
+> - План был стейл («страница не делалась») — страница уже собрана (~335 КБ).
+> - DoD-проверка 2026-07-21 (Playwright Chromium, 3 viewport 1600/1536/1366):
+>   overflow 0, console errors 0, night band OK, RU/EN + cite popovers
+>   (`#src.show` opacity 1), glossary tips OK, внешние ссылки docs-site/GitHub/
+>   `/examples/` → HTTP 200, size 0.32 МБ ≤ 1.2, forbidden kitchen tokens 0
+>   в visible text. Числа recall 0.975 / faithfulness 0.864 сверены с
+>   `reports/ragas/20260605T103014Z-ab5564d8-aircargo-ragas.*`; «800+» тестов
+>   ок (collect 919). В cite-тексте «830» → «900» (пол текущего collect).
+> - **Публикация в git/Pages — только по явному решению** (план §7.1).
+>
+> **Другие untracked (не трогались):** `docs/architecture-data-flow.html`,
+> `scripts/check_architecture_diagram.py`, `FLANT_DOGFOOD_FINDINGS.md`,
+> `rag_new_explanation.md`.
+>
+> **Дальше — только внешний trigger или явный запрос:**
+> 1. Опубликовать/доработать presentation (git? docs-site?).
+> 2. SLA → multi-replica impl (design готов).
+> 3. SHIP-arm retrieval → Q1b nightly/CI floor.
+> 4. Feature/bug → C1 graph split.
+> 5. Live benchmark / GraceKelly — opt-in only.
+
+## 2026-07-21 Update-7 (все гейты закрыты решением; hybrid N4) — SUPERSEDED by Update-8
+
+> **SUPERSEDED.** Заход: «все гейты — на твоё решение».
 >
 > **Полный текст решений:** `docs/operations/2026-07-21-gate-decisions.md`
 > (kitchen — не на Pages).
