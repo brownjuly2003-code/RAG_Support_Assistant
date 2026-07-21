@@ -107,13 +107,17 @@ C1) до выполнения их условий.
   против CI-замера.
 - [x] ~~6 прогнан при первом свободном Mac-окне, вердикт задокументирован~~ —
   ВЫПОЛНЕНО 18.07, NO-SHIP.
-- [ ] 7 имеет явное решение.
+- [x] ~~7 имеет явное решение~~ — ВЫПОЛНЕНО 2026-07-21: hybrid N4 + DEFER
+  Q1b/multi-replica/C1. Текст: `docs/operations/2026-07-21-gate-decisions.md`
+  и AGENT_STATE Update-7.
 
 ## Notes
 
 - Non-goals без новых данных: factcard в дефолт, авто-роутер, multi-worker
   без externalization, broad-рефакторы (подтверждено обоими аудитами).
-- Оба файла аудита (этот и `audit_fable_18_07_26.md`) созданы untracked —
-  коммитить только по явному решению Юли (см. N4).
+- Process-аудиты fable/plan: **закоммичены** в kitchen
+  `docs/operations/2026-07-18-audit-fable.md` и
+  `docs/operations/2026-07-18-plan-fable.md` (N4 hybrid, 2026-07-21).
+  Корневые untracked-копии удалены.
 - Задачи 2–5 при выполнении в `/auto`: локальные коммиты по одному на задачу,
   push по правилу auto-mode-own-the-push.

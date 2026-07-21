@@ -16,13 +16,19 @@
 > | **L1 silent-except** | opportunistic only. |
 > | **fastapi lock** | **SHIP** — Update-6, push выполнен. |
 >
-> **Push выполнен.** `origin/master = 2609a4e` (fastapi bump + gate docs +
-> trailing-ws fix).
+> **Push выполнен.** Handoff-цепочка на master: `4bf68a8` (fastapi) →
+> `60280cc` (gate docs) → `2609a4e` (trailing-ws) → `b5fef35` (этот handoff).
+> Актуальный HEAD после doc-sync stale-fix — см. git log (не хардкодить SHA
+> ниже без проверки `git rev-parse origin/master`).
 >
 > | Run | Result |
 > |-----|--------|
-> | CI fastapi bump `29797563409` | unit/security green; pre-commit failed only on trailing-ws in AGENT_STATE |
-> | CI head `29797798931` (`2609a4e`) | **success, все джобы** (вкл. pre-commit, coverage 72, fastapi 0.139.2) |
+> | CI fastapi bump `29797563409` (`4bf68a8`) | unit/security green; pre-commit failed only on trailing-ws in AGENT_STATE |
+> | CI `29797798931` (`2609a4e`) | **success, все джобы** (pre-commit, coverage 72, fastapi 0.139.2) |
+> | CI `b5fef35` handoff-only | docs-only; не смешивать с green-доказательством unit gate |
+>
+> **2026-07-21 doc-sync:** закрыты stale-хвосты — Done When §7, Notes plan,
+> CHANGELOG N4 wording, HEAD-строка (этот коммит).
 >
 > **Windows non-gated backlog:** пуст. Дальше — только новые findings или
 > внешний trigger (SLA / SHIP-arm / feature в graph).

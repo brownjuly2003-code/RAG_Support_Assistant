@@ -38,7 +38,9 @@
 
 - **`docs-site/scripts/sync-docs.mjs`:** `'sessions/'` добавлен в
   `KITCHEN_DIR_PREFIXES`. Файлы остаются в репозитории, с сайта уходят после
-  push + redeploy. `audits/` намеренно не трогаем — это N4 (policy Юли).
+  push + redeploy. Product `docs/audits/` **намеренно оставлены** на Pages
+  (N4 hybrid, 2026-07-21: technical transparency; process-kitchen —
+  `operations/` / `sessions/` — не публикуется).
 - **Guard:** `test_sync_docs_keeps_sessions_out_of_public_pages` — префикс
   нельзя убрать молча.
 - **Coverage:** `fail_under` 70 → **72** против CI-замера 73.30%
