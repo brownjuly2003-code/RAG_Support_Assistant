@@ -41,8 +41,8 @@
 > - Coverage gate на 3.13 отработал с `fail_under=72` — зелёный.
 > - regression-eval skipped (paths-filter: входы не менялись) — ожидаемо.
 >
-> **Утечка остановлена на живом сайте:**  
-> `https://…/guides/sessions/agent-state-archive-2026-05-01-to-06-16/` → **HTTP 404**.  
+> **Утечка остановлена на живом сайте:**
+> `https://…/guides/sessions/agent-state-archive-2026-05-01-to-06-16/` → **HTTP 404**.
 > Index `/guides/sessions/` → **404**. Поисковые кэши могут держать старое ещё какое-то время.
 >
 > **Сделано в `85c330f`:**
