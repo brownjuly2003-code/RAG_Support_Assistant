@@ -135,16 +135,20 @@ All production packages are `mypy --strict` clean (CI-enforced).
 **Prerequisites:** Python 3.11+, локальный GraceKelly на `http://127.0.0.1:8011` для default `gracekelly-primary` profile.
 
 ```bash
-# 1. Dependencies — pinned hashes for reproducibility (Python 3.11+, Linux x86_64)
+# 1. Local env template. Supply your own optional provider keys
+#    (for example MISTRAL_API_KEY). No API keys ship in this repository.
+cp .env.example .env              # Windows: copy .env.example .env
+
+# 2. Dependencies — pinned hashes for reproducibility (Python 3.11+, Linux x86_64)
 pip install --require-hashes -r requirements.lock
 # Or for development (adds pytest/ruff/pre-commit):
 # pip install --require-hashes -r requirements-dev.lock
 
-# 2. Start the default GraceKelly orchestrator
+# 3. Start the default GraceKelly orchestrator
 cd ../GraceKelly   # path to your local GraceKelly checkout
 uvicorn gracekelly.main:create_app --factory --host 127.0.0.1 --port 8011
 
-# 3. Run RAG Support Assistant
+# 4. Run RAG Support Assistant
 cd RAG_Support_Assistant
 python main.py
 ```
@@ -155,6 +159,14 @@ Explicit Ollama-only mode is still available:
 ollama serve
 ollama pull qwen2.5:7b
 LLM_PROVIDER_PROFILE=local-first python main.py
+```
+
+Optional local Docker Compose path (loopback-only stack from `docker-compose.yml`;
+see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)):
+
+```bash
+cp .env.example .env
+docker compose -f docker-compose.yml up
 ```
 
 Альтернативные routing profiles (см. `LLM_PROVIDER_PROFILE` в [docs/CONFIGURATION.md](docs/CONFIGURATION.md)): `local-first`, `external-mistral`, `gracekelly-mixed`. Подробнее — в `config/providers.yml` и в `docs/QUICKSTART.md` секции 5-6.

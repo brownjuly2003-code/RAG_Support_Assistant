@@ -35,3 +35,16 @@ def test_default_compose_forces_development_environment() -> None:
     compose = _load_compose()
 
     assert "RAG_ENV=development" in compose["services"]["app"]["environment"]
+
+
+def test_readme_quick_start_covers_local_first_onboarding() -> None:
+    """README Quick Start must document env bootstrap, local Compose, and no shipped keys."""
+    content = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    quick_start = content.split("## Quick Start", 1)[1].split("## API", 1)[0]
+    lowered = quick_start.lower()
+
+    assert "cp .env.example .env" in quick_start
+    assert "docker compose" in lowered
+    assert "docker-compose.yml" in quick_start
+    assert "optional provider keys" in lowered
+    assert "no api keys ship in this repository" in lowered
