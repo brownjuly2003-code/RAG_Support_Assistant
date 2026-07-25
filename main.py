@@ -8,6 +8,13 @@ quality gates. The supported entrypoint is `api.app:app`.
 
 from __future__ import annotations
 
+from pathlib import Path
+
+if __name__ == "__main__":
+    from dotenv import load_dotenv
+
+    load_dotenv(Path(__file__).resolve().with_name(".env"), override=False)
+
 from api.app import app  # noqa: F401  re-exported as `main:app` for backwards compat
 
 

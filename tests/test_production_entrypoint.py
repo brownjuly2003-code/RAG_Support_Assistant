@@ -9,6 +9,8 @@ Locks invariants exposed by Codex audit 2026-04-27 P0:
 from __future__ import annotations
 
 import importlib
+import runpy
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -22,6 +24,33 @@ def test_main_app_is_canonical_api_app():
         "main:app must re-export api.app:app — Docker/uvicorn entrypoints "
         "must run the production application with full middleware/lifespan."
     )
+
+
+def test_python_main_loads_project_dotenv_before_uvicorn(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import dotenv
+    import uvicorn
+
+    import main as legacy_entrypoint
+
+    events: list[tuple[str, object]] = []
+
+    def _fake_load_dotenv(dotenv_path: object, *, override: bool) -> bool:
+        events.append(("dotenv", (Path(dotenv_path), override)))
+        return True
+
+    def _fake_uvicorn_run(*args: object, **kwargs: object) -> None:
+        events.append(("uvicorn", (args, kwargs)))
+
+    monkeypatch.setattr(dotenv, "load_dotenv", _fake_load_dotenv)
+    monkeypatch.setattr(uvicorn, "run", _fake_uvicorn_run)
+
+    entrypoint_path = Path(legacy_entrypoint.__file__).resolve()
+    runpy.run_path(str(entrypoint_path), run_name="__main__")
+
+    assert events[0] == ("dotenv", (entrypoint_path.with_name(".env"), False))
+    assert events[1][0] == "uvicorn"
 
 
 def test_production_app_has_full_middleware_stack():
