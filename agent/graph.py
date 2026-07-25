@@ -1530,6 +1530,18 @@ def make_evaluate_node(
         if state.get("error"):
             return state
         trace_id = state.get("trace_id", "unknown-trace-id")
+        complexity = state.get("complexity", "unknown")
+        llm = llm_fast if complexity == "simple" else llm_strong
+        model = _get_llm_model_name(llm) or ""
+        provider = _get_llm_provider_name(llm) or ""
+        evaluate_started_at = time.monotonic()
+        logger.info(
+            "[evaluate] boundary=start monotonic=%.6f provider=%s model=%s",
+            evaluate_started_at,
+            provider or "-",
+            model or "-",
+            extra={"trace_id": trace_id},
+        )
         try:
             question = state.get("question", "")
             answer = state.get("answer") or ""
@@ -1537,9 +1549,6 @@ def make_evaluate_node(
             answer_for_eval = re.sub(r"\s*\[\d+\]", "", answer)
             answer_for_eval = re.sub(r"\s{2,}", " ", answer_for_eval).strip()
             prompt = build_self_eval_prompt(question=question, answer=answer_for_eval, context_docs=docs)
-            complexity = state.get("complexity", "unknown")
-            llm = llm_fast if complexity == "simple" else llm_strong
-            model = _get_llm_model_name(llm) or ""
             usage = _new_llm_usage("evaluate")
             usage_recorded = False
             tracer = get_otel_tracer()
@@ -1577,6 +1586,17 @@ def make_evaluate_node(
             return new_state
         except Exception as exc:
             return _make_error_state(state, "evaluate", exc)
+        finally:
+            evaluate_finished_at = time.monotonic()
+            logger.info(
+                "[evaluate] boundary=end monotonic=%.6f elapsed=%.6fs "
+                "provider=%s model=%s",
+                evaluate_finished_at,
+                evaluate_finished_at - evaluate_started_at,
+                provider or "-",
+                model or "-",
+                extra={"trace_id": trace_id},
+            )
 
     return node
 

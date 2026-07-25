@@ -176,6 +176,18 @@ async def ask(
                 getattr(settings, "pipeline_acquire_timeout_sec", 0.5)
             )
             request_id = get_request_id()
+            logger.info(
+                "req_id=%s /api/ask effective_timeouts request=%.3fs "
+                "ask_budget=%.3fs ollama_mistral=%.3fs gracekelly=%.3fs "
+                "profile=%s",
+                request_id or "-",
+                timeout,
+                float(getattr(settings, "ask_budget_sec", 0.0) or 0.0),
+                float(getattr(settings, "ollama_request_timeout_sec", 60.0)),
+                float(getattr(settings, "gracekelly_request_timeout_sec", 30.0)),
+                str(getattr(settings, "llm_provider_profile", "local-first")),
+                extra={"trace_id": request_id},
+            )
             ask_kwargs: dict[str, Any] = {
                 "trace_id": request_id,
                 "tenant_id": tenant,
@@ -290,10 +302,14 @@ async def ask(
                         prometheus_metrics.record_request_timeout("/api/ask")
                     except Exception:
                         pass
+                    outer_timeout_at = time.monotonic()
                     logger.warning(
-                        "req_id=%s /api/ask exceeded timeout=%.1fs",
+                        "req_id=%s /api/ask exceeded timeout=%.1fs "
+                        "outer_timeout_monotonic=%.6f",
                         request_id or "-",
                         timeout,
+                        outer_timeout_at,
+                        extra={"trace_id": request_id},
                     )
                     raise HTTPException(
                         status_code=504,
