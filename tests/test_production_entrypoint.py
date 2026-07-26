@@ -132,6 +132,47 @@ def test_production_auto_migrate_fail_open_requires_explicit_opt_in(
     app_module._run_alembic_upgrade()
 
 
+@pytest.mark.parametrize("migration_fails", [False, True])
+def test_auto_migrate_restores_application_logging(
+    monkeypatch: pytest.MonkeyPatch,
+    migration_fails: bool,
+) -> None:
+    import logging
+
+    import alembic.command
+
+    import api.app as app_module
+    from config.logging_config import _JsonFormatter
+
+    root = logging.getLogger()
+    original_level = root.level
+    original_handlers = list(root.handlers)
+
+    def _fake_upgrade(config, revision) -> None:
+        _ = config, revision
+        root.setLevel(logging.WARNING)
+        root.handlers.clear()
+        root.addHandler(logging.StreamHandler())
+        if migration_fails:
+            raise RuntimeError("migration failed")
+
+    monkeypatch.setenv("AUTO_MIGRATE", "true")
+    monkeypatch.delenv("AUTO_MIGRATE_FAIL_OPEN", raising=False)
+    monkeypatch.setattr(app_module, "get_settings", lambda: SimpleNamespace(rag_env="development"))
+    monkeypatch.setattr(alembic.command, "upgrade", _fake_upgrade)
+
+    try:
+        app_module._run_alembic_upgrade()
+
+        assert root.getEffectiveLevel() == logging.INFO
+        assert len(root.handlers) == 1
+        assert isinstance(root.handlers[0].formatter, _JsonFormatter)
+    finally:
+        root.handlers.clear()
+        root.handlers.extend(original_handlers)
+        root.setLevel(original_level)
+
+
 def _openapi_paths(app) -> set[str]:
     """Collect route paths via OpenAPI — stable across FastAPI versions.
 

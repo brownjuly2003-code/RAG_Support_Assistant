@@ -1315,8 +1315,10 @@ def _run_alembic_upgrade() -> None:
         cfg = Config(str(cfg_path))
         cfg.set_main_option("script_location", str(project_root / "alembic"))
         command.upgrade(cfg, "head")
+        setup_logging()
         logger.info("alembic upgrade head: OK")
     except Exception as exc:  # noqa: BLE001
+        setup_logging()
         fail_open = os.getenv("AUTO_MIGRATE_FAIL_OPEN", "false").strip().lower() in (
             "1",
             "true",
