@@ -76,10 +76,43 @@ async def ask(
     if not question:
         raise HTTPException(status_code=400, detail="question is empty")
 
-    tenant = get_current_tenant() or _user.get("tenant", "default")
-    session_id, session = await _app._get_or_create_session(body.session_id, tenant)
-
     settings = _app.get_settings()
+    timeout = float(getattr(settings, "request_timeout_sec", 30.0))
+    request_id = get_request_id()
+    logger.info(
+        "req_id=%s /api/ask effective_timeouts request=%.3fs "
+        "ask_budget=%.3fs ollama_mistral=%.3fs gracekelly=%.3fs "
+        "profile=%s",
+        request_id or "-",
+        timeout,
+        float(getattr(settings, "ask_budget_sec", 0.0) or 0.0),
+        float(getattr(settings, "ollama_request_timeout_sec", 60.0)),
+        float(getattr(settings, "gracekelly_request_timeout_sec", 30.0)),
+        str(getattr(settings, "llm_provider_profile", "local-first")),
+        extra={"trace_id": request_id},
+    )
+
+    tenant = get_current_tenant() or _user.get("tenant", "default")
+    session_started_at = time.monotonic()
+    logger.info(
+        "req_id=%s /api/ask session_setup boundary=start monotonic=%.6f",
+        request_id or "-",
+        session_started_at,
+        extra={"trace_id": request_id},
+    )
+    try:
+        session_id, session = await _app._get_or_create_session(body.session_id, tenant)
+    finally:
+        session_finished_at = time.monotonic()
+        logger.info(
+            "req_id=%s /api/ask session_setup boundary=end "
+            "monotonic=%.6f elapsed=%.6fs",
+            request_id or "-",
+            session_finished_at,
+            session_finished_at - session_started_at,
+            extra={"trace_id": request_id},
+        )
+
     cache_enabled = bool(getattr(settings, "llm_cache_enabled", False))
     if cache_enabled:
         # The cache key is tenant+question only. A follow-up inside a dialog
@@ -171,22 +204,8 @@ async def ask(
                     pass
 
         if not cache_hit:
-            timeout = float(getattr(settings, "request_timeout_sec", 30.0))
             acquire_timeout = float(
                 getattr(settings, "pipeline_acquire_timeout_sec", 0.5)
-            )
-            request_id = get_request_id()
-            logger.info(
-                "req_id=%s /api/ask effective_timeouts request=%.3fs "
-                "ask_budget=%.3fs ollama_mistral=%.3fs gracekelly=%.3fs "
-                "profile=%s",
-                request_id or "-",
-                timeout,
-                float(getattr(settings, "ask_budget_sec", 0.0) or 0.0),
-                float(getattr(settings, "ollama_request_timeout_sec", 60.0)),
-                float(getattr(settings, "gracekelly_request_timeout_sec", 30.0)),
-                str(getattr(settings, "llm_provider_profile", "local-first")),
-                extra={"trace_id": request_id},
             )
             ask_kwargs: dict[str, Any] = {
                 "trace_id": request_id,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -129,3 +130,38 @@ def test_initialize_vector_store_skips_incompatible_chroma_embeddings(
     assert api_app._retriever is None
     assert counts["retriever"] == 0
     assert "incompatible with embedding model BAAI/bge-m3" in caplog.text
+
+
+def test_session_setup_does_not_reopen_store_rejected_at_startup(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    import api.app as api_app
+
+    chroma_dir = tmp_path / "chroma"
+    chroma_dir.mkdir()
+    (chroma_dir / "index.bin").write_text("incompatible", encoding="utf-8")
+    calls = {"retriever": 0}
+
+    def _fake_get_retriever(*args, **kwargs):
+        _ = args, kwargs
+        calls["retriever"] += 1
+        return object()
+
+    monkeypatch.setattr(api_app, "_db_retry_after", float("inf"))
+    monkeypatch.setattr(api_app, "_session_llm_state", {})
+    monkeypatch.setattr(api_app, "_session_last_access", {})
+    monkeypatch.setattr(api_app, "_vector_store", None)
+    monkeypatch.setattr(api_app, "_retriever", None)
+    monkeypatch.setattr(api_app, "_get_retriever", _fake_get_retriever)
+    monkeypatch.setattr(api_app, "_ConversationSession", None)
+    monkeypatch.setattr(
+        api_app,
+        "get_settings",
+        lambda: SimpleNamespace(vectordb_chroma_dir=chroma_dir),
+    )
+
+    _, session = asyncio.run(api_app._get_or_create_session(None, "default"))
+
+    assert calls["retriever"] == 0
+    assert session == {"history": [], "tenant_id": "default"}

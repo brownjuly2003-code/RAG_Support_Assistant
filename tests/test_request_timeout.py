@@ -178,17 +178,33 @@ def test_timeout_logs_effective_budgets_and_evaluate_boundaries(
     effective_record = next(
         record for record in caplog.records if "effective_timeouts" in record.getMessage()
     )
+    session_start_record = next(
+        record
+        for record in caplog.records
+        if "session_setup boundary=start" in record.getMessage()
+    )
+    session_end_record = next(
+        record
+        for record in caplog.records
+        if "session_setup boundary=end" in record.getMessage()
+    )
     evaluate_start_record = next(
-        record for record in caplog.records if "boundary=start" in record.getMessage()
+        record
+        for record in caplog.records
+        if "[evaluate] boundary=start" in record.getMessage()
     )
     outer_timeout_record = next(
         record for record in caplog.records if "outer_timeout_monotonic=" in record.getMessage()
     )
     evaluate_end_record = next(
-        record for record in caplog.records if "boundary=end" in record.getMessage()
+        record
+        for record in caplog.records
+        if "[evaluate] boundary=end" in record.getMessage()
     )
     diagnostic_records = (
         effective_record,
+        session_start_record,
+        session_end_record,
         evaluate_start_record,
         outer_timeout_record,
         evaluate_end_record,
@@ -198,6 +214,8 @@ def test_timeout_logs_effective_budgets_and_evaluate_boundaries(
     } == {"timeout-observability-1"}
 
     effective = effective_record.getMessage()
+    session_start = session_start_record.getMessage()
+    session_end = session_end_record.getMessage()
     evaluate_start = evaluate_start_record.getMessage()
     outer_timeout = outer_timeout_record.getMessage()
     evaluate_end = evaluate_end_record.getMessage()
@@ -213,11 +231,13 @@ def test_timeout_logs_effective_budgets_and_evaluate_boundaries(
         assert match is not None
         return float(match.group(1))
 
+    session_started_at = _timestamp(session_start, "monotonic")
+    session_finished_at = _timestamp(session_end, "monotonic")
     started_at = _timestamp(evaluate_start, "monotonic")
     timed_out_at = _timestamp(outer_timeout, "outer_timeout_monotonic")
     finished_at = _timestamp(evaluate_end, "monotonic")
 
-    assert started_at < timed_out_at < finished_at
+    assert session_started_at < session_finished_at <= started_at < timed_out_at < finished_at
 
 
 def test_event_loop_not_blocked_during_pipeline(
