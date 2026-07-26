@@ -240,6 +240,7 @@ Provider routing is configured through `config/providers.yml`, which defines:
 Runtime behavior:
 
 - `gracekelly-primary` is the default profile and routes both tiers through the local GraceKelly orchestrator.
+- Its strong tier uses the current GraceKelly browser-catalog model `claude-sonnet-5`; the former `claude-sonnet-4-6` names remain compatibility aliases.
 - `local-first` is the explicit Ollama-only profile and keeps both fast/strong lanes on Ollama.
 - `gracekelly-primary` falls back only to the declared Ollama fallback when GraceKelly is unavailable and failover is enabled.
 - `gracekelly-mixed` keeps browser-backed strong answer generation on GraceKelly while routing fast helper/evaluator calls through direct Mistral; use it only for explicit live benchmark runs.

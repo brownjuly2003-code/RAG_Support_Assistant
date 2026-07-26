@@ -1,7 +1,7 @@
 #!/usr/bin/env powershell
 <#
 .SYNOPSIS
-    Regression wrapper for GraceKelly (claude-sonnet-4-6-api) via RAG pipeline.
+    Regression wrapper for GraceKelly (claude-sonnet-5) via RAG pipeline.
 
 .DESCRIPTION
     1. Validates GraceKelly is running and NOT in dry-run mode.
@@ -9,7 +9,7 @@
     3. Runs alembic migrations.
     4. Ingests docs/ into the vector store.
     5. Executes scripts/regression_eval.py baseline=ministral-3b-latest
-       candidate=claude-sonnet-4-6 (browser.perplexity adapter) through
+       candidate=claude-sonnet-5 (browser.perplexity adapter) through
        gracekelly-primary profile.
     6. Cleans up disposable containers on exit.
 
@@ -31,7 +31,7 @@ param(
     [string]$PostgresPassword = "rag_test",
     [string]$PostgresDb = "rag_regression_test",
     [string]$Baseline = "ministral-3b-latest",
-    [string]$Candidate = "claude-sonnet-4-6",
+    [string]$Candidate = "claude-sonnet-5",
     [string]$CandidateProfile = "",
     [int]$MaxCases = 20
 )
@@ -211,7 +211,7 @@ Switch to real execution before running regression:
 Write-Host "GraceKelly OK (profile=$profile)"
 
 # ---------------------------------------------------------------------------
-# 2b. Browser-route candidate. The alias `claude-sonnet-4-6` resolves in
+# 2b. Browser-route candidate. The model `claude-sonnet-5` resolves in
 #     GraceKelly to the browser.perplexity adapter; if the browser session
 #     is dead, the regression run will fail-fast on the first request with
 #     `[provider_unavailable]`. We do not pre-validate readiness here because

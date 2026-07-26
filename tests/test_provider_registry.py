@@ -36,6 +36,17 @@ def test_provider_registry_resolves_model_alias_and_pricing() -> None:
     assert resolved.output_price_per_1m_tokens == 0.0
 
 
+def test_default_gracekelly_profile_uses_current_browser_model_contract() -> None:
+    from config.provider_schema import load_provider_registry
+
+    registry = load_provider_registry(
+        Path(__file__).resolve().parent.parent / "config" / "providers.yml"
+    )
+
+    assert registry.get_profile("gracekelly-primary").strong.model == "claude-sonnet-5"
+    assert registry.resolve_model("claude-sonnet-4-6").model == "claude-sonnet-5"
+
+
 def test_provider_registry_exposes_streaming_and_batch_capabilities() -> None:
     from config.provider_schema import load_provider_registry
 
