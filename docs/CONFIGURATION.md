@@ -48,7 +48,7 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `RAG_EMBEDDING_REMOTE_API_KEY_ENV` | `MISTRAL_API_KEY` | Name of the env var holding the remote API key (the key itself is never stored in settings/logs) |
 | `RAG_EMBEDDING_REMOTE_BATCH` | `32` | Inputs per remote embeddings request |
 | `RAG_EMBEDDING_REMOTE_TIMEOUT_SEC` | `60` | Timeout for a single remote embeddings request |
-| `RAG_RERANKER_MODEL` | `BAAI/bge-reranker-v2-m3` | Multilingual cross-encoder reranker (pairs with BGE-M3) |
+| `RAG_RERANKER_MODEL` | `BAAI/bge-reranker-v2-m3` | Multilingual cross-encoder reranker (pairs with BGE-M3); set to an empty value to disable it |
 | `RAG_HYBRID_SEARCH` | `true` | Combine BM25 with vector retrieval |
 | `RAG_RETRIEVAL_STRATEGY` | `hybrid` | Retrieval strategy: `vector`, `hybrid`, `graph`, or `factcard`; `graph` and `factcard` fall back to `hybrid` when their store is absent. `factcard` (opt-in) serves whole fact-cards for enumeration queries (fields/documents/conditions) — closes the `customs-clearance-fields` recall gap; build the collection with `scripts/build_factcards.py`. Auto-routing into `factcard` is intentionally NOT default (NO-SHIP pending Phase-5 offline-delta — see `docs/operations/2026-06-14-adaptive-retrieval-closure.md`) |
 | `RAG_RETRIEVAL_TOP_K` | `20` | Candidate documents fetched before reranking |
@@ -89,6 +89,7 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `REGRESSION_GATE_MAX_REGRESSIONS` | `2` | Maximum allowed curated regressions before the gate fails |
 | `REGRESSION_GATE_MIN_PASS_RATE` | `0.85` | Minimum candidate pass rate required by the regression gate |
 | `RAG_VECTOR_BACKEND` | `chroma` | Vector store backend |
+| `VECTORDB_CHROMA_DIR` | `<repo>/data/vectordb/chroma` | Chroma persistence directory. Use a new empty directory before changing embedding model or vector dimension; re-ingest the corpus into that directory |
 | `VECTORDB_COLLECTION_PREFIX` | `rag_docs` | Chroma collection prefix; full name is `{prefix}_{tenant_id}` |
 | `CATEGORIES_CONFIG_PATH` | `config/categories.yml` | Taxonomy file for upload auto-categorization |
 

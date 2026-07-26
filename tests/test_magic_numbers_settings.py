@@ -175,6 +175,25 @@ def test_settings_env_fields_react_to_env_after_import(monkeypatch) -> None:
     assert settings.vector_backend == "qdrant"
 
 
+def test_chroma_directory_env_override_is_lazy_and_blank_safe(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    from config.settings import PROJECT_ROOT, Settings
+
+    default_dir = PROJECT_ROOT / "data" / "vectordb" / "chroma"
+    isolated_dir = tmp_path / "isolated-chroma"
+
+    monkeypatch.delenv("VECTORDB_CHROMA_DIR", raising=False)
+    assert Settings().vectordb_chroma_dir == default_dir
+
+    monkeypatch.setenv("VECTORDB_CHROMA_DIR", str(isolated_dir))
+    assert Settings().vectordb_chroma_dir == isolated_dir
+
+    monkeypatch.setenv("VECTORDB_CHROMA_DIR", "")
+    assert Settings().vectordb_chroma_dir == default_dir
+
+
 def test_build_retriever_uses_rrf_settings() -> None:
     doc = manager.Document(page_content="test content", metadata={})
     vector_store = MagicMock()

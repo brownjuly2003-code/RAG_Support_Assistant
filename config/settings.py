@@ -195,7 +195,12 @@ class Settings:
     data_dir: Path = PROJECT_ROOT / "data"
 
     # Векторная БД (Chroma)
-    vectordb_chroma_dir: Path = data_dir / "vectordb" / "chroma"
+    vectordb_chroma_dir: Path = field(
+        default_factory=lambda: Path(
+            os.getenv("VECTORDB_CHROMA_DIR", "").strip()
+            or str(PROJECT_ROOT / "data" / "vectordb" / "chroma")
+        )
+    )
     vectordb_collection_prefix: str = field(
         default_factory=lambda: os.getenv("VECTORDB_COLLECTION_PREFIX", "rag_docs")
     )

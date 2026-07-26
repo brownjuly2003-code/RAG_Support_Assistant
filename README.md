@@ -153,6 +153,13 @@ cd RAG_Support_Assistant
 python main.py
 ```
 
+Changing `RAG_EMBEDDING_MODEL` against an existing Chroma collection is not
+supported because vector dimensions must match. Set `VECTORDB_CHROMA_DIR` in
+`.env` to a new empty directory and re-ingest the corpus when evaluating a
+different embedding model; the default remains `data/vectordb/chroma`.
+Memory-constrained hosts can disable the cross-encoder with
+`RAG_RERANKER_MODEL=`.
+
 Explicit Ollama-only mode is still available:
 
 ```bash
