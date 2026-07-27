@@ -1,5 +1,12 @@
 # Backlog
 
+## Project Closure (2026-07-27)
+
+The product scope is frozen and the non-live safe queue is empty. Historical
+tasks below remain evidence, not active work. Deferred runtime/benchmark/refactor
+gates have a final `future` / `retired` / `won't-run` disposition in
+[`docs/PROJECT_CLOSURE.md`](docs/PROJECT_CLOSURE.md).
+
 ## Autopilot Task Queue
 
 > No active non-live autopilot-safe tasks remain in this fallback queue.

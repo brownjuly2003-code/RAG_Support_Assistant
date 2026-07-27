@@ -5,6 +5,11 @@
 Answers support questions against a knowledge base and decides whether a
 request can be resolved automatically or should be escalated to a human.
 
+**Project status:** closure candidate. The product scope is feature-frozen; the
+safe local backlog is empty. Final scope decisions, preserved local artifacts,
+and the remaining `master`/CI/Pages publication gates are recorded in
+[docs/PROJECT_CLOSURE.md](docs/PROJECT_CLOSURE.md).
+
 Public HTTP endpoints are documented below; runtime configuration lives in [docs/CONFIGURATION.md](docs/CONFIGURATION.md) and the metric / monitoring inventory in [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 **Stack:** FastAPI · LangGraph · ChromaDB · GraceKelly/Ollama provider routing · SQLite for

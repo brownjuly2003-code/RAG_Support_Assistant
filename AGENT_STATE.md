@@ -1,6 +1,17 @@
 # Agent State
 
-## 2026-07-21 Update-10 (presentation DoD добит 10/10: axe 0 + вычитка) ✅ START HERE
+## 2026-07-27 Update-11 (project closure candidate) ✅ START HERE
+
+> Product backlog remains empty. The current product scope is feature-frozen;
+> deferred SLA/Q1b/C1/live-benchmark choices have a final disposition in
+> `docs/PROJECT_CLOSURE.md`. Twelve local untracked portfolio/kitchen artifacts
+> remain preserved and are excluded from the closing commit.
+>
+> Remaining work is external only: publish the local closing commits, require
+> green CI + Pages on the exact SHA, then repeat the issues/PR check. No public
+> application target is known, so closure must not invent one.
+
+## 2026-07-21 Update-10 (presentation DoD добит 10/10: axe 0 + вычитка) — SUPERSEDED by Update-11
 
 > **START HERE.** Заход: «продолжи» после Update-9. Product backlog по-прежнему
 > **пуст** (гейты Update-7 без изменений); сделан единственный незагейченный
