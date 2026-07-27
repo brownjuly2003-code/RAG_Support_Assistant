@@ -6,12 +6,12 @@
 
 - Python 3.11+ (tested on 3.13)
 - Docker Desktop (for Postgres + Redis in dev and for regression eval)
-- ~8 GB disk space for embeddings/reranker/cache; explicit Ollama mode requires additional space for models.
+- ~8 GB disk space for embeddings/reranker/cache; Ollama models require additional space.
 
 Per selected profile:
-- **GraceKelly** at `D:\GraceKelly\` (port 8011) — default local orchestrator for Claude Sonnet 4.6 / GPT-5 / Gemini via Perplexity Pro.
-- **Ollama** (`https://ollama.com/download`) — for explicit `local-first` scenario or fallback.
-- **Mistral API key** (`MISTRAL_API_KEY`) — for direct Mistral fast-tier.
+- **Ollama** (`https://ollama.com/download`) — default `local-first` provider; no API key.
+- **Mistral API key** (`MISTRAL_API_KEY`) — optional direct provider using your own key.
+- **GraceKelly** at `D:\GraceKelly\` (port 8011) — optional local orchestrator.
 
 ## 1. Dependencies
 
@@ -32,10 +32,10 @@ Open `.env` and fill in the required values. Minimal scenarios:
 
 | Scenario | Required variables |
 | --- | --- |
-| **GraceKelly primary** (default) | `GRACEKELLY_BASE_URL=http://127.0.0.1:8011`, `LLM_PROVIDER_PROFILE=gracekelly-primary` is implied |
-| **Local-only Ollama** | `LLM_PROVIDER_PROFILE=local-first` |
-| **+ Mistral fast tier** | `MISTRAL_API_KEY=<key>` + `LLM_PROVIDER_PROFILE=external-mistral` |
-| **GraceKelly mixed routing** (Claude Sonnet 4.6 reasoning) | `MISTRAL_API_KEY=<key>` + `LLM_PROVIDER_PROFILE=gracekelly-mixed` + `GRACEKELLY_REQUEST_TIMEOUT_SEC=120` |
+| **Local-only Ollama** (default) | Start Ollama and pull `qwen2.5:7b`; `LLM_PROVIDER_PROFILE=local-first` is implied |
+| **Direct Mistral** | `MISTRAL_API_KEY=<your-key>` + `LLM_PROVIDER_PROFILE=external-mistral` |
+| **GraceKelly primary** | `GRACEKELLY_BASE_URL=http://127.0.0.1:8011` + `LLM_PROVIDER_PROFILE=gracekelly-primary` |
+| **GraceKelly mixed routing** | `MISTRAL_API_KEY=<your-key>` + `LLM_PROVIDER_PROFILE=gracekelly-mixed` + `GRACEKELLY_REQUEST_TIMEOUT_SEC=120` |
 
 Full list of variables — see `README.md` section **Environment Variables**.
 
@@ -57,12 +57,18 @@ Then run migrations:
 alembic upgrade head
 ```
 
-## 4. Scenario A — GraceKelly primary (default)
+## 4. Scenario A — Local-only Ollama (default)
+
+In terminal A:
 
 ```bash
-# Start GraceKelly in a separate terminal
-cd D:\GraceKelly
-uvicorn gracekelly.main:create_app --factory --host 127.0.0.1 --port 8011
+ollama serve
+```
+
+In terminal B:
+
+```bash
+ollama pull qwen2.5:7b
 
 # Launch RAG Support Assistant
 cd D:\RAG_Support_Assistant
@@ -74,22 +80,25 @@ Open `http://localhost:8000/static/login.html` (password + SSO) or
 `/agent` for the agent copilot dashboard. (legacy `/` index UI was removed
 2026-04-27 — it was unauthenticated, see SESSION-NOTES-2026-04-27.)
 
-`gracekelly-primary` profile routes fast and strong tiers through the local GraceKelly orchestrator. `/api/health/ready` checks GraceKelly readiness and does not require Ollama if the active profile does not use Ollama.
+`local-first` routes both fast and strong tiers through local Ollama.
+`/api/health/ready` checks Ollama readiness. Set `REQUIRE_OLLAMA=true` if startup
+must fail immediately when Ollama is unavailable.
 
-## 5. Scenario B — explicit Local-only Ollama
+## 5. Scenario B — Direct Mistral with your own key
 
-```bash
-# Start Ollama and pull models
-ollama serve &
-ollama pull qwen2.5:7b
+In `.env`:
 
-# Launch with explicit local-first profile
-LLM_PROVIDER_PROFILE=local-first python main.py
+```dotenv
+MISTRAL_API_KEY=<your-key>
+LLM_PROVIDER_PROFILE=external-mistral
 ```
 
-## 6. Scenario C — GraceKelly mixed routing
+Then run `python main.py`. Placeholder keys such as `changeme` are rejected.
 
-Useful when you need reasoning quality (Claude Sonnet 4.6) for final answers, but want background processing (classification, grade_docs, verify_facts) handled by fast Mistral API.
+## 6. Scenario C — Optional GraceKelly routing
+
+Use `gracekelly-primary` for both tiers, or `gracekelly-mixed` when final answers
+should use GraceKelly while helper calls use your direct Mistral key.
 
 1. Start GraceKelly (separate project):
 
@@ -99,9 +108,13 @@ Useful when you need reasoning quality (Claude Sonnet 4.6) for final answers, bu
    uvicorn gracekelly.main:create_app --factory --host 127.0.0.1 --port 8011
    ```
 
-2. In `D:\RAG_Support_Assistant\.env`:
+2. In `D:\RAG_Support_Assistant\.env`, choose one explicit profile:
 
-   ```
+   ```dotenv
+   # GraceKelly for both tiers
+   LLM_PROVIDER_PROFILE=gracekelly-primary
+
+   # Or mixed routing (requires your Mistral key)
    MISTRAL_API_KEY=<your-key>
    LLM_PROVIDER_PROFILE=gracekelly-mixed
    GRACEKELLY_REQUEST_TIMEOUT_SEC=120
@@ -113,7 +126,8 @@ Useful when you need reasoning quality (Claude Sonnet 4.6) for final answers, bu
    python main.py
    ```
 
-`gracekelly-mixed` profile routes fast tier through Mistral API (~1-3s/call), strong tier (final answer) through GraceKelly browser → Perplexity Pro (Claude Sonnet 4.6, ~30-60s/call).
+`gracekelly-mixed` routes the fast tier through Mistral API and the strong tier
+through the optional GraceKelly orchestrator.
 
 ## 7. Document ingestion and first query
 

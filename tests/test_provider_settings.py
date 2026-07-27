@@ -33,28 +33,28 @@ def test_settings_validate_allows_local_first_without_paid_keys(
     assert settings.daily_cost_limit_usd == 5.0
 
 
-def test_settings_defaults_to_gracekelly_primary_without_implicit_ollama_probe(
+def test_settings_defaults_to_local_first_and_probes_ollama(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from config.settings import Settings
 
     calls: list[object] = []
 
-    def _fail_if_ollama_is_probed(*args, **kwargs):
+    def _record_ollama_probe(*args, **kwargs):
         calls.append((args, kwargs))
         raise urllib.error.URLError("offline")
 
     monkeypatch.delenv("LLM_PROVIDER_PROFILE", raising=False)
     monkeypatch.delenv("REQUIRE_OLLAMA", raising=False)
     monkeypatch.delenv("MISTRAL_API_KEY", raising=False)
-    monkeypatch.setattr("urllib.request.urlopen", _fail_if_ollama_is_probed)
+    monkeypatch.setattr("urllib.request.urlopen", _record_ollama_probe)
 
     settings = Settings()
 
     settings.validate()
 
-    assert settings.llm_provider_profile == "gracekelly-primary"
-    assert calls == []
+    assert settings.llm_provider_profile == "local-first"
+    assert len(calls) == 1
 
 
 def test_settings_validate_requires_mistral_api_key_for_external_mistral_profile(
@@ -74,8 +74,10 @@ def test_settings_validate_requires_mistral_api_key_for_external_mistral_profile
 
     settings = Settings()
 
-    with pytest.raises(RuntimeError, match="MISTRAL_API_KEY"):
+    with pytest.raises(RuntimeError, match="MISTRAL_API_KEY") as exc_info:
         settings.validate()
+
+    assert "LLM_PROVIDER_PROFILE=local-first" in str(exc_info.value)
 
 
 def test_settings_validate_requires_mistral_api_key_for_mixed_paid_fast_profile(

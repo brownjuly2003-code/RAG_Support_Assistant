@@ -232,8 +232,8 @@ class Settings:
     )
     # --- Настройки LLM provider routing ---
     llm_provider_profile: str = field(
-        default_factory=lambda: os.getenv("LLM_PROVIDER_PROFILE", "gracekelly-primary").strip()
-        or "gracekelly-primary"
+        default_factory=lambda: os.getenv("LLM_PROVIDER_PROFILE", "local-first").strip()
+        or "local-first"
     )
     ollama_base_url: str = field(
         default_factory=lambda: os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -807,7 +807,7 @@ class Settings:
 
     # --- Продакшн-режим ---
     # REQUIRE_OLLAMA=true → fail fast если Ollama недоступна при старте.
-    # По умолчанию false; Ollama обязателен только для explicit local-first mode.
+    # По умолчанию false; local-first сообщает о недоступности через readiness.
     require_ollama: bool = field(
         default_factory=lambda: os.getenv("REQUIRE_OLLAMA", "false").strip().lower()
         in ("1", "true", "yes")
@@ -1032,7 +1032,7 @@ class Settings:
             raise RuntimeError(
                 f"\nERROR: LLM provider profile '{self.llm_provider_profile}' requires paid provider credentials.\n"
                 f"       Missing env vars: {missing}\n"
-                "       Set the required keys in .env or switch to LLM_PROVIDER_PROFILE=gracekelly-primary."
+                "       Set the required keys in .env or switch to LLM_PROVIDER_PROFILE=local-first."
             )
 
         # Проверка Ollama
@@ -1063,7 +1063,7 @@ class Settings:
                     ) from exc
                 log.warning(
                     "Ollama недоступна по адресу %s (%s). "
-                    "Установите REQUIRE_OLLAMA=true для fail-fast в explicit local-first mode.",
+                    "Установите REQUIRE_OLLAMA=true для fail-fast в local-first mode.",
                     self.ollama_base_url,
                     exc,
                 )

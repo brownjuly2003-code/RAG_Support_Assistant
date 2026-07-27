@@ -34,8 +34,9 @@ User / Email / Widget
 - **Retrieval:** ChromaDB (vector) + BM25 hybrid search, Reciprocal Rank
   Fusion, cross-encoder reranking, contextual headers, and optional document
   category metadata.
-- **Generation:** GraceKelly is the default local orchestrator, with explicit
-  `local-first` Ollama/Qwen2.5 7B routing for offline-only setups. Responses can include
+- **Generation:** the default `local-first` profile uses Ollama/Qwen2.5 7B
+  without an API key. Direct Mistral with your own key and the optional
+  GraceKelly orchestrator remain explicit profiles. Responses can include
   inline citations `[N]` backed by retrieved documents.
 - **Agent layer:** Feature-flagged tool use supports multi-step reasoning,
   confirmation-gated irreversible actions, and agent-side ticket creation.
@@ -130,9 +131,11 @@ All production packages are `mypy --strict` clean (CI-enforced).
 
 ## Quick Start
 
-> Полная пошаговая справка со сценариями GraceKelly primary, explicit local-only Ollama, Mistral и mixed routing — в [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
+> Полная пошаговая справка для default local-only Ollama, Mistral с вашим
+> ключом и optional GraceKelly routing — в [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 
-**Prerequisites:** Python 3.11+, локальный GraceKelly на `http://127.0.0.1:8011` для default `gracekelly-primary` profile.
+**Prerequisites:** Python 3.11+, [Ollama](https://ollama.com/download), and the
+default `qwen2.5:7b` model. Direct Mistral and GraceKelly are optional.
 
 ```bash
 # 1. Local env template. Supply your own optional provider keys
@@ -143,13 +146,18 @@ cp .env.example .env              # Windows: copy .env.example .env
 pip install --require-hashes -r requirements.lock
 # Or for development (adds pytest/ruff/pre-commit):
 # pip install --require-hashes -r requirements-dev.lock
+```
 
-# 3. Start the default GraceKelly orchestrator
-cd ../GraceKelly   # path to your local GraceKelly checkout
-uvicorn gracekelly.main:create_app --factory --host 127.0.0.1 --port 8011
+Start the default local provider in terminal A:
 
-# 4. Run RAG Support Assistant
-cd RAG_Support_Assistant
+```bash
+ollama serve
+```
+
+Then, from the repository in terminal B:
+
+```bash
+ollama pull qwen2.5:7b
 python main.py
 ```
 
@@ -160,12 +168,11 @@ different embedding model; the default remains `data/vectordb/chroma`.
 Memory-constrained hosts can disable the cross-encoder with
 `RAG_RERANKER_MODEL=`.
 
-Explicit Ollama-only mode is still available:
+To use your own Mistral key instead of Ollama, set these values in `.env`:
 
-```bash
-ollama serve
-ollama pull qwen2.5:7b
-LLM_PROVIDER_PROFILE=local-first python main.py
+```dotenv
+LLM_PROVIDER_PROFILE=external-mistral
+MISTRAL_API_KEY=<your-key>
 ```
 
 Optional local Docker Compose path (loopback-only stack from `docker-compose.yml`;
@@ -176,7 +183,9 @@ cp .env.example .env
 docker compose -f docker-compose.yml up
 ```
 
-Альтернативные routing profiles (см. `LLM_PROVIDER_PROFILE` в [docs/CONFIGURATION.md](docs/CONFIGURATION.md)): `local-first`, `external-mistral`, `gracekelly-mixed`. Подробнее — в `config/providers.yml` и в `docs/QUICKSTART.md` секции 5-6.
+`local-first` is the default. Explicit alternatives (see
+`LLM_PROVIDER_PROFILE` in [docs/CONFIGURATION.md](docs/CONFIGURATION.md)) are
+`external-mistral`, `gracekelly-primary`, and `gracekelly-mixed`.
 
 Open:
 - **http://localhost:8000/static/login.html** - password + SSO login page

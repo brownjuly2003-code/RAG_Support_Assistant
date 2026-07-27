@@ -10,12 +10,12 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 
 | Variable | Default | Description |
 |---|---|---|
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Base URL for explicit `local-first` Ollama mode or GraceKelly fallback |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Base URL for the default `local-first` Ollama mode or GraceKelly fallback |
 | `OLLAMA_MODEL_NAME` | `qwen2.5:7b` | Primary Ollama model when `LLM_PROVIDER_PROFILE=local-first` |
-| `OLLAMA_FAST_MODEL_NAME` | `llama3.2:3b` | Faster Ollama model for explicit local helper/tool flows |
+| `OLLAMA_FAST_MODEL_NAME` | `llama3.2:3b` | Faster Ollama model for local helper/tool flows |
 | `MODEL_ROUTING_ENABLED` | `false` | Enable simple/complex/global model routing |
 | `OLLAMA_REQUEST_TIMEOUT_SEC` | `60` | Timeout for a single Ollama HTTP request |
-| `REQUIRE_OLLAMA` | `false` | Fail fast at startup if explicit Ollama mode/fallback validation requires Ollama |
+| `REQUIRE_OLLAMA` | `false` | Fail fast at startup if Ollama/fallback validation requires Ollama |
 | `LANGFUSE_PUBLIC_KEY` | `-` | Optional Langfuse public key |
 | `LANGFUSE_SECRET_KEY` | `-` | Optional Langfuse secret key |
 | `LANGFUSE_HOST` | `https://cloud.langfuse.com` | Langfuse host for LLM observability |
@@ -25,7 +25,7 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | Variable | Default | Description |
 |---|---|---|
 | `PROVIDER_REGISTRY_PATH` | `config/providers.yml` | YAML registry with providers, pricing, capabilities, and routing profiles |
-| `LLM_PROVIDER_PROFILE` | `gracekelly-primary` | Active routing profile; defaults to the local GraceKelly orchestrator |
+| `LLM_PROVIDER_PROFILE` | `local-first` | Active routing profile; defaults to local Ollama with no API key |
 | `LLM_BENCHMARK_ALLOW_PAID_APIS` | `false` | Backward-compatible flag that allows live external-provider calls in provider benchmarks |
 | `DAILY_COST_LIMIT_USD` | `5.0` | Fail fast when tracked direct-provider spend for the current UTC day reaches this limit |
 | `MISTRAL_API_KEY` | `changeme` | Direct Mistral API key; placeholder values are treated as missing |
@@ -239,12 +239,12 @@ Provider routing is configured through `config/providers.yml`, which defines:
 
 Runtime behavior:
 
-- `gracekelly-primary` is the default profile and routes both tiers through the local GraceKelly orchestrator.
+- `local-first` is the default profile and keeps both fast/strong lanes on local Ollama.
+- `gracekelly-primary` is an explicit opt-in that routes both tiers through the local GraceKelly orchestrator.
 - Its strong tier uses the current GraceKelly browser-catalog model `claude-sonnet-5`; the former `claude-sonnet-4-6` names remain compatibility aliases.
-- `local-first` is the explicit Ollama-only profile and keeps both fast/strong lanes on Ollama.
 - `gracekelly-primary` falls back only to the declared Ollama fallback when GraceKelly is unavailable and failover is enabled.
 - `gracekelly-mixed` keeps browser-backed strong answer generation on GraceKelly while routing fast helper/evaluator calls through direct Mistral; use it only for explicit live benchmark runs.
-- `external-mistral` uses the direct Mistral API and is the intended non-local deployment option when GraceKelly is not present.
+- `external-mistral` uses the direct Mistral API with the user's own `MISTRAL_API_KEY`.
 - Startup validation loads the registry, verifies `LLM_PROVIDER_PROFILE`, and treats placeholder credentials such as `changeme` as missing.
 - Each traced LLM step now records `provider_name`, `model_name`, token usage, and cost; Prometheus exports `llm_cost_usd_total{provider,model,tenant}`.
 - Automatic failover events are exported as `llm_provider_fallback_total{from_provider,to_provider,reason}`.
@@ -255,12 +255,12 @@ Runtime behavior:
 
 - `gracekelly-primary` is intended for local setups where `D:\GraceKelly\` runs on `http://127.0.0.1:8011`.
 - The provider uses `GET /healthz/ready` before the first request and calls `POST /api/v1/smart` with `reliability_level=quick`.
-- If GraceKelly is down or times out, the runtime switches only to the declared local fallback (`ollama`) and caches that decision for `FAILOVER_FALLBACK_CACHE_SECONDS`. Ollama is not otherwise required by the default health path.
+- If GraceKelly is down or times out, the runtime switches only to the declared local fallback (`ollama`) and caches that decision for `FAILOVER_FALLBACK_CACHE_SECONDS`.
 - GraceKelly calls are treated as proxy/orchestrator traffic, so `cost_usd` remains `0.0` in local traces.
 
 ### Mistral provider
 
-- `external-mistral` is the direct Mistral fallback for deployments where GraceKelly is unavailable.
+- `external-mistral` is the direct Mistral profile for users who provide their own key.
 - The provider uses `POST https://api.mistral.ai/v1/chat/completions` with OpenAI-compatible chat payloads and reads token usage from `usage.prompt_tokens` / `usage.completion_tokens`.
 - Placeholder `MISTRAL_API_KEY=changeme` is treated as missing both in startup validation and in the provider constructor.
 - `DAILY_COST_LIMIT_USD` applies to the direct Mistral profile and blocks new runtime creation after the current UTC-day spend is exhausted.
