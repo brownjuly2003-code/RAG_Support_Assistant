@@ -1,24 +1,27 @@
 # Backlog
 
-## Active source (2026-08-02) — audit plan reopened; P0 local remediation @ `2767b9d`
+## Active source (2026-08-02) — audit plan reopened; OBS-01 local @ `5a9f857`
 
 **Sole active backlog:** [`plan_sol_23_07_26`](plan_sol_23_07_26)
 (status matrix in [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md)).
 
 The 2026-07-27 «project closure / empty queue» narrative remains **revoked**.
-P0 **implementation** is locally remediated at HEAD `2767b9d`, but full plan
-DoD / production release / project closure are **not** complete. Historical
+P0 **implementation** is locally remediated; **OBS-01** is locally remediated
+at HEAD `5a9f857`. Plan step 1 is **locally complete**. Full plan DoD /
+production release / project closure are **not** complete. Historical
 autopilot/safe tasks below remain evidence only — not the active queue.
 
 ### Next atomic slice (local code)
 
-**Plan step 1 remaining item only (test-first):**
+**Plan step 4 first durable-job contract only (test-first):**
 
-1. Repeated client request ID / trace PK collision surface (**OBS-01**)
+1. One tenant-aware durable ingestion job contract with a real `job_id` and
+   observable status/terminal error
 
-Do **not** implement a production fix until that contract test is red for the
-expected reason. Tenant/audit/Helm red contracts already existed and were
-remediated (`3c1e7b7`, `28580aa`, `ed8520a`, `2767b9d`).
+Do **not** claim atomic index publish, retry/idempotency, locks, worker
+topology, or TEN-03 already designed or complete. OBS-01 closed locally at
+`5a9f857` (tenant/audit/Helm earlier: `3c1e7b7`, `28580aa`, `ed8520a`,
+`2767b9d`).
 
 ### Live / external P0 gates (not local-complete)
 
@@ -31,8 +34,11 @@ Track separately from the next code slice — do **not** list as done work:
   **disposable** DB (never production DSN for `pg_restore --clean`); known-query
   smoke; measured RPO/RTO
 
-Steps 4–10 remain open. Live GraceKelly/Mistral benchmarks remain explicit
-opt-in only and are **not** this slice.
+Step 5 remains **open / partially remediated** (trace identity done; timeout
+cancellation, bounded capacity, session concurrency/history ordering, sticky
+experiment propagation still open). Steps 4 and 6–10 remain open. Live
+GraceKelly/Mistral benchmarks remain explicit opt-in only and are **not** this
+slice.
 
 ## Project Closure note (2026-07-27) — historical
 

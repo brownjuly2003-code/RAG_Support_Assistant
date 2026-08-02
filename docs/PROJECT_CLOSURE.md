@@ -2,20 +2,29 @@
 
 Дата фиксации scope: 2026-07-27.
 
-> ## SUPERSEDED / REOPENED — 2026-08-02 (status @ `2767b9d`)
+> ## SUPERSEDED / REOPENED — 2026-08-02 (status @ `5a9f857`)
 >
 > This closure note is **historical**. Remediation remains **reopened**: the
 > project is **not** closed. P0 release-blocker **implementation** is locally
-> remediated and mechanically verified at HEAD `2767b9d`, but full audit-plan
-> DoD, OPS-01 operational restore DoD, and production release are still open.
+> remediated and mechanically verified; **OBS-01** is locally remediated at
+> HEAD `5a9f857`. Full audit-plan DoD, OPS-01 operational restore DoD, and
+> production release are still open.
 >
-> **Steps 1–3 partial status:**
-> - Step 1 **in progress** — remaining test-first slice: repeated request-ID /
->   trace PK collision (OBS-01).
+> **Steps 1–5 status:**
+> - Step 1 **locally complete** — all named contract-test slices demonstrated
+>   red then green (tenant/audit/Helm + OBS-01). Does not close production
+>   release.
 > - Step 2 **local implementation verified; live PostgreSQL DoD open**.
 > - Step 3 **chart/backup runtime locally verified; operational restore DoD
 >   open**.
-> - Steps 4–10 remain open.
+> - Step 4 **open** — next implementation slice: first test-first
+>   durable-ingestion job contract (`job_id` + observable status/terminal
+>   error). Atomic publish / retry / locks / worker topology / TEN-03 not
+>   claimed complete.
+> - Step 5 **open / partially remediated** — trace identity done at
+>   `5a9f857`; timeout cancellation, bounded capacity, session
+>   concurrency/history ordering, sticky experiment propagation still open.
+> - Steps 6–10 remain open.
 >
 > Owner decision unchanged: **no** Hugging Face Space publication target; HF is
 > not a required external-user runtime. Users run the service locally (own

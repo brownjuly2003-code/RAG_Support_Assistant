@@ -4,35 +4,37 @@
 **Принцип порядка:** сначала release-blockers и проверяемые контракты, затем RAG-качество, после этого декомпозиция.
 **Оценка (historical, 2026-07-23):** 6–9 инженерных недель для одного сильного разработчика; шаги 3–4 и 7–8 частично параллелятся только после закрытия шага 2.
 
-> ## 2026-08-02 execution status (P0 local remediation)
+> ## 2026-08-02 execution status (OBS-01 local remediation)
 >
 > Plan is **ACTIVE**. Original step estimates below are **historical** and are
 > not rewritten. Closure candidate / empty-backlog narrative remains revoked;
 > this plan is the sole active remediation source (see `BACKLOG.md`).
 >
-> Implementation HEAD: `2767b9d`. Audit snapshot body: `383cfe9` (2026-07-23).
-> P0 local implementation is verified; production release and full step DoD
-> remain gated by explicit live/external checks.
+> Implementation HEAD: `5a9f857`. Audit snapshot body: `383cfe9` (2026-07-23).
+> P0 local implementation is verified; OBS-01 is locally remediated; production
+> release and full step DoD remain gated by explicit live/external checks.
 >
-> | Step | Historical estimate | Status @ `2767b9d` | Notes |
+> | Step | Historical estimate | Status @ `5a9f857` | Notes |
 > |---|---|---|---|
-> | 1 Contract tests + release gate | 1–2 days | **in progress** — **NEXT SLICE = OBS-01 only** | Tenant/audit/Helm red contracts exist and were remediated; remaining test-first item is repeated client request-ID / trace PK collision |
+> | 1 Contract tests + release gate | 1–2 days | **locally complete** | All named step-1 contract-test slices demonstrated red then green (tenant/audit/Helm + OBS-01). Does **not** close production release |
 > | 2 Tenant Session/Message/Audit | 2–4 days | **local implementation verified; live PostgreSQL DoD open** | Commits `3c1e7b7`, `28580aa`; migration `018`; local tenant/audit/schema tests green. Live Postgres upgrade/downgrade + two-tenant restart drill not run |
 > | 3 Production storage + backup | 2–4 days | **chart/backup runtime locally verified; operational restore DoD open** | Commits `ed8520a`, `2767b9d`; Helm + backup runtime contracts green. Image/cluster/restore/RPO/RTO gates still open |
-> | 4 Durable ingestion + atomic index | 4–6 days | **open** | Still requires operational durable topology from step 3; Celery-without-worker and non-atomic rebuild remain |
-> | 5 Timeout/capacity/trace identity | 4–6 days | **open** (obs partial only) | Timeout *logging* improved post-audit; cancellation/capacity DoD not met; OBS-01 is the next test-first slice |
+> | 4 Durable ingestion + atomic index | 4–6 days | **open — NEXT SLICE** | First test-first durable-ingestion slice only: one tenant-aware job contract with a real `job_id` and observable status/terminal error. Atomic index publish, retry/idempotency, locks, worker topology, TEN-03 are **not** claimed designed or complete |
+> | 5 Timeout/capacity/trace identity | 4–6 days | **open / partially remediated** | Trace identity (OBS-01) done at `5a9f857`; timeout cancellation, bounded capacity, session concurrency/history ordering, sticky experiment propagation still require work |
 > | 6 Sync/SSE unify + durable escalation | 4–6 days | **open** | Dual streaming path + human-without-ticket remain |
 > | 7 Fail-closed RAG routing | 5–8 days | **open** | Depends on step 6 |
 > | 8 Real regression gate | 5–10 days | **open** | Mock expected-copy executor still present |
 > | 9 Widget + edge/security | 3–5 days | **open** | Depends on steps 2 and 6 |
 > | 10 Orchestration decomp + rollout | 4–6 days | **open** | Depends on steps 2–9 |
 >
-> **Gates A–D:** all incomplete (Gate A still requires steps 1–3 fully closed,
-> including remaining OBS-01 red contract and live/external DoD for 2–3).
+> **Gates A–D:** all incomplete (Gate A still requires live/external DoD for
+> steps 2–3; step 1 local contracts are green, but production release is not
+> closed). Steps 4 and 6–10 remain open.
 >
-> **Exact next implementation slice:** remaining step **1** item only —
-> write the minimal failing contract for repeated request-ID / trace collision
-> (OBS-01). No production fix until that test is red on current HEAD.
+> **Exact next implementation slice:** plan step **4** first test-first
+> durable-ingestion slice — one tenant-aware job contract with a real
+> `job_id` and observable status/terminal error. Do not claim atomic index
+> publish, retry/idempotency, locks, worker topology, or TEN-03 already done.
 
 ## 1. Зафиксировать failing contract tests и release gate
 
@@ -41,14 +43,13 @@
 **Reasoning:** `xhigh`
 **Зависимости:** нет
 **Оценка:** 1–2 дня
-**Статус 2026-08-02 @ `2767b9d`:** **in progress — NEXT = OBS-01 only**
+**Статус 2026-08-02 @ `5a9f857`:** **locally complete**
 
 - ~~Добавить минимальные red tests для: cross-tenant `/api/ask`, invalid UUID cooldown, audit tenant, missing Helm storage/PVC~~ — **done** (tenant/audit/Helm red contracts existed; remediation landed in steps 2–3).
-- **Remaining:** minimal red test for repeated client request ID / trace PK collision (OBS-01).
-- Не менять production-код для OBS-01, пока тест не воспроизводит конкретный дефект.
-- Добавить checklist release-blocker’ов в CI/operations docs (still open with Gate A).
+- ~~Minimal red-then-green contract for repeated client request ID / trace PK collision (OBS-01)~~ — **done** at `5a9f857` (initial 8 expected failures on `fbf3bcf` → green; QA positional-only legacy callable fixed; independent regression 44 passed / 1 deprecation warning; Ruff/mypy/`git diff --check` clean).
+- Checklist release-blocker’ов в CI/operations docs and Gate A production release remain open (live/external DoD for steps 2–3).
 
-**DoD:** каждый step-1 инвариант имеет red-then-green contract; remaining OBS-01 must first fail on current HEAD for the expected reason, without broad mocks.
+**DoD:** каждый step-1 инвариант имеет red-then-green contract — **locally met**. Local completeness does **not** close production release.
 
 ## 2. Закрыть tenant-изоляцию Session/Message/Audit
 
@@ -127,8 +128,9 @@
 **Reasoning:** `xhigh`
 **Зависимости:** шаг 3
 **Оценка:** 4–6 дней
-**Статус 2026-08-02:** **open**
+**Статус 2026-08-02 @ `5a9f857`:** **open — NEXT SLICE**
 
+- **Next atomic slice (test-first only):** one tenant-aware job contract with a real `job_id` and observable status/terminal error. Do not claim broader step-4 design complete until that contract is red-then-green.
 - Выбрать один job contract для всех tenant: worker Deployment + heartbeat либо отдельный job service.
 - Возвращать `job_id`; реализовать status, retry, idempotency и queue-age metrics.
 - Добавить per-tenant distributed lock.
@@ -138,7 +140,7 @@
 
 **Проверка:** fault injection до/после embeddings и switch, два concurrent upload, worker outage/recovery, duplicate job.
 
-**DoD:** accepted job либо завершается, либо имеет наблюдаемый terminal error; неудачный rebuild не повреждает активный индекс.
+**DoD:** accepted job либо завершается, либо имеет наблюдаемый terminal error; неудачный rebuild не повреждает активный индекс. First slice only requires the job_id + status/terminal-error contract; atomic publish / retry / locks / worker topology / TEN-03 remain later work.
 
 ## 5. Исправить timeout, capacity, session concurrency и tracing identity
 
@@ -147,18 +149,20 @@
 **Reasoning:** `xhigh`
 **Зависимости:** шаг 2
 **Оценка:** 4–6 дней
-**Статус 2026-08-02:** **open** (timeout observability partial only; DoD unmet)
+**Статус 2026-08-02 @ `5a9f857`:** **open / partially remediated** (trace identity done; remaining DoD unmet)
 
 - Убрать вложенный per-request `ThreadPoolExecutor`.
 - Ввести единый deadline и bounded executor/job pool; capacity освобождать после реального завершения underlying work.
 - Протянуть provider/retriever/tool timeouts и cooperative cancellation.
 - Добавить per-session serialization или optimistic sequence/version.
-- Разделить внутренний unique trace ID, внешний correlation ID и idempotency key.
+- ~~Разделить внутренний unique trace ID, внешний correlation ID и idempotency key.~~ — **trace identity done** at `5a9f857` (`traces.trace_id` always fresh UUID4; external `X-Request-Id` → nullable indexed `traces.correlation_id`; graph/`AskResponse.trace_id` internal; response header remains external correlation). **No** idempotency/replay behavior was added; that remains open if required later.
 - Передавать `user_id` и `session_id` в normal `run_qa_pipeline`, чтобы experiment assignment был sticky.
 
-**Проверка:** blocking fake provider, client disconnect, repeated timeout, concurrent same-session confirm, повторный `X-Request-Id`.
+**Still open in this step:** timeout cancellation, bounded capacity, session concurrency/history ordering, sticky experiment propagation.
 
-**DoD:** после terminal HTTP/SSE результата нет скрытой работы или она продолжает занимать bounded capacity; history упорядочена; trace collisions невозможны.
+**Проверка:** blocking fake provider, client disconnect, repeated timeout, concurrent same-session confirm, повторный `X-Request-Id` (trace collision surface closed; other checks remain).
+
+**DoD:** после terminal HTTP/SSE результата нет скрытой работы или она продолжает занимать bounded capacity; history упорядочена; trace collisions невозможны. Trace-collision portion is locally met; full step DoD is **not**.
 
 ## 6. Объединить sync/SSE и durable escalation
 

@@ -5,12 +5,12 @@
 **Проверенный commit:** `383cfe90e8a5b75e831e8ad5b5fea792b15f7c9f` (`master`, синхронизирован с `origin/master`)
 **Тип аудита:** архитектура, RAG-качество, multi-tenancy, безопасность, надёжность, ingestion, эксплуатация, CI/CD и тестовая стратегия.
 
-> ## 2026-08-02 revalidation + P0 local remediation (active)
+> ## 2026-08-02 revalidation + local remediation (active)
 >
 > **Статус аудита: ACTIVE.** Detailed findings below remain the **2026-07-23
 > audit snapshot** @ `383cfe9` — historical defect evidence, not rewritten as
 > if the defects never existed. This top layer records later revalidation and
-> local remediation against HEAD `2767b9d`.
+> local remediation against HEAD `5a9f857`.
 >
 > **Решение владельца (HF):** Hugging Face **не** является publication target
 > и **не** required user-runtime dependency для рекомендуемого external-user
@@ -26,13 +26,14 @@
 > | Policy/docs reopen + no-HF path | `edb729c` | Docs recipe preserved | N/A (policy) |
 > | TEN-01 / TEN-02 | `3c1e7b7`, `28580aa` | Test-first red (7+7); 41 tenant/audit + 49 adjacent; schema/migration 39; Ruff/mypy clean; `alembic heads` = `018` | Real PostgreSQL upgrade/downgrade; live two-tenant restart drill |
 > | OPS-01 chart + backup runtime | `ed8520a`, `2767b9d` | Helm red→green (23 fail / 7 pass → 30 pass); backup runtime red→green (11 fail / 10 pass → aggregate 52 pass / 1 skip); Ruff/mypy; helm lint + default/existing/dev-disabled renders; production data-disabled fails closed | Docker image build/tool smoke; live Postgres; kind/live install; app pod recreation; clean-namespace restore to **disposable** DB; known-query smoke; measured RPO/RTO |
+> | OBS-01 trace identity | `5a9f857` | Test-first red (8 expected failures on `fbf3bcf`) → green; QA positional-only legacy callable (`TypeError` → fixed); independent regression 44 passed / 1 deprecation warning; Ruff clean; mypy `--follow-imports=skip` clean; `git diff --check` clean | N/A for OBS-01 local contract. Plan step 5 still open for timeout cancellation, bounded capacity, session concurrency/history ordering, sticky experiment propagation. No production release claim |
 >
 > **P0 release-blocker implementation is locally remediated and mechanically
-> verified; production release remains gated by the live/external checks above.**
-> Do **not** treat the whole audit plan, OPS-01 operational DoD, or project
-> closure as complete.
+> verified; OBS-01 is locally remediated at `5a9f857`.** Production release
+> remains gated by the live/external checks above. Do **not** treat the whole
+> audit plan, OPS-01 operational DoD, or project closure as complete.
 >
-> ### Status matrix @ `2767b9d`
+> ### Status matrix @ `5a9f857`
 >
 > | ID | Priority | Status | Evidence @ HEAD |
 > |---|---|---|---|
@@ -46,7 +47,7 @@
 > | ING-01 | P1 | **open** | Default upload still Celery-accepted without worker Deployment in compose/Helm |
 > | ING-02 | P1 | **open** | Rebuild still delete-then-build pattern in `vectordb` manager |
 > | TEN-03 | P1 | **open** | Lossy tenant sanitization still present |
-> | OBS-01 | P1 | **open — next test-first slice** | Client request ID still usable as trace PK collision surface; remaining plan step 1 contract |
+> | OBS-01 | P1 | **locally remediated** @ `5a9f857` | `traces.trace_id` is always a fresh internal UUID4; external `X-Request-Id` stored in nullable indexed `traces.correlation_id` (may repeat); old SQLite schemas migrate append-only (historic rows NULL); legacy `start_trace(trace_id=...)` accepted as correlation alias only; graph state / `AskResponse.trace_id` use internal UUID; response `X-Request-Id` header remains external correlation. No idempotency/replay behavior added. Original finding prose below is the 2026-07-23 audit snapshot |
 > | EVAL-01 | P1 | **open** | Mock regression executor still can synthesize expected answers |
 > | WID-01 | P1 | **open** | Widget embed/auth/session contract unchanged |
 > | SEC-01 | P1 | **open** | OIDC linking still lacks hard `email_verified` gate |
@@ -56,11 +57,12 @@
 > | DEP-01 | P2 | **open** | Docs-site dependency posture not re-audited this pass |
 > | MAINT-01 | P2 | **open** | Large orchestration modules still dual contracts |
 >
-> **Next implementation slice (test-first, plan order):** remaining **plan
-> step 1** item only — minimal **failing** contract for repeated client
-> request-ID / trace primary-key collision (**OBS-01**). Tenant/audit/Helm
-> red contracts already exist and were remediated. Do **not** start a
-> production fix for OBS-01 until that test is red for the expected reason.
+> **Next implementation slice (test-first, plan order):** **plan step 4** —
+> first durable-ingestion contract only: one tenant-aware job contract with a
+> real `job_id` and observable status/terminal error. Do **not** claim that
+> atomic index publish, retry/idempotency, locks, worker topology, or TEN-03
+> are already designed or complete. OBS-01 is closed locally; remaining open
+> P1/P2 findings keep their prior status without new evidence.
 >
 > Active plan: [`plan_sol_23_07_26`](plan_sol_23_07_26).
 

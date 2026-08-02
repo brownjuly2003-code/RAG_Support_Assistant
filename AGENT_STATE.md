@@ -1,44 +1,69 @@
 # Agent State
 
-## 2026-08-02 Update-13 (P0 local remediation documented @ `2767b9d`) ✅ START HERE
+## 2026-08-02 Update-14 (OBS-01 local remediation documented @ `5a9f857`) ✅ START HERE
 
-> **Documentation-only truth pass** after verified P0 code already on HEAD.
+> **Documentation-only truth pass** after verified OBS-01 code already on HEAD.
 > No source/runtime/test/config/Helm changes in this docs refresh.
 >
-> **HEAD:** `2767b9d`. Relevant commits:
+> **HEAD:** `5a9f857` (`fix(tracing): separate correlation from trace identity`).
+> Relevant commits:
 > - `edb729c` — reopen audit remediation + no-HF local-user path
 > - `3c1e7b7` / `28580aa` — TEN-01/TEN-02 tenant + schema ownership
 > - `ed8520a` / `2767b9d` — OPS-01 Helm persistence + safe Postgres backup
+> - `5a9f857` — OBS-01: internal `trace_id` UUID4 + nullable `correlation_id`
 >
 > **Exact current truth:**
 > - P0 release-blocker **implementation is locally remediated and mechanically
 >   verified**; production release remains gated by explicit live/external checks.
-> - Plan step 1 **in progress** (not complete): remaining test-first slice =
->   repeated client request-ID / trace PK collision (**OBS-01**).
+> - Plan step 1 **locally complete**: all named contract-test slices
+>   demonstrated red then green (tenant/audit/Helm + OBS-01). Does **not**
+>   close production release.
+> - Audit finding **OBS-01 locally remediated** at `5a9f857`:
+>   `traces.trace_id` always fresh internal UUID4; external `X-Request-Id` →
+>   nullable indexed `traces.correlation_id` (may repeat); append-only SQLite
+>   migration (historic rows NULL); legacy `start_trace(trace_id=...)` is
+>   correlation alias only; graph/`AskResponse.trace_id` internal; response
+>   header remains external correlation. No idempotency/replay added.
+> - Evidence: initial contract 8 expected failures on `fbf3bcf` → green; QA
+>   positional-only legacy callable TypeError → fixed; independent regression
+>   44 passed / 1 deprecation warning; Ruff clean; mypy
+>   `--follow-imports=skip` clean; `git diff --check` clean.
 > - Plan step 2 **local implementation verified; live PostgreSQL DoD open**.
 > - Plan step 3 **chart/backup runtime locally verified; operational restore
 >   DoD open**.
-> - Steps 4–10 remain open. Audit plan / OPS-01 operational DoD / project
->   closure are **not** complete.
+> - Plan step 5 **open / partially remediated**: trace identity done; timeout
+>   cancellation, bounded capacity, session concurrency/history ordering,
+>   sticky experiment propagation still require work.
+> - Steps 4 and 6–10 remain open. Audit plan / OPS-01 operational DoD /
+>   project closure are **not** complete.
 > - Owner policy unchanged: **no HF Space/public target**; external users run
 >   locally with own `MISTRAL_API_KEY` + remote embeddings + empty
 >   `RAG_RERANKER_MODEL`.
 >
-> **Protected untracked artifacts:** preserve byte-for-byte (portfolio/kitchen
-> + presentation/explainer + architecture diagram, etc.). Do not
-> stage/delete/rename them in scoped commits unless the owner explicitly
-> includes them. Original audit body in `audit_gpt_23_07_26.md` is a dated
-> snapshot — update only the top remediation/status layer.
+> **Protected untracked artifacts:** nine protected untracked user artifacts
+> still match their recorded hashes (portfolio/kitchen + presentation/explainer
+> + architecture diagram, etc.). Do not stage/delete/rename them in scoped
+> commits unless the owner explicitly includes them. Original audit body in
+> `audit_gpt_23_07_26.md` is a dated snapshot — update only the top
+> remediation/status layer.
 >
-> **Next atomic implementation slice (plan order):** OBS-01 only — write the
-> failing repeated request-ID / trace collision contract test first. No
-> production fix until red is observed.
+> **Next atomic implementation slice (plan order):** step **4** first
+> test-first durable-ingestion slice — one tenant-aware job contract with a
+> real `job_id` and observable status/terminal error. Do not claim atomic
+> index publish, retry/idempotency, locks, worker topology, or TEN-03 already
+> designed or complete.
+
+## 2026-08-02 Update-13 (P0 local remediation documented @ `2767b9d`) — SUPERSEDED by Update-14
+
+> **SUPERSEDED.** Historical status at HEAD `2767b9d` after P0 local
+> remediation and before OBS-01 close. Step 1 was still in progress with
+> OBS-01 as next slice. Status truth now lives in Update-14.
 
 ## 2026-08-02 Update-12 (audit revalidation + no-HF local-user path) — SUPERSEDED by Update-13
 
 > **SUPERSEDED.** Historical revalidation at HEAD `26d24e6` before P0 local
 > remediation commits. P0 were still open at that SHA. HF no-Space policy and
-> reopened audit plan remain valid; status truth now lives in Update-13.
+> reopened audit plan remain valid; status truth now lives in Update-14.
 
 ## 2026-07-27 Update-11 (project closure candidate) — SUPERSEDED by Update-12
 
