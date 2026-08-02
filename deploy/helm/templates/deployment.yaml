@@ -1,6 +1,17 @@
 {{- if and (eq (default "" .Values.env.RAG_ENV) "production") (not .Values.persistence.data.enabled) }}
 {{- fail "Helm: persistence.data.enabled must be true when env.RAG_ENV=production (authoritative /app/data tree: uploads, Chroma, SQLite traces). Enable data persistence or set env.RAG_ENV to a non-production value." }}
 {{- end }}
+{{- if .Values.worker.enabled }}
+{{- if not .Values.persistence.data.enabled }}
+{{- fail "Helm: worker.enabled requires persistence.data.enabled=true so the ingestion sidecar shares the authoritative /app/data volume. Disable the worker explicitly for non-production data-disabled renders." }}
+{{- end }}
+{{- if ne (int .Values.replicaCount) 1 }}
+{{- fail "Helm: worker.enabled requires replicaCount=1 until per-tenant locking and atomic index publish exist (single ingestion execution slot)." }}
+{{- end }}
+{{- if ne (int .Values.worker.concurrency) 1 }}
+{{- fail "Helm: worker.enabled requires worker.concurrency=1 until per-tenant locking and atomic index publish exist (single ingestion execution slot)." }}
+{{- end }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -33,6 +44,9 @@ spec:
     spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.worker.enabled }}
+      terminationGracePeriodSeconds: {{ .Values.worker.terminationGracePeriodSeconds }}
+      {{- end }}
       containers:
         - name: app
           image: {{ include "rag-support-assistant.image" . | quote }}
@@ -83,6 +97,47 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 3
+        {{- if .Values.worker.enabled }}
+        - name: worker
+          image: {{ include "rag-support-assistant.image" . | quote }}
+          command:
+            - celery
+            - -A
+            - tasks.celery_app:celery_app
+            - worker
+            - --concurrency={{ .Values.worker.concurrency }}
+            - --hostname=ingest@%h
+            - --loglevel={{ .Values.worker.logLevel }}
+          envFrom:
+            {{- include "rag-support-assistant.envFrom" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          readinessProbe:
+            exec:
+              command:
+                - python
+                - -m
+                - tasks.worker_health
+            initialDelaySeconds: {{ .Values.worker.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.worker.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.worker.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.worker.readinessProbe.failureThreshold }}
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -m
+                - tasks.worker_health
+            initialDelaySeconds: {{ .Values.worker.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.worker.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.worker.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.worker.livenessProbe.failureThreshold }}
+        {{- end }}
       {{- if .Values.persistence.data.enabled }}
       volumes:
         - name: data

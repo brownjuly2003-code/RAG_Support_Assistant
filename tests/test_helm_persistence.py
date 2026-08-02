@@ -341,11 +341,15 @@ def test_deployment_mounts_data_security_checksums_and_readiness() -> None:
 
 @requires_helm
 def test_nonproduction_data_disabled_keeps_http_readiness() -> None:
+    # Worker is fail-closed without data persistence; disable it explicitly so
+    # the historical non-production data-disabled app render remains valid.
     result = _helm_template(
         "--set",
         "env.RAG_ENV=development",
         "--set",
         "persistence.data.enabled=false",
+        "--set",
+        "worker.enabled=false",
     )
     assert result.returncode == 0, result.stderr
     docs = _docs(result.stdout)

@@ -86,11 +86,19 @@ Runbooks: [operations/helm-lint.md](operations/helm-lint.md),
 
 ### Deployment topology
 
-**Run exactly one worker and one replica.** Session history, pending
-confirm-actions (the human-approval step for irreversible actions such as
-`create_ticket`), the LLM/retriever/store caches, the regression-job registry
-and the circuit breaker all live in process memory and are **not** shared across
-workers or replicas. With more than one process:
+Distinguish the **web process** from the **ingestion worker** — they are not
+the same “worker”:
+
+| Role | Default topology | Process |
+|---|---|---|
+| Web / API | **Exactly one** Uvicorn process and **one** app replica | `uvicorn … --workers 1` |
+| Ingestion | **Exactly one** Celery worker with **concurrency 1** | `celery -A tasks.celery_app:celery_app worker --concurrency=1 --hostname=ingest@%h` |
+
+**Web (Uvicorn).** Session history, pending confirm-actions (the human-approval
+step for irreversible actions such as `create_ticket`), the LLM/retriever/store
+caches, the regression-job registry and the circuit breaker all live in process
+memory and are **not** shared across Uvicorn workers or app replicas. With more
+than one web process:
 
 - a confirm-action started on process A is invisible to process B, so the user
   is re-prompted forever and the action never completes;
@@ -98,13 +106,42 @@ workers or replicas. With more than one process:
 - queued regression jobs can appear stuck.
 
 The SQLite trace DB uses WAL + `busy_timeout` and tolerates concurrent access,
-but that does **not** make the application multi-worker safe. Defaults reflect
-the invariant: `Dockerfile` runs `--workers 1`, and the Helm chart ships
+but that does **not** make the web application multi-worker safe. Defaults
+reflect the invariant: `Dockerfile` runs `--workers 1`, and the Helm chart ships
 `replicaCount: 1` with `autoscaling.enabled: false`. A startup warning fires
 when `WEB_CONCURRENCY > 1` (best-effort; it does not catch an explicit
-`uvicorn --workers N` flag). Scaling out requires first externalising session
-state and pending confirm-actions to Redis/Postgres (the `Message`/`Session`
-models exist; `pending_action` and server-side history do not yet).
+`uvicorn --workers N` flag). Scaling the web tier out requires first
+externalising session state and pending confirm-actions to Redis/Postgres (the
+`Message`/`Session` models exist; `pending_action` and server-side history do
+not yet).
+
+**Ingestion (Celery).** Local Compose starts a dedicated `worker` service built
+from the same image/source as `app`, with the same `.env` and DB/Redis/Ollama
+environment, the shared `./data:/app/data` bind mount, `restart: unless-stopped`,
+`stop_grace_period: 3600s` for warm shutdown, and a healthcheck that runs
+`python -m tasks.worker_health` (Celery control ping of `ingest@<hostname>` —
+not a PID/process grep). The worker publishes no host ports. There is no
+configured Celery ingestion `task_time_limit` in this repository, so the
+default warm-shutdown grace is deliberately long (3600 seconds) to avoid
+SIGKILL mid-embed/index of a large document.
+
+Helm runs the same Celery process as a **sidecar** in the single-replica app
+pod (`worker.enabled: true` by default). A sidecar keeps the default
+ReadWriteOnce data PVC on one node/pod and avoids multi-attach. The worker
+container uses the same image, ConfigMap + Secret `envFrom`, writable
+`/app/data`, pod/container security contexts, and checksum-triggered rollout as
+the app; it publishes no container port. Values expose concurrency, log level,
+resources, probe timings, and `terminationGracePeriodSeconds` (default 3600).
+Rendering **fails closed** when the worker is enabled but data persistence is
+off, or when the effective topology would create more than one ingestion
+execution slot (`replicaCount != 1` or `worker.concurrency != 1`).
+Non-production data-disabled charts remain possible only with
+`worker.enabled=false`. Disabling the worker leaves the existing app
+Deployment contract intact.
+
+**Still open (not claimed by this topology slice):** stuck-queued reaper,
+retry/idempotency, queue-age metrics/alerts, atomic index publish (ING-02),
+per-tenant locking / TEN-03, and live Redis/Postgres/Celery drills.
 
 ### Reverse proxy and cookie authentication
 

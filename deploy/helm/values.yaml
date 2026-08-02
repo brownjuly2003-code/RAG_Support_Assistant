@@ -149,3 +149,33 @@ containerSecurityContext:
   capabilities:
     drop:
       - ALL
+
+# Celery ingestion worker (sidecar in the app pod by default). Shares the
+# ReadWriteOnce /app/data PVC with the Uvicorn web container. Keep
+# concurrency=1 and replicaCount=1 until per-tenant locking and atomic index
+# publish exist. Disabling the worker leaves the app Deployment contract
+# intact; non-production data-disabled renders require worker.enabled=false.
+worker:
+  enabled: true
+  concurrency: 1
+  logLevel: info
+  # Long warm-shutdown: no Celery task_time_limit is configured in-repo, and
+  # embedding/indexing a large document can run for many minutes.
+  terminationGracePeriodSeconds: 3600
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  readinessProbe:
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    timeoutSeconds: 10
+    failureThreshold: 3
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 20
+    timeoutSeconds: 10
+    failureThreshold: 3
