@@ -180,3 +180,54 @@ def test_snapshot_cli_entry_exits_zero_on_happy_path(
 
     assert rc == 0
     assert (out_dir / "snapshot_manifest.json").exists()
+
+
+def test_snapshot_postgres_skipped_detail_mentions_both_env_fallbacks(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    project_root = _make_project_root(tmp_path)
+    out_dir = tmp_path / "backup"
+    monkeypatch.delenv("POSTGRES_URL", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    manifest = backup_snapshot.create_snapshot(
+        out_dir=out_dir,
+        project_root=project_root,
+        database_url=None,
+        skip_chroma=True,
+    )
+
+    components = {c.name: c for c in manifest.components}
+    assert components["postgres"].status == "skipped"
+    detail = (components["postgres"].detail or "").upper()
+    assert "POSTGRES_URL" in detail
+    assert "DATABASE_URL" in detail
+
+
+def test_snapshot_uses_database_url_env_when_postgres_url_missing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    project_root = _make_project_root(tmp_path)
+    out_dir = tmp_path / "backup"
+    seen: dict[str, str] = {}
+
+    def _fake_pg_dump(database_url: str, target: Path, *, pg_dump_path: str | None = None) -> None:
+        del pg_dump_path
+        seen["url"] = database_url
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"PGDMP")
+
+    monkeypatch.setattr(backup_snapshot, "_pg_dump", _fake_pg_dump)
+    monkeypatch.delenv("POSTGRES_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@env-db:5432/rag")
+
+    manifest = backup_snapshot.create_snapshot(
+        out_dir=out_dir,
+        project_root=project_root,
+        database_url=None,
+        skip_chroma=True,
+    )
+
+    components = {c.name: c for c in manifest.components}
+    assert components["postgres"].status == "ok"
+    assert seen["url"] == "postgresql://u:p@env-db:5432/rag"

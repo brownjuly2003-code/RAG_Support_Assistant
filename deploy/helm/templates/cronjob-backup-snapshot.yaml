@@ -40,6 +40,14 @@ spec:
                 - --output-dir
                 - /backups
               env:
+                # Explicit backup contract: map Secret DATABASE_URL → POSTGRES_URL
+                # so the snapshot runtime always sees a Postgres DSN (chart-managed
+                # or secrets.existingSecret). Never put the DSN in command args.
+                - name: POSTGRES_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.secrets.existingSecret | default (printf "%s-secrets" .Release.Name) }}
+                      key: DATABASE_URL
                 - name: BACKUP_ENCRYPTION_ENABLED
                   value: {{ .Values.backup.encryption.enabled | quote }}
                 {{- if .Values.backup.encryption.enabled }}

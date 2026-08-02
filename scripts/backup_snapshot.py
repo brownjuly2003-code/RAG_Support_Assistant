@@ -2,7 +2,8 @@
 """Snapshot backup for RAG_Support_Assistant persistent stores (task-159).
 
 Creates an atomic snapshot directory with:
-- Optional ``pg_dump`` of the live Postgres (when ``POSTGRES_URL`` env is set).
+- Optional ``pg_dump`` of the live Postgres (explicit ``--database-url``, else
+  ``POSTGRES_URL``, then ``DATABASE_URL``).
 - Atomic SQLite backup of ``data/tracing/traces.db`` via the SQLite backup API.
 - Tarballs of ChromaDB persistent path and ``data/uploads`` (opt-in, default on).
 - ``snapshot_manifest.json`` with versions, per-file SHA256 + size.
@@ -29,6 +30,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -286,15 +288,76 @@ def _atomic_sqlite_backup(source: Path, target: Path) -> None:
         src_conn.close()
 
 
+def _resolve_database_url(explicit: Optional[str] = None) -> Optional[str]:
+    """Resolve Postgres DSN: explicit arg > POSTGRES_URL > DATABASE_URL."""
+    if explicit:
+        return explicit
+    return os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or None
+
+
+def _normalize_postgres_dsn(database_url: str) -> tuple[str, str | None]:
+    """Return (password-free libpq URL, password).
+
+    Accepts SQLAlchemy driver schemes such as ``postgresql+asyncpg://`` and
+    ``postgresql+psycopg2://``. Query parameters (e.g. ``sslmode``) are kept.
+    The password is never placed in the returned URL — callers must pass it via
+    ``PGPASSWORD`` in the child environment.
+    """
+    parts = urlsplit(database_url.strip())
+    raw_scheme = (parts.scheme or "").lower()
+    if not raw_scheme:
+        raise ValueError("database URL missing scheme")
+
+    base_scheme = raw_scheme.split("+", 1)[0]
+    if base_scheme not in {"postgresql", "postgres"}:
+        raise ValueError(
+            f"unsupported database scheme {parts.scheme!r}; expected postgresql/postgres"
+        )
+
+    scheme = "postgresql"
+    # urlsplit leaves userinfo percent-encoded; decode exactly once so the
+    # password is raw for PGPASSWORD and the username is re-quoted once only.
+    password = unquote(parts.password) if parts.password is not None else None
+
+    hostname = parts.hostname
+    if hostname is None:
+        host = ""
+    elif ":" in hostname and not hostname.startswith("["):
+        host = f"[{hostname}]"
+    else:
+        host = hostname
+    if parts.port is not None:
+        host = f"{host}:{parts.port}" if host else f":{parts.port}"
+
+    if parts.username is not None:
+        user = quote(unquote(parts.username), safe="")
+        netloc = f"{user}@{host}" if host or parts.port is not None else user
+    else:
+        netloc = host
+
+    password_free = urlunsplit((scheme, netloc, parts.path, parts.query, parts.fragment))
+    return password_free, password
+
+
 def _pg_dump(database_url: str, target: Path, *, pg_dump_path: str | None = None) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     binary = pg_dump_path or os.environ.get("PG_DUMP_PATH") or shutil.which("pg_dump") or "pg_dump"
-    with target.open("wb") as fh:
-        subprocess.run(
-            [binary, database_url, "-Fc"],
-            check=True,
-            stdout=fh,
-        )
+    dsn, password = _normalize_postgres_dsn(database_url)
+    env = os.environ.copy()
+    if password is not None:
+        env["PGPASSWORD"] = password
+    cmd = [binary, "--format=custom", "--dbname", dsn]
+    try:
+        with target.open("wb") as fh:
+            subprocess.run(
+                cmd,
+                check=True,
+                stdout=fh,
+                env=env,
+            )
+    except Exception:
+        target.unlink(missing_ok=True)
+        raise
 
 
 def _create_tarball(source_dir: Path, target: Path) -> None:
@@ -326,16 +389,34 @@ def _snapshot_sqlite(project_root: Path, out_dir: Path) -> ComponentReport:
 
 def _snapshot_postgres(out_dir: Path, database_url: Optional[str]) -> ComponentReport:
     if not database_url:
-        return ComponentReport(name="postgres", status="skipped", detail="POSTGRES_URL unset")
+        return ComponentReport(
+            name="postgres",
+            status="skipped",
+            detail="POSTGRES_URL and DATABASE_URL unset",
+        )
     target = out_dir / "postgres" / "postgres.dump"
     try:
         _pg_dump(database_url, target)
     except FileNotFoundError:
+        target.unlink(missing_ok=True)
         return ComponentReport(name="postgres", status="failed", detail="pg_dump binary not found")
     except subprocess.CalledProcessError as exc:
-        return ComponentReport(name="postgres", status="failed", detail=f"pg_dump exit {exc.returncode}")
-    except Exception as exc:
+        target.unlink(missing_ok=True)
+        return ComponentReport(
+            name="postgres",
+            status="failed",
+            detail=f"pg_dump exit {exc.returncode}",
+        )
+    except ValueError as exc:
+        target.unlink(missing_ok=True)
         return ComponentReport(name="postgres", status="failed", detail=str(exc))
+    except Exception:
+        target.unlink(missing_ok=True)
+        return ComponentReport(
+            name="postgres",
+            status="failed",
+            detail="pg_dump failed",
+        )
     digest, size = _hash_file(target)
     return ComponentReport(
         name="postgres",
@@ -424,7 +505,9 @@ def create_snapshot(
     )
 
     manifest.components.append(_snapshot_sqlite(project_root, out_dir))
-    manifest.components.append(_snapshot_postgres(out_dir, database_url or os.environ.get("POSTGRES_URL")))
+    manifest.components.append(
+        _snapshot_postgres(out_dir, _resolve_database_url(database_url))
+    )
     manifest.components.append(_snapshot_chroma(project_root, out_dir, skip=skip_chroma))
     manifest.components.append(_snapshot_uploads(project_root, out_dir))
     manifest.components.append(_snapshot_key_fingerprint(out_dir))
@@ -461,7 +544,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--database-url",
         default=None,
-        help="Postgres URL (falls back to POSTGRES_URL env)",
+        help="Postgres URL (falls back to POSTGRES_URL, then DATABASE_URL env)",
     )
     args = parser.parse_args(argv)
     if bool(args.out) == bool(args.output_dir):

@@ -1,5 +1,13 @@
 FROM python:3.11-slim
 
+# Backup/restore CronJobs reuse this image: pg_dump/pg_restore + age for
+# encrypted snapshot components. Keep the layer lean and drop apt lists.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        postgresql-client \
+        age \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.lock /tmp/requirements.lock
 RUN pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock
 
