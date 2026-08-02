@@ -2001,6 +2001,70 @@ def build_support_graph(
 # ---------------------------------------------------------------------------
 
 
+def _start_trace_for_request(
+    external_request_id: str | None,
+    tenant_id: str = "default",
+) -> str:
+    """Create a fresh internal trace, storing the caller's request id as correlation.
+
+    Higher-level APIs still name the inbound value ``trace_id`` (e.g. X-Request-Id
+    from /api/ask). That value is an *external correlation*, not the SQLite PK.
+    Canonical ``start_trace`` receives it via ``correlation_id`` when supported.
+
+    Signature inspection preserves narrow monkeypatched / older callables that
+    accept only ``trace_id``, positional input, or no arguments. Call shape is
+    chosen from ``inspect.Parameter.kind`` before invocation so positional-only
+    parameters are never passed as keywords, and real TypeErrors from inside
+    the callable are not swallowed.
+    """
+    start_trace_params = inspect.signature(start_trace).parameters
+    has_var_kwargs = any(
+        param.kind == inspect.Parameter.VAR_KEYWORD
+        for param in start_trace_params.values()
+    )
+
+    def _accepts_keyword(name: str) -> bool:
+        param = start_trace_params.get(name)
+        return param is not None and param.kind in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        )
+
+    def _is_positional_only(name: str) -> bool:
+        param = start_trace_params.get(name)
+        return param is not None and param.kind == inspect.Parameter.POSITIONAL_ONLY
+
+    args: list[Any] = []
+    kwargs: dict[str, Any] = {}
+
+    if _accepts_keyword("tenant_id") or has_var_kwargs:
+        kwargs["tenant_id"] = tenant_id
+
+    if _accepts_keyword("correlation_id"):
+        kwargs["correlation_id"] = external_request_id
+    elif _is_positional_only("correlation_id"):
+        args.append(external_request_id)
+    elif has_var_kwargs and not _accepts_keyword("trace_id") and not _is_positional_only(
+        "trace_id"
+    ):
+        kwargs["correlation_id"] = external_request_id
+    elif _accepts_keyword("trace_id") or (
+        has_var_kwargs and not _is_positional_only("trace_id")
+    ):
+        # Legacy alias: external value travels as trace_id= for older stubs.
+        kwargs["trace_id"] = external_request_id
+    elif _is_positional_only("trace_id"):
+        args.append(external_request_id)
+    elif args or kwargs:
+        pass
+    elif external_request_id is not None:
+        return start_trace(external_request_id)
+    else:
+        return start_trace()
+
+    return start_trace(*args, **kwargs)
+
+
 def run_qa_pipeline(
     question: str,
     retriever: Any,
@@ -2020,8 +2084,11 @@ def run_qa_pipeline(
         llm: LLM для генерации.
         max_iterations: макс. итераций Self-RAG.
         chat_history: история диалога (Level 3).
+        trace_id: external request correlation (e.g. X-Request-Id); not the
+            internal SQLite primary key.
     """
-    trace_id = start_trace(trace_id=trace_id, tenant_id=tenant_id)
+    # Inbound ``trace_id`` is external correlation; internal UUID comes back.
+    trace_id = _start_trace_for_request(trace_id, tenant_id=tenant_id)
     assigned_experiment = None
     try:
         from agent.prompt_registry import resolve_active_experiment as _resolve_active
@@ -2407,17 +2474,7 @@ class ConversationSession:
             for marker in ("создай тикет", "создать тикет", "тикет", "оператор", "эскал")
         )
 
-        start_trace_params = inspect.signature(start_trace).parameters
-        has_var_kwargs = any(
-            param.kind == inspect.Parameter.VAR_KEYWORD
-            for param in start_trace_params.values()
-        )
-        if "trace_id" in start_trace_params or "tenant_id" in start_trace_params or has_var_kwargs:
-            active_trace_id = start_trace(trace_id=trace_id, tenant_id=tenant_id)
-        elif trace_id is not None:
-            active_trace_id = start_trace(trace_id)
-        else:
-            active_trace_id = start_trace()
+        active_trace_id = _start_trace_for_request(trace_id, tenant_id=tenant_id)
         state = create_initial_state(
             question=question,
             trace_id=active_trace_id,

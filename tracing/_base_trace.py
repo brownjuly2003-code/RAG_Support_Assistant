@@ -17,16 +17,22 @@ Legacy root-level `sqlite_trace` imports are kept through a compatibility shim.
 
 Схема БД:
 
-1) Таблица traces — один ряд = один проход графа (один trace_id)
+1) Таблица traces — один ряд = один проход графа (один internal trace_id)
 
    traces(
-       trace_id        TEXT PRIMARY KEY,  -- идентификатор трассы (UUID)
+       trace_id        TEXT PRIMARY KEY,  -- внутренний UUID4 трассы (всегда уникален)
        started_at      TEXT,              -- время начала (ISO 8601)
        finished_at     TEXT,              -- время завершения (ISO 8601) или NULL
+       tenant_id       TEXT,              -- tenant isolation key
        final_route     TEXT,              -- "auto" / "human" / NULL
        final_quality   INTEGER,           -- итоговый quality_score или NULL
-       final_relevance REAL               -- итоговый relevance_score или NULL
+       final_relevance REAL,              -- итоговый relevance_score или NULL
+       correlation_id  TEXT               -- внешний request id (X-Request-Id); nullable, indexed
    )
+
+   Internal ``trace_id`` is always a fresh UUID4 and is the primary key.
+   ``correlation_id`` stores the external client request identifier and may
+   legitimately repeat across retries; it is not an idempotency key.
 
 2) Таблица trace_steps — шаги внутри одной трассы
 
@@ -41,8 +47,10 @@ Legacy root-level `sqlite_trace` imports are kept through a compatibility shim.
 
 Функции публичного интерфейса:
 
-- start_trace() -> str
-    Создаёт запись в traces, возвращает trace_id (строка UUID).
+- start_trace(trace_id=None, tenant_id="default", *, correlation_id=None) -> str
+    Создаёт запись в traces с новым internal UUID4, опционально сохраняет
+    внешний correlation id (явный ``correlation_id`` или legacy alias
+    ``trace_id``), возвращает internal trace_id.
 
 - log_step(trace_id: str, node_name: str, state: dict) -> None
     Добавляет запись в trace_steps с порядковым номером, именем узла,
@@ -152,7 +160,8 @@ def _init_db() -> None:
                 tenant_id       TEXT NOT NULL DEFAULT 'default',
                 final_route     TEXT,
                 final_quality   INTEGER,
-                final_relevance REAL
+                final_relevance REAL,
+                correlation_id  TEXT
             );
             """
         )
@@ -164,6 +173,15 @@ def _init_db() -> None:
                 """
                 ALTER TABLE traces
                 ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'
+                """
+            )
+        if "correlation_id" not in trace_columns:
+            # Append-only migration: do not rewrite historic internal IDs as
+            # external correlations; existing rows stay NULL.
+            cur.execute(
+                """
+                ALTER TABLE traces
+                ADD COLUMN correlation_id TEXT
                 """
             )
 
@@ -251,6 +269,13 @@ def _init_db() -> None:
             """
         )
 
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_traces_correlation_id
+            ON traces(correlation_id);
+            """
+        )
+
         conn.commit()
 
 
@@ -286,27 +311,49 @@ def _state_to_dict(state: Any) -> dict[str, Any]:
     return {"value": repr(state)}
 
 
-def start_trace(trace_id: str | None = None, tenant_id: str = "default") -> str:
+def start_trace(
+    trace_id: str | None = None,
+    tenant_id: str = "default",
+    *,
+    correlation_id: str | None = None,
+) -> str:
     """
-    Начинает новую трассу: создаёт запись в таблице traces и возвращает trace_id.
+    Начинает новую трассу: всегда создаёт internal UUID4 PK и возвращает его.
 
-    :return: trace_id (строка UUID4), который нужно хранить в состоянии и
-             использовать при логировании шагов.
+    External request identity is stored separately in ``correlation_id``.
+    The legacy ``trace_id`` argument is accepted only as a compatibility alias
+    for that external value and never selects the primary key. Correlation is
+    not an idempotency/replay key: repeated values create distinct rows.
+
+    :return: internal ``trace_id`` (UUID4 string) for graph state / step logs.
     """
-    if trace_id is None:
-        trace_id = str(uuid.uuid4())
+    if (
+        correlation_id is not None
+        and trace_id is not None
+        and correlation_id != trace_id
+    ):
+        raise ValueError(
+            "conflicting correlation identifiers: "
+            f"correlation_id={correlation_id!r} != trace_id={trace_id!r}"
+        )
+
+    external_correlation = (
+        correlation_id if correlation_id is not None else trace_id
+    )
+    internal_trace_id = str(uuid.uuid4())
+
     with _get_connection() as conn:
         cur = conn.cursor()
         cur.execute(
             """
-            INSERT INTO traces (trace_id, started_at, tenant_id)
-            VALUES (?, ?, ?)
+            INSERT INTO traces (trace_id, started_at, tenant_id, correlation_id)
+            VALUES (?, ?, ?, ?)
             """,
-            (trace_id, _now_iso(), tenant_id),
+            (internal_trace_id, _now_iso(), tenant_id, external_correlation),
         )
         conn.commit()
 
-    return trace_id
+    return internal_trace_id
 
 
 def _resolve_model_pricing(
@@ -550,7 +597,7 @@ def list_recent_traces(
         if tenant_id is None:
             cur.execute(
                 """
-                SELECT trace_id, started_at, finished_at
+                SELECT trace_id, started_at, finished_at, correlation_id
                 FROM traces
                 ORDER BY started_at DESC
                 LIMIT ?
@@ -560,7 +607,7 @@ def list_recent_traces(
         else:
             cur.execute(
                 """
-                SELECT trace_id, started_at, finished_at
+                SELECT trace_id, started_at, finished_at, correlation_id
                 FROM traces
                 WHERE tenant_id = ?
                 ORDER BY started_at DESC
@@ -569,7 +616,12 @@ def list_recent_traces(
                 (tenant_id, limit),
             )
         return [
-            {"trace_id": row[0], "started_at": row[1], "finished_at": row[2]}
+            {
+                "trace_id": row[0],
+                "started_at": row[1],
+                "finished_at": row[2],
+                "correlation_id": row[3],
+            }
             for row in cur.fetchall()
         ]
 
@@ -582,13 +634,17 @@ def get_trace_detail(
         cur = conn.cursor()
         if tenant_id is None:
             cur.execute(
-                "SELECT trace_id, started_at, finished_at FROM traces WHERE trace_id = ?",
+                """
+                SELECT trace_id, started_at, finished_at, correlation_id
+                FROM traces
+                WHERE trace_id = ?
+                """,
                 (trace_id,),
             )
         else:
             cur.execute(
                 """
-                SELECT trace_id, started_at, finished_at
+                SELECT trace_id, started_at, finished_at, correlation_id
                 FROM traces
                 WHERE trace_id = ? AND tenant_id = ?
                 """,
@@ -627,6 +683,7 @@ def get_trace_detail(
             "trace_id": row[0],
             "started_at": row[1],
             "finished_at": row[2],
+            "correlation_id": row[3],
             "steps": steps,
             "feedback": feedback,
         }
