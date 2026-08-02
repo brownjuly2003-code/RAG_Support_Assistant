@@ -2,13 +2,13 @@
 
 Дата фиксации scope: 2026-07-27.
 
-> ## SUPERSEDED / REOPENED — 2026-08-02 (status @ `b7faa19`)
+> ## SUPERSEDED / REOPENED — 2026-08-02 (status @ `4f93038`)
 >
 > This closure note is **historical**. Remediation remains **reopened**: the
 > project is **not** closed. P0 release-blocker **implementation** is locally
 > remediated and mechanically verified; **OBS-01** is locally remediated at
-> `5a9f857`; plan step **4.1** durable job contract is locally verified at
-> HEAD `b7faa19` (ING-01 partially locally remediated). Full audit-plan DoD,
+> `5a9f857`; plan steps **4.1** (`b7faa19`) and **4.2** (`4f93038`) are locally
+> verified (ING-01 further partially locally remediated). Full audit-plan DoD,
 > OPS-01 operational restore DoD, and production release are still open.
 >
 > **Steps 1–5 status:**
@@ -18,11 +18,13 @@
 > - Step 2 **local implementation verified; live PostgreSQL DoD open**.
 > - Step 3 **chart/backup runtime locally verified; operational restore DoD
 >   open**.
-> - Step 4 **in progress** — slice 4.1 done at `b7faa19` (durable
->   `IngestionJob` + migration `019`; upload/jobs/tasks identity; DB
->   lifecycle; terminal errors). Next: 4.2 worker topology (Compose/Helm
->   worker + heartbeat/readiness). Atomic publish / retry / queue-age/reaper /
->   TEN-03 not claimed complete. ING-02 remains open.
+> - Step 4 **in progress** — slices 4.1–4.2 done: durable `IngestionJob` +
+>   migration `019`; upload/jobs/tasks identity; DB lifecycle; terminal errors;
+>   Compose one-worker service + Helm Celery sidecar (concurrency 1, exact-node
+>   health, 3600s warm shutdown). Next: 4.3 durable liveness/recovery
+>   (job lease/heartbeat + stale queued/running reaper). Atomic publish /
+>   retry / queue-age alerting / TEN-03 not claimed complete. ING-02 remains
+>   open.
 > - Step 5 **open / partially remediated** — trace identity done at
 >   `5a9f857`; timeout cancellation, bounded capacity, session
 >   concurrency/history ordering, sticky experiment propagation still open.

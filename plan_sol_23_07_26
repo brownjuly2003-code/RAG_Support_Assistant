@@ -4,23 +4,23 @@
 **Принцип порядка:** сначала release-blockers и проверяемые контракты, затем RAG-качество, после этого декомпозиция.
 **Оценка (historical, 2026-07-23):** 6–9 инженерных недель для одного сильного разработчика; шаги 3–4 и 7–8 частично параллелятся только после закрытия шага 2.
 
-> ## 2026-08-02 execution status (step 4.1 durable job contract)
+> ## 2026-08-02 execution status (step 4.2 worker topology)
 >
 > Plan is **ACTIVE**. Original step estimates below are **historical** and are
 > not rewritten. Closure candidate / empty-backlog narrative remains revoked;
 > this plan is the sole active remediation source (see `BACKLOG.md`).
 >
-> Implementation HEAD: `b7faa19`. Audit snapshot body: `383cfe9` (2026-07-23).
-> P0 local implementation is verified; OBS-01 is locally remediated; step 4.1
-> durable job contract is locally verified; production release and full step
-> DoD remain gated by explicit live/external checks.
+> Implementation HEAD: `4f93038`. Audit snapshot body: `383cfe9` (2026-07-23).
+> P0 local implementation is verified; OBS-01 is locally remediated; steps 4.1
+> durable job contract and 4.2 worker topology are locally verified; production
+> release and full step DoD remain gated by explicit live/external checks.
 >
-> | Step | Historical estimate | Status @ `b7faa19` | Notes |
+> | Step | Historical estimate | Status @ `4f93038` | Notes |
 > |---|---|---|---|
 > | 1 Contract tests + release gate | 1–2 days | **locally complete** | All named step-1 contract-test slices demonstrated red then green (tenant/audit/Helm + OBS-01). Does **not** close production release |
 > | 2 Tenant Session/Message/Audit | 2–4 days | **local implementation verified; live PostgreSQL DoD open** | Commits `3c1e7b7`, `28580aa`; migration `018`; local tenant/audit/schema tests green. Live Postgres upgrade/downgrade + two-tenant restart drill not run |
 > | 3 Production storage + backup | 2–4 days | **chart/backup runtime locally verified; operational restore DoD open** | Commits `ed8520a`, `2767b9d`; Helm + backup runtime contracts green. Image/cluster/restore/RPO/RTO gates still open |
-> | 4 Durable ingestion + atomic index | 4–6 days | **in progress** (slice 4.1 done) | `b7faa19`: durable tenant-owned `IngestionJob` + migration `019`; upload/jobs/tasks identity; DB lifecycle; terminal errors. **Next:** 4.2 worker topology (Compose/Helm worker + heartbeat/readiness). Atomic index publish, retry/idempotency, queue-age/reaper, TEN-03 **not** claimed complete |
+> | 4 Durable ingestion + atomic index | 4–6 days | **in progress** (slices 4.1–4.2 done) | `b7faa19` durable job; `4f93038` Compose one-worker + Helm Celery sidecar (concurrency 1, exact-node health, 3600s warm shutdown). **Next:** 4.3 durable liveness/recovery (job lease/heartbeat + stale queued/running reaper). Atomic index publish, retry/idempotency, queue-age alerting, TEN-03 **not** claimed complete |
 > | 5 Timeout/capacity/trace identity | 4–6 days | **open / partially remediated** | Trace identity (OBS-01) done at `5a9f857`; timeout cancellation, bounded capacity, session concurrency/history ordering, sticky experiment propagation still require work |
 > | 6 Sync/SSE unify + durable escalation | 4–6 days | **open** | Dual streaming path + human-without-ticket remain |
 > | 7 Fail-closed RAG routing | 5–8 days | **open** | Depends on step 6 |
@@ -32,12 +32,11 @@
 > steps 2–3; step 1 local contracts are green, but production release is not
 > closed). Step 4 is in progress; steps 6–10 remain open.
 >
-> **Exact next implementation slice:** plan step **4.2** worker topology
-> contract — add one ingestion worker to Docker Compose and Helm with the same
-> Secret/ConfigMap DB+Redis environment, durable `/app/data` mount, constrained
-> concurrency, security context, and verifiable heartbeat/readiness. Do not
-> claim queue-age/reaper, retry/idempotency, atomic publish, or TEN-03 complete
-> in that slice.
+> **Exact next implementation slice:** plan step **4.3** durable
+> liveness/recovery contract — add a persisted job lease/heartbeat and a
+> deterministic stale queued/running job recovery/reaper path, with fail-closed
+> tests. Do not claim retry, idempotency, queue-age alerting, atomic publish, or
+> TEN-03 complete in that slice.
 
 ## 1. Зафиксировать failing contract tests и release gate
 
@@ -131,7 +130,7 @@
 **Reasoning:** `xhigh`
 **Зависимости:** шаг 3
 **Оценка:** 4–6 дней
-**Статус 2026-08-02 @ `b7faa19`:** **in progress** (slice 4.1 done; step not complete)
+**Статус 2026-08-02 @ `4f93038`:** **in progress** (slices 4.1–4.2 done; step not complete)
 
 - ~~**Slice 4.1 (test-first):** one tenant-aware durable job contract with a real `job_id` and observable status/terminal error~~ — **done** at `b7faa19`:
   - ORM `IngestionJob` + migration `019` (`018` parent); status constraint queued/running/completed/failed; UUID public job id; tenant ownership; timestamps/result/error/secondary Celery id + indexes
@@ -142,19 +141,25 @@
   - Celery progress backend is best-effort and cannot preempt DB lifecycle
   - durable/public/log error boundaries are phase-level and redact PII/secrets; no production test-mode/in-memory fallback; no new dependency
   - Local verification: initial contract failed at collection on missing `IngestionJob`, then green; review QA 12 expected failures → fixed; log QA 6 expected failures → fixed; final independent focused 47 passed / 2 deprecation warnings; adjacent chunks 22 + 19 passed; Ruff/mypy clean; Alembic `019 (head)`; `git diff --check` clean
-- **Next atomic slice 4.2:** add one ingestion worker to Docker Compose and Helm with the same Secret/ConfigMap DB+Redis environment, durable `/app/data` mount, constrained concurrency, security context, and verifiable heartbeat/readiness. Do not claim broader step-4 DoD complete in that slice.
-- Выбрать один job contract для всех tenant: worker Deployment + heartbeat либо отдельный job service. *(4.2 topology; not yet deployed in Compose/Helm)*
+- ~~**Slice 4.2 (test-first):** one ingestion worker in Docker Compose and Helm with shared DB/Redis/data env, constrained concurrency, security context, and verifiable exact-node health/readiness~~ — **done** at `4f93038`:
+  - Compose: exactly one `worker` service; same build/env, DB/Redis/Ollama, deps, shared `./data:/app/data` as app; no ports; Celery concurrency 1; `ingest@%h`; restart; exact-node health; 3600s warm shutdown
+  - Helm: enabled-by-default Celery sidecar in one-replica app pod (RWO data PVC co-located); shares image, ConfigMap+Secret envFrom, writable data, security, resources, checksum rollout; exact worker readiness/liveness; 3600s pod grace; fails closed if persistence off, `replicaCount != 1`, or worker concurrency != 1
+  - `tasks.worker_health` lazily pings only `ingest@socket.gethostname()`, validates real pong, silent/fail-closed on malformed replies or broker exceptions
+  - `docs/DEPLOYMENT.md` distinguishes one Uvicorn web process/app replica from one Celery ingestion worker/concurrency slot
+  - Local verification: initial 18 expected failures / 2 passes → 21 green; adversarial grace QA 4 expected failures at 120s → 3600; strengthened focused 24 passes; independent topology/Helm/Compose 47 passes; adjacent ingestion+upload 10; durable job 27 / 2 warnings; docs suite 21 / 1 warning; Ruff/mypy clean; Helm lint + `docker compose config --quiet` clean; protected artifacts 9/9 unchanged
+- **Next atomic slice 4.3:** durable liveness/recovery contract — persisted job lease/heartbeat + deterministic stale queued/running recovery/reaper, with fail-closed tests. Do not claim broader step-4 DoD complete in that slice.
+- Выбрать один job contract для всех tenant: worker Deployment + heartbeat либо отдельный job service. *(4.2 topology done in Compose one-worker + Helm sidecar; job-level lease/heartbeat still open in 4.3)*
 - Возвращать `job_id`; реализовать status, retry, idempotency и queue-age metrics. *(`job_id` + status/terminal error done; retry/idempotency/queue-age still open)*
 - Добавить per-tenant distributed lock.
 - Строить versioned staging collection, проверять count/dimension/known queries и атомарно переключать active version.
 - Сохранять предыдущую collection для rollback; original uploads сделать immutable/versioned.
 - Использовать collision-resistant physical tenant name. *(TEN-03 still open)*
 
-**Still open after 4.1:** Compose/Helm worker; heartbeat/readiness; stuck-queued reaper/recovery; retry/idempotency; queue-age metric/alert; live Redis/Postgres/Celery drill; real PostgreSQL upgrade/downgrade for migration `019`; ING-02 atomic publish; TEN-03.
+**Still open after 4.2:** stuck queued/running recovery/reaper; durable job heartbeat/lease; retry/idempotency; queue-age metric/alert; live Redis/Postgres/Celery worker-outage drill; real PostgreSQL upgrade/downgrade for migration `019`; ING-02 atomic publish; TEN-03.
 
 **Проверка:** fault injection до/после embeddings и switch, два concurrent upload, worker outage/recovery, duplicate job.
 
-**DoD:** accepted job либо завершается, либо имеет наблюдаемый terminal error; неудачный rebuild не повреждает активный индекс. Slice 4.1 met the job_id + status/terminal-error contract locally; full step DoD (worker topology, atomic publish, retry/locks, TEN-03) remains **not** met.
+**DoD:** accepted job либо завершается, либо имеет наблюдаемый terminal error; неудачный rebuild не повреждает активный индекс. Slices 4.1–4.2 met the job_id/status/terminal-error and local worker-topology contracts; full step DoD (liveness/recovery, atomic publish, retry/locks, TEN-03) remains **not** met.
 
 ## 5. Исправить timeout, capacity, session concurrency и tracing identity
 

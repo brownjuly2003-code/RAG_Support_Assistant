@@ -1,17 +1,19 @@
 # Agent State
 
-## 2026-08-02 Update-15 (step 4.1 durable job contract @ `b7faa19`) ✅ START HERE
+## 2026-08-02 Update-16 (step 4.2 worker topology @ `4f93038`) ✅ START HERE
 
-> **Documentation-only truth pass** after verified plan-step 4.1 code already on
-> HEAD. No source/runtime/test/config/Helm changes in this docs refresh.
+> **Documentation-only truth pass** after verified plan-step 4.2 code already on
+> HEAD. No source/runtime/test/config/Helm changes in this docs refresh (README
+> Quick Start wording only + status-layer docs).
 >
-> **HEAD:** `b7faa19` (`feat(ingestion): persist tenant-owned job state`).
+> **HEAD:** `4f93038` (`feat(ingestion): ship single worker topology`).
 > Relevant commits:
 > - `edb729c` — reopen audit remediation + no-HF local-user path
 > - `3c1e7b7` / `28580aa` — TEN-01/TEN-02 tenant + schema ownership
 > - `ed8520a` / `2767b9d` — OPS-01 Helm persistence + safe Postgres backup
 > - `5a9f857` — OBS-01: internal `trace_id` UUID4 + nullable `correlation_id`
 > - `b7faa19` — step 4.1: durable tenant-owned ingestion job contract
+> - `4f93038` — step 4.2: single-worker Compose + Helm sidecar topology
 >
 > **Exact current truth:**
 > - P0 release-blocker **implementation is locally remediated and mechanically
@@ -22,37 +24,37 @@
 > - Plan step 2 **local implementation verified; live PostgreSQL DoD open**.
 > - Plan step 3 **chart/backup runtime locally verified; operational restore
 >   DoD open**.
-> - Plan step 4 **in progress** (not complete). Slice **4.1** landed at
->   `b7faa19`:
->   - ORM `IngestionJob` + migration `019` (`018` parent); status constraint
->     queued/running/completed/failed; UUID public job id; tenant ownership;
->     timestamps/result/error/secondary Celery id + indexes
->   - `/api/upload` returns durable `job_id` and explicit real tenant on every
->     accepted/completed/failed-processing path
->   - canonical `/api/jobs/{job_id}` and compatibility `/api/tasks/{identifier}`
->     read DB only; 404 for cross-tenant/unknown
->   - default Celery enqueue passes file path + job id + tenant; worker verifies
->     identity, propagates tenant to vector build, records DB lifecycle; real
->     failures end in Celery FAILURE
->   - synchronous paths reuse the same row and fail closed if an authoritative
->     DB transition cannot be persisted
->   - Celery progress backend is best-effort and cannot preempt DB lifecycle
->   - durable/public/log error boundaries are phase-level and redact PII/secrets
->   - no production test-mode/in-memory fallback and no new dependency
-> - Evidence for 4.1: initial contract failed at collection on missing
->   `IngestionJob`, then green; review QA 12 expected failures → fixed; log QA
->   6 expected failures → fixed; final independent focused 47 passed / 2
->   deprecation warnings; adjacent independent chunks 22 + 19 passed before
->   log-only correction; original 11-file quiet aggregate exceeded 3 minutes
->   without failure and was not raw-retried — splitting showed no hang/failure;
->   Ruff and mypy clean; Alembic `019 (head)`; `git diff --check` clean;
->   protected user artifacts 9/9 unchanged.
-> - Audit finding **ING-01 partially locally remediated**: durable
->   job/status/tenant/task identity and terminal error exist, but Compose/Helm
->   still have no worker; no heartbeat/readiness, stuck-queued reaper/recovery,
->   retry/idempotency, queue-age metric/alert, or live Redis/Postgres/Celery
->   drill. Migration `019` still needs real PostgreSQL upgrade/downgrade
->   verification.
+> - Plan step 4 **in progress** (not complete). Slices **4.1** (`b7faa19`) and
+>   **4.2** (`4f93038`) landed:
+>   - **4.1:** ORM `IngestionJob` + migration `019`; durable `job_id`/status;
+>     DB-only jobs/tasks reads; tenant-aware worker lifecycle; terminal errors
+>   - **4.2 Compose:** exactly one `worker` service; same build/env,
+>     DB/Redis/Ollama, deps, shared `./data:/app/data` as app; no ports; Celery
+>     concurrency 1; `ingest@%h`; restart; exact-node health; 3600s warm shutdown
+>   - **4.2 Helm:** enabled-by-default Celery sidecar in one-replica app pod
+>     (RWO data PVC co-located); shares image, ConfigMap+Secret envFrom, writable
+>     data, security, resources, checksum rollout; exact worker readiness/liveness;
+>     3600s pod grace; fails closed if persistence off, `replicaCount != 1`, or
+>     worker concurrency != 1
+>   - **4.2 health:** `tasks.worker_health` lazily pings only
+>     `ingest@socket.gethostname()`, validates real pong, silent/fail-closed on
+>     malformed replies or broker exceptions
+>   - `docs/DEPLOYMENT.md` distinguishes one Uvicorn web process/app replica from
+>     one Celery ingestion worker/concurrency slot
+> - Evidence for 4.2: initial worker contracts 18 expected failures / 2 passes →
+>   21 green; adversarial grace QA 4 expected failures at 120s → corrected to
+>   3600; strengthened focused 24 passes; independent Codex topology/Helm/Compose
+>   47 passes (+ pre-existing README wording-contract failure fixed in this
+>   docs pass); adjacent ingestion task + async upload 10 passes; durable job
+>   contract 27 passes / 2 warnings; docs suite 21 passes / 1 warning; Ruff and
+>   mypy clean; Helm lint clean; `docker compose config --quiet` clean;
+>   `git diff --check` clean; protected artifacts 9/9 unchanged.
+> - Audit finding **ING-01 further partially locally remediated**: durable
+>   job/status plus required local Compose and Helm worker topology/health/
+>   readiness are implemented. **Still open:** stuck queued/running recovery/
+>   reaper; durable job heartbeat/lease; retry/idempotency; queue-age
+>   metric/alert; live Redis/Postgres/Celery worker-outage drill; real
+>   PostgreSQL migration `019` upgrade/downgrade.
 > - **ING-02** non-atomic delete-then-build remains **open**.
 > - **TEN-03** colliding physical tenant names remains **open**.
 > - Plan step 5 **open / partially remediated**: trace identity done at
@@ -72,18 +74,23 @@
 > `audit_gpt_23_07_26.md` is a dated snapshot — update only the top
 > remediation/status layer.
 >
-> **Next atomic implementation slice (plan order):** step **4.2** worker
-> topology contract — add one ingestion worker to Docker Compose and Helm with
-> the same Secret/ConfigMap DB+Redis environment, durable `/app/data` mount,
-> constrained concurrency, security context, and verifiable heartbeat/readiness.
-> Do **not** claim queue-age/reaper, retry/idempotency, atomic publish, or
-> TEN-03 complete in that slice.
+> **Next atomic implementation slice (plan order):** step **4.3** durable
+> liveness/recovery contract — add a persisted job lease/heartbeat and a
+> deterministic stale queued/running job recovery/reaper path, with fail-closed
+> tests. Do **not** claim retry, idempotency, queue-age alerting, atomic
+> publish, or TEN-03 complete in 4.3.
+
+## 2026-08-02 Update-15 (step 4.1 durable job contract @ `b7faa19`) — SUPERSEDED by Update-16
+
+> **SUPERSEDED.** Historical status at HEAD `b7faa19` after step 4.1 durable
+> job contract and before step 4.2 worker topology. Next was 4.2 Compose/Helm
+> worker. Status truth now lives in Update-16.
 
 ## 2026-08-02 Update-14 (OBS-01 local remediation documented @ `5a9f857`) — SUPERSEDED by Update-15
 
 > **SUPERSEDED.** Historical status at HEAD `5a9f857` after OBS-01 local close
 > and before step 4.1 durable job contract. Step 4 was still wholly open as the
-> next first job-contract slice. Status truth now lives in Update-15.
+> next first job-contract slice. Status truth now lives in Update-16.
 
 ## 2026-08-02 Update-13 (P0 local remediation documented @ `2767b9d`) — SUPERSEDED by Update-14
 

@@ -160,7 +160,8 @@ cp .env.example .env              # Windows: copy .env.example .env
 pip install --require-hashes -r requirements.lock
 ```
 
-Put your own key and the no-HF runtime profile in `.env` (no secrets ship in-repo):
+Put your own key and the no-HF runtime profile in `.env`. Optional provider keys
+belong only in the user's local `.env`; no API keys ship in this repository:
 
 ```dotenv
 LLM_PROVIDER_PROFILE=external-mistral
