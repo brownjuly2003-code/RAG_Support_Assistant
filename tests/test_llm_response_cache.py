@@ -210,6 +210,7 @@ def test_cache_miss_invokes_pipeline_and_stores(
 def test_cache_invalidated_on_upload(
     monkeypatch: pytest.MonkeyPatch,
     client_with_key: TestClient,
+    ingestion_jobs_db,
 ) -> None:
     captured: dict[str, object] = {}
 

@@ -18,6 +18,7 @@ def test_upload_then_ask_returns_uploaded_content(
     integration_client,
     integration_headers,
     integration_store,
+    ingestion_jobs_db,
 ) -> None:
     uploaded_text = "Политика возврата: товар можно вернуть в течение 14 дней."
 
@@ -77,7 +78,10 @@ def test_upload_then_ask_returns_uploaded_content(
     )
 
     assert upload_response.status_code == 200
-    assert upload_response.json()["status"] == "ok"
+    upload_body = upload_response.json()
+    assert upload_body["status"] == "ok"
+    assert upload_body["tenant_id"] == "acme"
+    assert "job_id" in upload_body
 
     ask_response = integration_client.post(
         "/api/ask",

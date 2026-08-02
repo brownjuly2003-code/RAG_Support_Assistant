@@ -82,6 +82,7 @@ def test_upload_response_includes_assigned_categories(
     monkeypatch: pytest.MonkeyPatch,
     client_with_key,
     tmp_path: Path,
+    ingestion_jobs_db,
 ) -> None:
     import api.app as api_app
     from ingestion import categorizer as categorizer_module

@@ -328,3 +328,75 @@ def temp_upload_dir(tmp_path: Path) -> Path:
     upload_dir = tmp_path / "uploads"
     upload_dir.mkdir()
     return upload_dir
+
+
+@pytest.fixture
+def ingestion_jobs_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Named, non-autouse: real temporary SQLite IngestionJob table + scoped overrides.
+
+    Gives upload/job poll tests a real ORM table without globally replacing DB
+    behavior for unrelated tests. Production code has no test-mode fallback.
+    """
+    import asyncio
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from db.models import IngestionJob
+
+    db_path = tmp_path / "ingestion_jobs.sqlite"
+    async_url = f"sqlite+aiosqlite:///{db_path.as_posix()}"
+    sync_url = f"sqlite:///{db_path.as_posix()}"
+
+    async_engine = create_async_engine(async_url, echo=False)
+    sync_engine = create_engine(sync_url, echo=False)
+
+    async def _create_table() -> None:
+        async with async_engine.begin() as conn:
+            await conn.run_sync(IngestionJob.__table__.create, checkfirst=True)
+
+    try:
+        asyncio.run(_create_table())
+    except Exception:
+        # Model may not exist yet during red phase — surface as fixture error.
+        IngestionJob  # noqa: B018
+        raise
+
+    async_factory = async_sessionmaker(
+        async_engine, class_=AsyncSession, expire_on_commit=False
+    )
+    sync_factory = sessionmaker(sync_engine, expire_on_commit=False)
+
+    monkeypatch.setattr("db.engine.async_session", async_factory)
+
+    # Narrow job-service override when the module is present (green phase).
+    try:
+        from contextlib import contextmanager
+
+        import ingestion.jobs as jobs_mod
+
+        @contextmanager
+        def _sync_session_cm():
+            session = sync_factory()
+            try:
+                yield session
+            finally:
+                session.close()
+
+        monkeypatch.setattr(jobs_mod, "sync_session", _sync_session_cm)
+        monkeypatch.setattr(jobs_mod, "_async_session", lambda: async_factory())
+    except ImportError:
+        pass
+
+    yield {
+        "async_session": async_factory,
+        "sync_session": sync_factory,
+        "db_path": db_path,
+    }
+
+    async def _dispose() -> None:
+        await async_engine.dispose()
+
+    asyncio.run(_dispose())
+    sync_engine.dispose()

@@ -130,6 +130,7 @@ def test_upload_path_bypasses_body_middleware(
     monkeypatch: pytest.MonkeyPatch,
     settings_factory,
     client_with_key: TestClient,
+    ingestion_jobs_db,
 ) -> None:
     monkeypatch.setattr(
         api_app,

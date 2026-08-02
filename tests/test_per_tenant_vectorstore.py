@@ -202,6 +202,7 @@ def test_ask_endpoint_passes_tenant_to_session_resolution(
 def test_upload_uses_tenant_specific_rebuild(
     monkeypatch: pytest.MonkeyPatch,
     client_with_key: TestClient,
+    ingestion_jobs_db,
 ) -> None:
     import api.app as api_app
 
@@ -242,3 +243,5 @@ def test_upload_uses_tenant_specific_rebuild(
 
     assert response.status_code == 200
     assert captured["tenant_id"] == "acme-corp"
+    assert response.json()["tenant_id"] == "acme-corp"
+    assert "job_id" in response.json()

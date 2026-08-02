@@ -7,10 +7,12 @@ from datetime import datetime, timezone
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     DateTime,
     Float,
     ForeignKey,
     ForeignKeyConstraint,
+    Index,
     Integer,
     String,
     Text,
@@ -308,3 +310,38 @@ class DocumentStats(Base):
     )
     citation_count: Mapped[int] = mapped_column(Integer, default=0)
     last_cited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class IngestionJob(Base):
+    """Durable tenant-owned ingestion job (public job_id identity)."""
+
+    __tablename__ = "ingestion_jobs"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('queued', 'running', 'completed', 'failed')",
+            name="ck_ingestion_jobs_status",
+        ),
+        Index("ix_ingestion_jobs_tenant_id_created_at", "tenant_id", "created_at"),
+        Index("ix_ingestion_jobs_status", "status"),
+        Index("ix_ingestion_jobs_celery_task_id", "celery_task_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        # Application-generated; no server default / extension required.
+    )
+    tenant_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_path: Mapped[str] = mapped_column(String(512), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="queued")
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    celery_task_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
