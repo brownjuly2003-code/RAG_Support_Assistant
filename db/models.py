@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    ForeignKeyConstraint,
     Integer,
     String,
     Text,
@@ -27,6 +28,9 @@ class Base(DeclarativeBase):
 
 class Session(Base):
     __tablename__ = "sessions"
+    __table_args__ = (
+        UniqueConstraint("id", "tenant_id", name="uq_sessions_id_tenant_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -85,12 +89,18 @@ class User(Base):
 
 class Message(Base):
     __tablename__ = "messages"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["session_id", "tenant_id"],
+            ["sessions.id", "sessions.tenant_id"],
+            ondelete="CASCADE",
+            name="fk_messages_session_tenant",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("sessions.id", ondelete="CASCADE"),
-    )
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    tenant_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     role: Mapped[str] = mapped_column(String(20))
     content: Mapped[str] = mapped_column(EncryptedText, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

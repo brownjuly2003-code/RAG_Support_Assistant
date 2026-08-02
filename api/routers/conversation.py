@@ -117,8 +117,22 @@ async def _persist_ask_messages(
             )
             if owned.scalar_one_or_none() is None:
                 return
-            db.add(Message(session_id=session_uuid, role="user", content=question))
-            db.add(Message(session_id=session_uuid, role="assistant", content=answer))
+            db.add(
+                Message(
+                    session_id=session_uuid,
+                    tenant_id=tenant_id,
+                    role="user",
+                    content=question,
+                )
+            )
+            db.add(
+                Message(
+                    session_id=session_uuid,
+                    tenant_id=tenant_id,
+                    role="assistant",
+                    content=answer,
+                )
+            )
             await asyncio.wait_for(db.commit(), timeout=timeout)
             _app._db_retry_after = 0.0
     except Exception as exc:
