@@ -62,6 +62,11 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `RAG_SEMANTIC_CHUNKING` | `true` | Enable semantic chunking |
 | `RAG_CONTEXTUAL_HEADERS` | `true` | Prepend contextual headers during ingestion. Cheap by default (`build_vector_store` derives headers from chunk metadata — no LLM/network). The LLM-generated variant runs **only** when `INGESTION_BATCH_ENABLED=true`, and then per *document*, not per chunk |
 | `INGESTION_CONTEXTUAL_CONCURRENCY` | `4` | Bounded concurrency for the LLM contextual-header fallback (providers without a native batch API). `1` = strictly serial. Caps in-flight requests so a full-corpus ingest cannot fan out unbounded provider calls. Progress is logged as `[contextual_headers] i/N` |
+| `INGESTION_JOB_LEASE_SEC` | `120` | Worker ownership lease duration for async Celery ingestion jobs. Extended by heartbeats while load/embed/index work runs. Does **not** make delete-then-build vector mutation atomic (ING-02 remains open) |
+| `INGESTION_JOB_HEARTBEAT_INTERVAL_SEC` | `30` | Background lease extension interval. Must be positive and **strictly less** than `INGESTION_JOB_LEASE_SEC` |
+| `INGESTION_JOB_QUEUED_STALE_SEC` | `900` | Async jobs (`celery_task_id` set) still `queued` longer than this are marked failed by the FastAPI reaper. Synchronous uploads (no Celery id) are never reaped |
+| `INGESTION_JOB_LEGACY_RUNNING_STALE_SEC` | `1800` | Conservative age for async `running` rows that have no lease (pre-lease workers), based on `started_at`/`created_at` |
+| `INGESTION_JOB_REAPER_INTERVAL_SEC` | `60` | Interval for the in-process stale-job reaper (independent of the Celery worker so worker outage still becomes a terminal result). Initial sweep runs promptly at startup |
 | `RAG_AGENTIC_MODE` | `false` | Enable the tool-calling agent graph |
 | `RAG_HYDE` | `false` | Enable Hypothetical Document Embeddings |
 | `RAG_PARENT_CHILD` | `false` | Enable parent-child chunking |

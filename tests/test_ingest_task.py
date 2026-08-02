@@ -239,14 +239,15 @@ def test_progress_update_failure_does_not_block_durable_completion(
         order.append("build")
         return None
 
-    real_mark_running = jobs_mod.sync_mark_running
+    real_claim = jobs_mod.sync_claim_running
 
-    def _mark_running(job_uuid, tenant_id):
+    def _claim_running(job_uuid, tenant_id):
         order.append("running")
-        return real_mark_running(job_uuid, tenant_id)
+        return real_claim(job_uuid, tenant_id)
 
     monkeypatch.setattr(ingest_task.ingest_document, "update_state", _boom_update_state)
-    monkeypatch.setattr(jobs_mod, "sync_mark_running", _mark_running)
+    monkeypatch.setattr(jobs_mod, "sync_claim_running", _claim_running)
+    monkeypatch.setattr("ingestion.jobs.sync_claim_running", _claim_running)
     monkeypatch.setattr("ingestion.loader.DocumentLoader", FakeLoader)
     monkeypatch.setattr("vectordb.manager.get_embeddings", lambda: "embeddings")
     monkeypatch.setattr("vectordb.manager.build_vector_store", fake_build)

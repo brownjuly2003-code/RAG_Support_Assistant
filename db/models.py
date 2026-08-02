@@ -324,6 +324,11 @@ class IngestionJob(Base):
         Index("ix_ingestion_jobs_tenant_id_created_at", "tenant_id", "created_at"),
         Index("ix_ingestion_jobs_status", "status"),
         Index("ix_ingestion_jobs_celery_task_id", "celery_task_id"),
+        Index(
+            "ix_ingestion_jobs_status_lease_expires_at",
+            "status",
+            "lease_expires_at",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -338,6 +343,16 @@ class IngestionJob(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     celery_task_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Opaque worker lease; never expose in public API/logs.
+    lease_token: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    heartbeat_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

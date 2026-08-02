@@ -3,20 +3,24 @@
 Async helpers for API routes; narrow synchronous SQLAlchemy session for the
 Celery worker so state transitions do not reuse a global async engine across
 fresh ``asyncio.run`` loops.
+
+Worker ownership uses an opaque lease token with conditional CAS updates.
+Async helpers for the synchronous upload path do not require a worker lease.
 """
 from __future__ import annotations
 
 import logging
 import os
 import re
+import secrets
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from db.models import IngestionJob
@@ -40,6 +44,18 @@ _sync_session_factory: sessionmaker[Session] | None = None
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _lease_duration_sec() -> int:
+    """Validated lease horizon; shares the fail-closed path with ingestion.liveness."""
+    from ingestion.liveness import lease_duration_sec
+
+    return lease_duration_sec()
+
+
+def _new_lease_token() -> str:
+    # Cryptographically unpredictable opaque token; never log or serialize publicly.
+    return secrets.token_urlsafe(32)
 
 
 def _async_session() -> Any:
@@ -109,6 +125,7 @@ def _serialize_ts(value: datetime | None) -> str | None:
 
 
 def job_public_dict(job: IngestionJob) -> dict[str, Any]:
+    # lease_token is intentionally omitted — never public.
     return {
         "job_id": str(job.id),
         "task_id": job.celery_task_id,
@@ -119,6 +136,8 @@ def job_public_dict(job: IngestionJob) -> dict[str, Any]:
         "created_at": _serialize_ts(job.created_at),
         "started_at": _serialize_ts(job.started_at),
         "finished_at": _serialize_ts(job.finished_at),
+        "heartbeat_at": _serialize_ts(job.heartbeat_at),
+        "lease_expires_at": _serialize_ts(job.lease_expires_at),
         "meta": {
             "filename": job.filename,
         },
@@ -298,6 +317,10 @@ class JobIdentityError(LookupError):
     """Unknown or tenant-mismatched durable job identity."""
 
 
+class JobOwnershipError(RuntimeError):
+    """Claim/heartbeat/terminal CAS failed (lost lease, duplicate claim, etc.)."""
+
+
 def sync_require_job(job_id: uuid.UUID, tenant_id: str) -> IngestionJob:
     with sync_session() as session:
         job = session.get(IngestionJob, job_id)
@@ -310,49 +333,137 @@ def sync_require_job(job_id: uuid.UUID, tenant_id: str) -> IngestionJob:
         return job
 
 
-def sync_mark_running(job_id: uuid.UUID, tenant_id: str) -> None:
+def sync_claim_running(job_id: uuid.UUID, tenant_id: str) -> str:
+    """Atomically claim a queued job for this worker; return opaque lease token.
+
+    Fail closed on missing/wrong-tenant/non-queued rows before any vector work.
+    """
+    if not tenant_id or not str(tenant_id).strip():
+        raise JobOwnershipError("tenant_id is required for job claim")
+
+    token = _new_lease_token()
+    now = _utc_now()
+    lease_sec = _lease_duration_sec()
+    expires = now + timedelta(seconds=lease_sec)
+
     with sync_session() as session:
-        job = session.get(IngestionJob, job_id)
-        if job is None or job.tenant_id != tenant_id:
-            raise JobIdentityError(
-                f"Ingestion job {job_id} not found for tenant {tenant_id}"
+        result = session.execute(
+            update(IngestionJob)
+            .where(
+                IngestionJob.id == job_id,
+                IngestionJob.tenant_id == tenant_id,
+                IngestionJob.status == "queued",
             )
-        job.status = "running"
-        job.started_at = job.started_at or _utc_now()
-        job.error = None
+            .values(
+                status="running",
+                lease_token=token,
+                heartbeat_at=now,
+                lease_expires_at=expires,
+                started_at=now,
+                error=None,
+            )
+        )
+        if int(getattr(result, "rowcount", 0) or 0) != 1:
+            session.rollback()
+            raise JobOwnershipError(
+                f"Failed to claim ingestion job {job_id} for tenant {tenant_id}"
+            )
         session.commit()
+    return token
+
+
+def sync_extend_lease(job_id: uuid.UUID, tenant_id: str, lease_token: str) -> bool:
+    """Conditional heartbeat extension; True only when ownership matches."""
+    if not lease_token:
+        return False
+    now = _utc_now()
+    expires = now + timedelta(seconds=_lease_duration_sec())
+    with sync_session() as session:
+        result = session.execute(
+            update(IngestionJob)
+            .where(
+                IngestionJob.id == job_id,
+                IngestionJob.tenant_id == tenant_id,
+                IngestionJob.status == "running",
+                IngestionJob.lease_token == lease_token,
+            )
+            .values(
+                heartbeat_at=now,
+                lease_expires_at=expires,
+            )
+        )
+        if int(getattr(result, "rowcount", 0) or 0) != 1:
+            session.rollback()
+            return False
+        session.commit()
+        return True
 
 
 def sync_mark_completed(
     job_id: uuid.UUID,
     tenant_id: str,
+    lease_token: str,
     result: dict[str, Any] | None = None,
 ) -> None:
+    """CAS completed transition; requires exact running lease ownership."""
+    now = _utc_now()
     with sync_session() as session:
-        job = session.get(IngestionJob, job_id)
-        if job is None or job.tenant_id != tenant_id:
-            raise JobIdentityError(
-                f"Ingestion job {job_id} not found for tenant {tenant_id}"
+        res = session.execute(
+            update(IngestionJob)
+            .where(
+                IngestionJob.id == job_id,
+                IngestionJob.tenant_id == tenant_id,
+                IngestionJob.status == "running",
+                IngestionJob.lease_token == lease_token,
             )
-        if job.started_at is None:
-            job.started_at = _utc_now()
-        job.status = "completed"
-        job.result = result
-        job.error = None
-        job.finished_at = _utc_now()
+            .values(
+                status="completed",
+                result=result,
+                error=None,
+                finished_at=now,
+                lease_token=None,
+                # Preserve last successful heartbeat for observability.
+                lease_expires_at=None,
+            )
+        )
+        if int(getattr(res, "rowcount", 0) or 0) != 1:
+            session.rollback()
+            raise JobOwnershipError(
+                f"Lost lease completing ingestion job {job_id}"
+            )
         session.commit()
 
 
-def sync_mark_failed(job_id: uuid.UUID, tenant_id: str, error: str) -> None:
+def sync_mark_failed(
+    job_id: uuid.UUID,
+    tenant_id: str,
+    lease_token: str,
+    error: str,
+) -> None:
+    """CAS failed transition; requires exact running lease ownership."""
+    now = _utc_now()
+    redacted = safe_error_message(error)
     with sync_session() as session:
-        job = session.get(IngestionJob, job_id)
-        if job is None or job.tenant_id != tenant_id:
-            raise JobIdentityError(
-                f"Ingestion job {job_id} not found for tenant {tenant_id}"
+        res = session.execute(
+            update(IngestionJob)
+            .where(
+                IngestionJob.id == job_id,
+                IngestionJob.tenant_id == tenant_id,
+                IngestionJob.status == "running",
+                IngestionJob.lease_token == lease_token,
             )
-        if job.started_at is None:
-            job.started_at = _utc_now()
-        job.status = "failed"
-        job.error = safe_error_message(error)
-        job.finished_at = _utc_now()
+            .values(
+                status="failed",
+                error=redacted,
+                finished_at=now,
+                lease_token=None,
+                # Preserve last successful heartbeat for observability.
+                lease_expires_at=None,
+            )
+        )
+        if int(getattr(res, "rowcount", 0) or 0) != 1:
+            session.rollback()
+            raise JobOwnershipError(
+                f"Lost lease failing ingestion job {job_id}"
+            )
         session.commit()

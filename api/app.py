@@ -1514,9 +1514,23 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             except Exception as exc:
                 logger.warning("Audit retention purge failed: %s", exc)
 
+    async def _reap_stale_ingestion_jobs_periodically() -> None:
+        """Independent of Celery: surface stuck async jobs as terminal failures."""
+        from ingestion.liveness import (  # noqa: PLC0415
+            ingestion_reaper_loop,
+            reaper_interval_sec,
+        )
+
+        # Fail-closed: use the validated accessor (no silent max/clamp).
+        interval = reaper_interval_sec()
+        await ingestion_reaper_loop(interval_sec=interval)
+
     cleanup_task = asyncio.create_task(_cleanup_sessions())
     purge_task = asyncio.create_task(_purge_old_traces_periodically())
     audit_purge_task = asyncio.create_task(_purge_old_audit_periodically())
+    ingestion_reaper_task = asyncio.create_task(
+        _reap_stale_ingestion_jobs_periodically()
+    )
     logger.info("RAG Support Assistant started")
     try:
         yield
@@ -1536,6 +1550,12 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         cleanup_task.cancel()
         purge_task.cancel()
         audit_purge_task.cancel()
+        ingestion_reaper_task.cancel()
+        # Await reaper so shutdown does not leave a pending-task warning.
+        try:
+            await ingestion_reaper_task
+        except asyncio.CancelledError:
+            pass
         logger.info("RAG Support Assistant shutting down")
 
 

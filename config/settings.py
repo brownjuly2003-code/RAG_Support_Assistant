@@ -431,6 +431,30 @@ class Settings:
     ingestion_contextual_concurrency: int = field(
         default_factory=lambda: max(1, int(os.getenv("INGESTION_CONTEXTUAL_CONCURRENCY", "4")))
     )
+    # Durable ingestion job lease / heartbeat / reaper (plan step 4.3).
+    # Parse raw integers without silent clamp; validate() fail-closes zeros/negatives
+    # and requires heartbeat strictly shorter than lease.
+    ingestion_job_lease_sec: int = field(
+        default_factory=lambda: int(os.getenv("INGESTION_JOB_LEASE_SEC", "120"))
+    )
+    ingestion_job_heartbeat_interval_sec: int = field(
+        default_factory=lambda: int(
+            os.getenv("INGESTION_JOB_HEARTBEAT_INTERVAL_SEC", "30")
+        )
+    )
+    ingestion_job_queued_stale_sec: int = field(
+        default_factory=lambda: int(os.getenv("INGESTION_JOB_QUEUED_STALE_SEC", "900"))
+    )
+    ingestion_job_legacy_running_stale_sec: int = field(
+        default_factory=lambda: int(
+            os.getenv("INGESTION_JOB_LEGACY_RUNNING_STALE_SEC", "1800")
+        )
+    )
+    ingestion_job_reaper_interval_sec: int = field(
+        default_factory=lambda: int(
+            os.getenv("INGESTION_JOB_REAPER_INTERVAL_SEC", "60")
+        )
+    )
     agentic_mode: bool = field(
         default_factory=lambda: os.getenv(
             "RAG_AGENTIC_MODE", "false"
@@ -936,6 +960,39 @@ class Settings:
         import urllib.request
 
         log = logging.getLogger(__name__)
+
+        if self.ingestion_job_lease_sec <= 0:
+            raise RuntimeError(
+                "\nERROR: INGESTION_JOB_LEASE_SEC must be positive.\n"
+                f"       Got {self.ingestion_job_lease_sec}."
+            )
+        if self.ingestion_job_heartbeat_interval_sec <= 0:
+            raise RuntimeError(
+                "\nERROR: INGESTION_JOB_HEARTBEAT_INTERVAL_SEC must be positive.\n"
+                f"       Got {self.ingestion_job_heartbeat_interval_sec}."
+            )
+        if self.ingestion_job_heartbeat_interval_sec >= self.ingestion_job_lease_sec:
+            raise RuntimeError(
+                "\nERROR: INGESTION_JOB_HEARTBEAT_INTERVAL_SEC must be strictly less "
+                "than INGESTION_JOB_LEASE_SEC.\n"
+                f"       Got heartbeat={self.ingestion_job_heartbeat_interval_sec}, "
+                f"lease={self.ingestion_job_lease_sec}."
+            )
+        if self.ingestion_job_queued_stale_sec <= 0:
+            raise RuntimeError(
+                "\nERROR: INGESTION_JOB_QUEUED_STALE_SEC must be positive.\n"
+                f"       Got {self.ingestion_job_queued_stale_sec}."
+            )
+        if self.ingestion_job_legacy_running_stale_sec <= 0:
+            raise RuntimeError(
+                "\nERROR: INGESTION_JOB_LEGACY_RUNNING_STALE_SEC must be positive.\n"
+                f"       Got {self.ingestion_job_legacy_running_stale_sec}."
+            )
+        if self.ingestion_job_reaper_interval_sec <= 0:
+            raise RuntimeError(
+                "\nERROR: INGESTION_JOB_REAPER_INTERVAL_SEC must be positive.\n"
+                f"       Got {self.ingestion_job_reaper_interval_sec}."
+            )
 
         if self.rag_env == "production" and ("*" in self.cors_origins or self.cors_origins == []):
             raise RuntimeError(
