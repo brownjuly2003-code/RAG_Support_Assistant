@@ -350,6 +350,7 @@ async def agent_respond_to_ticket(
         actor=_user.get("sub", "anonymous"),
         action="agent_respond",
         resource=f"ticket:{ticket_id}",
+        tenant_id=tenant,
         detail={"tenant": tenant},
         ip_address=request.client.host if request.client else None,
     )

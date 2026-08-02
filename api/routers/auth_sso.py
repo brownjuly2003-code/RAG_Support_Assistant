@@ -94,6 +94,7 @@ async def sso_callback(provider: str, request: Request) -> RedirectResponse:
         actor=str(user.id),
         action="sso_login",
         resource=f"auth/{provider}",
+        tenant_id=user.tenant_id or "default",
         detail={"provider": provider, "tenant": user.tenant_id},
         ip_address=request.client.host if request.client else None,
     )

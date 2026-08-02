@@ -57,13 +57,15 @@ async def post_feedback(
     except Exception as exc:
         logger.warning("Failed to save feedback: %s", exc)
 
+    tenant = _user.get("tenant", "default") or "default"
     await _log_audit(
         actor=_user.get("sub", "anonymous"),
         action="feedback",
         resource=f"trace:{body.trace_id}",
+        tenant_id=tenant,
         detail={
             "rating": body.rating,
-            "tenant": _user.get("tenant", "default"),
+            "tenant": tenant,
         },
         ip_address=request.client.host if request.client else None,
     )
@@ -120,13 +122,15 @@ async def escalate_to_human(
     except Exception as exc:
         logger.warning("Failed to persist escalated ticket: %s", exc)
 
+    tenant = _user.get("tenant", "default") or "default"
     await _log_audit(
         actor=_user.get("sub", "anonymous"),
         action="escalate",
         resource=f"session:{body.session_id}",
+        tenant_id=tenant,
         detail={
             "reason": body.reason,
-            "tenant": _user.get("tenant", "default"),
+            "tenant": tenant,
         },
         ip_address=request.client.host if request.client else None,
     )

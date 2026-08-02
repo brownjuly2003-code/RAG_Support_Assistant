@@ -98,6 +98,7 @@ async def upload_document(
         actor=_user.get("sub", "anonymous"),
         action="upload",
         resource=f"document:{safe_name}",
+        tenant_id=tenant,
         detail={"tenant": tenant},
         ip_address=request.client.host if request.client else None,
     )

@@ -28,7 +28,7 @@ from urllib.parse import urlparse
 from collections.abc import AsyncGenerator
 
 import httpx
-from fastapi import APIRouter, FastAPI, Request
+from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -919,21 +919,41 @@ def _cache_key(tenant: str, question: str) -> str:
     return f"llm_resp:{tenant or 'default'}:{question_hash}"
 
 
+def _session_owner_tenant(session_obj: Any) -> str | None:
+    """Return stored tenant for an in-memory session object, if any."""
+    if session_obj is None:
+        return None
+    if hasattr(session_obj, "_tenant_id"):
+        return getattr(session_obj, "_tenant_id", None)
+    if isinstance(session_obj, dict):
+        return session_obj.get("tenant_id") or session_obj.get("_tenant_id")
+    return None
+
+
 async def _get_or_create_session(
     session_id: Optional[str],
     tenant_id: str = "default",
 ) -> tuple:
     global _retriever, _llm, _db_retry_after
 
+    # Track caller-supplied vs server-generated IDs: only server-generated IDs
+    # may use the in-memory create fallback when DB is unavailable/cooldown.
+    caller_supplied = bool(session_id)
+
+    # Normalize / reject session UUID *before* any DB or circuit-breaker logic.
+    # Malformed client input must never trip ``_db_retry_after``.
     if not session_id:
-        session_id = uuid.uuid4().hex
+        session_uuid = uuid.uuid4()
+        session_id = session_uuid.hex
     else:
         try:
-            session_id = uuid.UUID(session_id).hex
-        except (TypeError, ValueError, AttributeError):
-            pass
+            session_uuid = uuid.UUID(str(session_id))
+            session_id = session_uuid.hex
+        except (TypeError, ValueError, AttributeError) as exc:
+            raise HTTPException(status_code=422, detail="Invalid session_id") from exc
 
     db_history: list[dict[str, str]] = []
+    db_ownership_verified = False
     if time.monotonic() >= _db_retry_after:
         try:
             from datetime import datetime, timezone
@@ -947,24 +967,42 @@ async def _get_or_create_session(
                 getattr(get_settings(), "db_persist_timeout_sec", 2.0)
             )
             async with async_session() as db:
-                session_uuid = uuid.UUID(session_id)
+                # Primary ownership lookup is scoped by (id, tenant_id).
                 result = await asyncio.wait_for(
-                    db.execute(select(DBSession).where(DBSession.id == session_uuid)),
+                    db.execute(
+                        select(DBSession)
+                        .where(DBSession.id == session_uuid)
+                        .where(DBSession.tenant_id == tenant_id)
+                    ),
                     timeout=db_timeout,
                 )
                 db_session = result.scalar_one_or_none()
                 if db_session is None:
+                    # Minimal ID-existence check: foreign collision vs genuinely new.
+                    # Never load foreign history or rewrite its tenant.
+                    exists_result = await asyncio.wait_for(
+                        db.execute(
+                            select(DBSession.id).where(DBSession.id == session_uuid)
+                        ),
+                        timeout=db_timeout,
+                    )
+                    if exists_result.scalar_one_or_none() is not None:
+                        raise HTTPException(
+                            status_code=404,
+                            detail="Session not found",
+                        )
                     db.add(DBSession(id=session_uuid, tenant_id=tenant_id))
                 else:
                     db_session.last_access = datetime.now(timezone.utc)
-                    if not db_session.tenant_id or db_session.tenant_id == "default":
-                        db_session.tenant_id = tenant_id
                 await asyncio.wait_for(db.commit(), timeout=db_timeout)
 
+                # History only through owning Session predicate.
                 history_result = await asyncio.wait_for(
                     db.execute(
                         select(Message.role, Message.content)
+                        .join(DBSession, DBSession.id == Message.session_id)
                         .where(Message.session_id == session_uuid)
+                        .where(DBSession.tenant_id == tenant_id)
                         .order_by(Message.created_at)
                     ),
                     timeout=db_timeout,
@@ -973,7 +1011,11 @@ async def _get_or_create_session(
                     {"role": role, "content": content}
                     for role, content in history_result.all()
                 ]
+                db_ownership_verified = True
                 _db_retry_after = 0.0
+        except HTTPException:
+            # Client validation / ownership rejection is not an infra failure.
+            raise
         except Exception as exc:
             _db_retry_after = time.monotonic() + 60.0
             try:
@@ -993,12 +1035,30 @@ async def _get_or_create_session(
             logger.warning("Failed to resolve retriever for tenant %s: %s", tenant_id, exc)
 
     existing_session = _session_llm_state.get(session_id)
-    tenant_mismatch = (
-        hasattr(existing_session, "ask")
-        and getattr(existing_session, "_tenant_id", "default") != tenant_id
-    )
+    if existing_session is not None:
+        owner = _session_owner_tenant(existing_session)
+        if owner is not None and owner != tenant_id:
+            # Never replace or mutate a foreign in-memory session.
+            raise HTTPException(status_code=404, detail="Session not found")
 
-    if session_id not in _session_llm_state or tenant_mismatch:
+    # Fail-closed for caller-supplied UUIDs without verified DB/cache ownership.
+    # During DB cooldown/failure: only an already-cached session whose stored
+    # tenant equals the authenticated tenant is usable. Do not create, overwrite,
+    # read, or write session state for an unverified supplied id (503).
+    # Server-generated IDs retain the in-memory create fallback below.
+    if caller_supplied and not db_ownership_verified:
+        cache_owner = (
+            _session_owner_tenant(existing_session)
+            if existing_session is not None
+            else None
+        )
+        if existing_session is None or cache_owner != tenant_id:
+            raise HTTPException(
+                status_code=503,
+                detail="Session store temporarily unavailable",
+            )
+
+    if session_id not in _session_llm_state:
         if _ConversationSession is not None and session_retriever is not None:
             session = _ConversationSession(
                 retriever=session_retriever,
@@ -1007,7 +1067,7 @@ async def _get_or_create_session(
                 max_history=20,
             )
             setattr(session, "_tenant_id", tenant_id)
-            if session_id not in _session_llm_state and db_history and hasattr(session, "_history"):
+            if db_history and hasattr(session, "_history"):
                 max_history = getattr(session, "_max_history", 20)
                 session._history = db_history[-(max_history * 2):]
             _session_llm_state[session_id] = session
@@ -1019,9 +1079,7 @@ async def _get_or_create_session(
         and session_retriever is not None
     ):
         setattr(existing_session, "_retriever", session_retriever)
-        setattr(existing_session, "_tenant_id", tenant_id)
-    elif isinstance(existing_session, dict):
-        existing_session["tenant_id"] = tenant_id
+        # Keep stored tenant; do not rewrite ownership for the caller.
 
     import time as _time
     _session_last_access[session_id] = _time.monotonic()

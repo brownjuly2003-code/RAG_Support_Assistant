@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant, get_request_id
@@ -34,6 +34,20 @@ class AskRequest(BaseModel):
         max_length=50,
         pattern=r"^[a-zA-Z0-9_\-]+$",
     )
+
+    @field_validator("session_id")
+    @classmethod
+    def _validate_session_id(cls, value: Optional[str]) -> Optional[str]:
+        """Reject malformed session UUIDs at the API boundary (422)."""
+        if value is None:
+            return None
+        raw = value.strip()
+        if not raw:
+            return None
+        try:
+            return uuid.UUID(raw).hex
+        except (TypeError, ValueError, AttributeError) as exc:
+            raise ValueError("session_id must be a valid UUID") from exc
 
 
 class SourceInfo(BaseModel):
@@ -60,6 +74,60 @@ class AskResponse(BaseModel):
     requires_confirmation: bool = False
     action_summary: str = ""
     cached: bool = False
+
+
+async def _persist_ask_messages(
+    session_id: str,
+    tenant_id: str,
+    question: str,
+    answer: str,
+    path: str,
+) -> None:
+    """Persist ask messages only when Session is owned by ``tenant_id``.
+
+    Shared by sync / SSE / fallback paths so foreign or missing owners never
+    receive a write. Ownership rejection is silent (no write); real DB failures
+    retain the existing cooldown fallback.
+    """
+    _app = _app_module()
+    if time.monotonic() < _app._db_retry_after:
+        return
+    try:
+        session_uuid = uuid.UUID(str(session_id))
+    except (TypeError, ValueError, AttributeError):
+        return
+
+    try:
+        from sqlalchemy import select
+
+        from db.engine import async_session as db_session_factory
+        from db.models import Message
+        from db.models import Session as DBSession
+
+        settings = _app.get_settings()
+        timeout = float(getattr(settings, "db_persist_timeout_sec", 2.0))
+        async with db_session_factory() as db:
+            owned = await asyncio.wait_for(
+                db.execute(
+                    select(DBSession.id)
+                    .where(DBSession.id == session_uuid)
+                    .where(DBSession.tenant_id == tenant_id)
+                ),
+                timeout=timeout,
+            )
+            if owned.scalar_one_or_none() is None:
+                return
+            db.add(Message(session_id=session_uuid, role="user", content=question))
+            db.add(Message(session_id=session_uuid, role="assistant", content=answer))
+            await asyncio.wait_for(db.commit(), timeout=timeout)
+            _app._db_retry_after = 0.0
+    except Exception as exc:
+        _app._db_retry_after = time.monotonic() + 60.0
+        try:
+            prometheus_metrics.record_message_persist_failure(path)
+        except Exception:
+            pass
+        logger.warning("Failed to persist messages (%s): %s", path, exc)
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -403,35 +471,22 @@ async def ask(
             suggested_questions=[],
         )
 
-    if time.monotonic() >= _app._db_retry_after:
-        try:
-            from db.engine import async_session as db_session_factory
-            from db.models import Message
-
-            async with db_session_factory() as db:
-                session_uuid = uuid.UUID(session_id)
-                db.add(Message(session_id=session_uuid, role="user", content=question))
-                db.add(Message(session_id=session_uuid, role="assistant", content=response.answer))
-                await asyncio.wait_for(
-                    db.commit(),
-                    timeout=float(getattr(settings, "db_persist_timeout_sec", 2.0)),
-                )
-                _app._db_retry_after = 0.0
-        except Exception as exc:
-            _app._db_retry_after = time.monotonic() + 60.0
-            try:
-                prometheus_metrics.record_message_persist_failure("ask")
-            except Exception:
-                pass
-            logger.warning("Failed to persist messages: %s", exc)
+    await _persist_ask_messages(
+        session_id=session_id,
+        tenant_id=tenant,
+        question=question,
+        answer=response.answer,
+        path="ask",
+    )
 
     await _app.log_audit(
         actor=_user.get("sub", "anonymous"),
         action="ask",
         resource=f"session:{session_id}",
+        tenant_id=tenant,
         detail={
             "question_length": len(body.question),
-            "tenant": _user.get("tenant", "default"),
+            "tenant": tenant,
         },
         ip_address=request.client.host if request.client else None,
     )
@@ -493,9 +548,10 @@ async def ask_stream(
             actor=_user.get("sub", "anonymous"),
             action="ask",
             resource=f"session:{session_id}",
+            tenant_id=tenant,
             detail={
                 "question_length": len(body.question),
-                "tenant": _user.get("tenant", "default"),
+                "tenant": tenant,
             },
             ip_address=request.client.host if request.client else None,
         )
@@ -865,27 +921,13 @@ async def ask_stream(
                             "page_content": content,
                         })
 
-            if time.monotonic() >= _app._db_retry_after:
-                try:
-                    from db.engine import async_session as db_session_factory
-                    from db.models import Message
-
-                    async with db_session_factory() as db:
-                        session_uuid = uuid.UUID(session_id)
-                        db.add(Message(session_id=session_uuid, role="user", content=question))
-                        db.add(Message(session_id=session_uuid, role="assistant", content=full_answer))
-                        await asyncio.wait_for(
-                            db.commit(),
-                            timeout=float(getattr(settings, "db_persist_timeout_sec", 2.0)),
-                        )
-                        _app._db_retry_after = 0.0
-                except Exception as db_exc:
-                    _app._db_retry_after = time.monotonic() + 60.0
-                    try:
-                        prometheus_metrics.record_message_persist_failure("stream")
-                    except Exception:
-                        pass
-                    logger.warning("Failed to persist streaming messages: %s", db_exc)
+            await _persist_ask_messages(
+                session_id=session_id,
+                tenant_id=tenant,
+                question=question,
+                answer=full_answer,
+                path="stream",
+            )
             try:
                 prometheus_metrics.record_quality_score_source(quality_source)
             except Exception:
@@ -971,33 +1013,13 @@ async def ask_stream(
                     quality, route, sources, citations, trace_id, suggested_questions = 0, "human", [], [], "", []
                     quality_source = "heuristic"
 
-                if time.monotonic() >= _app._db_retry_after:
-                    try:
-                        from db.engine import async_session as db_session_factory
-                        from db.models import Message
-
-                        async with db_session_factory() as db:
-                            session_uuid = uuid.UUID(session_id)
-                            db.add(Message(session_id=session_uuid, role="user", content=question))
-                            db.add(Message(session_id=session_uuid, role="assistant", content=answer))
-                            await asyncio.wait_for(
-                                db.commit(),
-                                timeout=float(
-                                    getattr(
-                                        _app.get_settings(), "db_persist_timeout_sec", 2.0
-                                    )
-                                ),
-                            )
-                            _app._db_retry_after = 0.0
-                    except Exception as db_exc:
-                        _app._db_retry_after = time.monotonic() + 60.0
-                        try:
-                            prometheus_metrics.record_message_persist_failure(
-                                "stream_fallback"
-                            )
-                        except Exception:
-                            pass
-                        logger.warning("Failed to persist streamed fallback messages: %s", db_exc)
+                await _persist_ask_messages(
+                    session_id=session_id,
+                    tenant_id=tenant,
+                    question=question,
+                    answer=answer,
+                    path="stream_fallback",
+                )
 
                 try:
                     if quality:

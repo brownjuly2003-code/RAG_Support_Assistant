@@ -130,6 +130,7 @@ async def login(request: Request, body: LoginRequest, response: Response) -> Tok
             actor=body.username or "<anonymous>",
             action="login_failed",
             resource="auth",
+            tenant_id=login_tenant,
             detail={"reason": reason, "tenant": login_tenant},
             ip_address=client_ip,
         )
@@ -148,6 +149,7 @@ async def login(request: Request, body: LoginRequest, response: Response) -> Tok
                 actor=body.username,
                 action="login",
                 resource="auth",
+                tenant_id=login_tenant,
                 detail={"tenant": login_tenant},
                 ip_address=client_ip,
             )
@@ -175,6 +177,7 @@ async def login(request: Request, body: LoginRequest, response: Response) -> Tok
         actor=body.username,
         action="login",
         resource="auth",
+        tenant_id=login_tenant,
         detail={"tenant": login_tenant},
         ip_address=client_ip,
     )
@@ -446,7 +449,8 @@ async def clear_session(
         actor=_user.get("sub", "anonymous"),
         action="delete_session",
         resource=f"session:{session_id}",
-        detail={"tenant": _user.get("tenant", "default")},
+        tenant_id=user_tenant,
+        detail={"tenant": user_tenant},
         ip_address=request.client.host if request.client else None,
     )
     return {"status": "ok", "message": f"Session {session_id} cleared"}

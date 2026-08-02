@@ -47,12 +47,14 @@ async def admin_reset_circuit_breaker(
     breaker.reset()
     current = breaker.snapshot()
 
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
     await _log_audit(
         actor=_user.get("sub", "anonymous"),
         action="circuit_breaker_reset",
         resource=f"breaker/{breaker.name}",
+        tenant_id=tenant,
         detail={
-            "tenant": _user.get("tenant", "default"),
+            "tenant": tenant,
             "previous_state": previous["state"],
             "previous_consecutive_failures": previous["consecutive_failures"],
         },
@@ -206,10 +208,11 @@ async def admin_purge_traces(
         actor=_user.get("sub", "anonymous"),
         action="trace_purge",
         resource=f"traces/older_than={older_than_days}d",
+        tenant_id=tenant,
         detail=(
             result
-            if _user.get("tenant", "default") == "default"
-            else {**result, "tenant": _user.get("tenant", "default")}
+            if tenant == "default"
+            else {**result, "tenant": tenant}
         ),
         ip_address=request.client.host if request.client else None,
     )
@@ -249,9 +252,10 @@ async def admin_purge_audit(
         actor=_user.get("sub", "anonymous"),
         action="audit_purge",
         resource=f"audit_log/older_than={older_than_days}d",
+        tenant_id=tenant,
         detail={
             "deleted": deleted,
-            "tenant": _user.get("tenant", "default"),
+            "tenant": tenant,
         },
         ip_address=request.client.host if request.client else None,
     )

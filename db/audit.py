@@ -15,10 +15,20 @@ async def log_audit(
     actor: str,
     action: str,
     resource: str,
+    tenant_id: str,
     detail: Optional[dict] = None,
     ip_address: Optional[str] = None,
 ) -> None:
-    """Append audit record. Fire-and-forget - never blocks request."""
+    """Append audit record. Fire-and-forget - never blocks request.
+
+    ``tenant_id`` is required and must be non-empty. Derive it from the
+    authenticated/resolved user context; use an explicit ``"default"`` only
+    for genuinely unauthenticated events where no tenant can yet be resolved.
+    """
+    if tenant_id is None or not str(tenant_id).strip():
+        raise ValueError("tenant_id is required and must be non-empty")
+    resolved_tenant = str(tenant_id).strip()
+
     async def _write_entry() -> None:
         try:
             from db.engine import async_session
@@ -31,18 +41,16 @@ async def log_audit(
                     resource=resource,
                     detail=json.dumps(detail, ensure_ascii=False) if detail else None,
                     ip_address=ip_address,
+                    tenant_id=resolved_tenant,
                 )
                 db.add(entry)
                 await asyncio.wait_for(db.commit(), timeout=0.25)
         except Exception as exc:
-            logger.warning("Audit DB write failed, logging to file: %s", exc)
-            logger.info(
-                "AUDIT: actor=%s action=%s resource=%s detail=%s ip=%s",
-                actor,
+            # Redacted fallback: never emit detail, IP, tokens, or other payload.
+            logger.warning(
+                "Audit DB write failed: action=%s error=%s",
                 action,
-                resource,
-                detail,
-                ip_address,
+                type(exc).__name__,
             )
 
     spawn_tracked(_write_entry())
