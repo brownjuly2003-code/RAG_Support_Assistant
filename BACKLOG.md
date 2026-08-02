@@ -1,28 +1,38 @@
 # Backlog
 
-## Active source (2026-08-02) — audit plan reopened
+## Active source (2026-08-02) — audit plan reopened; P0 local remediation @ `2767b9d`
 
 **Sole active backlog:** [`plan_sol_23_07_26`](plan_sol_23_07_26)
-(revalidation summary in [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md)).
+(status matrix in [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md)).
 
-The 2026-07-27 «project closure / empty queue» narrative is **revoked**.
-P0/P1 audit contracts have not all met DoD at HEAD `26d24e6`. Historical
+The 2026-07-27 «project closure / empty queue» narrative remains **revoked**.
+P0 **implementation** is locally remediated at HEAD `2767b9d`, but full plan
+DoD / production release / project closure are **not** complete. Historical
 autopilot/safe tasks below remain evidence only — not the active queue.
 
-### Next atomic slice
+### Next atomic slice (local code)
 
-**Plan step 1 (test-first):** add minimal **failing** contract tests for P0
-invariants only — no production-code fixes until each test is red for the
-expected reason:
+**Plan step 1 remaining item only (test-first):**
 
-1. Cross-tenant `/api/ask` Session/Message ownership (TEN-01)
-2. Invalid UUID must not trip global DB cooldown (TEN-01 related)
-3. `log_audit` requires/records `tenant_id` (TEN-02)
-4. Helm missing `/app/data` mount + unresolved backup/report PVC claims (OPS-01)
-5. Repeated client request ID / trace PK collision surface (OBS-01, listed in step 1)
+1. Repeated client request ID / trace PK collision surface (**OBS-01**)
 
-Do not skip to step 2+ implementation. Live GraceKelly/Mistral benchmarks remain
-explicit opt-in only and are **not** this slice.
+Do **not** implement a production fix until that contract test is red for the
+expected reason. Tenant/audit/Helm red contracts already existed and were
+remediated (`3c1e7b7`, `28580aa`, `ed8520a`, `2767b9d`).
+
+### Live / external P0 gates (not local-complete)
+
+Track separately from the next code slice — do **not** list as done work:
+
+- **TEN-01/02:** real PostgreSQL migration upgrade/downgrade; live two-tenant
+  restart drill
+- **OPS-01:** Docker image build + pg/age tool smoke; live PostgreSQL; kind/live
+  cluster install; app pod recreation; clean-namespace restore to a
+  **disposable** DB (never production DSN for `pg_restore --clean`); known-query
+  smoke; measured RPO/RTO
+
+Steps 4–10 remain open. Live GraceKelly/Mistral benchmarks remain explicit
+opt-in only and are **not** this slice.
 
 ## Project Closure note (2026-07-27) — historical
 

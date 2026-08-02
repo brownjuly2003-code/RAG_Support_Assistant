@@ -53,6 +53,37 @@ git and back it up separately from database backups.
 
 ## Deployment and Migrations
 
+### Helm persistence (production chart)
+
+The chart under `deploy/helm/` provisions durable stores for the authoritative
+`/app/data` tree (uploads, Chroma, SQLite traces), backup snapshots, and ops
+reports.
+
+| Store | Default managed claim | Default size | Notes |
+|---|---|---:|---|
+| `persistence.data` | `<release>-data` | 10Gi | Mounted at `/app/data` on the app Deployment when enabled |
+| `persistence.backups` | `<release>-backups` | 20Gi | Backup CronJobs |
+| `persistence.reports` | `<release>-reports` | 5Gi | Report / integrity / restore-verify jobs |
+
+- Leave `existingClaim` empty to create chart-managed PVCs, or set
+  `persistence.<store>.existingClaim` to bind a pre-provisioned claim
+  (optional `storageClass`, `accessModes`, `size` per store).
+- Defaults use `ReadWriteOnce`. If the app pod and a backup Job schedule on
+  different nodes, a single RWO volume may not attach to both; choose a
+  multi-attach storage class / `ReadWriteMany` only when the backend supports it.
+- Production (`env.RAG_ENV=production`) **fails closed** when
+  `persistence.data.enabled=false`. Non-production may disable data persistence
+  for ephemeral local renders.
+- Storage-dependent CronJobs are conditional; backup-snapshot mounts `/app/data`
+  read-only and maps Secret `DATABASE_URL` → runtime `POSTGRES_URL`.
+
+**Locally verified:** chart render contracts, helm lint, production fail-closed.
+**Still open:** image build/tool smoke, kind/live install, pod recreation,
+disposable restore, known-query, measured RPO/RTO.
+
+Runbooks: [operations/helm-lint.md](operations/helm-lint.md),
+[operations/backup-restore.md](operations/backup-restore.md).
+
 ### Deployment topology
 
 **Run exactly one worker and one replica.** Session history, pending

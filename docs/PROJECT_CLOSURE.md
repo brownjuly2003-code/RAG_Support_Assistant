@@ -2,18 +2,26 @@
 
 Дата фиксации scope: 2026-07-27.
 
-> ## SUPERSEDED / REOPENED — 2026-08-02
+> ## SUPERSEDED / REOPENED — 2026-08-02 (status @ `2767b9d`)
 >
-> This closure note is **historical**. The 2026-07-23 audit revalidation at
-> HEAD `26d24e6` reopened remediation: P0/P1 DoD items from
-> [`audit_gpt_23_07_26.md`](../audit_gpt_23_07_26.md) and
-> [`plan_sol_23_07_26`](../plan_sol_23_07_26) are **not** all complete.
-> «Closure candidate / backlog empty» is no longer the active status.
+> This closure note is **historical**. Remediation remains **reopened**: the
+> project is **not** closed. P0 release-blocker **implementation** is locally
+> remediated and mechanically verified at HEAD `2767b9d`, but full audit-plan
+> DoD, OPS-01 operational restore DoD, and production release are still open.
 >
-> Owner decision recorded with the revalidation: **no** Hugging Face Space
-> publication target; users run the service locally. Active work tracks the
-> audit plan (next slice: plan step 1 contract tests). Do not delete this file;
-> treat it as a dated scope snapshot only.
+> **Steps 1–3 partial status:**
+> - Step 1 **in progress** — remaining test-first slice: repeated request-ID /
+>   trace PK collision (OBS-01).
+> - Step 2 **local implementation verified; live PostgreSQL DoD open**.
+> - Step 3 **chart/backup runtime locally verified; operational restore DoD
+>   open**.
+> - Steps 4–10 remain open.
+>
+> Owner decision unchanged: **no** Hugging Face Space publication target; HF is
+> not a required external-user runtime. Users run the service locally (own
+> `MISTRAL_API_KEY` + remote embeddings + empty `RAG_RERANKER_MODEL`). Active
+> work tracks [`plan_sol_23_07_26`](../plan_sol_23_07_26). Do not delete this
+> file; treat it as a dated scope snapshot only.
 
 ## Закрываемый scope
 

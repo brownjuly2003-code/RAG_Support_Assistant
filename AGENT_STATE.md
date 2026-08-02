@@ -1,29 +1,44 @@
 # Agent State
 
-## 2026-08-02 Update-12 (audit revalidation + no-HF local-user path) ✅ START HERE
+## 2026-08-02 Update-13 (P0 local remediation documented @ `2767b9d`) ✅ START HERE
 
-> **Documentation-only truth pass.** No source/runtime/test/config changes.
+> **Documentation-only truth pass** after verified P0 code already on HEAD.
+> No source/runtime/test/config/Helm changes in this docs refresh.
 >
-> **Audit plan ACTIVE again.** Revalidated `audit_gpt_23_07_26.md` (snapshot
-> 2026-07-23 @ `383cfe9`) against HEAD `26d24e6`. P0 still open with code
-> evidence: TEN-01 (`api/app.py::_get_or_create_session` ID-only Session +
-> Message), TEN-02 (`db/audit.py::log_audit` no required `tenant_id`), OPS-01
-> (Helm app no `/app/data` mount; CronJob PVC names without chart PVC).
-> Closure-candidate / empty-backlog narrative from Update-11 /
-> `docs/PROJECT_CLOSURE.md` is **superseded/reopened**.
+> **HEAD:** `2767b9d`. Relevant commits:
+> - `edb729c` — reopen audit remediation + no-HF local-user path
+> - `3c1e7b7` / `28580aa` — TEN-01/TEN-02 tenant + schema ownership
+> - `ed8520a` / `2767b9d` — OPS-01 Helm persistence + safe Postgres backup
 >
-> **HF decision (owner):** no Hugging Face Space publication target; HF is not
-> a required user-runtime dependency for the documented external path. Users
-> run locally with their own `MISTRAL_API_KEY` + remote embeddings + empty
-> `RAG_RERANKER_MODEL`. Owner defaults (`local-first`, GraceKelly profiles)
-> unchanged.
+> **Exact current truth:**
+> - P0 release-blocker **implementation is locally remediated and mechanically
+>   verified**; production release remains gated by explicit live/external checks.
+> - Plan step 1 **in progress** (not complete): remaining test-first slice =
+>   repeated client request-ID / trace PK collision (**OBS-01**).
+> - Plan step 2 **local implementation verified; live PostgreSQL DoD open**.
+> - Plan step 3 **chart/backup runtime locally verified; operational restore
+>   DoD open**.
+> - Steps 4–10 remain open. Audit plan / OPS-01 operational DoD / project
+>   closure are **not** complete.
+> - Owner policy unchanged: **no HF Space/public target**; external users run
+>   locally with own `MISTRAL_API_KEY` + remote embeddings + empty
+>   `RAG_RERANKER_MODEL`.
 >
 > **Protected untracked artifacts:** preserve byte-for-byte (portfolio/kitchen
-> + audit/plan files). Do not stage/delete/rename them in scoped commits unless
-> the owner explicitly includes them.
+> + presentation/explainer + architecture diagram, etc.). Do not
+> stage/delete/rename them in scoped commits unless the owner explicitly
+> includes them. Original audit body in `audit_gpt_23_07_26.md` is a dated
+> snapshot — update only the top remediation/status layer.
 >
-> **Next task (code, separate session):** plan step 1 only — failing P0
-> contract tests (test-first). Do not implement production fixes until red.
+> **Next atomic implementation slice (plan order):** OBS-01 only — write the
+> failing repeated request-ID / trace collision contract test first. No
+> production fix until red is observed.
+
+## 2026-08-02 Update-12 (audit revalidation + no-HF local-user path) — SUPERSEDED by Update-13
+
+> **SUPERSEDED.** Historical revalidation at HEAD `26d24e6` before P0 local
+> remediation commits. P0 were still open at that SHA. HF no-Space policy and
+> reopened audit plan remain valid; status truth now lives in Update-13.
 
 ## 2026-07-27 Update-11 (project closure candidate) — SUPERSEDED by Update-12
 

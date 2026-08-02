@@ -20,8 +20,33 @@
 - `scripts/reindex.py --all` rebuild-ит Chroma из `data/uploads`, а не из Postgres. Потеря и `data/uploads`, и Chroma одновременно означает ручное повторное наполнение знаний.
 - `scripts/rotate_encryption_key.py` существует, но это заглушка: он проверяет env wiring и не переписывает ciphertext. Для реальной ротации используйте SQL-процедуру из раздела `2.3`.
 - Операционные трейсы и feedback сейчас живут в `data/tracing/traces.db`; их нужно бэкапить отдельно от Postgres.
-- Helm chart в `deploy/helm/` выносит `DATABASE_URL`, `DB_ENCRYPTION_KEY` и остальные runtime credentials в Kubernetes Secret (`secrets.existingSecret` или chart-managed `<release>-secrets`), но всё ещё не создаёт `PersistentVolumeClaim` для `/app/data`. В production PVC/object storage нужно добавить до первого релиза, иначе uploads / Chroma / SQLite traces будут эфемерными.
+- Helm chart (`deploy/helm/`) **does** create/attach durable claims for production data when `persistence.*.enabled` (defaults on). See **Helm persistence & backup jobs** below. Local chart/runtime contracts are verified; live image/cluster/restore/RPO gates remain open.
 - Ollama-модели не резервируем: они derivable и повторно подтягиваются стандартным деплоем.
+
+### Helm persistence & backup jobs (chart @ HEAD)
+
+Chart-managed defaults (when `existingClaim` is empty):
+
+| Store | Default claim name | Default size | Mount |
+|---|---|---:|---|
+| data | `<release>-data` | 10Gi | app: `/app/data` R/W; backup-snapshot: `/app/data` **RO** |
+| backups | `<release>-backups` | 20Gi | backup jobs: `/backups` |
+| reports | `<release>-reports` | 5Gi | report/integrity/restore-verify jobs |
+
+- Override any store with `persistence.<store>.existingClaim`, plus optional `storageClass`, `accessModes`, `size`.
+- Production (`env.RAG_ENV=production`) **fails closed** if `persistence.data.enabled=false`.
+- App readiness (when data persistence enabled) checks that `/app/data` is a mounted R/W volume **and** HTTP `/api/health/ready`.
+- Storage-dependent CronJobs are **conditional** on the required persistence flags (helpers resolve managed vs existing claim names).
+- Backup snapshot maps Secret key `DATABASE_URL` → runtime env `POSTGRES_URL` (never on argv). `scripts/backup_snapshot.py` resolves DSN as arg > `POSTGRES_URL` > `DATABASE_URL`, normalizes SQLAlchemy Postgres schemes, uses child `PGPASSWORD`, and removes partial dumps.
+- Image definition installs `postgresql-client` and `age`, retains non-root `USER app`.
+- Default access mode is `ReadWriteOnce`. Concurrent app + backup pods on different nodes may not both attach the same RWO volume; use a multi-attach class/`ReadWriteMany` only when the storage backend actually supports it.
+- Chart-managed PVCs in `templates/pvc.yaml` have **no** `helm.sh/resource-policy: keep` annotation. On `helm uninstall`, Helm deletes those PVC objects with the release; do **not** invent retention guarantees. Prefer `existingClaim` (or cluster-level PV reclaim / snapshots) when data must outlive the release.
+
+**Locally verified (not production DoD):** Helm lint/template invariants, default/existingClaim/dev-disabled renders, production data-disabled fail-closed, backup runtime unit/render contracts.
+
+**Still open external gates:** Docker image build + pg/age tool smoke; live PostgreSQL; kind/live cluster install; app pod recreation; clean-namespace restore to a **disposable** database; known-query smoke; measured RPO/RTO.
+
+**Critical restore warning:** `scripts/restore_verify.py` / restore paths use `pg_restore --clean`. **Never** point restore-verify or clean restore at a production DSN — only disposable/staging databases.
 
 ### Базовые переменные
 
@@ -161,7 +186,9 @@ aws s3 cp "$BACKUP_ROOT/chromadb/" "$BACKUP_BUCKET/chromadb/" --recursive --excl
 
 #### Kubernetes
 
-Для production в k8s этот раздел работает только если `/app/data` вынесен на PVC или object storage. В текущем chart это нужно добавить отдельно.
+Production chart mounts the authoritative tree at `/app/data` when
+`persistence.data.enabled` (default). Use the app Deployment or the
+chart `backup-snapshot` CronJob (data mount is read-only there).
 
 Полный snapshot каталога из работающего pod:
 
@@ -239,7 +266,9 @@ PY
 
 - Никогда не сохранять ключ в тот же `BACKUP_BUCKET`.
 - Для Compose использовать runtime injection или Docker secret. `.env` допустим только для dev/single-host.
-- Для Kubernetes использовать `Secret` или Vault Agent. Текущий chart нужно доработать: он умеет только `ConfigMap`, этого недостаточно.
+- Для Kubernetes использовать `Secret` или Vault Agent. Chart already renders
+  credentials as a Kubernetes Secret (`secrets.existingSecret` or
+  chart-managed `<release>-secrets`); keep `DB_ENCRYPTION_KEY` out of ConfigMap.
 
 ### 1.4 Uploaded documents и SQLite traces
 
@@ -271,7 +300,7 @@ aws s3 cp \
 
 #### Kubernetes
 
-Только если `/app/data` вынесен на PVC:
+With chart data persistence enabled (`/app/data` mounted):
 
 ```bash
 kubectl -n "$NAMESPACE" exec "deployment/${RELEASE}-app" -- \
@@ -449,7 +478,11 @@ kubectl -n "$NAMESPACE" run "pgrestore-${timestamp}" \
 
 3. Восстановить PVC / object storage для `uploads`, `tracing`, `vectordb/chroma`.
 
-Текущий chart не создаёт PVC, поэтому универсальной `kubectl`-команды здесь нет. Используйте storage-layer snapshot restore для конкретного класса хранилища и только потом возвращайте replicas приложения.
+Chart-managed claims are `<release>-data` / `-backups` / `-reports` unless
+`existingClaim` overrides. Restore from volume snapshots or rehydrate the
+data claim contents, then return app replicas. Prefer a **disposable**
+Postgres target: restore uses `pg_restore --clean` and must never hit
+production.
 
 4. Поднять приложение:
 
@@ -482,7 +515,7 @@ docker compose up -d app
 
 #### Kubernetes
 
-Только при наличии PVC с `/app/data`:
+With data persistence enabled (`/app/data` mounted on the app Deployment):
 
 ```bash
 kubectl -n "$NAMESPACE" exec "deployment/${RELEASE}-app" -- python scripts/reindex.py --all
@@ -760,7 +793,7 @@ docker-compose -f docker-compose.test.yml down -v
 
 - [ ] `DB_ENCRYPTION_KEY` хранится в Vault / Secret, не в Git и не в ConfigMap.
 - [ ] Backup bucket настроен с lifecycle: `7d hourly + 4w daily + 12m monthly`.
-- [ ] Для k8s добавлены PVC или object storage для `/app/data`.
+- [ ] Для k8s data/backups/reports claims provisioned (managed defaults or `existingClaim`) and production data persistence left enabled.
 - [ ] Backup Postgres выполняется ежечасно.
 - [ ] Backup `data/uploads`, `data/vectordb/chroma`, `data/tracing` выполняется ежедневно.
 - [ ] Restore из последнего production backup проверен в staging.
@@ -774,7 +807,7 @@ docker-compose -f docker-compose.test.yml down -v
 - Per-tenant isolation в Chroma существует на уровне collection name (`rag_docs_<tenant>`), но storage layout общий. Поэтому point restore одного tenant должен идти через export/import коллекции, а не через raw copy одного файла.
 - `scripts/reindex.py --all` использует `data/uploads` как вход. Postgres не является источником для rebuild embeddings в текущей версии.
 - `DB_ENCRYPTION_KEY` нельзя хранить рядом с данными. Бэкап ключа и бэкап Postgres должны быть разведены по разным системам контроля доступа.
-- Текущий Helm chart неполон для production backup/restore: runtime secrets вынесены в Secret, но PVC-манифестов для `/app/data` всё ещё нет.
+- Helm chart now provisions data/backups/reports claims and conditional backup jobs; **operational** restore DoD (live image, cluster install, disposable restore, known-query, measured RPO/RTO) is still open. Never run `pg_restore --clean` against production.
 - Трейсы и feedback всё ещё пишутся в `data/tracing/traces.db`; потеря этого файла не ломает ответы, но ломает расследование инцидентов и `/api/metrics`.
 - `scripts/rotate_encryption_key.py` сейчас только подтверждает, что env variables переданы; фактическую ротацию выполняем SQL-процедурой.
 - Ollama-модели не включаем в backup scope: при DR их нужно заново подтянуть стандартным деплоем.

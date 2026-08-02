@@ -4,34 +4,35 @@
 **Принцип порядка:** сначала release-blockers и проверяемые контракты, затем RAG-качество, после этого декомпозиция.
 **Оценка (historical, 2026-07-23):** 6–9 инженерных недель для одного сильного разработчика; шаги 3–4 и 7–8 частично параллелятся только после закрытия шага 2.
 
-> ## 2026-08-02 execution status (revalidation)
+> ## 2026-08-02 execution status (P0 local remediation)
 >
 > Plan is **ACTIVE**. Original step estimates below are **historical** and are
-> not rewritten. Closure candidate / empty-backlog narrative is revoked; this
-> plan is the sole active remediation source (see `BACKLOG.md`).
+> not rewritten. Closure candidate / empty-backlog narrative remains revoked;
+> this plan is the sole active remediation source (see `BACKLOG.md`).
 >
-> Revalidation HEAD: `26d24e6`. Audit snapshot: `383cfe9` (2026-07-23).
-> Post-audit commits improved local startup, provider selection, observability,
-> isolated Chroma, and docs — they do **not** mark plan steps complete.
+> Implementation HEAD: `2767b9d`. Audit snapshot body: `383cfe9` (2026-07-23).
+> P0 local implementation is verified; production release and full step DoD
+> remain gated by explicit live/external checks.
 >
-> | Step | Historical estimate | Status @ `26d24e6` | Notes |
+> | Step | Historical estimate | Status @ `2767b9d` | Notes |
 > |---|---|---|---|
-> | 1 Contract tests + release gate | 1–2 days | **open** — **NEXT SLICE** | No dedicated red tests found for cross-tenant `/api/ask`, audit `tenant_id` required, Helm PVC/claim invariants, invalid UUID cooldown, repeated request-ID collision |
-> | 2 Tenant Session/Message/Audit | 2–4 days | **open** | `api/app.py::_get_or_create_session` still ID-only; `db/audit.py::log_audit` has no required `tenant_id` |
-> | 3 Production storage + backup | 2–4 days | **open** | App Deployment still without `/app/data` mount; no chart PVC; CronJob claimNames unresolved |
-> | 4 Durable ingestion + atomic index | 4–6 days | **open** | Blocked on step 3 for production topology; Celery-without-worker and non-atomic rebuild remain |
-> | 5 Timeout/capacity/trace identity | 4–6 days | **open** (obs partial only) | Timeout *logging* improved post-audit; cancellation/capacity DoD not met |
+> | 1 Contract tests + release gate | 1–2 days | **in progress** — **NEXT SLICE = OBS-01 only** | Tenant/audit/Helm red contracts exist and were remediated; remaining test-first item is repeated client request-ID / trace PK collision |
+> | 2 Tenant Session/Message/Audit | 2–4 days | **local implementation verified; live PostgreSQL DoD open** | Commits `3c1e7b7`, `28580aa`; migration `018`; local tenant/audit/schema tests green. Live Postgres upgrade/downgrade + two-tenant restart drill not run |
+> | 3 Production storage + backup | 2–4 days | **chart/backup runtime locally verified; operational restore DoD open** | Commits `ed8520a`, `2767b9d`; Helm + backup runtime contracts green. Image/cluster/restore/RPO/RTO gates still open |
+> | 4 Durable ingestion + atomic index | 4–6 days | **open** | Still requires operational durable topology from step 3; Celery-without-worker and non-atomic rebuild remain |
+> | 5 Timeout/capacity/trace identity | 4–6 days | **open** (obs partial only) | Timeout *logging* improved post-audit; cancellation/capacity DoD not met; OBS-01 is the next test-first slice |
 > | 6 Sync/SSE unify + durable escalation | 4–6 days | **open** | Dual streaming path + human-without-ticket remain |
 > | 7 Fail-closed RAG routing | 5–8 days | **open** | Depends on step 6 |
 > | 8 Real regression gate | 5–10 days | **open** | Mock expected-copy executor still present |
 > | 9 Widget + edge/security | 3–5 days | **open** | Depends on steps 2 and 6 |
 > | 10 Orchestration decomp + rollout | 4–6 days | **open** | Depends on steps 2–9 |
 >
-> **Gates A–D:** all incomplete (Gate A requires steps 1–3).
+> **Gates A–D:** all incomplete (Gate A still requires steps 1–3 fully closed,
+> including remaining OBS-01 red contract and live/external DoD for 2–3).
 >
-> **Exact next implementation slice:** step **1** only — write minimal
-> failing contract tests (test-first). Do not implement production fixes until
-> each new test is red for the named invariant on current HEAD.
+> **Exact next implementation slice:** remaining step **1** item only —
+> write the minimal failing contract for repeated request-ID / trace collision
+> (OBS-01). No production fix until that test is red on current HEAD.
 
 ## 1. Зафиксировать failing contract tests и release gate
 
@@ -40,13 +41,14 @@
 **Reasoning:** `xhigh`
 **Зависимости:** нет
 **Оценка:** 1–2 дня
-**Статус 2026-08-02:** **open — NEXT**
+**Статус 2026-08-02 @ `2767b9d`:** **in progress — NEXT = OBS-01 only**
 
-- Добавить минимальные red tests для: cross-tenant `/api/ask`, invalid UUID cooldown, audit tenant, missing Helm storage/PVC, repeated request ID.
-- Не менять production-код, пока каждый тест не воспроизводит конкретный дефект.
-- Добавить checklist release-blocker’ов в CI/operations docs.
+- ~~Добавить минимальные red tests для: cross-tenant `/api/ask`, invalid UUID cooldown, audit tenant, missing Helm storage/PVC~~ — **done** (tenant/audit/Helm red contracts existed; remediation landed in steps 2–3).
+- **Remaining:** minimal red test for repeated client request ID / trace PK collision (OBS-01).
+- Не менять production-код для OBS-01, пока тест не воспроизводит конкретный дефект.
+- Добавить checklist release-blocker’ов в CI/operations docs (still open with Gate A).
 
-**DoD:** новые тесты падают на текущем HEAD по ожидаемой причине; в каждом тесте один нарушенный инвариант, без широких mocks.
+**DoD:** каждый step-1 инвариант имеет red-then-green contract; remaining OBS-01 must first fail on current HEAD for the expected reason, without broad mocks.
 
 ## 2. Закрыть tenant-изоляцию Session/Message/Audit
 
@@ -55,7 +57,7 @@
 **Reasoning:** `xhigh`
 **Зависимости:** шаг 1
 **Оценка:** 2–4 дня
-**Статус 2026-08-02:** **open**
+**Статус 2026-08-02 @ `2767b9d`:** **local implementation verified; live PostgreSQL DoD open**
 
 - Валидировать `session_id` на API boundary; client errors не должны включать DB cooldown.
 - Scope Session lookup и Message read/write по tenant; удалить перепривязку `default`.
@@ -63,9 +65,21 @@
 - Ввести DB-level constraint/RLS или composite ownership guard.
 - Добавить миграцию/backfill для существующих данных с отдельным review неоднозначных `default`-строк.
 
+**Completed locally (`3c1e7b7`, `28580aa`):**
+
+- `/api/ask` validates UUIDs; Session/history/write ownership scoped by tenant; fails closed on caller UUID during DB outage; does not rebind `default`.
+- `log_audit` requires/persists `tenant_id`; all call sites updated; fallback logs redacted.
+- `Message.tenant_id` required; composite FK `(session_id, tenant_id) → sessions(id, tenant_id)` via migration `018`.
+- Local verification: test-first red (7 + 7 failures); independent 41 tenant/audit + 49 adjacent; schema/migration set 39 passed; Ruff/mypy clean; `alembic heads` = `018 (head)`.
+
+**External / live gates still open (not completed):**
+
+- Real PostgreSQL migration upgrade/downgrade on a live DB.
+- Live two-tenant restart drill (cold/warm cache + ownership after restart).
+
 **Проверка:** два tenant, cold/warm cache, restart simulation, read/write/purge audit, malformed UUID flood.
 
-**DoD:** ни один tenant не читает, не изменяет и не видит Session/Message/Audit другого tenant; invalid UUID не влияет на запросы других пользователей.
+**DoD:** ни один tenant не читает, не изменяет и не видит Session/Message/Audit другого tenant; invalid UUID не влияет на запросы других пользователей. Local contracts green; full DoD still needs the live gates above.
 
 ## 3. Сделать production storage и backup действительно durable
 
@@ -74,7 +88,7 @@
 **Reasoning:** `high`
 **Зависимости:** шаг 1
 **Оценка:** 2–4 дня
-**Статус 2026-08-02:** **open**
+**Статус 2026-08-02 @ `2767b9d`:** **chart/backup runtime locally verified; operational restore DoD open**
 
 - Добавить `persistence` values и mount `/app/data` либо перевести original uploads в object storage.
 - Создавать PVC для data/backups/reports или требовать явные `existingClaim`.
@@ -82,9 +96,29 @@
 - Добавить pod/container securityContext, checksum rollout и storage readiness probe.
 - Автоматизировать backup → clean namespace → restore → known-query smoke.
 
+**Completed locally (`ed8520a`, `2767b9d`):**
+
+- Chart defaults create/attach data (10Gi), backups (20Gi), reports (5Gi); each supports `existingClaim`, storage class, access modes, size.
+- Production app mounts `/app/data`; production render fails if data persistence is disabled; readiness checks mounted R/W storage + HTTP readiness; security contexts + checksum rollout rendered.
+- Storage-dependent jobs conditional via effective claim helpers; backup-snapshot mounts live `/app/data` read-only.
+- Backup snapshot maps Secret `DATABASE_URL` → runtime `POSTGRES_URL`; `backup_snapshot.py` falls back arg > `POSTGRES_URL` > `DATABASE_URL`, normalizes SQLAlchemy Postgres schemes, keeps passwords out of argv via child `PGPASSWORD`, removes partial dumps.
+- Image installs `postgresql-client` and `age` while retaining non-root `USER app`.
+- Local verification: Helm red 23 fail / 7 pass → 30 pass; backup runtime red 11 fail / 10 pass → aggregate 52 pass / 1 skip; Ruff/mypy clean; helm lint + default/existing/dev-disabled renders pass; production data-disabled fails closed.
+- Local `kubectl apply --dry-run=client --validate=false` could not complete API discovery without a server at localhost:8080 — **not** a manifest failure.
+
+**External / live gates still open (not completed):**
+
+- Docker image build + pg/age tool smoke.
+- Live PostgreSQL against the backup path.
+- kind / live cluster install.
+- App pod recreation (data durability).
+- Clean-namespace restore to a **disposable** database (never production DSN: restore uses `pg_restore --clean`).
+- Known-query smoke after restore.
+- Measured RPO/RTO vs targets.
+
 **Проверка:** `helm lint`, `helm template`, manifest invariant tests, kind install, pod recreation и restore drill.
 
-**DoD:** pod replacement не теряет uploads/Chroma/traces; все claim references разрешены; подтверждены RPO 24h и RTO 2h либо обновлены на измеренные значения.
+**DoD:** pod replacement не теряет uploads/Chroma/traces; все claim references разрешены; подтверждены RPO 24h и RTO 2h либо обновлены на измеренные значения. Local chart/runtime contracts green; operational DoD still needs the live gates above.
 
 ## 4. Перевести ingestion на durable job и атомарный index publish
 

@@ -5,35 +5,40 @@
 **Проверенный commit:** `383cfe90e8a5b75e831e8ad5b5fea792b15f7c9f` (`master`, синхронизирован с `origin/master`)
 **Тип аудита:** архитектура, RAG-качество, multi-tenancy, безопасность, надёжность, ingestion, эксплуатация, CI/CD и тестовая стратегия.
 
-> ## 2026-08-02 revalidation (active)
+> ## 2026-08-02 revalidation + P0 local remediation (active)
 >
-> **Статус аудита: ACTIVE again.** Snapshot ниже (2026-07-23 @ `383cfe9`)
-> сохранён как исторический. Revalidation на HEAD `26d24e6` (ветка `master`,
-> 9 commits ahead of `origin/master` @ `383cfe9`) **не** закрывает P0/P1
-> DoD из `plan_sol_23_07_26`. Нарратив «closure candidate / backlog empty»
-> из `docs/PROJECT_CLOSURE.md` (2026-07-27) **superseded** этой сверкой.
+> **Статус аудита: ACTIVE.** Detailed findings below remain the **2026-07-23
+> audit snapshot** @ `383cfe9` — historical defect evidence, not rewritten as
+> if the defects never existed. This top layer records later revalidation and
+> local remediation against HEAD `2767b9d`.
 >
 > **Решение владельца (HF):** Hugging Face **не** является publication target
-> и **не** user-runtime dependency для рекомендуемого external-user path.
-> Hosted HF Space не существует и не планируется. Пользователи запускают
-> сервис локально. Исторические/optional HF-ссылки в репозитории (локальные
-> embedding/reranker defaults) остаются, но required no-HF user path их не
-> требует.
+> и **не** required user-runtime dependency для рекомендуемого external-user
+> path. Hosted HF Space не существует и не планируется. External users run
+> locally with their own `MISTRAL_API_KEY`, remote Mistral embeddings, and
+> empty `RAG_RERANKER_MODEL`. Owner local-first / GraceKelly defaults
+> unchanged. README/QUICKSTART already document that recipe.
 >
-> **Post-audit commits `383cfe9..26d24e6` (context only, not DoD proof):**
-> local-first onboarding, dotenv-before-app, timeout/evaluate observability,
-> rejected vector-store guard, isolated `VECTORDB_CHROMA_DIR`, logging restore
-> after Alembic, GraceKelly browser model align, Ollama default profile,
-> closure-scope docs. Эти коммиты **не** заменяют behavioral verification
-> шагов плана.
+> ### Remediation evidence note (local, not full production DoD)
 >
-> ### Status matrix @ `26d24e6`
+> | Slice | Commits | Local verification | Still open (external / live) |
+> |---|---|---|---|
+> | Policy/docs reopen + no-HF path | `edb729c` | Docs recipe preserved | N/A (policy) |
+> | TEN-01 / TEN-02 | `3c1e7b7`, `28580aa` | Test-first red (7+7); 41 tenant/audit + 49 adjacent; schema/migration 39; Ruff/mypy clean; `alembic heads` = `018` | Real PostgreSQL upgrade/downgrade; live two-tenant restart drill |
+> | OPS-01 chart + backup runtime | `ed8520a`, `2767b9d` | Helm red→green (23 fail / 7 pass → 30 pass); backup runtime red→green (11 fail / 10 pass → aggregate 52 pass / 1 skip); Ruff/mypy; helm lint + default/existing/dev-disabled renders; production data-disabled fails closed | Docker image build/tool smoke; live Postgres; kind/live install; app pod recreation; clean-namespace restore to **disposable** DB; known-query smoke; measured RPO/RTO |
+>
+> **P0 release-blocker implementation is locally remediated and mechanically
+> verified; production release remains gated by the live/external checks above.**
+> Do **not** treat the whole audit plan, OPS-01 operational DoD, or project
+> closure as complete.
+>
+> ### Status matrix @ `2767b9d`
 >
 > | ID | Priority | Status | Evidence @ HEAD |
 > |---|---|---|---|
-> | TEN-01 | P0 | **open** | `api/app.py::_get_or_create_session`: `select(DBSession).where(DBSession.id == session_uuid)` without tenant; `Message.session_id` without ownership join; still rebinds `default` tenant |
-> | OPS-01 | P0 | **open** | `deploy/helm/templates/deployment.yaml` has no `volumeMounts`/`/app/data`; chart has **no** `PersistentVolumeClaim` templates; CronJobs still `claimName: {{ .Release.Name }}-backups` / `-reports` |
-> | TEN-02 | P0 | **open** | `db/audit.py::log_audit` signature has no `tenant_id`; `AuditLog(...)` omits tenant (server_default `default`) |
+> | TEN-01 | P0 | **local remediated; live DoD open** | `/api/ask` validates UUIDs; Session/history/write scoped by tenant; fails closed on caller UUID during DB outage; does not rebind `default`. `Message.tenant_id` required; composite `(session_id, tenant_id) → sessions(id, tenant_id)` via migration `018`. Live two-tenant restart + real Postgres migration drill not run on this host |
+> | OPS-01 | P0 | **local chart/runtime verified; operational restore DoD open** | Chart defaults create/attach data (10Gi), backups (20Gi), reports (5Gi); `existingClaim`/class/accessModes/size supported; production mounts `/app/data` and fails if data persistence disabled; readiness checks mounted R/W + HTTP; storage-dependent jobs conditional; backup-snapshot mounts `/app/data` RO; Secret `DATABASE_URL` → runtime `POSTGRES_URL`; image installs `postgresql-client` + `age`, non-root `USER app`. Live image/cluster/restore/RPO/RTO gates still open |
+> | TEN-02 | P0 | **local remediated; live DoD open** | `log_audit` requires/persists `tenant_id`; all call sites updated; fallback logs redacted. Live multi-tenant audit drill still open with TEN-01 |
 > | REL-01 | P1 | **open** | `asyncio.wait_for` + `to_thread` still cancel wait only; post-audit work added timeout *observability* (`ad50b0d`, `3ff0bc3`) but not cooperative cancellation / capacity hold |
 > | RAG-01 | P1 | **open** | Streaming path in `api/routers/conversation.py` remains a separate RAG; parity still dual-work |
 > | RAG-02 | P1 | **open** | Route still quality/relevance-centric; factuality / knowledge_gap not auto-route gates |
@@ -41,7 +46,7 @@
 > | ING-01 | P1 | **open** | Default upload still Celery-accepted without worker Deployment in compose/Helm |
 > | ING-02 | P1 | **open** | Rebuild still delete-then-build pattern in `vectordb` manager |
 > | TEN-03 | P1 | **open** | Lossy tenant sanitization still present |
-> | OBS-01 | P1 | **open** | Client request ID still usable as trace PK collision surface |
+> | OBS-01 | P1 | **open — next test-first slice** | Client request ID still usable as trace PK collision surface; remaining plan step 1 contract |
 > | EVAL-01 | P1 | **open** | Mock regression executor still can synthesize expected answers |
 > | WID-01 | P1 | **open** | Widget embed/auth/session contract unchanged |
 > | SEC-01 | P1 | **open** | OIDC linking still lacks hard `email_verified` gate |
@@ -51,13 +56,11 @@
 > | DEP-01 | P2 | **open** | Docs-site dependency posture not re-audited this pass |
 > | MAINT-01 | P2 | **open** | Large orchestration modules still dual contracts |
 >
-> **Next implementation slice (test-first, plan order):** **plan step 1** —
-> add minimal **failing** contract tests for P0 (cross-tenant `/api/ask`,
-> invalid UUID cooldown, audit tenant, Helm missing storage/PVC, repeated
-> request ID). Existing suite still mocks `_get_or_create_session` on most
-> ask paths and covers `/api/sessions*` isolation, **not** real ask DB
-> tenant ownership. Do **not** start production code until those tests are red
-> for the expected reasons.
+> **Next implementation slice (test-first, plan order):** remaining **plan
+> step 1** item only — minimal **failing** contract for repeated client
+> request-ID / trace primary-key collision (**OBS-01**). Tenant/audit/Helm
+> red contracts already exist and were remediated. Do **not** start a
+> production fix for OBS-01 until that test is red for the expected reason.
 >
 > Active plan: [`plan_sol_23_07_26`](plan_sol_23_07_26).
 
