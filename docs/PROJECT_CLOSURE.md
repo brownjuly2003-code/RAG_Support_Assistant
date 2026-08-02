@@ -2,13 +2,14 @@
 
 Дата фиксации scope: 2026-07-27.
 
-> ## SUPERSEDED / REOPENED — 2026-08-02 (status @ `5a9f857`)
+> ## SUPERSEDED / REOPENED — 2026-08-02 (status @ `b7faa19`)
 >
 > This closure note is **historical**. Remediation remains **reopened**: the
 > project is **not** closed. P0 release-blocker **implementation** is locally
 > remediated and mechanically verified; **OBS-01** is locally remediated at
-> HEAD `5a9f857`. Full audit-plan DoD, OPS-01 operational restore DoD, and
-> production release are still open.
+> `5a9f857`; plan step **4.1** durable job contract is locally verified at
+> HEAD `b7faa19` (ING-01 partially locally remediated). Full audit-plan DoD,
+> OPS-01 operational restore DoD, and production release are still open.
 >
 > **Steps 1–5 status:**
 > - Step 1 **locally complete** — all named contract-test slices demonstrated
@@ -17,10 +18,11 @@
 > - Step 2 **local implementation verified; live PostgreSQL DoD open**.
 > - Step 3 **chart/backup runtime locally verified; operational restore DoD
 >   open**.
-> - Step 4 **open** — next implementation slice: first test-first
->   durable-ingestion job contract (`job_id` + observable status/terminal
->   error). Atomic publish / retry / locks / worker topology / TEN-03 not
->   claimed complete.
+> - Step 4 **in progress** — slice 4.1 done at `b7faa19` (durable
+>   `IngestionJob` + migration `019`; upload/jobs/tasks identity; DB
+>   lifecycle; terminal errors). Next: 4.2 worker topology (Compose/Helm
+>   worker + heartbeat/readiness). Atomic publish / retry / queue-age/reaper /
+>   TEN-03 not claimed complete. ING-02 remains open.
 > - Step 5 **open / partially remediated** — trace identity done at
 >   `5a9f857`; timeout cancellation, bounded capacity, session
 >   concurrency/history ordering, sticky experiment propagation still open.

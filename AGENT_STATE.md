@@ -1,16 +1,17 @@
 # Agent State
 
-## 2026-08-02 Update-14 (OBS-01 local remediation documented @ `5a9f857`) ✅ START HERE
+## 2026-08-02 Update-15 (step 4.1 durable job contract @ `b7faa19`) ✅ START HERE
 
-> **Documentation-only truth pass** after verified OBS-01 code already on HEAD.
-> No source/runtime/test/config/Helm changes in this docs refresh.
+> **Documentation-only truth pass** after verified plan-step 4.1 code already on
+> HEAD. No source/runtime/test/config/Helm changes in this docs refresh.
 >
-> **HEAD:** `5a9f857` (`fix(tracing): separate correlation from trace identity`).
+> **HEAD:** `b7faa19` (`feat(ingestion): persist tenant-owned job state`).
 > Relevant commits:
 > - `edb729c` — reopen audit remediation + no-HF local-user path
 > - `3c1e7b7` / `28580aa` — TEN-01/TEN-02 tenant + schema ownership
 > - `ed8520a` / `2767b9d` — OPS-01 Helm persistence + safe Postgres backup
 > - `5a9f857` — OBS-01: internal `trace_id` UUID4 + nullable `correlation_id`
+> - `b7faa19` — step 4.1: durable tenant-owned ingestion job contract
 >
 > **Exact current truth:**
 > - P0 release-blocker **implementation is locally remediated and mechanically
@@ -18,27 +19,51 @@
 > - Plan step 1 **locally complete**: all named contract-test slices
 >   demonstrated red then green (tenant/audit/Helm + OBS-01). Does **not**
 >   close production release.
-> - Audit finding **OBS-01 locally remediated** at `5a9f857`:
->   `traces.trace_id` always fresh internal UUID4; external `X-Request-Id` →
->   nullable indexed `traces.correlation_id` (may repeat); append-only SQLite
->   migration (historic rows NULL); legacy `start_trace(trace_id=...)` is
->   correlation alias only; graph/`AskResponse.trace_id` internal; response
->   header remains external correlation. No idempotency/replay added.
-> - Evidence: initial contract 8 expected failures on `fbf3bcf` → green; QA
->   positional-only legacy callable TypeError → fixed; independent regression
->   44 passed / 1 deprecation warning; Ruff clean; mypy
->   `--follow-imports=skip` clean; `git diff --check` clean.
 > - Plan step 2 **local implementation verified; live PostgreSQL DoD open**.
 > - Plan step 3 **chart/backup runtime locally verified; operational restore
 >   DoD open**.
-> - Plan step 5 **open / partially remediated**: trace identity done; timeout
->   cancellation, bounded capacity, session concurrency/history ordering,
->   sticky experiment propagation still require work.
-> - Steps 4 and 6–10 remain open. Audit plan / OPS-01 operational DoD /
->   project closure are **not** complete.
+> - Plan step 4 **in progress** (not complete). Slice **4.1** landed at
+>   `b7faa19`:
+>   - ORM `IngestionJob` + migration `019` (`018` parent); status constraint
+>     queued/running/completed/failed; UUID public job id; tenant ownership;
+>     timestamps/result/error/secondary Celery id + indexes
+>   - `/api/upload` returns durable `job_id` and explicit real tenant on every
+>     accepted/completed/failed-processing path
+>   - canonical `/api/jobs/{job_id}` and compatibility `/api/tasks/{identifier}`
+>     read DB only; 404 for cross-tenant/unknown
+>   - default Celery enqueue passes file path + job id + tenant; worker verifies
+>     identity, propagates tenant to vector build, records DB lifecycle; real
+>     failures end in Celery FAILURE
+>   - synchronous paths reuse the same row and fail closed if an authoritative
+>     DB transition cannot be persisted
+>   - Celery progress backend is best-effort and cannot preempt DB lifecycle
+>   - durable/public/log error boundaries are phase-level and redact PII/secrets
+>   - no production test-mode/in-memory fallback and no new dependency
+> - Evidence for 4.1: initial contract failed at collection on missing
+>   `IngestionJob`, then green; review QA 12 expected failures → fixed; log QA
+>   6 expected failures → fixed; final independent focused 47 passed / 2
+>   deprecation warnings; adjacent independent chunks 22 + 19 passed before
+>   log-only correction; original 11-file quiet aggregate exceeded 3 minutes
+>   without failure and was not raw-retried — splitting showed no hang/failure;
+>   Ruff and mypy clean; Alembic `019 (head)`; `git diff --check` clean;
+>   protected user artifacts 9/9 unchanged.
+> - Audit finding **ING-01 partially locally remediated**: durable
+>   job/status/tenant/task identity and terminal error exist, but Compose/Helm
+>   still have no worker; no heartbeat/readiness, stuck-queued reaper/recovery,
+>   retry/idempotency, queue-age metric/alert, or live Redis/Postgres/Celery
+>   drill. Migration `019` still needs real PostgreSQL upgrade/downgrade
+>   verification.
+> - **ING-02** non-atomic delete-then-build remains **open**.
+> - **TEN-03** colliding physical tenant names remains **open**.
+> - Plan step 5 **open / partially remediated**: trace identity done at
+>   `5a9f857`; timeout cancellation, bounded capacity, session
+>   concurrency/history ordering, sticky experiment propagation still require
+>   work.
+> - Steps 6–10 remain open. Audit plan / OPS-01 operational DoD / project
+>   closure are **not** complete.
 > - Owner policy unchanged: **no HF Space/public target**; external users run
 >   locally with own `MISTRAL_API_KEY` + remote embeddings + empty
->   `RAG_RERANKER_MODEL`.
+>   `RAG_RERANKER_MODEL`. Do not duplicate or modify recipes.
 >
 > **Protected untracked artifacts:** nine protected untracked user artifacts
 > still match their recorded hashes (portfolio/kitchen + presentation/explainer
@@ -47,17 +72,24 @@
 > `audit_gpt_23_07_26.md` is a dated snapshot — update only the top
 > remediation/status layer.
 >
-> **Next atomic implementation slice (plan order):** step **4** first
-> test-first durable-ingestion slice — one tenant-aware job contract with a
-> real `job_id` and observable status/terminal error. Do not claim atomic
-> index publish, retry/idempotency, locks, worker topology, or TEN-03 already
-> designed or complete.
+> **Next atomic implementation slice (plan order):** step **4.2** worker
+> topology contract — add one ingestion worker to Docker Compose and Helm with
+> the same Secret/ConfigMap DB+Redis environment, durable `/app/data` mount,
+> constrained concurrency, security context, and verifiable heartbeat/readiness.
+> Do **not** claim queue-age/reaper, retry/idempotency, atomic publish, or
+> TEN-03 complete in that slice.
+
+## 2026-08-02 Update-14 (OBS-01 local remediation documented @ `5a9f857`) — SUPERSEDED by Update-15
+
+> **SUPERSEDED.** Historical status at HEAD `5a9f857` after OBS-01 local close
+> and before step 4.1 durable job contract. Step 4 was still wholly open as the
+> next first job-contract slice. Status truth now lives in Update-15.
 
 ## 2026-08-02 Update-13 (P0 local remediation documented @ `2767b9d`) — SUPERSEDED by Update-14
 
 > **SUPERSEDED.** Historical status at HEAD `2767b9d` after P0 local
 > remediation and before OBS-01 close. Step 1 was still in progress with
-> OBS-01 as next slice. Status truth now lives in Update-14.
+> OBS-01 as next slice. Status truth now lives in Update-15.
 
 ## 2026-08-02 Update-12 (audit revalidation + no-HF local-user path) — SUPERSEDED by Update-13
 

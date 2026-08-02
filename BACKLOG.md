@@ -1,27 +1,31 @@
 # Backlog
 
-## Active source (2026-08-02) — audit plan reopened; OBS-01 local @ `5a9f857`
+## Active source (2026-08-02) — audit plan reopened; step 4.1 @ `b7faa19`
 
 **Sole active backlog:** [`plan_sol_23_07_26`](plan_sol_23_07_26)
 (status matrix in [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md)).
 
 The 2026-07-27 «project closure / empty queue» narrative remains **revoked**.
 P0 **implementation** is locally remediated; **OBS-01** is locally remediated
-at HEAD `5a9f857`. Plan step 1 is **locally complete**. Full plan DoD /
-production release / project closure are **not** complete. Historical
-autopilot/safe tasks below remain evidence only — not the active queue.
+at `5a9f857`. Plan step 1 is **locally complete**. Plan step 4 is **in
+progress**: slice **4.1** durable job contract landed at HEAD `b7faa19`
+(ING-01 partially locally remediated). Full plan DoD / production release /
+project closure are **not** complete. Historical autopilot/safe tasks below
+remain evidence only — not the active queue.
 
 ### Next atomic slice (local code)
 
-**Plan step 4 first durable-job contract only (test-first):**
+**Plan step 4.2 worker topology contract only:**
 
-1. One tenant-aware durable ingestion job contract with a real `job_id` and
-   observable status/terminal error
+1. Add one ingestion worker to Docker Compose and Helm with the same
+   Secret/ConfigMap DB+Redis environment, durable `/app/data` mount,
+   constrained concurrency, security context, and verifiable
+   heartbeat/readiness
 
-Do **not** claim atomic index publish, retry/idempotency, locks, worker
-topology, or TEN-03 already designed or complete. OBS-01 closed locally at
-`5a9f857` (tenant/audit/Helm earlier: `3c1e7b7`, `28580aa`, `ed8520a`,
-`2767b9d`).
+Do **not** claim queue-age/reaper, retry/idempotency, atomic index publish, or
+TEN-03 complete in that slice. Slice 4.1 closed locally at `b7faa19`
+(OBS-01 at `5a9f857`; tenant/audit/Helm earlier: `3c1e7b7`, `28580aa`,
+`ed8520a`, `2767b9d`).
 
 ### Live / external P0 gates (not local-complete)
 
@@ -33,12 +37,16 @@ Track separately from the next code slice — do **not** list as done work:
   cluster install; app pod recreation; clean-namespace restore to a
   **disposable** DB (never production DSN for `pg_restore --clean`); known-query
   smoke; measured RPO/RTO
+- **ING-01 remaining:** migration `019` real PostgreSQL upgrade/downgrade;
+  Compose/Helm worker; heartbeat/readiness; stuck-queued reaper/recovery;
+  retry/idempotency; queue-age metric/alert; live Redis/Postgres/Celery drill
 
-Step 5 remains **open / partially remediated** (trace identity done; timeout
-cancellation, bounded capacity, session concurrency/history ordering, sticky
-experiment propagation still open). Steps 4 and 6–10 remain open. Live
-GraceKelly/Mistral benchmarks remain explicit opt-in only and are **not** this
-slice.
+Step 4 remains **in progress** (4.1 done; worker topology and later step-4
+DoD open). Step 5 remains **open / partially remediated** (trace identity
+done; timeout cancellation, bounded capacity, session concurrency/history
+ordering, sticky experiment propagation still open). Steps 6–10 remain open.
+ING-02 and TEN-03 remain open. Live GraceKelly/Mistral benchmarks remain
+explicit opt-in only and are **not** this slice.
 
 ## Project Closure note (2026-07-27) — historical
 

@@ -10,14 +10,15 @@
 > **Статус аудита: ACTIVE.** Detailed findings below remain the **2026-07-23
 > audit snapshot** @ `383cfe9` — historical defect evidence, not rewritten as
 > if the defects never existed. This top layer records later revalidation and
-> local remediation against HEAD `5a9f857`.
+> local remediation against HEAD `b7faa19`.
 >
 > **Решение владельца (HF):** Hugging Face **не** является publication target
 > и **не** required user-runtime dependency для рекомендуемого external-user
 > path. Hosted HF Space не существует и не планируется. External users run
 > locally with their own `MISTRAL_API_KEY`, remote Mistral embeddings, and
 > empty `RAG_RERANKER_MODEL`. Owner local-first / GraceKelly defaults
-> unchanged. README/QUICKSTART already document that recipe.
+> unchanged. README/QUICKSTART already document that recipe. Do not duplicate
+> or modify recipes.
 >
 > ### Remediation evidence note (local, not full production DoD)
 >
@@ -27,13 +28,16 @@
 > | TEN-01 / TEN-02 | `3c1e7b7`, `28580aa` | Test-first red (7+7); 41 tenant/audit + 49 adjacent; schema/migration 39; Ruff/mypy clean; `alembic heads` = `018` | Real PostgreSQL upgrade/downgrade; live two-tenant restart drill |
 > | OPS-01 chart + backup runtime | `ed8520a`, `2767b9d` | Helm red→green (23 fail / 7 pass → 30 pass); backup runtime red→green (11 fail / 10 pass → aggregate 52 pass / 1 skip); Ruff/mypy; helm lint + default/existing/dev-disabled renders; production data-disabled fails closed | Docker image build/tool smoke; live Postgres; kind/live install; app pod recreation; clean-namespace restore to **disposable** DB; known-query smoke; measured RPO/RTO |
 > | OBS-01 trace identity | `5a9f857` | Test-first red (8 expected failures on `fbf3bcf`) → green; QA positional-only legacy callable (`TypeError` → fixed); independent regression 44 passed / 1 deprecation warning; Ruff clean; mypy `--follow-imports=skip` clean; `git diff --check` clean | N/A for OBS-01 local contract. Plan step 5 still open for timeout cancellation, bounded capacity, session concurrency/history ordering, sticky experiment propagation. No production release claim |
+> | ING-01 step 4.1 durable job contract | `b7faa19` | Initial contract failed at collection on missing `IngestionJob`, then green; review QA 12 expected failures → fixed; log QA 6 expected failures → fixed; final independent focused 47 passed / 2 deprecation warnings; adjacent independent chunks 22 + 19 passed; original 11-file quiet aggregate exceeded 3 minutes without failure (not raw-retried; splitting showed no hang/failure); Ruff/mypy clean; Alembic `019 (head)`; `git diff --check` clean; protected user artifacts 9/9 unchanged | Compose/Helm worker topology; heartbeat/readiness; stuck-queued reaper/recovery; retry/idempotency; queue-age metric/alert; live Redis/Postgres/Celery drill; real PostgreSQL upgrade/downgrade for migration `019`. ING-02 and TEN-03 remain open |
 >
 > **P0 release-blocker implementation is locally remediated and mechanically
-> verified; OBS-01 is locally remediated at `5a9f857`.** Production release
-> remains gated by the live/external checks above. Do **not** treat the whole
-> audit plan, OPS-01 operational DoD, or project closure as complete.
+> verified; OBS-01 is locally remediated at `5a9f857`; ING-01 is partially
+> locally remediated at `b7faa19`.** Production release remains gated by the
+> live/external checks above. Plan step 4 is **in progress**, not complete.
+> Do **not** treat the whole audit plan, OPS-01 operational DoD, or project
+> closure as complete.
 >
-> ### Status matrix @ `5a9f857`
+> ### Status matrix @ `b7faa19`
 >
 > | ID | Priority | Status | Evidence @ HEAD |
 > |---|---|---|---|
@@ -44,7 +48,7 @@
 > | RAG-01 | P1 | **open** | Streaming path in `api/routers/conversation.py` remains a separate RAG; parity still dual-work |
 > | RAG-02 | P1 | **open** | Route still quality/relevance-centric; factuality / knowledge_gap not auto-route gates |
 > | ESC-01 | P1 | **open** | `route="human"` still metric/badge without mandatory durable ticket |
-> | ING-01 | P1 | **open** | Default upload still Celery-accepted without worker Deployment in compose/Helm |
+> | ING-01 | P1 | **partially locally remediated** @ `b7faa19` | Durable job contract: ORM `IngestionJob` + migration `019`; `/api/upload` returns durable `job_id` + real tenant; `/api/jobs/{job_id}` and `/api/tasks/{identifier}` read DB only (404 cross-tenant/unknown); worker verifies identity, propagates tenant, records DB lifecycle; sync paths reuse same row and fail closed on unpersistable transitions; Celery progress best-effort only; phase-level error redaction; no production test-mode/in-memory fallback. **Still open:** Compose/Helm worker; heartbeat/readiness; stuck-queued reaper/recovery; retry/idempotency; queue-age metric/alert; live Redis/Postgres/Celery drill; real PostgreSQL upgrade/downgrade for `019`. Original finding prose below is the 2026-07-23 audit snapshot |
 > | ING-02 | P1 | **open** | Rebuild still delete-then-build pattern in `vectordb` manager |
 > | TEN-03 | P1 | **open** | Lossy tenant sanitization still present |
 > | OBS-01 | P1 | **locally remediated** @ `5a9f857` | `traces.trace_id` is always a fresh internal UUID4; external `X-Request-Id` stored in nullable indexed `traces.correlation_id` (may repeat); old SQLite schemas migrate append-only (historic rows NULL); legacy `start_trace(trace_id=...)` accepted as correlation alias only; graph state / `AskResponse.trace_id` use internal UUID; response `X-Request-Id` header remains external correlation. No idempotency/replay behavior added. Original finding prose below is the 2026-07-23 audit snapshot |
@@ -57,12 +61,14 @@
 > | DEP-01 | P2 | **open** | Docs-site dependency posture not re-audited this pass |
 > | MAINT-01 | P2 | **open** | Large orchestration modules still dual contracts |
 >
-> **Next implementation slice (test-first, plan order):** **plan step 4** —
-> first durable-ingestion contract only: one tenant-aware job contract with a
-> real `job_id` and observable status/terminal error. Do **not** claim that
-> atomic index publish, retry/idempotency, locks, worker topology, or TEN-03
-> are already designed or complete. OBS-01 is closed locally; remaining open
-> P1/P2 findings keep their prior status without new evidence.
+> **Next implementation slice (plan order):** **plan step 4.2** worker
+> topology contract — add one ingestion worker to Docker Compose and Helm with
+> the same Secret/ConfigMap DB+Redis environment, durable `/app/data` mount,
+> constrained concurrency, security context, and verifiable heartbeat/readiness.
+> Do **not** claim queue-age/reaper, retry/idempotency, atomic index publish, or
+> TEN-03 complete in that slice. Step 4 is **in progress** (4.1 done at
+> `b7faa19`). Remaining open P1/P2 findings keep their prior status without new
+> evidence.
 >
 > Active plan: [`plan_sol_23_07_26`](plan_sol_23_07_26).
 
