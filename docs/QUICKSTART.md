@@ -1,22 +1,31 @@
 # Quickstart — RAG Support Assistant
 
-> The minimum steps to run the service locally and verify it works.
+> The minimum steps to run the service **locally** and verify it works.
+>
+> **No hosted Hugging Face Space** is provided or planned. Users run this
+> application on their own machine. Hugging Face is not a required publication
+> or user-runtime dependency for the external-user recipe below.
 
 ## 0. Requirements
 
 - Python 3.11+ (tested on 3.13)
 - Docker Desktop (for Postgres + Redis in dev and for regression eval)
-- ~8 GB disk space for embeddings/reranker/cache; Ollama models require additional space.
+- Disk/RAM depend on the selected profile (Ollama models need extra space;
+  the external Mistral + remote embeddings path does not download local
+  embedding/reranker weights)
 
 Per selected profile:
-- **Ollama** (`https://ollama.com/download`) — default `local-first` provider; no API key.
-- **Mistral API key** (`MISTRAL_API_KEY`) — optional direct provider using your own key.
-- **GraceKelly** at `D:\GraceKelly\` (port 8011) — optional local orchestrator.
+- **External Mistral (recommended for external users)** — your own
+  `MISTRAL_API_KEY`; remote embeddings; local reranker disabled. No model-hub
+  download for embeddings/reranker.
+- **Ollama** (`https://ollama.com/download`) — repository default
+  `local-first` provider for owner/local use; no API key.
+- **GraceKelly** — optional owner/internal orchestrator (separate install).
 
 ## 1. Dependencies
 
 ```bash
-cd D:\RAG_Support_Assistant
+# From your clone of this repository
 python -m venv .venv
 . .venv/Scripts/activate          # Windows PowerShell: . .venv\Scripts\Activate.ps1
 pip install --require-hashes -r requirements.lock
@@ -32,12 +41,13 @@ Open `.env` and fill in the required values. Minimal scenarios:
 
 | Scenario | Required variables |
 | --- | --- |
-| **Local-only Ollama** (default) | Start Ollama and pull `qwen2.5:7b`; `LLM_PROVIDER_PROFILE=local-first` is implied |
-| **Direct Mistral** | `MISTRAL_API_KEY=<your-key>` + `LLM_PROVIDER_PROFILE=external-mistral` |
-| **GraceKelly primary** | `GRACEKELLY_BASE_URL=http://127.0.0.1:8011` + `LLM_PROVIDER_PROFILE=gracekelly-primary` |
-| **GraceKelly mixed routing** | `MISTRAL_API_KEY=<your-key>` + `LLM_PROVIDER_PROFILE=gracekelly-mixed` + `GRACEKELLY_REQUEST_TIMEOUT_SEC=120` |
+| **External user: Mistral + remote embeddings (no HF download)** | See **Scenario A** below |
+| **Local-only Ollama** (repo default for owner) | Start Ollama and pull `qwen2.5:7b`; `LLM_PROVIDER_PROFILE=local-first` is implied |
+| **Direct Mistral (generation only)** | `MISTRAL_API_KEY=<your-key>` + `LLM_PROVIDER_PROFILE=external-mistral` (local embeddings/reranker still follow other defaults unless overridden) |
+| **GraceKelly primary** (owner/internal) | GraceKelly base URL + `LLM_PROVIDER_PROFILE=gracekelly-primary` |
+| **GraceKelly mixed routing** (owner/internal) | `MISTRAL_API_KEY=<your-key>` + `LLM_PROVIDER_PROFILE=gracekelly-mixed` + `GRACEKELLY_REQUEST_TIMEOUT_SEC=120` |
 
-Full list of variables — see `README.md` section **Environment Variables**.
+Full list of variables — see `docs/CONFIGURATION.md` and `README.md`.
 
 ## 3. Infrastructure (Postgres + Redis)
 
@@ -57,7 +67,53 @@ Then run migrations:
 alembic upgrade head
 ```
 
-## 4. Scenario A — Local-only Ollama (default)
+## 4. Scenario A — External user: Mistral API + remote embeddings (no HF download)
+
+Recommended path when you only have a Mistral API key and want to avoid
+downloading local embedding/reranker models from a model hub.
+
+Verified against current settings/code (`config/settings.py`,
+`vectordb/_base_manager.py`, `docs/CONFIGURATION.md`):
+
+- `LLM_PROVIDER_PROFILE=external-mistral` → direct Mistral for generation
+  (`config/providers.yml`)
+- `RAG_EMBEDDING_BACKEND=remote` + remote URL/model/key-env → Mistral-compatible
+  embeddings API (no local SentenceTransformer load)
+- `RAG_RERANKER_MODEL=` (empty) → `get_reranker()` returns `None` and skips the
+  cross-encoder model download
+
+In `.env`:
+
+```dotenv
+LLM_PROVIDER_PROFILE=external-mistral
+MISTRAL_API_KEY=<your-key>
+RAG_EMBEDDING_BACKEND=remote
+RAG_EMBEDDING_REMOTE_URL=https://api.mistral.ai/v1/embeddings
+RAG_EMBEDDING_REMOTE_MODEL=mistral-embed
+RAG_EMBEDDING_REMOTE_API_KEY_ENV=MISTRAL_API_KEY
+RAG_RERANKER_MODEL=
+```
+
+Then:
+
+```bash
+alembic upgrade head
+python main.py
+```
+
+Open `http://localhost:8000/static/login.html` or
+`http://localhost:8000/static/chat.html`.
+
+Placeholder keys such as `changeme` are rejected. This recipe does **not** claim
+the whole repository has zero historical Hugging Face references; it only
+defines a user path that does not require HF downloads at runtime.
+
+If you switch embedding backends or dimensions against an existing Chroma
+directory, set a fresh `VECTORDB_CHROMA_DIR` and re-ingest documents.
+
+## 5. Scenario B — Local-only Ollama (owner default)
+
+Repository default remains `local-first`. Unchanged for owner/internal use.
 
 In terminal A:
 
@@ -69,9 +125,6 @@ In terminal B:
 
 ```bash
 ollama pull qwen2.5:7b
-
-# Launch RAG Support Assistant
-cd D:\RAG_Support_Assistant
 python main.py
 ```
 
@@ -84,31 +137,19 @@ Open `http://localhost:8000/static/login.html` (password + SSO) or
 `/api/health/ready` checks Ollama readiness. Set `REQUIRE_OLLAMA=true` if startup
 must fail immediately when Ollama is unavailable.
 
-## 5. Scenario B — Direct Mistral with your own key
+Default local embedding/reranker settings may still download models unless you
+override them (see Scenario A for the remote/no-reranker profile).
 
-In `.env`:
+## 6. Scenario C — Optional GraceKelly routing (owner/internal)
 
-```dotenv
-MISTRAL_API_KEY=<your-key>
-LLM_PROVIDER_PROFILE=external-mistral
-```
+Owner/internal only. Use `gracekelly-primary` for both tiers, or
+`gracekelly-mixed` when final answers should use GraceKelly while helper calls
+use your direct Mistral key. These profiles are **unchanged** and are separate
+from the external-user Scenario A recipe.
 
-Then run `python main.py`. Placeholder keys such as `changeme` are rejected.
+1. Start GraceKelly (separate project on your machine).
 
-## 6. Scenario C — Optional GraceKelly routing
-
-Use `gracekelly-primary` for both tiers, or `gracekelly-mixed` when final answers
-should use GraceKelly while helper calls use your direct Mistral key.
-
-1. Start GraceKelly (separate project):
-
-   ```bash
-   cd D:\GraceKelly
-   $env:GRACEKELLY_EXECUTION_PROFILE = "hybrid"
-   uvicorn gracekelly.main:create_app --factory --host 127.0.0.1 --port 8011
-   ```
-
-2. In `D:\RAG_Support_Assistant\.env`, choose one explicit profile:
+2. In `.env`, choose one explicit profile:
 
    ```dotenv
    # GraceKelly for both tiers

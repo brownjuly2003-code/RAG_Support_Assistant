@@ -1,15 +1,39 @@
 # Agent State
 
-## 2026-07-27 Update-11 (project closure candidate) ✅ START HERE
+## 2026-08-02 Update-12 (audit revalidation + no-HF local-user path) ✅ START HERE
 
-> Product backlog remains empty. The current product scope is feature-frozen;
-> deferred SLA/Q1b/C1/live-benchmark choices have a final disposition in
-> `docs/PROJECT_CLOSURE.md`. Twelve local untracked portfolio/kitchen artifacts
-> remain preserved and are excluded from the closing commit.
+> **Documentation-only truth pass.** No source/runtime/test/config changes.
 >
-> Remaining work is external only: publish the local closing commits, require
-> green CI + Pages on the exact SHA, then repeat the issues/PR check. No public
-> application target is known, so closure must not invent one.
+> **Audit plan ACTIVE again.** Revalidated `audit_gpt_23_07_26.md` (snapshot
+> 2026-07-23 @ `383cfe9`) against HEAD `26d24e6`. P0 still open with code
+> evidence: TEN-01 (`api/app.py::_get_or_create_session` ID-only Session +
+> Message), TEN-02 (`db/audit.py::log_audit` no required `tenant_id`), OPS-01
+> (Helm app no `/app/data` mount; CronJob PVC names without chart PVC).
+> Closure-candidate / empty-backlog narrative from Update-11 /
+> `docs/PROJECT_CLOSURE.md` is **superseded/reopened**.
+>
+> **HF decision (owner):** no Hugging Face Space publication target; HF is not
+> a required user-runtime dependency for the documented external path. Users
+> run locally with their own `MISTRAL_API_KEY` + remote embeddings + empty
+> `RAG_RERANKER_MODEL`. Owner defaults (`local-first`, GraceKelly profiles)
+> unchanged.
+>
+> **Protected untracked artifacts:** preserve byte-for-byte (portfolio/kitchen
+> + audit/plan files). Do not stage/delete/rename them in scoped commits unless
+> the owner explicitly includes them.
+>
+> **Next task (code, separate session):** plan step 1 only — failing P0
+> contract tests (test-first). Do not implement production fixes until red.
+
+## 2026-07-27 Update-11 (project closure candidate) — SUPERSEDED by Update-12
+
+> **SUPERSEDED 2026-08-02.** Historical closure-candidate note. Product backlog
+> was marked empty and feature-frozen; deferred SLA/Q1b/C1/live-benchmark
+> choices recorded in `docs/PROJECT_CLOSURE.md`. Twelve local untracked
+> portfolio/kitchen artifacts remain preserved.
+>
+> Remaining external publish/CI/Pages gates from that note are still owner-
+> gated; they do **not** override the reopened audit plan.
 
 ## 2026-07-21 Update-10 (presentation DoD добит 10/10: axe 0 + вычитка) — SUPERSEDED by Update-11
 

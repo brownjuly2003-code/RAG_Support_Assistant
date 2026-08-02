@@ -5,10 +5,17 @@
 Answers support questions against a knowledge base and decides whether a
 request can be resolved automatically or should be escalated to a human.
 
-**Project status:** closure candidate. The product scope is feature-frozen; the
-safe local backlog is empty. Final scope decisions, preserved local artifacts,
-and the remaining `master`/CI/Pages publication gates are recorded in
-[docs/PROJECT_CLOSURE.md](docs/PROJECT_CLOSURE.md).
+**Project status:** audit remediation in progress (revalidated 2026-08-02).
+The 2026-07-23 audit plan is active again: P0/P1 contracts have not all met
+their DoD. See [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md) and
+[`plan_sol_23_07_26`](plan_sol_23_07_26). The earlier
+[docs/PROJECT_CLOSURE.md](docs/PROJECT_CLOSURE.md) note is historical and
+**superseded** by that revalidation.
+
+**Deployment model:** there is **no** hosted Hugging Face Space and none is
+planned. Users run the service **locally**. Hugging Face is not a publication
+or required user-runtime dependency for the recommended external-user path
+below (owner/local profiles may still use optional local models).
 
 Public HTTP endpoints are documented below; runtime configuration lives in [docs/CONFIGURATION.md](docs/CONFIGURATION.md) and the metric / monitoring inventory in [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
@@ -136,49 +143,65 @@ All production packages are `mypy --strict` clean (CI-enforced).
 
 ## Quick Start
 
-> Полная пошаговая справка для default local-only Ollama, Mistral с вашим
-> ключом и optional GraceKelly routing — в [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
+> Full steps: [`docs/QUICKSTART.md`](docs/QUICKSTART.md). Configuration reference:
+> [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md).
 
-**Prerequisites:** Python 3.11+, [Ollama](https://ollama.com/download), and the
-default `qwen2.5:7b` model. Direct Mistral and GraceKelly are optional.
+### External users (recommended): local run, your Mistral key, no HF model download
+
+This path uses **direct Mistral** for generation and **remote Mistral embeddings**.
+Empty `RAG_RERANKER_MODEL` disables the local cross-encoder so the app does not
+download a reranker from a model hub. Historical/optional Hugging Face model
+names may still appear elsewhere in the repo; **this user path does not require
+them**.
 
 ```bash
-# 1. Local env template. Supply your own optional provider keys
-#    (for example MISTRAL_API_KEY). No API keys ship in this repository.
+# 1. Clone, create env, install hashed deps (Python 3.11+)
 cp .env.example .env              # Windows: copy .env.example .env
-
-# 2. Dependencies — pinned hashes for reproducibility (Python 3.11+, Linux x86_64)
 pip install --require-hashes -r requirements.lock
-# Or for development (adds pytest/ruff/pre-commit):
-# pip install --require-hashes -r requirements-dev.lock
 ```
 
-Start the default local provider in terminal A:
-
-```bash
-ollama serve
-```
-
-Then, from the repository in terminal B:
-
-```bash
-ollama pull qwen2.5:7b
-python main.py
-```
-
-Changing `RAG_EMBEDDING_MODEL` against an existing Chroma collection is not
-supported because vector dimensions must match. Set `VECTORDB_CHROMA_DIR` in
-`.env` to a new empty directory and re-ingest the corpus when evaluating a
-different embedding model; the default remains `data/vectordb/chroma`.
-Memory-constrained hosts can disable the cross-encoder with
-`RAG_RERANKER_MODEL=`.
-
-To use your own Mistral key instead of Ollama, set these values in `.env`:
+Put your own key and the no-HF runtime profile in `.env` (no secrets ship in-repo):
 
 ```dotenv
 LLM_PROVIDER_PROFILE=external-mistral
 MISTRAL_API_KEY=<your-key>
+RAG_EMBEDDING_BACKEND=remote
+RAG_EMBEDDING_REMOTE_URL=https://api.mistral.ai/v1/embeddings
+RAG_EMBEDDING_REMOTE_MODEL=mistral-embed
+RAG_EMBEDDING_REMOTE_API_KEY_ENV=MISTRAL_API_KEY
+RAG_RERANKER_MODEL=
 ```
+
+```bash
+# 2. Postgres + Redis (dev example), then migrate and start
+#    (see docs/QUICKSTART.md for container commands)
+alembic upgrade head
+python main.py
+```
+
+Open **http://localhost:8000/static/login.html** or
+**http://localhost:8000/static/chat.html**.
+
+### Owner / internal local profiles (unchanged defaults)
+
+Repository defaults remain **`local-first`** (Ollama / `qwen2.5:7b`) for the
+owner. Optional **`gracekelly-primary`** and **`gracekelly-mixed`** profiles are
+unchanged. Those paths may load local embedding/reranker models depending on
+`.env`; they are **not** the external-user recipe above.
+
+```bash
+cp .env.example .env
+pip install --require-hashes -r requirements.lock
+# terminal A: ollama serve
+# terminal B:
+ollama pull qwen2.5:7b
+python main.py
+```
+
+Changing `RAG_EMBEDDING_MODEL` / embedding backend against an existing Chroma
+collection is not supported when vector dimensions differ. Set
+`VECTORDB_CHROMA_DIR` to a new empty directory and re-ingest when evaluating a
+different embedding profile; the default remains `data/vectordb/chroma`.
 
 Optional local Docker Compose path (loopback-only stack from `docker-compose.yml`;
 see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)):
@@ -187,10 +210,6 @@ see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)):
 cp .env.example .env
 docker compose -f docker-compose.yml up
 ```
-
-`local-first` is the default. Explicit alternatives (see
-`LLM_PROVIDER_PROFILE` in [docs/CONFIGURATION.md](docs/CONFIGURATION.md)) are
-`external-mistral`, `gracekelly-primary`, and `gracekelly-mixed`.
 
 Open:
 - **http://localhost:8000/static/login.html** - password + SSO login page

@@ -1,0 +1,239 @@
+# План существенного улучшения RAG Support Assistant
+
+**Основание:** `audit_gpt_23_07_26.md`
+**Принцип порядка:** сначала release-blockers и проверяемые контракты, затем RAG-качество, после этого декомпозиция.
+**Оценка (historical, 2026-07-23):** 6–9 инженерных недель для одного сильного разработчика; шаги 3–4 и 7–8 частично параллелятся только после закрытия шага 2.
+
+> ## 2026-08-02 execution status (revalidation)
+>
+> Plan is **ACTIVE**. Original step estimates below are **historical** and are
+> not rewritten. Closure candidate / empty-backlog narrative is revoked; this
+> plan is the sole active remediation source (see `BACKLOG.md`).
+>
+> Revalidation HEAD: `26d24e6`. Audit snapshot: `383cfe9` (2026-07-23).
+> Post-audit commits improved local startup, provider selection, observability,
+> isolated Chroma, and docs — they do **not** mark plan steps complete.
+>
+> | Step | Historical estimate | Status @ `26d24e6` | Notes |
+> |---|---|---|---|
+> | 1 Contract tests + release gate | 1–2 days | **open** — **NEXT SLICE** | No dedicated red tests found for cross-tenant `/api/ask`, audit `tenant_id` required, Helm PVC/claim invariants, invalid UUID cooldown, repeated request-ID collision |
+> | 2 Tenant Session/Message/Audit | 2–4 days | **open** | `api/app.py::_get_or_create_session` still ID-only; `db/audit.py::log_audit` has no required `tenant_id` |
+> | 3 Production storage + backup | 2–4 days | **open** | App Deployment still without `/app/data` mount; no chart PVC; CronJob claimNames unresolved |
+> | 4 Durable ingestion + atomic index | 4–6 days | **open** | Blocked on step 3 for production topology; Celery-without-worker and non-atomic rebuild remain |
+> | 5 Timeout/capacity/trace identity | 4–6 days | **open** (obs partial only) | Timeout *logging* improved post-audit; cancellation/capacity DoD not met |
+> | 6 Sync/SSE unify + durable escalation | 4–6 days | **open** | Dual streaming path + human-without-ticket remain |
+> | 7 Fail-closed RAG routing | 5–8 days | **open** | Depends on step 6 |
+> | 8 Real regression gate | 5–10 days | **open** | Mock expected-copy executor still present |
+> | 9 Widget + edge/security | 3–5 days | **open** | Depends on steps 2 and 6 |
+> | 10 Orchestration decomp + rollout | 4–6 days | **open** | Depends on steps 2–9 |
+>
+> **Gates A–D:** all incomplete (Gate A requires steps 1–3).
+>
+> **Exact next implementation slice:** step **1** only — write minimal
+> failing contract tests (test-first). Do not implement production fixes until
+> each new test is red for the named invariant on current HEAD.
+
+## 1. Зафиксировать failing contract tests и release gate
+
+**Приоритет:** P0
+**Модель:** `gpt-5.6-sol`
+**Reasoning:** `xhigh`
+**Зависимости:** нет
+**Оценка:** 1–2 дня
+**Статус 2026-08-02:** **open — NEXT**
+
+- Добавить минимальные red tests для: cross-tenant `/api/ask`, invalid UUID cooldown, audit tenant, missing Helm storage/PVC, repeated request ID.
+- Не менять production-код, пока каждый тест не воспроизводит конкретный дефект.
+- Добавить checklist release-blocker’ов в CI/operations docs.
+
+**DoD:** новые тесты падают на текущем HEAD по ожидаемой причине; в каждом тесте один нарушенный инвариант, без широких mocks.
+
+## 2. Закрыть tenant-изоляцию Session/Message/Audit
+
+**Приоритет:** P0
+**Модель:** `gpt-5.6-sol`
+**Reasoning:** `xhigh`
+**Зависимости:** шаг 1
+**Оценка:** 2–4 дня
+**Статус 2026-08-02:** **open**
+
+- Валидировать `session_id` на API boundary; client errors не должны включать DB cooldown.
+- Scope Session lookup и Message read/write по tenant; удалить перепривязку `default`.
+- Сделать `tenant_id` обязательным для `log_audit()` и всех call sites.
+- Ввести DB-level constraint/RLS или composite ownership guard.
+- Добавить миграцию/backfill для существующих данных с отдельным review неоднозначных `default`-строк.
+
+**Проверка:** два tenant, cold/warm cache, restart simulation, read/write/purge audit, malformed UUID flood.
+
+**DoD:** ни один tenant не читает, не изменяет и не видит Session/Message/Audit другого tenant; invalid UUID не влияет на запросы других пользователей.
+
+## 3. Сделать production storage и backup действительно durable
+
+**Приоритет:** P0
+**Модель:** `gpt-5.6-terra`
+**Reasoning:** `high`
+**Зависимости:** шаг 1
+**Оценка:** 2–4 дня
+**Статус 2026-08-02:** **open**
+
+- Добавить `persistence` values и mount `/app/data` либо перевести original uploads в object storage.
+- Создавать PVC для data/backups/reports или требовать явные `existingClaim`.
+- Сделать storage-dependent CronJob условными.
+- Добавить pod/container securityContext, checksum rollout и storage readiness probe.
+- Автоматизировать backup → clean namespace → restore → known-query smoke.
+
+**Проверка:** `helm lint`, `helm template`, manifest invariant tests, kind install, pod recreation и restore drill.
+
+**DoD:** pod replacement не теряет uploads/Chroma/traces; все claim references разрешены; подтверждены RPO 24h и RTO 2h либо обновлены на измеренные значения.
+
+## 4. Перевести ingestion на durable job и атомарный index publish
+
+**Приоритет:** P1
+**Модель:** `gpt-5.6-sol`
+**Reasoning:** `xhigh`
+**Зависимости:** шаг 3
+**Оценка:** 4–6 дней
+**Статус 2026-08-02:** **open**
+
+- Выбрать один job contract для всех tenant: worker Deployment + heartbeat либо отдельный job service.
+- Возвращать `job_id`; реализовать status, retry, idempotency и queue-age metrics.
+- Добавить per-tenant distributed lock.
+- Строить versioned staging collection, проверять count/dimension/known queries и атомарно переключать active version.
+- Сохранять предыдущую collection для rollback; original uploads сделать immutable/versioned.
+- Использовать collision-resistant physical tenant name.
+
+**Проверка:** fault injection до/после embeddings и switch, два concurrent upload, worker outage/recovery, duplicate job.
+
+**DoD:** accepted job либо завершается, либо имеет наблюдаемый terminal error; неудачный rebuild не повреждает активный индекс.
+
+## 5. Исправить timeout, capacity, session concurrency и tracing identity
+
+**Приоритет:** P1
+**Модель:** `gpt-5.6-sol`
+**Reasoning:** `xhigh`
+**Зависимости:** шаг 2
+**Оценка:** 4–6 дней
+**Статус 2026-08-02:** **open** (timeout observability partial only; DoD unmet)
+
+- Убрать вложенный per-request `ThreadPoolExecutor`.
+- Ввести единый deadline и bounded executor/job pool; capacity освобождать после реального завершения underlying work.
+- Протянуть provider/retriever/tool timeouts и cooperative cancellation.
+- Добавить per-session serialization или optimistic sequence/version.
+- Разделить внутренний unique trace ID, внешний correlation ID и idempotency key.
+- Передавать `user_id` и `session_id` в normal `run_qa_pipeline`, чтобы experiment assignment был sticky.
+
+**Проверка:** blocking fake provider, client disconnect, repeated timeout, concurrent same-session confirm, повторный `X-Request-Id`.
+
+**DoD:** после terminal HTTP/SSE результата нет скрытой работы или она продолжает занимать bounded capacity; history упорядочена; trace collisions невозможны.
+
+## 6. Объединить sync/SSE и durable escalation
+
+**Приоритет:** P1
+**Модель:** `gpt-5.6-sol`
+**Reasoning:** `high`
+**Зависимости:** шаг 5
+**Оценка:** 4–6 дней
+**Статус 2026-08-02:** **open**
+
+- Сделать LangGraph единственным pipeline и источником token/node events.
+- Sync собирает event stream, SSE транслирует его; убрать direct streaming RAG и parallel parity.
+- Один answer должен определять citations, quality, route, trace и history.
+- Объединить DB ticket, inbox integration и manual escalation через idempotent service + transactional outbox.
+- Возвращать `ticket_id`/delivery state; не обещать handoff до durable insert.
+
+**Проверка:** ровно один provider generation, sync/SSE semantic parity, disconnect, retry, human/error routes, outbox delivery retry.
+
+**DoD:** один запрос создаёт один ответ и одну history mutation; любой `human` имеет durable ticket либо явный delivery error.
+
+## 7. Сделать RAG routing fail-closed и калиброванным
+
+**Приоритет:** P1, ключевой шаг качества
+**Модель:** `gpt-5.6-sol`
+**Reasoning:** `xhigh`
+**Зависимости:** шаг 6
+**Оценка:** 5–8 дней
+**Статус 2026-08-02:** **open**
+
+- Ввести состояния `verified`, `unsupported`, `not_verified`; не присваивать 100 при skip/error/no-context.
+- Разделить retrieval relevance, answer quality, factual grounding и safety.
+- Auto-route разрешать только при context + supported citations + factuality threshold + `knowledge_gap=false`.
+- All-docs-rejected не должен возвращать исходный context.
+- Добавить hard negatives, near-duplicates и entity-aware retrieval slices.
+- Тестировать contextual compression/reranker только против recall/FULL safety floors.
+
+**Целевые gates:** context precision ≥ 0,63; recall ≥ 0,97; FULL ≥ 97; MISS ≤ 1; faithfulness ≥ 0,90; unverified auto-rate = 0.
+
+**DoD:** цели подтверждены минимум тремя runs с confidence intervals; ни один slice не нарушает safety floor.
+
+## 8. Заменить декоративный regression gate на реальный
+
+**Приоритет:** P1
+**Модель:** `gpt-5.6-sol`
+**Reasoning:** `xhigh`
+**Зависимости:** шаг 7 может выполняться совместно после определения новых route-сигналов
+**Оценка:** 5–10 дней
+**Статус 2026-08-02:** **open**
+
+- Executor не должен читать expected fields для создания answer.
+- Baseline строить из merge-base artifact, candidate — из текущего SHA.
+- Расширить path filter на graph, retrieval, ingestion, prompts, providers, cache и streaming.
+- Ввести schema validation единой шкалы 0–100.
+- Расширить dataset: multi-tenant, multi-turn, citations, no-answer, tools, streaming, adversarial docs, escalation.
+- Разделить fast deterministic PR gate и scheduled live provider/judge gate.
+- Хранить slice metrics, bootstrap confidence intervals и историю regressions.
+
+**DoD:** намеренно испорченный retriever/prompt/route валит gate; identical baseline/candidate и mock expected-copy больше не могут считаться доказательством качества.
+
+## 9. Починить widget и edge/security hardening
+
+**Приоритет:** P1/P2
+**Модель:** `gpt-5.6-terra`
+**Reasoning:** `high`
+**Зависимости:** шаги 2 и 6
+**Оценка:** 3–5 дней
+**Статус 2026-08-02:** **open**
+
+- Реализовать widget bootstrap с короткоживущим audience-scoped token.
+- Добавить `WIDGET_ALLOWED_ORIGINS`, path-specific `frame-ancestors`, строгий postMessage handshake и session reuse.
+- Проверять фактические ASGI body bytes; upload стримить во временный файл с atomic rename.
+- Требовать `email_verified`, identity `(issuer, subject)` и единый tenant email resolver.
+- Запретить placeholder encryption/session secrets и production dev-admin bypass.
+- Обновить docs dependencies; high advisory либо исправляется, либо получает точное reachability-исключение с expiry.
+
+**Проверка:** cross-origin Playwright E2E, chunked body, OIDC linking tests, startup secret-negative tests, `npm audit`.
+
+**DoD:** widget работает в разрешённом origin и блокируется в чужом; multi-turn сохраняется; production startup отвергает небезопасную конфигурацию.
+
+## 10. Декомпозировать orchestration и провести rollout gate
+
+**Приоритет:** P2
+**Модель:** `gpt-5.6-terra`
+**Reasoning:** `high`
+**Зависимости:** шаги 2–9
+**Оценка:** 4–6 дней
+**Статус 2026-08-02:** **open**
+
+- Выделить `SessionService`, `PipelineRunner`, `EscalationService`, `IngestionJobService`, `TraceService`.
+- Сохранить публичные API через characterization tests; удалять дубли только по одному contract за раз.
+- Ограничить Redis fallback TTL/size, добавить reconnect и versioned cache keys.
+- Ввести dashboards/SLO: orphan work, queue age, index publish failures, unverified auto-rate, escalation delivery, tenant-denied access.
+- Выполнить canary на одном tenant, затем staged rollout с rollback criteria.
+- Провести полный 3.11/3.13 suite, coverage, mypy, Ruff, Bandit, dependency audits, Helm install/restore, sync/SSE E2E и live RAG gate.
+
+**DoD:** критические orchestration-функции больше не дублируют lifecycle; все P0/P1 tests зелёные; SLO и rollback проверены на canary; release checklist подписан.
+
+## Общий порядок и контрольные точки
+
+```text
+Шаг 1
+  ├─> Шаг 2 ─> Шаг 5 ─> Шаг 6 ─> Шаг 7 ─> Шаг 8
+  └─> Шаг 3 ─> Шаг 4
+                    └───────────────> Шаг 9 ─> Шаг 10
+```
+
+- **Gate A — multi-tenant release:** завершены шаги 1–3.
+- **Gate B — надёжный runtime:** завершены шаги 4–6.
+- **Gate C — доказанное RAG-качество:** завершены шаги 7–8.
+- **Gate D — production rollout:** завершены шаги 9–10.
+
+Не переходить к следующему gate только по code review: для каждого шага требуется указанная behavioral verification и свежий артефакт результата.

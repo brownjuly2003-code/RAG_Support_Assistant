@@ -1,24 +1,46 @@
 # Backlog
 
-## Project Closure (2026-07-27)
+## Active source (2026-08-02) — audit plan reopened
 
-The product scope is frozen and the non-live safe queue is empty. Historical
-tasks below remain evidence, not active work. Deferred runtime/benchmark/refactor
-gates have a final `future` / `retired` / `won't-run` disposition in
-[`docs/PROJECT_CLOSURE.md`](docs/PROJECT_CLOSURE.md).
+**Sole active backlog:** [`plan_sol_23_07_26`](plan_sol_23_07_26)
+(revalidation summary in [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md)).
+
+The 2026-07-27 «project closure / empty queue» narrative is **revoked**.
+P0/P1 audit contracts have not all met DoD at HEAD `26d24e6`. Historical
+autopilot/safe tasks below remain evidence only — not the active queue.
+
+### Next atomic slice
+
+**Plan step 1 (test-first):** add minimal **failing** contract tests for P0
+invariants only — no production-code fixes until each test is red for the
+expected reason:
+
+1. Cross-tenant `/api/ask` Session/Message ownership (TEN-01)
+2. Invalid UUID must not trip global DB cooldown (TEN-01 related)
+3. `log_audit` requires/records `tenant_id` (TEN-02)
+4. Helm missing `/app/data` mount + unresolved backup/report PVC claims (OPS-01)
+5. Repeated client request ID / trace PK collision surface (OBS-01, listed in step 1)
+
+Do not skip to step 2+ implementation. Live GraceKelly/Mistral benchmarks remain
+explicit opt-in only and are **not** this slice.
+
+## Project Closure note (2026-07-27) — historical
+
+Superseded by the 2026-08-02 audit revalidation. See
+[`docs/PROJECT_CLOSURE.md`](docs/PROJECT_CLOSURE.md) banner. Deferred
+runtime/benchmark/refactor dispositions in that file remain historical context
+only until re-decided under the audit plan.
 
 ## Autopilot Task Queue
 
-> No active non-live autopilot-safe tasks remain in this fallback queue.
-> `AP-1` (`test: guard historical backlog pointers`) is closed by `d3f8eb7`.
-> `AP-2` (`docs: refresh autopilot state snapshot`) is closed by `cd6e7ba`.
-> Use `docs/plans/2026-05-01-backlog.md` for context; the live
+> Historical autopilot snapshot (pre-audit reopen). Former note: no active
+> non-live autopilot-safe tasks; `AP-1` closed by `d3f8eb7`, `AP-2` by `cd6e7ba`.
+> Use `docs/plans/2026-05-01-backlog.md` for older product context. The live
 > GraceKelly/Mistral benchmark lane requires staged runtime and explicit
-> opt-in only, and is not an active local backlog item.
+> opt-in only, and is not the current audit-plan next slice.
 > 2026-05-30 branch note: Colab remote benchmark setup is merged to `master`
 > through PR #1 at `415d4c8`; current state is in `AGENT_STATE.md` and
-> `docs/sessions/next-session-3-subagents.md`. Master CI and Pages deploy passed. No
-> additional local backlog item is open.
+> `docs/sessions/next-session-3-subagents.md`. Master CI and Pages deploy passed.
 > 2026-05-30 live opt-in note: commit `7b0d9ee` closed a runtime quality
 > blocker by failing closed on incompatible Chroma embedding dimensions. A
 > separate ignored eval collection passed a 3-case live Mistral regression; the
@@ -38,9 +60,10 @@ gates have a final `future` / `retired` / `won't-run` disposition in
 ## Historical Safe Tasks
 
 > Historical safe-task snapshot. The tasks below are closed in current history;
-> use `docs/plans/2026-05-01-backlog.md` as the active backlog source. The only
+> use `docs/plans/2026-05-01-backlog.md` for older product context. The only
 > remaining benchmark lane is live GraceKelly/Mistral work: explicit opt-in only.
 > It requires staged runtime and is not an active local backlog item.
+> **Active remediation source (2026-08-02+):** `plan_sol_23_07_26`.
 
 ## Safe Task 1: Add a Local Gate Wrapper
 
