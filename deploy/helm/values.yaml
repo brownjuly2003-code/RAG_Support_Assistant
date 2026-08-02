@@ -103,3 +103,49 @@ ollama:
 backup:
   encryption:
     enabled: false
+
+# Durable stores for the authoritative /app/data tree (uploads, Chroma, SQLite
+# traces), backup snapshots, and ops reports. Production requires data
+# persistence (see templates/deployment.yaml). Use existingClaim to bind a
+# pre-provisioned PVC; leave empty to create a chart-managed claim.
+persistence:
+  data:
+    enabled: true
+    existingClaim: ""
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 10Gi
+  backups:
+    enabled: true
+    existingClaim: ""
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 20Gi
+  reports:
+    enabled: true
+    existingClaim: ""
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi
+
+# Pod-level security. Do not invent runAsUser: the image runs as Debian's
+# system `app` user without a stable UID contract. fsGroup makes PVC mounts
+# group-writable; Kubernetes adds it as a supplementary group.
+podSecurityContext:
+  runAsNonRoot: true
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container-level security. readOnlyRootFilesystem stays off until every
+# required writable path is an explicit mount.
+containerSecurityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL

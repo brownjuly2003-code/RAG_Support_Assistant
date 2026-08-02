@@ -1,3 +1,4 @@
+{{- if .Values.persistence.reports.enabled }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -28,6 +29,8 @@ spec:
             app.kubernetes.io/component: curated-staleness
         spec:
           restartPolicy: OnFailure
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
           containers:
             - name: curated-staleness
               image: {{ include "rag-support-assistant.image" . | quote }}
@@ -41,10 +44,13 @@ spec:
                 {{- include "rag-support-assistant.envFrom" . | nindent 16 }}
               resources:
                 {{- toYaml .Values.resources | nindent 16 }}
+              securityContext:
+                {{- toYaml .Values.containerSecurityContext | nindent 16 }}
               volumeMounts:
                 - name: reports
                   mountPath: /reports
           volumes:
             - name: reports
               persistentVolumeClaim:
-                claimName: {{ .Release.Name }}-reports
+                claimName: {{ include "rag-support-assistant.reportsClaimName" . }}
+{{- end }}

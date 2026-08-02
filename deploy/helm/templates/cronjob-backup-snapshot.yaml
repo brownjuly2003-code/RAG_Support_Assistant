@@ -1,3 +1,4 @@
+{{- if and .Values.persistence.data.enabled .Values.persistence.backups.enabled }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -28,6 +29,8 @@ spec:
             app.kubernetes.io/component: backup-snapshot
         spec:
           restartPolicy: OnFailure
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
           containers:
             - name: backup-snapshot
               image: {{ include "rag-support-assistant.image" . | quote }}
@@ -38,23 +41,38 @@ spec:
                 - /backups
               env:
                 - name: BACKUP_ENCRYPTION_ENABLED
-                  value: {{ .Values.backup.encryption.enabled | quote }}{{- if .Values.backup.encryption.enabled }}
+                  value: {{ .Values.backup.encryption.enabled | quote }}
+                {{- if .Values.backup.encryption.enabled }}
                 - name: BACKUP_ENCRYPTION_RECIPIENT_FILE
-                  value: /secrets/recipient.pub{{- end }}
+                  value: /secrets/recipient.pub
+                {{- end }}
               envFrom:
                 {{- include "rag-support-assistant.envFrom" . | nindent 16 }}
               resources:
                 {{- toYaml .Values.resources | nindent 16 }}
+              securityContext:
+                {{- toYaml .Values.containerSecurityContext | nindent 16 }}
               volumeMounts:
+                - name: data
+                  mountPath: /app/data
+                  readOnly: true
                 - name: backups
-                  mountPath: /backups{{- if .Values.backup.encryption.enabled }}
+                  mountPath: /backups
+                {{- if .Values.backup.encryption.enabled }}
                 - name: backup-encryption-key
                   mountPath: /secrets
-                  readOnly: true{{- end }}
+                  readOnly: true
+                {{- end }}
           volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: {{ include "rag-support-assistant.dataClaimName" . }}
             - name: backups
               persistentVolumeClaim:
-                claimName: {{ .Release.Name }}-backups{{- if .Values.backup.encryption.enabled }}
+                claimName: {{ include "rag-support-assistant.backupsClaimName" . }}
+            {{- if .Values.backup.encryption.enabled }}
             - name: backup-encryption-key
               secret:
-                secretName: backup-encryption-key{{- end }}
+                secretName: backup-encryption-key
+            {{- end }}
+{{- end }}

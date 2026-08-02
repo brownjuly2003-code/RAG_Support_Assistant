@@ -1,3 +1,4 @@
+{{- if and .Values.persistence.backups.enabled .Values.persistence.reports.enabled }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -28,6 +29,8 @@ spec:
             app.kubernetes.io/component: backup-integrity
         spec:
           restartPolicy: OnFailure
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
           containers:
             - name: backup-integrity
               image: {{ include "rag-support-assistant.image" . | quote }}
@@ -42,6 +45,8 @@ spec:
                 {{- include "rag-support-assistant.envFrom" . | nindent 16 }}
               resources:
                 {{- toYaml .Values.resources | nindent 16 }}
+              securityContext:
+                {{- toYaml .Values.containerSecurityContext | nindent 16 }}
               volumeMounts:
                 - name: backups
                   mountPath: /backups
@@ -50,7 +55,8 @@ spec:
           volumes:
             - name: backups
               persistentVolumeClaim:
-                claimName: {{ .Release.Name }}-backups
+                claimName: {{ include "rag-support-assistant.backupsClaimName" . }}
             - name: reports
               persistentVolumeClaim:
-                claimName: {{ .Release.Name }}-reports
+                claimName: {{ include "rag-support-assistant.reportsClaimName" . }}
+{{- end }}
