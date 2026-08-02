@@ -2,14 +2,15 @@
 
 Дата фиксации scope: 2026-07-27.
 
-> ## SUPERSEDED / REOPENED — 2026-08-02 (status @ `4f93038`)
+> ## SUPERSEDED / REOPENED — 2026-08-02 (status @ `6dc6fe4`)
 >
 > This closure note is **historical**. Remediation remains **reopened**: the
-> project is **not** closed. P0 release-blocker **implementation** is locally
-> remediated and mechanically verified; **OBS-01** is locally remediated at
-> `5a9f857`; plan steps **4.1** (`b7faa19`) and **4.2** (`4f93038`) are locally
-> verified (ING-01 further partially locally remediated). Full audit-plan DoD,
-> OPS-01 operational restore DoD, and production release are still open.
+> plan is **ACTIVE**; the project is **not** closed. P0 release-blocker
+> **implementation** is locally remediated and mechanically verified; **OBS-01**
+> is locally remediated at `5a9f857`; plan steps **4.1** (`b7faa19`), **4.2**
+> (`4f93038`), and **4.3** (`6dc6fe4`) are locally verified (ING-01 further
+> partially locally remediated). Full audit-plan DoD, OPS-01 operational
+> restore DoD, and production release are still open.
 >
 > **Steps 1–5 status:**
 > - Step 1 **locally complete** — all named contract-test slices demonstrated
@@ -18,13 +19,15 @@
 > - Step 2 **local implementation verified; live PostgreSQL DoD open**.
 > - Step 3 **chart/backup runtime locally verified; operational restore DoD
 >   open**.
-> - Step 4 **in progress** — slices 4.1–4.2 done: durable `IngestionJob` +
->   migration `019`; upload/jobs/tasks identity; DB lifecycle; terminal errors;
->   Compose one-worker service + Helm Celery sidecar (concurrency 1, exact-node
->   health, 3600s warm shutdown). Next: 4.3 durable liveness/recovery
->   (job lease/heartbeat + stale queued/running reaper). Atomic publish /
->   retry / queue-age alerting / TEN-03 not claimed complete. ING-02 remains
->   open.
+> - Step 4 **in progress** — slices 4.1–4.3 done: durable `IngestionJob` +
+>   migrations `019`/`020`; upload/jobs/tasks identity; DB lifecycle; terminal
+>   errors; Compose one-worker + Helm Celery sidecar; persisted opaque worker
+>   lease token with heartbeat/expiry; atomic queued→running claim;
+>   tenant/token/status CAS; background interruptible heartbeat; independent
+>   FastAPI stale queued/expired-lease/legacy-running reaper (async jobs only);
+>   fail-closed liveness config. Next: **4.4** bounded retry/idempotency
+>   contract. Queue-age alerting / atomic publish / TEN-03 / live drills not
+>   claimed complete. ING-02 remains open.
 > - Step 5 **open / partially remediated** — trace identity done at
 >   `5a9f857`; timeout cancellation, bounded capacity, session
 >   concurrency/history ordering, sticky experiment propagation still open.

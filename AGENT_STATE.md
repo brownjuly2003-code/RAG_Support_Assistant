@@ -1,12 +1,12 @@
 # Agent State
 
-## 2026-08-02 Update-16 (step 4.2 worker topology @ `4f93038`) ✅ START HERE
+## 2026-08-02 Update-17 (step 4.3 durable liveness/recovery @ `6dc6fe4`) ✅ START HERE
 
-> **Documentation-only truth pass** after verified plan-step 4.2 code already on
-> HEAD. No source/runtime/test/config/Helm changes in this docs refresh (README
-> Quick Start wording only + status-layer docs).
+> **Documentation-only truth pass** after verified plan-step 4.3 code already on
+> HEAD. No source/runtime/test/config/Helm changes in this docs refresh
+> (status-layer docs only; README status note only).
 >
-> **HEAD:** `4f93038` (`feat(ingestion): ship single worker topology`).
+> **HEAD:** `6dc6fe4` (`fix(ingestion): recover stale jobs with durable leases`).
 > Relevant commits:
 > - `edb729c` — reopen audit remediation + no-HF local-user path
 > - `3c1e7b7` / `28580aa` — TEN-01/TEN-02 tenant + schema ownership
@@ -14,8 +14,10 @@
 > - `5a9f857` — OBS-01: internal `trace_id` UUID4 + nullable `correlation_id`
 > - `b7faa19` — step 4.1: durable tenant-owned ingestion job contract
 > - `4f93038` — step 4.2: single-worker Compose + Helm sidecar topology
+> - `6dc6fe4` — step 4.3: durable job lease/heartbeat + stale recovery/reaper
 >
 > **Exact current truth:**
+> - Plan remains **ACTIVE**. Project/production release is **not** complete.
 > - P0 release-blocker **implementation is locally remediated and mechanically
 >   verified**; production release remains gated by explicit live/external checks.
 > - Plan step 1 **locally complete**: all named contract-test slices
@@ -24,39 +26,40 @@
 > - Plan step 2 **local implementation verified; live PostgreSQL DoD open**.
 > - Plan step 3 **chart/backup runtime locally verified; operational restore
 >   DoD open**.
-> - Plan step 4 **in progress** (not complete). Slices **4.1** (`b7faa19`) and
->   **4.2** (`4f93038`) landed:
+> - Plan step 4 **in progress** (not complete). Slices **4.1** (`b7faa19`),
+>   **4.2** (`4f93038`), and **4.3** (`6dc6fe4`) are locally verified:
 >   - **4.1:** ORM `IngestionJob` + migration `019`; durable `job_id`/status;
 >     DB-only jobs/tasks reads; tenant-aware worker lifecycle; terminal errors
->   - **4.2 Compose:** exactly one `worker` service; same build/env,
->     DB/Redis/Ollama, deps, shared `./data:/app/data` as app; no ports; Celery
->     concurrency 1; `ingest@%h`; restart; exact-node health; 3600s warm shutdown
->   - **4.2 Helm:** enabled-by-default Celery sidecar in one-replica app pod
->     (RWO data PVC co-located); shares image, ConfigMap+Secret envFrom, writable
->     data, security, resources, checksum rollout; exact worker readiness/liveness;
->     3600s pod grace; fails closed if persistence off, `replicaCount != 1`, or
->     worker concurrency != 1
->   - **4.2 health:** `tasks.worker_health` lazily pings only
->     `ingest@socket.gethostname()`, validates real pong, silent/fail-closed on
->     malformed replies or broker exceptions
->   - `docs/DEPLOYMENT.md` distinguishes one Uvicorn web process/app replica from
->     one Celery ingestion worker/concurrency slot
-> - Evidence for 4.2: initial worker contracts 18 expected failures / 2 passes →
->   21 green; adversarial grace QA 4 expected failures at 120s → corrected to
->   3600; strengthened focused 24 passes; independent Codex topology/Helm/Compose
->   47 passes (+ pre-existing README wording-contract failure fixed in this
->   docs pass); adjacent ingestion task + async upload 10 passes; durable job
->   contract 27 passes / 2 warnings; docs suite 21 passes / 1 warning; Ruff and
->   mypy clean; Helm lint clean; `docker compose config --quiet` clean;
->   `git diff --check` clean; protected artifacts 9/9 unchanged.
+>   - **4.2 Compose/Helm:** one worker topology (Compose one-worker + Helm
+>     Celery sidecar), concurrency 1, exact-node health, 3600s warm shutdown
+>   - **4.3:** migration `020`; persisted opaque worker lease token with
+>     heartbeat/expiry; atomic queued→running claim; tenant/token/status CAS
+>     for heartbeat and terminal transitions; background interruptible
+>     heartbeat; independent FastAPI stale queued / expired-lease /
+>     legacy-running reaper (only async jobs reaped); recovery clears active
+>     ownership/stale result while preserving last heartbeat; sync SQL reaper
+>     runs off the event loop; shutdown cancels+awaits reaper; runtime
+>     liveness config fails closed (including blank explicit env and
+>     heartbeat ≥ lease)
+> - Independent Codex verification after final Grok changes for 4.3:
+>   55 liveness + 9 ingest-task + 12 upload/security + 26 settings + 27 durable
+>   job-contract + 24 docs = **153 passed** total; expected deprecation
+>   warnings only. Ruff clean; mypy `--follow-imports=skip` clean;
+>   `alembic heads` = `020 (head)`; `git diff --check` clean; protected user
+>   artifacts 9/9 unchanged.
+> - Test-first/adversarial evidence (honest): import-order fixture leak found
+>   via order-dependent failures and fixed by late session resolution; runtime
+>   clamp/fallback tests were red before correction; explicit blank env
+>   produced 25 expected failures before becoming 25/25 green.
 > - Audit finding **ING-01 further partially locally remediated**: durable
->   job/status plus required local Compose and Helm worker topology/health/
->   readiness are implemented. **Still open:** stuck queued/running recovery/
->   reaper; durable job heartbeat/lease; retry/idempotency; queue-age
->   metric/alert; live Redis/Postgres/Celery worker-outage drill; real
->   PostgreSQL migration `019` upgrade/downgrade.
-> - **ING-02** non-atomic delete-then-build remains **open**.
-> - **TEN-03** colliding physical tenant names remains **open**.
+>   job/status, local Compose/Helm worker topology, and durable lease/
+>   heartbeat + stale recovery/reaper are implemented. **Still open:**
+>   bounded retry/idempotency; queue-age metric/alert; live
+>   Redis/Postgres/Celery worker-outage/recovery drill; real PostgreSQL
+>   upgrade/downgrade through migrations `019`/`020`.
+> - **ING-02** non-atomic delete-then-build / atomic versioned index publish +
+>   rollback remains **open**.
+> - **TEN-03** collision-resistant tenant physical naming remains **open**.
 > - Plan step 5 **open / partially remediated**: trace identity done at
 >   `5a9f857`; timeout cancellation, bounded capacity, session
 >   concurrency/history ordering, sticky experiment propagation still require
@@ -74,35 +77,39 @@
 > `audit_gpt_23_07_26.md` is a dated snapshot — update only the top
 > remediation/status layer.
 >
-> **Next atomic implementation slice (plan order):** step **4.3** durable
-> liveness/recovery contract — add a persisted job lease/heartbeat and a
-> deterministic stale queued/running job recovery/reaper path, with fail-closed
-> tests. Do **not** claim retry, idempotency, queue-age alerting, atomic
-> publish, or TEN-03 complete in 4.3.
+> **Next atomic implementation slice (plan order):** step **4.4** bounded
+> retry/idempotency contract. Keep queue-age alerting, atomic publish, TEN-03,
+> and live/external drills explicitly **unclaimed**.
+
+## 2026-08-02 Update-16 (step 4.2 worker topology @ `4f93038`) — SUPERSEDED by Update-17
+
+> **SUPERSEDED.** Historical status at HEAD `4f93038` after step 4.2 worker
+> topology and before step 4.3 liveness/recovery. Next was 4.3 durable
+> lease/heartbeat + stale reaper. Status truth now lives in Update-17.
 
 ## 2026-08-02 Update-15 (step 4.1 durable job contract @ `b7faa19`) — SUPERSEDED by Update-16
 
 > **SUPERSEDED.** Historical status at HEAD `b7faa19` after step 4.1 durable
 > job contract and before step 4.2 worker topology. Next was 4.2 Compose/Helm
-> worker. Status truth now lives in Update-16.
+> worker. Status truth now lives in Update-17.
 
 ## 2026-08-02 Update-14 (OBS-01 local remediation documented @ `5a9f857`) — SUPERSEDED by Update-15
 
 > **SUPERSEDED.** Historical status at HEAD `5a9f857` after OBS-01 local close
 > and before step 4.1 durable job contract. Step 4 was still wholly open as the
-> next first job-contract slice. Status truth now lives in Update-16.
+> next first job-contract slice. Status truth now lives in Update-17.
 
 ## 2026-08-02 Update-13 (P0 local remediation documented @ `2767b9d`) — SUPERSEDED by Update-14
 
 > **SUPERSEDED.** Historical status at HEAD `2767b9d` after P0 local
 > remediation and before OBS-01 close. Step 1 was still in progress with
-> OBS-01 as next slice. Status truth now lives in Update-15.
+> OBS-01 as next slice. Status truth now lives in Update-17.
 
 ## 2026-08-02 Update-12 (audit revalidation + no-HF local-user path) — SUPERSEDED by Update-13
 
 > **SUPERSEDED.** Historical revalidation at HEAD `26d24e6` before P0 local
 > remediation commits. P0 were still open at that SHA. HF no-Space policy and
-> reopened audit plan remain valid; status truth now lives in Update-14.
+> reopened audit plan remain valid; status truth now lives in Update-17.
 
 ## 2026-07-27 Update-11 (project closure candidate) — SUPERSEDED by Update-12
 

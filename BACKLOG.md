@@ -1,29 +1,28 @@
 # Backlog
 
-## Active source (2026-08-02) — audit plan reopened; step 4.2 @ `4f93038`
+## Active source (2026-08-02) — audit plan reopened; step 4.3 @ `6dc6fe4`
 
 **Sole active backlog:** [`plan_sol_23_07_26`](plan_sol_23_07_26)
 (status matrix in [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md)).
 
 The 2026-07-27 «project closure / empty queue» narrative remains **revoked**.
+Plan remains **ACTIVE**; project/production release is **not** complete.
 P0 **implementation** is locally remediated; **OBS-01** is locally remediated
 at `5a9f857`. Plan step 1 is **locally complete**. Plan step 4 is **in
-progress**: slices **4.1** (`b7faa19`) and **4.2** (`4f93038`) landed
-(ING-01 further partially locally remediated). Full plan DoD / production
-release / project closure are **not** complete. Historical autopilot/safe
-tasks below remain evidence only — not the active queue.
+progress**: slices **4.1** (`b7faa19`), **4.2** (`4f93038`), and **4.3**
+(`6dc6fe4`) are locally verified (ING-01 further partially locally remediated).
+Full plan DoD / production release / project closure are **not** complete.
+Historical autopilot/safe tasks below remain evidence only — not the active
+queue.
 
 ### Next atomic slice (local code)
 
-**Plan step 4.3 durable liveness/recovery contract only:**
+**Plan step 4.4 bounded retry/idempotency contract only.**
 
-1. Add a persisted job lease/heartbeat and a deterministic stale
-   queued/running job recovery/reaper path, with fail-closed tests
-
-Do **not** claim retry, idempotency, queue-age alerting, atomic index publish,
-or TEN-03 complete in that slice. Slices 4.1–4.2 closed locally at `b7faa19`
-and `4f93038` (OBS-01 at `5a9f857`; tenant/audit/Helm earlier: `3c1e7b7`,
-`28580aa`, `ed8520a`, `2767b9d`).
+Do **not** claim queue-age alerting, atomic index publish, TEN-03, or
+live/external drills complete in that slice. Slices 4.1–4.3 closed locally at
+`b7faa19`, `4f93038`, and `6dc6fe4` (OBS-01 at `5a9f857`; tenant/audit/Helm
+earlier: `3c1e7b7`, `28580aa`, `ed8520a`, `2767b9d`).
 
 ### Live / external P0 gates (not local-complete)
 
@@ -35,17 +34,18 @@ Track separately from the next code slice — do **not** list as done work:
   cluster install; app pod recreation; clean-namespace restore to a
   **disposable** DB (never production DSN for `pg_restore --clean`); known-query
   smoke; measured RPO/RTO
-- **ING-01 remaining:** stuck queued/running recovery/reaper; durable job
-  heartbeat/lease; retry/idempotency; queue-age metric/alert; live
-  Redis/Postgres/Celery worker-outage drill; migration `019` real PostgreSQL
-  upgrade/downgrade
+- **ING-01 remaining:** bounded retry/idempotency; queue-age metric/alert;
+  live Redis/Postgres/Celery worker-outage/recovery drill; real PostgreSQL
+  upgrade/downgrade through migrations `019`/`020`
 
-Step 4 remains **in progress** (4.1–4.2 done; liveness/recovery and later
+Step 4 remains **in progress** (4.1–4.3 done; retry/idempotency and later
 step-4 DoD open). Step 5 remains **open / partially remediated** (trace
 identity done; timeout cancellation, bounded capacity, session
 concurrency/history ordering, sticky experiment propagation still open).
-Steps 6–10 remain open. ING-02 and TEN-03 remain open. Live GraceKelly/Mistral
-benchmarks remain explicit opt-in only and are **not** this slice.
+Steps 6–10 remain open. ING-02 atomic/versioned index publish + rollback and
+TEN-03 collision-resistant tenant physical naming remain open. Live
+GraceKelly/Mistral benchmarks remain explicit opt-in only and are **not** this
+slice.
 
 ## Project Closure note (2026-07-27) — historical
 
