@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -12,13 +13,16 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from config.settings import get_settings
 from ingestion.loader import DocumentLoader
+from utils.tenant_naming import physical_tenant_component
 from vectordb.manager import build_vector_store, get_embeddings, reset_retriever_cache
+
+_HASHED_TENANT_COMPONENT_RE = re.compile(r"--[0-9a-f]{16}$")
 
 
 def _upload_dir_for_tenant(upload_root: Path, tenant_id: str) -> Path:
     if tenant_id == "default":
         return upload_root
-    return upload_root / tenant_id
+    return upload_root / physical_tenant_component(tenant_id, max_length=63)
 
 
 def _iter_tenants(upload_root: Path) -> list[str]:
@@ -27,6 +31,11 @@ def _iter_tenants(upload_root: Path) -> list[str]:
         return tenants
     for entry in sorted(upload_root.iterdir()):
         if entry.is_dir():
+            if _HASHED_TENANT_COMPONENT_RE.search(entry.name):
+                raise RuntimeError(
+                    "reindex --all cannot recover a canonical tenant ID from a "
+                    "hashed upload directory; rerun with --tenant <canonical-id>"
+                )
             tenants.append(entry.name)
     return tenants
 
@@ -62,7 +71,11 @@ def main() -> int:
     args = parser.parse_args()
 
     upload_root = PROJECT_ROOT / "data" / "uploads"
-    tenants = _iter_tenants(upload_root) if args.all else [args.tenant]
+    try:
+        tenants = _iter_tenants(upload_root) if args.all else [args.tenant]
+    except RuntimeError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     total_docs = 0
     for tenant_id in tenants:

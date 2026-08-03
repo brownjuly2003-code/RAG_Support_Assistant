@@ -16,12 +16,20 @@ from api.rate_limit import limiter
 from auth.dependencies import require_role
 from ingestion.jobs import CreateJobOutcome
 from monitoring import prometheus as prometheus_metrics
+from utils.tenant_naming import physical_tenant_component
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # Optional HTTP Idempotency-Key (never reuse X-Request-Id).
 _IDEMPOTENCY_KEY_RE = _re.compile(r"^[A-Za-z0-9._:~-]{16,128}$")
+
+
+def _tenant_upload_directory(upload_root: Path, tenant_id: str) -> Path:
+    tenant = tenant_id or "default"
+    if tenant == "default":
+        return upload_root
+    return upload_root / physical_tenant_component(tenant, max_length=63)
 
 
 class UploadResponse(BaseModel):
@@ -312,10 +320,7 @@ async def upload_document(
         raise HTTPException(status_code=400, detail="Invalid filename")
 
     upload_root = _app.PROJECT_ROOT / "data" / "uploads"
-    if tenant == "default":
-        upload_dir = upload_root
-    else:
-        upload_dir = upload_root / _re.sub(r"[^A-Za-z0-9_\-]", "_", tenant)
+    upload_dir = _tenant_upload_directory(upload_root, tenant)
     upload_dir.mkdir(parents=True, exist_ok=True)
 
     # Keep tenant corpus directory + canonical safe_name (no per-job subdirs).

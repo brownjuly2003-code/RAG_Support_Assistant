@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import re
 import time
 from collections.abc import Sequence
 from datetime import datetime, timezone
@@ -11,6 +10,7 @@ from threading import Lock
 from typing import TYPE_CHECKING, Any
 
 from config.settings import get_settings
+from utils.tenant_naming import physical_tenant_component
 from vectordb import _base_manager
 
 logger = logging.getLogger(__name__)
@@ -46,11 +46,8 @@ def _get_chroma() -> Any:
 
 def _sanitize_tenant(tenant_id: str) -> str:
     prefix = getattr(get_settings(), "vectordb_collection_prefix", "rag_docs")
-    sanitized = re.sub(r"[^a-zA-Z0-9._-]", "_", tenant_id or "default")
-    if not sanitized:
-        sanitized = "default"
-    max_length = max(1, 63 - len(prefix) - 1)
-    return sanitized[:max_length] or "default"
+    max_length = 63 - len(prefix) - 1
+    return physical_tenant_component(tenant_id, max_length=max_length)
 
 
 def _collection_name(tenant_id: str) -> str:
@@ -66,10 +63,9 @@ def _factcard_collection_name(tenant_id: str) -> str:
     """
     prefix = getattr(get_settings(), "vectordb_collection_prefix", "rag_docs")
     suffix = "factcards"
-    sanitized = re.sub(r"[^a-zA-Z0-9._-]", "_", tenant_id or "default") or "default"
     # prefix + "_" + tenant + "_" + suffix must be <= 63 chars.
-    max_tenant = max(1, 63 - len(prefix) - len(suffix) - 2)
-    tenant = sanitized[:max_tenant] or "default"
+    max_tenant = 63 - len(prefix) - len(suffix) - 2
+    tenant = physical_tenant_component(tenant_id, max_length=max_tenant)
     return f"{prefix}_{tenant}_{suffix}"
 
 

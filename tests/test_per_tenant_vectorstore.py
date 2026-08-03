@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import io
+import re
 import sys
 import types
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -27,7 +29,8 @@ def test_collection_name_sanitizes_special_chars() -> None:
     from vectordb.manager import _collection_name
 
     assert _collection_name("acme-corp") == "rag_docs_acme-corp"
-    assert _collection_name("evil; DROP TABLE") == "rag_docs_evil__DROP_TABLE"
+    unsafe = _collection_name("evil; DROP TABLE")
+    assert re.fullmatch(r"rag_docs_evil__DROP_TABLE--[0-9a-f]{16}", unsafe)
     assert _collection_name("") == "rag_docs_default"
 
 
@@ -37,6 +40,88 @@ def test_collection_name_truncates_long_tenant() -> None:
     result = _collection_name("x" * 100)
 
     assert len(result) <= 63
+
+
+def test_collection_names_resist_lossy_and_truncation_collisions() -> None:
+    from vectordb.manager import _collection_name, _factcard_collection_name
+
+    for name_factory in (_collection_name, _factcard_collection_name):
+        slash = name_factory("a/b")
+        question = name_factory("a?b")
+        assert slash != question
+        assert len(slash) <= 63
+        assert len(question) <= 63
+
+        long_a = name_factory(f"{'x' * 100}a")
+        long_b = name_factory(f"{'x' * 100}b")
+        assert long_a != long_b
+        assert len(long_a) <= 63
+        assert len(long_b) <= 63
+
+
+def test_upload_directories_use_the_same_collision_resistant_component(
+    tmp_path: Path,
+) -> None:
+    from api.routers.upload import _tenant_upload_directory
+    from utils.tenant_naming import physical_tenant_component
+
+    upload_root = tmp_path / "uploads"
+    assert _tenant_upload_directory(upload_root, "default") == upload_root
+    assert _tenant_upload_directory(upload_root, "acme-corp") == upload_root / "acme-corp"
+
+    slash = _tenant_upload_directory(upload_root, "a/b")
+    question = _tenant_upload_directory(upload_root, "a?b")
+    assert slash != question
+    assert slash.parent == upload_root
+    assert question.parent == upload_root
+    assert slash.name == physical_tenant_component("a/b", max_length=63)
+    assert question.name == physical_tenant_component("a?b", max_length=63)
+    assert re.fullmatch(r"a_b--[0-9a-f]{16}", slash.name)
+
+
+def test_physical_names_resist_casefold_and_windows_device_collisions() -> None:
+    from utils.tenant_naming import physical_tenant_component
+
+    lower = physical_tenant_component("acme", max_length=63)
+    mixed = physical_tenant_component("Acme", max_length=63)
+    assert lower == "acme"
+    assert lower.casefold() != mixed.casefold()
+    assert re.fullmatch(r"Acme--[0-9a-f]{16}", mixed)
+
+    reserved = physical_tenant_component("con", max_length=63)
+    assert reserved.casefold() != "con"
+    assert re.fullmatch(r"con--[0-9a-f]{16}", reserved)
+
+
+def test_reindex_resolves_explicit_tenant_and_rejects_ambiguous_hashed_all(
+    tmp_path: Path,
+) -> None:
+    from scripts import reindex
+    from utils.tenant_naming import physical_tenant_component
+
+    upload_root = tmp_path / "uploads"
+    component = physical_tenant_component("a/b", max_length=63)
+    assert reindex._upload_dir_for_tenant(upload_root, "a/b") == upload_root / component
+
+    (upload_root / component).mkdir(parents=True)
+    with pytest.raises(RuntimeError, match="--tenant"):
+        reindex._iter_tenants(upload_root)
+
+
+def test_factcard_default_cache_uses_physical_tenant_component(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from scripts import build_factcards
+    from utils.tenant_naming import physical_tenant_component
+
+    monkeypatch.setattr(build_factcards, "PROJECT_ROOT", tmp_path)
+    args = types.SimpleNamespace(cards_json=None, tenant="a/b")
+    component = physical_tenant_component("a/b", max_length=63)
+
+    assert build_factcards._cards_cache_path(args) == (
+        tmp_path / ".tmp" / f"factcards_{component}_cards.json"
+    )
 
 
 def test_two_tenants_get_different_retrievers(

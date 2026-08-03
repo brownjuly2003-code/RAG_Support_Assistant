@@ -32,6 +32,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from ingestion.factcard_extractor import FactCard, extract_fact_cards  # noqa: E402
 from scripts.factcard_verify import DEFAULT_DOCS, build_llm, source_id  # noqa: E402
+from utils.tenant_naming import physical_tenant_component  # noqa: E402
 
 DEFAULT_QUERY = "какие поля нужны для таможенной очистки"
 
@@ -63,7 +64,8 @@ def _cards_cache_path(args: argparse.Namespace) -> Path:
     if args.cards_json:
         p = Path(args.cards_json)
         return p if p.is_absolute() else (PROJECT_ROOT / args.cards_json).resolve()
-    return PROJECT_ROOT / ".tmp" / f"factcards_{args.tenant}_cards.json"
+    tenant = physical_tenant_component(str(args.tenant), max_length=63)
+    return PROJECT_ROOT / ".tmp" / f"factcards_{tenant}_cards.json"
 
 
 def _dump_cards(card_docs: list, path: Path) -> None:

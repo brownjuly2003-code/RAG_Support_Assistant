@@ -141,8 +141,18 @@ Deployment contract intact.
 
 Later ingestion slices add a stuck-queued reaper, bounded publish
 retry/idempotency, and the `rag_ingestion_queue_oldest_seconds` alerting
-contract. **Still open:** atomic index publish (ING-02), per-tenant locking /
-TEN-03, and live Redis/Postgres/Celery drills.
+contract. **Still open:** atomic index publish (ING-02), per-tenant distributed
+locking, and live Redis/Postgres/Celery drills.
+
+Tenant physical names preserve existing lowercase-safe identifiers such as
+`default`, UUIDs, and `acme-corp`. Uppercase, Windows-reserved, lossy, or long
+identifiers use a deterministic `safe-slug--<16 hex SHA-256>` component for
+both Chroma collections and upload directories. Ambiguous legacy directories
+are never adopted automatically: verify tenant ownership, move or re-ingest
+the corpus into the new directory, then run
+`python scripts/reindex.py --tenant <canonical-id>`. `reindex.py --all` fails
+closed when it encounters a hashed directory because the canonical ID is not
+reversible from that physical name.
 
 ### Reverse proxy and cookie authentication
 

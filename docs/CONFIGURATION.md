@@ -97,7 +97,7 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `REGRESSION_GATE_MIN_PASS_RATE` | `0.85` | Minimum candidate pass rate required by the regression gate |
 | `RAG_VECTOR_BACKEND` | `chroma` | Vector store backend |
 | `VECTORDB_CHROMA_DIR` | `<repo>/data/vectordb/chroma` | Chroma persistence directory. Use a new empty directory before changing embedding model or vector dimension; re-ingest the corpus into that directory |
-| `VECTORDB_COLLECTION_PREFIX` | `rag_docs` | Chroma collection prefix; full name is `{prefix}_{tenant_id}` |
+| `VECTORDB_COLLECTION_PREFIX` | `rag_docs` | Chroma collection prefix; full name is `{prefix}_{physical_tenant}`. Safe lowercase tenant IDs keep their existing component; uppercase, reserved, lossy, or truncated IDs use `safe-slug--<16 hex SHA-256>` so physical namespaces do not collide |
 | `CATEGORIES_CONFIG_PATH` | `config/categories.yml` | Taxonomy file for upload auto-categorization |
 
 ### Resilience and capacity
