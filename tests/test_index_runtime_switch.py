@@ -197,6 +197,7 @@ def test_rebuild_validates_known_query_then_atomically_publishes_candidate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from vectordb.index_manifest import read_index_manifest
+    from vectordb.index_retention import read_retention_inventory
 
     chroma_directory = tmp_path / "vectordb" / "chroma"
     state = _FakeChromaState()
@@ -205,6 +206,26 @@ def test_rebuild_validates_known_query_then_atomically_publishes_candidate(
     old_doc = manager.Document(page_content="old active content", metadata={})
     state.documents[legacy_name] = [old_doc]
     docs = [manager.Document(page_content="new known content", metadata={"source": "new.md"})]
+    real_record_retention = manager.record_retention_collection
+    real_publish = manager.publish_active_collection
+
+    def _spy_record_retention(*args: Any, **kwargs: Any) -> Any:
+        collection_name = args[1]
+        state.events.append(f"record-inventory:{collection_name}")
+        return real_record_retention(*args, **kwargs)
+
+    def _spy_publish(*args: Any, **kwargs: Any) -> Any:
+        collection_name = args[1]
+        state.events.append(f"publish:{collection_name}")
+        return real_publish(*args, **kwargs)
+
+    monkeypatch.setattr(
+        manager,
+        "record_retention_collection",
+        _spy_record_retention,
+        raising=False,
+    )
+    monkeypatch.setattr(manager, "publish_active_collection", _spy_publish)
 
     store, chunks = manager.build_vector_store(
         docs,
@@ -219,7 +240,19 @@ def test_rebuild_validates_known_query_then_atomically_publishes_candidate(
     assert manifest.generation == 1
     assert state.documents[legacy_name] == [old_doc]
     assert legacy_name not in state.deleted_names
-    assert state.events.index(f"known-query:{store.collection_name}") < len(state.events)
+    assert state.events.index(f"known-query:{store.collection_name}") < state.events.index(
+        f"record-inventory:{store.collection_name}"
+    )
+    assert state.events.index(
+        f"record-inventory:{store.collection_name}"
+    ) < state.events.index(f"publish:{store.collection_name}")
+    assert store.collection_name not in state.deleted_names
+    assert state.deleted_names == []
+    inventory = read_retention_inventory("acme", chroma_directory=chroma_directory)
+    assert inventory is not None
+    assert [entry.collection_name for entry in inventory.collections] == [
+        store.collection_name
+    ]
     assert chunks[0].page_content == "new known content"
 
     retriever = manager.get_retriever(
@@ -263,11 +296,69 @@ def test_known_query_failure_removes_candidate_without_changing_active(
     assert manifest_path.read_bytes() == manifest_before
 
 
+def test_inventory_record_failure_does_not_publish_and_discards_candidate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from vectordb.index_manifest import index_manifest_path
+    from vectordb.index_retention import read_retention_inventory
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    active_name = "rag_docs-v-acme-1111111111111111"
+    state.documents[active_name] = [
+        manager.Document(page_content="still active", metadata={"chunk_index": 0})
+    ]
+    _publish(monkeypatch, chroma_directory, active_name)
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    manifest_before = manifest_path.read_bytes()
+    publish_calls: list[str] = []
+    real_publish = manager.publish_active_collection
+
+    def _fail_record(*args: Any, **kwargs: Any) -> None:
+        state.events.append(f"record-inventory-fail:{args[1]}")
+        raise RuntimeError("inventory record failed")
+
+    def _spy_publish(*args: Any, **kwargs: Any) -> Any:
+        publish_calls.append(args[1])
+        state.events.append(f"publish:{args[1]}")
+        return real_publish(*args, **kwargs)
+
+    monkeypatch.setattr(
+        manager,
+        "record_retention_collection",
+        _fail_record,
+        raising=False,
+    )
+    monkeypatch.setattr(manager, "publish_active_collection", _spy_publish)
+
+    with pytest.raises(RuntimeError, match="inventory record failed"):
+        manager.build_vector_store(
+            [manager.Document(page_content="candidate", metadata={"source": "new.md"})],
+            {"chunk_size": 100, "chunk_overlap": 0},
+            embeddings=_Embeddings(),
+            tenant_id="acme",
+        )
+
+    candidate_name = state.built_names[-1]
+    assert publish_calls == []
+    assert f"publish:{candidate_name}" not in state.events
+    assert state.deleted_names == [candidate_name]
+    assert active_name in state.documents
+    assert candidate_name not in state.documents
+    assert manifest_path.read_bytes() == manifest_before
+    assert (
+        read_retention_inventory("acme", chroma_directory=chroma_directory) is None
+    )
+
+
 def test_publish_failure_removes_unpublished_candidate_and_preserves_manifest(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from vectordb.index_manifest import index_manifest_path
+    from vectordb.index_retention import read_retention_inventory
 
     chroma_directory = tmp_path / "vectordb" / "chroma"
     state = _FakeChromaState()
@@ -296,7 +387,15 @@ def test_publish_failure_removes_unpublished_candidate_and_preserves_manifest(
     candidate_name = state.built_names[-1]
     assert state.deleted_names == [candidate_name]
     assert active_name in state.documents
+    assert candidate_name not in state.documents
     assert manifest_path.read_bytes() == manifest_before
+    # Stale trusted inventory entry may remain after publish fails; retention
+    # adapter treats NotFoundError as idempotent and prunes durable inventory.
+    inventory = read_retention_inventory("acme", chroma_directory=chroma_directory)
+    assert inventory is not None
+    assert [entry.collection_name for entry in inventory.collections] == [
+        candidate_name
+    ]
 
 
 def test_retriever_cache_invalidates_when_manifest_generation_changes(

@@ -19,6 +19,7 @@ from vectordb.index_manifest import (
     read_index_manifest,
     rollback_active_collection,
 )
+from vectordb.index_retention import record_retention_collection
 from vectordb.index_staging import (
     IndexStagingValidationError,
     build_staged_collection,
@@ -257,6 +258,12 @@ def build_vector_store(
                     chunks,
                     tenant_id=tenant,
                     lock_token=lock_token,
+                )
+                record_retention_collection(
+                    tenant,
+                    candidate.collection_name,
+                    lock_token=lock_token,
+                    chroma_directory=persist_directory,
                 )
                 manifest = publish_active_collection(
                     tenant,
