@@ -93,6 +93,24 @@ def test_malformed_manifest_fails_closed_instead_of_using_a_collection(
             chroma_directory=chroma_directory,
         )
 
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1.0,
+                "active_collection": "rag_docs_acme_v1",
+                "previous_collection": None,
+                "generation": 1,
+                "updated_at": "2026-08-03T00:00:00+00:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(manifest.IndexManifestCorrupt, match="manifest"):
+        manifest.resolve_active_collection(
+            "acme",
+            chroma_directory=chroma_directory,
+        )
+
 
 def test_atomic_publish_preserves_previous_collection_and_increments_generation(
     tmp_path: Path,

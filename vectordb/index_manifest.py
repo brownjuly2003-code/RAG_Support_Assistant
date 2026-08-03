@@ -114,7 +114,11 @@ def _parse_manifest(payload: Any) -> IndexVersionManifest:
                 "Index version manifest has an unexpected schema"
             )
         schema_version = payload["schema_version"]
-        if isinstance(schema_version, bool) or schema_version != _SCHEMA_VERSION:
+        if (
+            isinstance(schema_version, bool)
+            or not isinstance(schema_version, int)
+            or schema_version != _SCHEMA_VERSION
+        ):
             raise IndexManifestValidationError(
                 "Index version manifest schema_version is unsupported"
             )
