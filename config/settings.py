@@ -107,6 +107,16 @@ DEPLOYED_EXPERIMENT_SETTINGS: dict[str, Any] = {}
 # END DEPLOYED_EXPERIMENT_SETTINGS
 
 
+def _load_vectordb_retention_max_versions() -> int:
+    raw_value = (os.getenv("VECTORDB_RETENTION_MAX_VERSIONS", "2") or "").strip()
+    try:
+        return int(raw_value)
+    except ValueError as exc:
+        raise RuntimeError(
+            "VECTORDB_RETENTION_MAX_VERSIONS must be an integer >= 2"
+        ) from exc
+
+
 def _load_llm_model_prices() -> dict[str, dict[str, float]]:
     raw_json = (os.getenv("LLM_MODEL_PRICES", "") or "").strip()
     if raw_json:
@@ -203,6 +213,9 @@ class Settings:
     )
     vectordb_collection_prefix: str = field(
         default_factory=lambda: os.getenv("VECTORDB_COLLECTION_PREFIX", "rag_docs")
+    )
+    vectordb_retention_max_versions: int = field(
+        default_factory=_load_vectordb_retention_max_versions
     )
 
     # Трейсинг (SQLite)
@@ -978,6 +991,14 @@ class Settings:
 
         log = logging.getLogger(__name__)
 
+        if (
+            isinstance(self.vectordb_retention_max_versions, bool)
+            or not isinstance(self.vectordb_retention_max_versions, int)
+            or self.vectordb_retention_max_versions < 2
+        ):
+            raise RuntimeError(
+                "\nERROR: VECTORDB_RETENTION_MAX_VERSIONS must be an integer >= 2."
+            )
         if self.ingestion_job_lease_sec <= 0:
             raise RuntimeError(
                 "\nERROR: INGESTION_JOB_LEASE_SEC must be positive.\n"
