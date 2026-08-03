@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 _LOCK_DOMAIN = b"rag-support:index-rebuild:v1\0"
 _POLL_INTERVAL_SEC = 0.1
+_TOKEN_PROOF = object()
 
 
 class TenantIndexLockError(RuntimeError):
@@ -29,6 +30,36 @@ class TenantIndexLockTimeout(TenantIndexLockError):
 
 class TenantIndexLockUnavailable(TenantIndexLockError):
     """Raised when lock ownership cannot be established or safely released."""
+
+
+class TenantIndexLockToken:
+    """Proof that the caller currently holds one tenant's rebuild lock."""
+
+    __slots__ = ("_active", "_tenant_id")
+
+    def __init__(self, tenant_id: str, proof: object) -> None:
+        if proof is not _TOKEN_PROOF:
+            raise TypeError("Tenant index lock tokens are created by tenant_index_lock")
+        self._tenant_id = str(tenant_id or "default")
+        self._active = True
+
+    def _invalidate(self, proof: object) -> None:
+        if proof is not _TOKEN_PROOF:
+            raise TypeError("Tenant index lock tokens are managed by tenant_index_lock")
+        self._active = False
+
+
+def require_tenant_index_lock(
+    lock_token: TenantIndexLockToken | None,
+    tenant_id: str,
+) -> None:
+    """Fail closed unless ``lock_token`` is active for ``tenant_id``."""
+    if not isinstance(lock_token, TenantIndexLockToken) or not lock_token._active:
+        raise TenantIndexLockUnavailable("A held tenant index lock is required")
+    if lock_token._tenant_id != str(tenant_id or "default"):
+        raise TenantIndexLockUnavailable(
+            "Tenant index lock token belongs to a different tenant"
+        )
 
 
 def _lock_key(tenant_id: str) -> int:
@@ -99,7 +130,7 @@ def _release(connection: Any, lock_key: int) -> None:
 
 
 @contextmanager
-def tenant_index_lock(tenant_id: str) -> Iterator[None]:
+def tenant_index_lock(tenant_id: str) -> Iterator[TenantIndexLockToken]:
     """Serialize destructive index rebuilds for one canonical tenant ID."""
     lock_key = _lock_key(tenant_id)
     try:
@@ -111,9 +142,10 @@ def tenant_index_lock(tenant_id: str) -> Iterator[None]:
 
     try:
         _acquire(connection, lock_key, _wait_timeout_sec())
+        lock_token = TenantIndexLockToken(tenant_id, _TOKEN_PROOF)
         body_failed = False
         try:
-            yield
+            yield lock_token
         except BaseException:
             body_failed = True
             raise
@@ -129,6 +161,8 @@ def tenant_index_lock(tenant_id: str) -> Iterator[None]:
                     )
                 else:
                     raise
+            finally:
+                lock_token._invalidate(_TOKEN_PROOF)
     finally:
         try:
             connection.close()
