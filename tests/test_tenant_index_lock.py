@@ -176,26 +176,65 @@ def test_main_and_factcard_rebuilds_hold_the_tenant_lock(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    from vectordb import manager
+    from vectordb import manager, tenant_lock
 
     events: list[str] = []
     lock_held = False
+
+    class _Connection:
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(tenant_lock, "_open_lock_connection", _Connection)
+    monkeypatch.setattr(tenant_lock, "_wait_timeout_sec", lambda: 0.0)
+    monkeypatch.setattr(tenant_lock, "_acquire", lambda *args: None)
+    monkeypatch.setattr(tenant_lock, "_release", lambda *args: None)
 
     @contextmanager
     def _lock(tenant_id: str):
         nonlocal lock_held
         events.append(f"enter:{tenant_id}")
-        lock_held = True
-        try:
-            yield
-        finally:
-            lock_held = False
-            events.append(f"exit:{tenant_id}")
+        with tenant_lock.tenant_index_lock(tenant_id) as lock_token:
+            lock_held = True
+            try:
+                yield lock_token
+            finally:
+                lock_held = False
+                events.append(f"exit:{tenant_id}")
+
+    class _Embeddings:
+        def embed_query(self, text: str) -> list[float]:
+            assert text
+            return [0.0, 0.0, 0.0]
 
     class _Store:
+        def __init__(self, documents: list[Any]) -> None:
+            self.documents = list(documents)
+            self._collection = self
+
         def persist(self) -> None:
             assert lock_held
             events.append("persist")
+
+        def count(self) -> int:
+            assert lock_held
+            return len(self.documents)
+
+        def query(self, **kwargs: Any) -> dict[str, list[list[str]]]:
+            _ = kwargs
+            assert lock_held
+            events.append("dimension")
+            return {"ids": [["chunk"]]}
+
+        def similarity_search(self, query: str, *, k: int) -> list[Any]:
+            _ = query
+            assert lock_held
+            events.append("known-query")
+            return self.documents[:k]
+
+        def delete_collection(self) -> None:
+            assert lock_held
+            events.append("delete")
 
     class _Chroma:
         def __init__(self, **kwargs: Any) -> None:
@@ -207,10 +246,25 @@ def test_main_and_factcard_rebuilds_hold_the_tenant_lock(
 
         @classmethod
         def from_documents(cls, **kwargs: Any) -> _Store:
-            _ = kwargs
             assert lock_held
             events.append("build")
-            return _Store()
+            return _Store(list(kwargs["documents"]))
+
+    def _publish(
+        tenant_id: str,
+        active_collection: str,
+        *,
+        lock_token: Any,
+        chroma_directory: Any,
+    ) -> Any:
+        _ = chroma_directory
+        tenant_lock.require_tenant_index_lock(lock_token, tenant_id)
+        assert lock_held
+        events.append("publish")
+        return SimpleNamespace(
+            active_collection=active_collection,
+            generation=1,
+        )
 
     settings = SimpleNamespace(
         vector_backend="chroma",
@@ -226,15 +280,24 @@ def test_main_and_factcard_rebuilds_hold_the_tenant_lock(
     monkeypatch.setattr(manager, "tenant_index_lock", _lock)
     monkeypatch.setattr(manager, "get_settings", lambda: settings)
     monkeypatch.setattr(manager, "_get_chroma", lambda: _Chroma)
+    monkeypatch.setattr(manager, "publish_active_collection", _publish)
     monkeypatch.setattr(manager._base_manager, "select_chunks", lambda *args, **kwargs: docs)
 
     manager.build_vector_store(
         docs,
         {"chunk_size": 100, "chunk_overlap": 0},
-        embeddings=object(),
+        embeddings=_Embeddings(),
         tenant_id="acme",
     )
-    assert events == ["enter:acme", "delete", "build", "persist", "exit:acme"]
+    assert events == [
+        "enter:acme",
+        "build",
+        "persist",
+        "dimension",
+        "known-query",
+        "publish",
+        "exit:acme",
+    ]
 
     events.clear()
     manager.build_factcard_store(docs, embeddings=object(), tenant_id="acme")

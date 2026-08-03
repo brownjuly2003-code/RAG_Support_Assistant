@@ -63,6 +63,7 @@ def test_tenant_vector_store_uses_settings_chunk_defaults(
     captured: dict[str, object] = {}
     docs = [tenant_manager.Document(page_content="Первый. Второй.", metadata={})]
     embeddings = MagicMock()
+    embeddings.embed_query.return_value = [0.0, 0.0, 0.0]
     split_documents = [
         tenant_manager.Document(page_content="Chunk", metadata={}),
     ]
@@ -70,7 +71,25 @@ def test_tenant_vector_store_uses_settings_chunk_defaults(
     splitter.split_documents.return_value = split_documents
 
     class FakeStore:
+        def __init__(self, documents) -> None:
+            self.documents = list(documents)
+            self._collection = self
+
         def persist(self) -> None:
+            return None
+
+        def count(self) -> int:
+            return len(self.documents)
+
+        def query(self, **kwargs):
+            _ = kwargs
+            return {"ids": [["chunk"]]}
+
+        def similarity_search(self, query: str, *, k: int):
+            _ = query
+            return self.documents[:k]
+
+        def delete_collection(self) -> None:
             return None
 
     class FakeChroma:
@@ -87,7 +106,7 @@ def test_tenant_vector_store_uses_settings_chunk_defaults(
         ):
             _ = embedding, persist_directory, collection_name
             captured["documents"] = list(documents)
-            return FakeStore()
+            return FakeStore(documents)
 
     def _fake_splitter(*, chunk_size: int, chunk_overlap: int):
         captured["chunk_size"] = chunk_size

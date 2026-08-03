@@ -5,6 +5,7 @@ import re
 import sys
 import types
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
@@ -204,27 +205,58 @@ def test_build_store_invalidates_cache(
     splitter = Mock()
     splitter.split_documents.return_value = docs
 
+    class _Embeddings:
+        def embed_query(self, text: str) -> list[float]:
+            assert text
+            return [0.0, 0.0, 0.0]
+
     class FakeChroma:
         def __init__(self, **kwargs):
             self.kwargs = kwargs
+            self.documents = list(kwargs.pop("documents", []))
+            self._collection = self
 
         @classmethod
         def from_documents(cls, **kwargs):
-            instance = cls(**kwargs)
-            instance.persist = lambda: None
-            return instance
+            return cls(**kwargs)
+
+        def persist(self) -> None:
+            return None
+
+        def count(self) -> int:
+            return len(self.documents)
+
+        def query(self, **kwargs):
+            _ = kwargs
+            return {"ids": [["chunk"]]}
+
+        def similarity_search(self, query: str, *, k: int):
+            _ = query
+            return self.documents[:k]
+
+        def delete_collection(self) -> None:
+            return None
 
         def as_retriever(self, **kwargs):
             return object()
 
     monkeypatch.setattr(manager, "Chroma", FakeChroma, raising=False)
-    monkeypatch.setattr(manager, "get_embeddings", lambda model_name=None: None)
-    monkeypatch.setattr(manager._base_manager, "_build_text_splitter", lambda *args, **kwargs: splitter)
+    monkeypatch.setattr(manager, "get_embeddings", lambda model_name=None: _Embeddings())
+    monkeypatch.setattr(manager, "get_settings", lambda: SimpleNamespace(
+        vector_backend="chroma",
+        vectordb_chroma_dir=tmp_path,
+        vectordb_collection_prefix="rag_docs",
+        chunk_size=800,
+        chunk_overlap=200,
+        contextual_headers=False,
+        rag_device="cpu",
+    ))
+    monkeypatch.setattr(manager._base_manager, "select_chunks", lambda *args, **kwargs: docs)
     manager.reset_retriever_cache()
 
     first = manager.get_retriever(
         persist_directory=str(tmp_path),
-        embeddings=None,
+        embeddings=_Embeddings(),
         tenant_id="acme",
     )
     manager.build_vector_store(

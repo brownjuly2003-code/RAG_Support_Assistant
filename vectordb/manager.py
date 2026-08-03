@@ -12,6 +12,16 @@ from typing import TYPE_CHECKING, Any
 from config.settings import get_settings
 from utils.tenant_naming import physical_tenant_component
 from vectordb import _base_manager
+from vectordb.index_manifest import (
+    IndexVersionManifest,
+    publish_active_collection,
+    read_index_manifest,
+)
+from vectordb.index_staging import (
+    build_staged_collection,
+    discard_staged_collection,
+    validate_staged_known_query,
+)
 from vectordb.tenant_lock import tenant_index_lock
 
 logger = logging.getLogger(__name__)
@@ -25,6 +35,7 @@ Chroma = getattr(_base_manager, "Chroma", None)
 _retriever_cache: dict[str, Any] = {}
 _chunks_cache: dict[str, list[Document]] = {}
 _store_cache: dict[str, Any] = {}
+_index_cache_keys: dict[str, tuple[str, str, int]] = {}
 _cache_lock = Lock()
 
 
@@ -68,6 +79,36 @@ def _factcard_collection_name(tenant_id: str) -> str:
     max_tenant = 63 - len(prefix) - len(suffix) - 2
     tenant = physical_tenant_component(tenant_id, max_length=max_tenant)
     return f"{prefix}_{tenant}_{suffix}"
+
+
+def _index_cache_key(
+    chroma_directory: str | Path,
+    manifest: IndexVersionManifest,
+) -> tuple[str, str, int]:
+    return (
+        str(Path(chroma_directory).resolve()),
+        manifest.active_collection,
+        manifest.generation,
+    )
+
+
+def _resolve_active_index(
+    tenant_id: str,
+    chroma_directory: str | Path,
+) -> tuple[str, tuple[str, str, int], bool]:
+    directory = Path(chroma_directory).resolve()
+    manifest = read_index_manifest(
+        tenant_id,
+        chroma_directory=directory,
+    )
+    if manifest is None:
+        active_collection = _collection_name(tenant_id)
+        return active_collection, (str(directory), active_collection, 0), False
+    return (
+        manifest.active_collection,
+        _index_cache_key(directory, manifest),
+        True,
+    )
 
 
 def add_contextual_headers(
@@ -172,7 +213,8 @@ def build_vector_store(
         metadata["chunk_index"] = index
         chunk.metadata = metadata
 
-    with tenant_index_lock(tenant):
+    index_cache_key: tuple[str, str, int] | None = None
+    with tenant_index_lock(tenant) as lock_token:
         # Embedding is the dominant cost here and runs synchronously inside the
         # backend's from_documents() with no per-item callback. On CPU with a large
         # local model (~1.3s/chunk for BGE-M3) a few-thousand-chunk corpus takes tens
@@ -197,28 +239,36 @@ def build_vector_store(
         else:
             chroma_cls = _get_chroma()
             persist_directory = str(settings.vectordb_chroma_dir)
-            collection_name = _collection_name(tenant)
-
-            try:
-                existing = chroma_cls(
-                    persist_directory=persist_directory,
-                    embedding_function=embeddings,
-                    collection_name=collection_name,
-                )
-                delete_collection = getattr(existing, "delete_collection", None)
-                if callable(delete_collection):
-                    delete_collection()
-            except Exception:
-                pass
-
-            store = chroma_cls.from_documents(
-                documents=list(chunks),
-                embedding=embeddings,
-                persist_directory=persist_directory,
-                collection_name=collection_name,
+            candidate = build_staged_collection(
+                chunks,
+                embeddings,
+                tenant_id=tenant,
+                lock_token=lock_token,
+                chroma_cls=chroma_cls,
+                chroma_directory=persist_directory,
             )
-            if hasattr(store, "persist"):
-                store.persist()
+            try:
+                validate_staged_known_query(
+                    candidate,
+                    chunks,
+                    tenant_id=tenant,
+                    lock_token=lock_token,
+                )
+                manifest = publish_active_collection(
+                    tenant,
+                    candidate.collection_name,
+                    lock_token=lock_token,
+                    chroma_directory=persist_directory,
+                )
+            except BaseException:
+                discard_staged_collection(
+                    candidate,
+                    tenant_id=tenant,
+                    lock_token=lock_token,
+                )
+                raise
+            store = candidate.store
+            index_cache_key = _index_cache_key(persist_directory, manifest)
 
         logger.info(
             "[index] collection '%s' built: %d chunks in %.0fs",
@@ -237,6 +287,10 @@ def build_vector_store(
             _chunks_cache[tenant] = list(chunks)
             _store_cache[tenant] = store
             _retriever_cache.pop(tenant, None)
+            if index_cache_key is None:
+                _index_cache_keys.pop(tenant, None)
+            else:
+                _index_cache_keys[tenant] = index_cache_key
 
     return store, chunks
 
@@ -458,27 +512,59 @@ def get_retriever(
     embeddings: Any | None = None,
 ) -> Any:
     tenant = tenant_id or "default"
+    settings = get_settings()
+    backend = getattr(settings, "vector_backend", "chroma")
+    active_collection: str | None = None
+    manifest_present = False
+    current_index_key: tuple[str, str, int] | None = None
+    cached_store: Any | None = None
+    cached_chunks: list[Document] | None = None
+
+    if backend != "qdrant":
+        chroma_directory = persist_directory or settings.vectordb_chroma_dir
+        active_collection, current_index_key, manifest_present = _resolve_active_index(
+            tenant,
+            chroma_directory,
+        )
 
     with _cache_lock:
+        if current_index_key is not None:
+            if _index_cache_keys.get(tenant) != current_index_key:
+                _retriever_cache.pop(tenant, None)
+                _chunks_cache.pop(tenant, None)
+                _store_cache.pop(tenant, None)
+                _index_cache_keys[tenant] = current_index_key
+        elif tenant in _index_cache_keys:
+            _retriever_cache.pop(tenant, None)
+            _chunks_cache.pop(tenant, None)
+            _store_cache.pop(tenant, None)
+            _index_cache_keys.pop(tenant, None)
+
         cached = _retriever_cache.get(tenant)
         if cached is not None:
             return cached
+        cached_store = _store_cache.get(tenant)
+        cached_chunks = _chunks_cache.get(tenant)
 
     if embeddings is None:
         embeddings = get_embeddings()
 
-    if vector_store is None:
-        with _cache_lock:
-            vector_store = _store_cache.get(tenant)
+    if manifest_present:
+        vector_store = cached_store
+        chunks = list(cached_chunks) if cached_chunks is not None else None
+    else:
+        if vector_store is None:
+            vector_store = cached_store
+        if chunks is None and cached_chunks is not None:
+            chunks = list(cached_chunks)
 
-    settings = get_settings()
-    backend = getattr(settings, "vector_backend", "chroma")
     if vector_store is None and backend != "qdrant":
+        assert active_collection is not None
         chroma_cls = _get_chroma()
         vector_store = chroma_cls(
             persist_directory=str(persist_directory or settings.vectordb_chroma_dir),
             embedding_function=embeddings,
-            collection_name=_collection_name(tenant),
+            collection_name=active_collection,
         )
 
     if chunks is None:
@@ -507,8 +593,10 @@ def reset_retriever_cache(tenant_id: str | None = None) -> None:
             _retriever_cache.clear()
             _chunks_cache.clear()
             _store_cache.clear()
+            _index_cache_keys.clear()
         else:
             tenant = tenant_id or "default"
             _retriever_cache.pop(tenant, None)
             _chunks_cache.pop(tenant, None)
             _store_cache.pop(tenant, None)
+            _index_cache_keys.pop(tenant, None)

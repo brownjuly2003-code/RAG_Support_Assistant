@@ -116,7 +116,10 @@ def test_restore_survives_collection_error(monkeypatch: pytest.MonkeyPatch) -> N
     assert "broken" not in manager._chunks_cache
 
 
-def test_build_vector_store_stamps_chunk_index(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_build_vector_store_stamps_chunk_index(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
     docs = [
         manager.Document(page_content="first", metadata={"source": "doc.md"}),
         manager.Document(page_content="second", metadata={"source": "doc.md"}),
@@ -126,19 +129,44 @@ def test_build_vector_store_stamps_chunk_index(monkeypatch: pytest.MonkeyPatch) 
 
     captured: dict[str, list] = {}
 
+    class _Embeddings:
+        def embed_query(self, text: str) -> list[float]:
+            assert text
+            return [0.0, 0.0, 0.0]
+
     class BuildChroma:
+        def __init__(self, documents=None, **kwargs):
+            _ = kwargs
+            self.documents = list(documents or [])
+            self._collection = self
+
         @classmethod
         def from_documents(cls, documents=None, **kwargs):
             captured["documents"] = list(documents or [])
-            instance = cls()
-            instance.persist = lambda: None
-            return instance
+            return cls(documents=documents, **kwargs)
+
+        def persist(self) -> None:
+            return None
+
+        def count(self) -> int:
+            return len(self.documents)
+
+        def query(self, **kwargs):
+            _ = kwargs
+            return {"ids": [["chunk"]]}
+
+        def similarity_search(self, query: str, *, k: int):
+            _ = query
+            return self.documents[:k]
+
+        def delete_collection(self) -> None:
+            return None
 
         def as_retriever(self, **kwargs):
             return object()
 
     monkeypatch.setattr(manager, "Chroma", BuildChroma, raising=False)
-    monkeypatch.setattr(manager, "get_embeddings", lambda model_name=None: None)
+    monkeypatch.setattr(manager, "get_embeddings", lambda model_name=None: _Embeddings())
     monkeypatch.setattr(
         manager._base_manager, "_build_text_splitter", lambda *args, **kwargs: splitter
     )
@@ -146,11 +174,12 @@ def test_build_vector_store_stamps_chunk_index(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(settings, "structural_chunking", False, raising=False)
     monkeypatch.setattr(settings, "semantic_chunking", False, raising=False)
     monkeypatch.setattr(settings, "contextual_headers", False, raising=False)
+    monkeypatch.setattr(settings, "vectordb_chroma_dir", tmp_path, raising=False)
 
     _store, chunks = manager.build_vector_store(
         docs,
         {"chunk_size": 800, "chunk_overlap": 200},
-        embeddings=None,
+        embeddings=_Embeddings(),
         tenant_id="stamped",
     )
 

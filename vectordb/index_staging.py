@@ -18,6 +18,7 @@ _COLLECTION_NAME_RE = re.compile(
     r"^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$"
 )
 _DIMENSION_PROBE_TEXT = "staged collection dimension validation"
+_KNOWN_QUERY_MAX_CHARS = 512
 
 
 class IndexStagingError(RuntimeError):
@@ -156,6 +157,74 @@ def _cleanup_candidate(
         raise IndexStagingCleanupError(
             "Unpublished staged collection cleanup failed"
         ) from exc
+
+
+def validate_staged_known_query(
+    candidate: StagedIndexCandidate,
+    chunks: Sequence[Any],
+    *,
+    tenant_id: str,
+    lock_token: TenantIndexLockToken | None,
+) -> None:
+    """Require one deterministic query to return content from the candidate."""
+    require_tenant_index_lock(lock_token, tenant_id)
+    documents = list(chunks)
+    ordered_contents = [
+        str(getattr(document, "page_content", ""))
+        for document in documents
+        if str(getattr(document, "page_content", "")).strip()
+    ]
+    expected_contents = set(ordered_contents)
+    if not expected_contents:
+        raise IndexStagingValidationError(
+            "Staged collection known-query smoke has no non-empty content"
+        )
+
+    known_content = ordered_contents[0]
+    similarity_search = getattr(candidate.store, "similarity_search", None)
+    if not callable(similarity_search):
+        raise IndexStagingValidationError(
+            "Staged collection does not expose known-query search"
+        )
+    try:
+        results = list(
+            similarity_search(
+                known_content[:_KNOWN_QUERY_MAX_CHARS],
+                k=1,
+            )
+        )
+    except Exception as exc:
+        raise IndexStagingValidationError(
+            "Staged collection known-query smoke failed"
+        ) from exc
+    if not results:
+        raise IndexStagingValidationError(
+            "Staged collection known-query smoke returned no results"
+        )
+    if not any(
+        str(getattr(result, "page_content", "")) in expected_contents
+        for result in results
+    ):
+        raise IndexStagingValidationError(
+            "Staged collection known-query smoke returned unknown content"
+        )
+
+
+def discard_staged_collection(
+    candidate: StagedIndexCandidate,
+    *,
+    tenant_id: str,
+    lock_token: TenantIndexLockToken | None,
+) -> None:
+    """Delete a candidate that has not been published as active."""
+    require_tenant_index_lock(lock_token, tenant_id)
+    _cleanup_candidate(
+        store=candidate.store,
+        chroma_cls=None,
+        embeddings=None,
+        persist_directory="",
+        collection_name=candidate.collection_name,
+    )
 
 
 def build_staged_collection(

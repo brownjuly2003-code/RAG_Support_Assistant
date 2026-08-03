@@ -1033,6 +1033,10 @@ async def _get_or_create_session(
             session_retriever = _get_retriever(tenant_id=tenant_id)
         except Exception as exc:
             logger.warning("Failed to resolve retriever for tenant %s: %s", tenant_id, exc)
+            raise HTTPException(
+                status_code=503,
+                detail="Tenant retriever temporarily unavailable",
+            ) from exc
 
     existing_session = _session_llm_state.get(session_id)
     if existing_session is not None:
@@ -1133,7 +1137,6 @@ def initialize_vector_store() -> None:
 
         settings = get_settings()
         chroma_dir = settings.vectordb_chroma_dir
-        collection_name = f"{getattr(settings, 'vectordb_collection_prefix', 'rag_docs')}_default"
 
         if _Chroma is not None and chroma_dir.exists() and any(chroma_dir.iterdir()):
             try:
@@ -1143,6 +1146,12 @@ def initialize_vector_store() -> None:
                     logger.warning("get_embeddings not available, skipping vector store load")
                     return
 
+                from vectordb.index_manifest import resolve_active_collection  # noqa: PLC0415
+
+                collection_name = resolve_active_collection(
+                    "default",
+                    chroma_directory=chroma_dir,
+                )
                 vector_store = _Chroma(
                     persist_directory=str(chroma_dir),
                     embedding_function=embeddings,

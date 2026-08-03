@@ -89,7 +89,25 @@ def test_build_vector_store_adds_contextual_headers_when_enabled(
     splitter.split_documents.return_value = split_documents
 
     class FakeStore:
+        def __init__(self, documents) -> None:
+            self.documents = list(documents)
+            self._collection = self
+
         def persist(self) -> None:
+            return None
+
+        def count(self) -> int:
+            return len(self.documents)
+
+        def query(self, **kwargs):
+            _ = kwargs
+            return {"ids": [["chunk"]]}
+
+        def similarity_search(self, query: str, *, k: int):
+            _ = query
+            return self.documents[:k]
+
+        def delete_collection(self) -> None:
             return None
 
     class FakeChroma:
@@ -105,9 +123,10 @@ def test_build_vector_store_adds_contextual_headers_when_enabled(
             collection_name,
         ):
             _ = embedding, persist_directory, collection_name
-            store = FakeStore()
-            store.documents = list(documents)
-            return store
+            return FakeStore(documents)
+
+    embeddings = MagicMock()
+    embeddings.embed_query.return_value = [0.0, 0.0, 0.0]
 
     monkeypatch.setattr(
         tenant_manager,
@@ -126,7 +145,7 @@ def test_build_vector_store_adds_contextual_headers_when_enabled(
     _, chunks = tenant_manager.build_vector_store(
         docs,
         {"chunk_size": 400, "chunk_overlap": 50},
-        embeddings=MagicMock(),
+        embeddings=embeddings,
         tenant_id="acme",
     )
 
@@ -154,7 +173,25 @@ def test_build_vector_store_skips_contextual_headers_when_disabled(
     splitter.split_documents.return_value = split_documents
 
     class FakeStore:
+        def __init__(self, documents) -> None:
+            self.documents = list(documents)
+            self._collection = self
+
         def persist(self) -> None:
+            return None
+
+        def count(self) -> int:
+            return len(self.documents)
+
+        def query(self, **kwargs):
+            _ = kwargs
+            return {"ids": [["chunk"]]}
+
+        def similarity_search(self, query: str, *, k: int):
+            _ = query
+            return self.documents[:k]
+
+        def delete_collection(self) -> None:
             return None
 
     class FakeChroma:
@@ -170,9 +207,10 @@ def test_build_vector_store_skips_contextual_headers_when_disabled(
             collection_name,
         ):
             _ = embedding, persist_directory, collection_name
-            store = FakeStore()
-            store.documents = list(documents)
-            return store
+            return FakeStore(documents)
+
+    embeddings = MagicMock()
+    embeddings.embed_query.return_value = [0.0, 0.0, 0.0]
 
     monkeypatch.setattr(
         tenant_manager,
@@ -191,7 +229,7 @@ def test_build_vector_store_skips_contextual_headers_when_disabled(
     _, chunks = tenant_manager.build_vector_store(
         docs,
         {"chunk_size": 400, "chunk_overlap": 50},
-        embeddings=MagicMock(),
+        embeddings=embeddings,
         tenant_id="acme",
     )
 

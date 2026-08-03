@@ -379,6 +379,7 @@ async def admin_publish_kb_draft(
 ) -> JSONResponse:
     from db.models import KbDraft  # noqa: PLC0415
     from vectordb import manager as tenant_manager  # noqa: PLC0415
+    from vectordb.index_manifest import resolve_active_collection  # noqa: PLC0415
 
     _app = _app_module()
     tenant = _user.get("tenant") or get_current_tenant() or "default"
@@ -405,15 +406,21 @@ async def admin_publish_kb_draft(
         )
 
         if tenant_manager.Chroma is not None:
-            store = tenant_manager.Chroma(
-                persist_directory=str(_app.get_settings().vectordb_chroma_dir),
-                embedding_function=tenant_manager.get_embeddings(),
-                collection_name=tenant_manager._collection_name(draft.tenant_id),
-            )
-            if hasattr(store, "add_documents"):
-                store.add_documents([doc])
-                if hasattr(store, "persist"):
-                    store.persist()
+            chroma_directory = _app.get_settings().vectordb_chroma_dir
+            with tenant_manager.tenant_index_lock(draft.tenant_id):
+                store = tenant_manager.Chroma(
+                    persist_directory=str(chroma_directory),
+                    embedding_function=tenant_manager.get_embeddings(),
+                    collection_name=resolve_active_collection(
+                        draft.tenant_id,
+                        chroma_directory=chroma_directory,
+                    ),
+                )
+                if hasattr(store, "add_documents"):
+                    store.add_documents([doc])
+                    if hasattr(store, "persist"):
+                        store.persist()
+                    tenant_manager.reset_retriever_cache(draft.tenant_id)
 
         draft.status = "published"
         draft.reviewed_at = datetime.now(timezone.utc)

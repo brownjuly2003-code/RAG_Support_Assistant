@@ -5,7 +5,6 @@ import importlib
 import inspect
 import sys
 import types
-from contextlib import nullcontext
 from functools import wraps
 from pathlib import Path
 from types import SimpleNamespace
@@ -225,13 +224,22 @@ def _disable_real_reranker_download(monkeypatch: pytest.MonkeyPatch):
 def _isolate_tenant_index_advisory_lock(monkeypatch: pytest.MonkeyPatch) -> None:
     # Unit tests stub vector backends and must never open the real PostgreSQL
     # coordination connection. Dedicated tenant-lock tests replace this stub.
-    from vectordb import manager
+    from vectordb import manager, tenant_lock
 
-    monkeypatch.setattr(
-        manager,
-        "tenant_index_lock",
-        lambda tenant_id: nullcontext(),
-    )
+    class _Result:
+        def scalar_one(self) -> bool:
+            return True
+
+    class _Connection:
+        def execute(self, statement: object, params: object) -> _Result:
+            _ = statement, params
+            return _Result()
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(tenant_lock, "_open_lock_connection", _Connection)
+    monkeypatch.setattr(manager, "tenant_index_lock", tenant_lock.tenant_index_lock)
 
 
 @pytest.fixture(autouse=True)
