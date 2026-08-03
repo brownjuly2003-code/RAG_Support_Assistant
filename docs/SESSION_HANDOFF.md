@@ -1,16 +1,16 @@
 # Session handoff
 
-**Обновлено:** 2026-08-03 (Update-50 docs-only record of completed slice
-**2.4c**; latest implementation `999c90f`; previous docs `9f59768`; previous
-implementation `29be31a` / **2.4b**; next candidate **2.4d sync non-default
-upload receipt ownership/contract investigation** not started)
+**Обновлено:** 2026-08-03 (Update-51 docs-only record of completed slice
+**2.4d**; latest implementation `dfbbca0`; previous docs `7e2fa84`; previous
+implementation `999c90f` / **2.4c**; next candidate **2.4e immutable
+job-object lifecycle cleanup ownership/policy investigation** not started)
 
 **Назначение:** самодостаточный next-session handoff для coding agent после
 compacted context. История срезов — в [`AGENT_STATE.md`](../AGENT_STATE.md)
-(**только верхний блок Update-50** — routing authority; older blocks including
-literal `✅ START HERE` headings are archival). Evidence 2.4c — ниже; 2.4b —
-Update-49; 2.4a — Update-48; 2.3i — Update-46; 2.3h — Update-45; 2.3g —
-Update-43; детали 2.3f/2.3e/2.3d/2.3c/2.3b/2.3a —
+(**только верхний блок Update-51** — routing authority; older blocks including
+literal `✅ START HERE` headings are archival). Evidence 2.4d — ниже; 2.4c —
+Update-50; 2.4b — Update-49; 2.4a — Update-48; 2.3i — Update-46; 2.3h —
+Update-45; 2.3g — Update-43; детали 2.3f/2.3e/2.3d/2.3c/2.3b/2.3a —
 Update-42/Update-41/Update-40/Update-39/Update-37/Update-36. Активный plan
 source — untracked/protected
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
@@ -22,27 +22,31 @@ source — untracked/protected
 
 | Факт | Значение |
 |------|----------|
-| Latest implementation | `999c90f` (`feat(ingestion): persist index publication receipt`) — **2.4c** (async-worker scope only) |
-| Previous docs commit | `9f59768` (`docs: record build publication receipt`) |
-| Previous implementation | `29be31a` (slice **2.4b**) |
-| Future Update-50 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
-| Branch advisory | `master...origin/master [ahead 84]` — **refresh mandatory** |
+| Latest implementation | `dfbbca0` (`feat(ingestion): persist sync upload publication receipt`) — **2.4d** (bounded sync non-default upload scope) |
+| Previous docs commit | `7e2fa84` (`docs: record async worker publication receipt`) |
+| Previous implementation | `999c90f` (slice **2.4c**) |
+| Future Update-51 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
+| Branch advisory | `master...origin/master [ahead 86]` — **refresh mandatory** |
 | Active writer | **none** |
 | Unfinished WIP in next targets | **none known** |
-| Locally complete (documented scopes) | **2.1–2.4c** |
-| Not complete / not claimed | full plan step 2; full immutable lifecycle; full durable cross-path job↔published index binding (async worker only; sync non-default upload remains bool-only/unwired); GC/retention for job/legacy objects; orphan cleanup; full suite; live drills; project/release/production readiness |
-| Next allowed candidate | **2.4d sync non-default upload receipt ownership/contract investigation** (**not started**) |
+| Locally complete (documented scopes) | **2.1–2.4d** |
+| Not complete / not claimed | full plan step 2; full immutable lifecycle; GC/retention for job/legacy objects; orphan cleanup; DB model/migration field; full suite; live drills; project/release/production readiness |
+| Next allowed candidate | **2.4e immutable job-object lifecycle cleanup ownership/policy investigation** (**not started**) |
 | Gates | no push / deploy / live services / destructive Git / production claims |
 
-**Known verification caveats (2.4c):** tests-first red by Codex after prior
-Grok tests-only WIP; Grok runs `a1`/`a2` both ended `cancelled` (do **not**
-describe as unqualified normal completion); independent Codex proportional
-gate 6 passed + one known Starlette deprecation warning; full default Mypy
-**not** claimed clean; full suite/live services **not** run. Remaining honest
-limitations: 2.4c is **async-worker only**; non-default sync upload remains
-bool-only/unwired; no migration/model field; no GC/retention for job objects
-or legacy recovery objects; a failed transition can leave an orphaned new
-immutable object. **No** full/live suite in 2.4c or this docs-only Update-50.
+**Known verification caveats (2.4d):** tests-first red 3 failed; one allowed
+green diagnostic correction (helper test monkeypatch target only); Grok
+focused green 33 passed + scoped Ruff/Mypy/diff-check clean; Codex review
+found one concrete test-isolation defect only; Grok QA/fix run ended
+`cancelled` after applying only that isolation fix and after pytest/Ruff/
+diff-check had passed (exact pytest count not exposed — do **not** invent
+one; do **not** call it an unqualified normal completion); independent Codex
+final proportional gate 8 passed + two known deprecation warnings; full
+suite/live services **not** run. Remaining honest limitations: both accepted
+upload paths now record exact available publication receipt in job result
+JSON, but full immutable lifecycle is still incomplete (no GC/retention for
+`job-objects`/`legacy-previous`, no orphan cleanup, no DB model/migration
+field). **No** full/live suite in 2.4d or this docs-only Update-51.
 
 **Protected state (do not touch/stage/remove without explicit request):**
 
@@ -65,20 +69,22 @@ next-candidate WIP на момент этого handoff.
 1. **Cycle-guard preflight** on the latest user message.
 2. `cd D:\RAG_Support_Assistant`; run fresh `git status --short --branch` and
    `git log -5 --oneline` as **separate** commands; **actual Git wins** over
-   embedded hashes/counts (including the future Update-50 docs commit SHA).
-3. Read **only** top **Update-50** in `AGENT_STATE.md` + this
+   embedded hashes/counts (including the future Update-51 docs commit SHA).
+3. Read **only** top **Update-51** in `AGENT_STATE.md` + this
    **Нулевая неоднозначность** capsule first; treat older Update blocks as
-   archive. Do **not** reselect 2.1–2.4c.
-4. Confirm **2.4d ownership read-only** before any edit (current evidence:
-   non-default upload in `api/routers/upload.py` calls bool-returning
-   `_app._rebuild_vector_store_from_docs`; `api/app.py` owns that helper and
-   its ordinary `_build_vector_store` binding). These are shared/protected
-   surfaces — confirm ownership/test impact **read-only** first; re-check
-   protected dirty/untracked list. Do **not** reopen completed 2.4c async
-   worker surfaces, completed 2.4b manager receipt, completed 2.4a upload
-   originals, or retention operator surfaces unless investigation proves a
-   required conflict — then **stop and re-scope**. Do **not** invent an API
-   or mark 2.4d started/complete without a confirmed contract.
+   archive. Do **not** reselect 2.1–2.4d.
+4. Confirm **2.4e ownership/policy read-only** before any edit (current
+   durable evidence only: 2.4a creates `job-objects/<job_id>/...` and
+   `job-objects/legacy-previous/<sha256>/...`; current handoff states no GC
+   or orphan cleanup exists). Next session must confirm owners, retention
+   safety invariants, job/index references, and tests **read-only** before
+   choosing a small test-first contract; re-check protected dirty/untracked
+   list. Do **not** reopen completed 2.4d sync upload receipt, completed
+   2.4c async worker receipt, completed 2.4b manager receipt, completed 2.4a
+   upload originals, or retention operator surfaces unless investigation
+   proves a required conflict — then **stop and re-scope**. Do **not**
+   prescribe deletion rules, edit the plan, or mark 2.4e started/complete
+   without a confirmed contract.
 5. Use **Grok** via the local verified route; announce counters
    `slice 1/1`, `delegated run N/3`, `QA follow-up N/1`. Execute **at most
    one** named atomic next candidate after ownership is confirmed.
@@ -95,23 +101,23 @@ opt-in and must **not** be selected as the default next slice.
 
 1. `git status --short --branch` и `git log -5 --oneline` — авторитетный
    источник текущего filesystem/Git state.
-2. Далее: верхний блок `AGENT_STATE.md` (**Update-50**) и эта капсула.
+2. Далее: верхний блок `AGENT_STATE.md` (**Update-51**) и эта капсула.
 3. `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26` и их
    dirty working-tree contents — protected user state; могут быть stale. Они
-   **не** переопределяют Update-50 и **не** дают права повторять уже
-   завершённые срезы 2.1–2.4c.
+   **не** переопределяют Update-51 и **не** дают права повторять уже
+   завершённые срезы 2.1–2.4d.
 4. `rag-remediation-plan-2026-08-03.md` — активный plan source
    (untracked/protected). Do **not** edit its checkboxes from docs turns.
    Старый `plan_sol_23_07_26` — protected legacy.
 5. Один user turn = максимум один named atomic slice.
 
-**Authoritative implementation state:** latest implementation is `999c90f`
-(`feat(ingestion): persist index publication receipt`) — slice **2.4c**
-locally complete/verified at the **bounded async-worker scope**. Previous
-docs commit: `9f59768` (`docs: record build publication receipt`). Previous
-implementation: `29be31a` (slice **2.4b**). Do **not** embed a guessed
-future docs commit hash; next session reads actual `git log`. Branch was
-observed as `master...origin/master [ahead 84]` immediately after
+**Authoritative implementation state:** latest implementation is `dfbbca0`
+(`feat(ingestion): persist sync upload publication receipt`) — slice **2.4d**
+locally complete/verified at the **bounded sync non-default upload scope**.
+Previous docs commit: `7e2fa84` (`docs: record async worker publication
+receipt`). Previous implementation: `999c90f` (slice **2.4c**). Do **not**
+embed a guessed future docs commit hash; next session reads actual `git log`.
+Branch was observed as `master...origin/master [ahead 86]` immediately after
 implementation — ahead counts/timestamps are **advisory only**. Push/deploy
 not authorized.
 
@@ -132,22 +138,69 @@ not authorized.
 | **2.3i** | retention API / admin audit | `ac4b317` | Update-46 |
 | **2.4a** | immutable upload originals (job-objects + flat current view) | `a1dcd5c` | Update-48 |
 | **2.4b** | build publication receipt (manager opt-in, unwired) | `29be31a` | Update-49 |
-| **2.4c** | async-worker index publication receipt persistence | `999c90f` | Update-50 + this handoff |
+| **2.4c** | async-worker index publication receipt persistence | `999c90f` | Update-50 |
+| **2.4d** | sync non-default upload index publication receipt persistence | `dfbbca0` | Update-51 + this handoff |
 
 Срезы **2.1, 2.2, 2.3a, 2.3b, 2.3c, 2.3d, 2.3e, 2.3f, 2.3g, 2.3h, 2.3i, 2.4a,
-2.4b, 2.4c** локально complete и verified (**2.4c only at bounded async-worker
-scope**). Локальный operator surface для retention preview + guarded
-execution и validated rollback **present**. Immutable upload originals with
-job-scoped objects + flat current corpus view **present** after 2.4a.
-Manager opt-in publication receipt (`build_vector_store_with_publication`)
-**present** after 2.4b. Async worker now persists exact Chroma receipt into
-durable `IngestionJob.result.index_publication` after 2.4c; non-default sync
-upload path remains bool-only/unwired. Полный plan step 2, full immutable
-lifecycle, full durable cross-path job↔published index binding,
-GC/retention for job/legacy objects, fault injection, live drills, project
-и release — **не** complete. **2.4a, 2.4b, and 2.4c must never be selected
-again.** Next safe candidate is **2.4d sync non-default upload receipt
-ownership/contract investigation** (**not started**).
+2.4b, 2.4c, 2.4d** локально complete и verified (**2.4d only at bounded sync
+non-default upload scope**; **2.4c only at bounded async-worker scope**).
+Локальный operator surface для retention preview + guarded execution и
+validated rollback **present**. Immutable upload originals with job-scoped
+objects + flat current corpus view **present** after 2.4a. Manager opt-in
+publication receipt (`build_vector_store_with_publication`) **present** after
+2.4b. Async worker persists exact Chroma receipt into durable
+`IngestionJob.result.index_publication` after 2.4c. Non-default sync upload
+now also persists exact available publication receipt under the same job
+result key after 2.4d. Полный plan step 2, full immutable lifecycle,
+GC/retention for job/legacy objects, orphan cleanup, fault injection, live
+drills, project и release — **не** complete. **2.4a, 2.4b, 2.4c, and 2.4d
+must never be selected again.** Next safe candidate is **2.4e immutable
+job-object lifecycle cleanup ownership/policy investigation** (**not
+started**).
+
+## Контракт 2.4d (sync non-default upload index publication receipt) — COMPLETE
+
+Sync non-default upload receipt wiring in `api/app.py` +
+`api/routers/upload.py` + contracts in `tests/test_ingestion_job_contract.py`
+at `dfbbca0`:
+
+- `api.app` binds the existing manager
+  `build_vector_store_with_publication` alongside the ordinary compatibility
+  binding
+- `_rebuild_vector_store_from_docs` performs exactly one opt-in build under
+  the existing runtime lock, activates returned store/chunks/retriever and
+  same-tenant session retrievers, then returns that exact
+  `BuildVectorStoreResult`; unavailable/build/activation exception paths
+  return `None` with existing failure behavior
+- no second build/lock, later manifest reread, callback, store-private
+  receipt, or global/thread-local receipt channel
+- non-default sync upload consumes only returned `publication` and persists
+  exact JSON under existing durable `IngestionJob.result.index_publication`:
+  `tenant_id`, `active_collection`, `previous_collection`,
+  `manifest_generation`
+- Qdrant/no-publication and legacy truthy test stubs persist
+  `index_publication: null`; falsey failures remain failures
+- public `UploadResponse` shape/status is unchanged; cache invalidation,
+  idempotency/replay, categorization, event-loop offload, durable
+  transitions, redaction/error boundaries, and DB schema remain preserved
+- default async/Celery path was already wired by 2.4c and was not reopened
+
+**Implementation paths changed in `dfbbca0` only:**
+
+- `api/app.py`
+- `api/routers/upload.py`
+- `tests/test_ingestion_job_contract.py`
+- diff stat: 3 files changed, 190 insertions, 13 deletions
+
+**Boundary:** bounded sync non-default upload scope. Both accepted upload
+execution paths now durably record the exact available publication receipt
+in existing job result JSON (default async via 2.4c, non-default sync via
+2.4d). Full immutable-original lifecycle is still **not** complete: **no**
+GC/retention policy/executor for `job-objects` or `legacy-previous`, **no**
+orphan cleanup on failed transitions, **no** DB model/migration field, live
+fault injection/full suite, push/deploy, or production-readiness claim. Do
+**not** claim full plan step 2, full immutable lifecycle, project, release,
+production readiness, or live drills complete.
 
 ## Контракт 2.4c (async-worker index publication receipt) — COMPLETE
 
@@ -412,23 +465,61 @@ release, production readiness, live drills, or retention API complete.
   `build_vector_store_with_publication` exactly once, places exact Chroma
   receipt under durable `IngestionJob.result.index_publication` (or `null`
   for Qdrant/no-publication), and passes the same dict through
-  lease/CAS `sync_mark_completed` / Celery return; non-default sync upload
-  path remains bool-only/unwired.
+  lease/CAS `sync_mark_completed` / Celery return.
+- Sync non-default upload receipt persistence (2.4d): `api.app` binds
+  opt-in manager entrypoint; `_rebuild_vector_store_from_docs` performs one
+  opt-in build under the existing runtime lock and returns exact
+  `BuildVectorStoreResult`; non-default sync upload persists exact available
+  `publication` under durable `IngestionJob.result.index_publication` (or
+  `null` for Qdrant/no-publication and legacy truthy stubs); public
+  `UploadResponse` unchanged.
 
 **Не утверждать:** Qdrant operator support, live services, production
-readiness, full immutable lifecycle, full durable cross-path
-job↔published index binding (2.4c is async-worker only; sync non-default
-upload remains bool-only/unwired), GC/retention for job/legacy objects,
+readiness, full immutable lifecycle, GC/retention for job/legacy objects,
 orphan cleanup, complete fault injection, complete plan step 2,
 project/release readiness. Local retention preview + guarded execution +
 validated rollback operator surface is present after 2.3i. Immutable upload
 originals + flat current view are present after 2.4a. Manager opt-in
 publication receipt is present after 2.4b. Async-worker receipt persistence
-is present after 2.4c.
+is present after 2.4c. Sync non-default upload receipt persistence is
+present after 2.4d; both accepted upload paths now record exact available
+publication receipt in existing job result JSON.
 
 ## Доказательства верификации (не перезапускать без new code/failure)
 
-### 2.4c (latest)
+### 2.4d (latest)
+
+- Grok implementation run `rag-step2-4d-20260803-a1`, local Grok CLI,
+  requested `grok-4.5`, actual `grok-4.5-build`, normal `end_turn`, 18 turns,
+  stderr empty.
+- Tests-first red: **3 failed** — missing
+  `_build_vector_store_with_publication` binding, missing durable
+  `index_publication` for exact receipt, and missing durable null key.
+- One allowed green diagnostic correction changed only the helper test's
+  monkeypatch target from `config.settings.get_settings` to module-local
+  `api.app.get_settings`.
+- Grok focused green aggregate: **33 passed**; scoped Ruff clean;
+  `mypy --follow-imports=skip` clean for app+upload; diff-check clean.
+- Codex review found one concrete test-isolation defect only: direct global
+  assignments and unisolated `_sessions` in the new helper test.
+- Grok QA/fix run `rag-step2-4d-20260803-qa1`, same route/requested/actual
+  model, 7 turns, stderr empty, ended `cancelled` after applying only the
+  test-isolation fix and after pytest/Ruff/diff-check had passed. The stored
+  output does **not** expose the exact pytest count; **do not invent one**
+  and do **not** call this an unqualified normal completion. Production
+  hashes remained unchanged.
+- Independent Codex final proportional gate: **8 passed**; two known warnings
+  (Starlette TestClient/httpx deprecation and LangChain Ollama deprecation);
+  scoped Ruff clean; `python -m mypy --follow-imports=skip api/app.py
+  api/routers/upload.py` clean; scoped diff-check clean.
+- All nine protected hashes matched: manager, async worker, jobs, model,
+  upload idempotency/security tests, categorizer test, integration ingestion
+  flow test, and active protected plan.
+- Full suite and live services were **not** run. Push/deploy not authorized;
+  production readiness and full plan step 2 **not** claimed.
+- Этот docs-only Update-51 **не** перезапускал project tests.
+
+### 2.4c (summary)
 
 - Tests-first red by Codex after prior Grok tests-only WIP: with local
   basetemp, **3 failed** because the unchanged worker still called ordinary
@@ -458,7 +549,7 @@ is present after 2.4c.
 - Full default Mypy is **not** claimed clean in this environment. Full suite
   and live services were **not** run. Push/deploy not authorized. Production
   readiness **not** claimed.
-- Этот docs-only Update-50 **не** перезапускал project tests.
+- Docs-only Update-50 recorded 2.4c without re-running project tests.
 
 ### 2.4b (summary)
 
@@ -627,6 +718,15 @@ is present after 2.4c.
 
 - Grok: **46** focused passes; Codex: **79**-pass closure.
 
+### Reference commands (2.4d) — только при new code/failure
+
+```powershell
+python -m pytest tests/test_ingestion_job_contract.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-4d-<unique>
+python -m ruff check api/app.py api/routers/upload.py tests/test_ingestion_job_contract.py
+python -m mypy --follow-imports=skip api/app.py api/routers/upload.py
+git diff --check -- api/app.py api/routers/upload.py tests/test_ingestion_job_contract.py
+```
+
 ### Reference commands (2.4c) — только при new code/failure
 
 ```powershell
@@ -677,75 +777,94 @@ never claim unconditional full-file Mypy cleanliness without evidence.
 - broader fault injection, live PostgreSQL/Redis/Celery/Chroma drills
   (explicit opt-in only — do **not** select as default next slice),
   release gates, project completion.
-- full immutable lifecycle beyond 2.4a/2.4b/2.4c: GC/retention for job-objects
-  and legacy-previous recovery objects; orphan cleanup after failed
-  transition; live concurrency/fault-injection for upload originals.
-- full cross-path job↔published index binding beyond async-worker scope;
-  API/UI surfaces; DB migration/model fields for index version/collection
-  (out of 2.4d investigation scope until ownership is confirmed).
+- full immutable lifecycle beyond 2.4a/2.4b/2.4c/2.4d: GC/retention for
+  job-objects and legacy-previous recovery objects; orphan cleanup after
+  failed transition; live concurrency/fault-injection for upload originals.
+- DB migration/model fields for index version/collection; API/UI surfaces
+  (out of 2.4e investigation scope until ownership/policy is confirmed).
 
-**Remaining honest limitations after 2.4c:**
+**Remaining honest limitations after 2.4d:**
 
-- 2.4c is **async-worker only** — full durable cross-path job↔published index
-  binding is **not** complete; non-default sync upload remains
-  bool-only/unwired
+- both accepted upload execution paths now durably record the exact available
+  publication receipt in existing job result JSON (default async via 2.4c,
+  non-default sync via 2.4d)
+- full immutable-original lifecycle is still **not** complete
+- no GC/retention policy/executor for `job-objects` or `legacy-previous`
+- no orphan cleanup on failed transitions
 - no migration/model field for index version/collection on the job
-- no GC/retention for job objects or legacy recovery objects
-- a failed transition can leave an orphaned new immutable object
 - no live concurrency/fault-injection; full suite not run
-- full default Mypy not claimed clean in this environment
 - full plan step 2 / project / release / production readiness **not** complete
 
-**Next candidate (not started):** **2.4d sync non-default upload receipt
-ownership/contract investigation**. Candidate only — **not** completed work
-and **not** started. Current read-only evidence: non-default upload in
-`api/routers/upload.py` calls bool-returning
-`_app._rebuild_vector_store_from_docs`; `api/app.py` owns that helper and its
-ordinary `_build_vector_store` binding. These are shared/protected surfaces;
-next session must confirm ownership/test impact **read-only** before edits
-and choose the smallest test-first receipt propagation contract. Do **not**
-prescribe an invented API, reopen 2.4b/2.4c, or mark 2.4d started/complete.
+**Next candidate (not started):** **2.4e immutable job-object lifecycle
+cleanup ownership/policy investigation**. Candidate only — **not** completed
+work and **not** started. Current durable evidence only: 2.4a creates
+`job-objects/<job_id>/...` and `job-objects/legacy-previous/<sha256>/...`;
+current handoff states no GC or orphan cleanup exists. Next session must
+confirm owners, retention safety invariants, job/index references, and tests
+**read-only** before choosing a small test-first contract. Do **not**
+prescribe deletion rules, edit the plan, reopen 2.4a–2.4d, or mark 2.4e
+started/complete from docs.
 
-**Superseded / do not re-select:** 2.1–2.4c are complete. Historical
-next-work text that still names **2.4a**, **2.4b**, **2.4c**, or generic
-job↔index investigation as the next candidate is stale. Historical headings
-containing `✅ START HERE` are archival.
+**Superseded / do not re-select:** 2.1–2.4d are complete. Historical
+next-work text that still names **2.4a**, **2.4b**, **2.4c**, **2.4d**, or
+generic job↔index investigation as the next candidate is stale. Historical
+headings containing `✅ START HERE` are archival.
 
-### Следующий named candidate: 2.4d sync non-default upload receipt ownership/contract investigation (не начат)
+### Следующий named candidate: 2.4e immutable job-object lifecycle cleanup ownership/policy investigation (не начат)
 
-Smallest safe framing: investigate ownership and the smallest test-first
-receipt propagation contract for the non-default synchronous upload path.
-**Not started.** **Do not re-select 2.4a, 2.4b, or 2.4c.** No active writer
-and no unfinished next-candidate WIP at this handoff.
+Smallest safe framing: investigate ownership/policy and the smallest
+test-first cleanup contract for immutable job-objects / legacy-previous
+recovery objects. **Not started.** **Do not re-select 2.4a, 2.4b, 2.4c, or
+2.4d.** No active writer and no unfinished next-candidate WIP at this
+handoff.
 
 **Candidate ownership (confirm read-only next session):**
 
 | Surface | Module / symbols | Notes |
 |---------|------------------|-------|
-| Non-default sync upload | `api/routers/upload.py` | calls bool-returning `_app._rebuild_vector_store_from_docs` |
-| Sync rebuild helper owner | `api/app.py` | owns `_rebuild_vector_store_from_docs` and ordinary `_build_vector_store` binding |
-| Opt-in manager entrypoint (consume only; do not re-open 2.4b) | `vectordb.manager.build_vector_store_with_publication` | already covered by 2.4b |
-| Async worker receipt (do not re-open 2.4c) | `tasks/ingest_task.py` | already persists `index_publication` after 2.4c |
+| Immutable job objects (create only today) | `api/routers/upload.py` / 2.4a path | creates `job-objects/<job_id>/...` |
+| Legacy previous recovery objects (create only today) | 2.4a path | creates `job-objects/legacy-previous/<sha256>/...` |
+| Durable job result receipt (do not re-open 2.4c/2.4d) | `IngestionJob.result.index_publication` | both upload paths now persist exact available receipt |
+| GC / orphan cleanup | **none known** | current handoff states no GC or orphan cleanup exists |
 
-**Evidence-based boundary for 2.4d:**
+**Evidence-based boundary for 2.4e:**
 
-- confirm ownership/test impact **read-only** before any edit
-- choose the smallest test-first receipt propagation contract only after
-  ownership is confirmed
-- **no** invented API
-- **no** reopening 2.4b manager or 2.4c async-worker surfaces without proven
-  conflict
-- **no** DB migration / model field unless investigation proves it is the
-  only honest path — then **stop and re-scope**
-- do **not** mark 2.4d started/complete from docs alone
+- confirm owners, retention safety invariants, job/index references, and
+  tests **read-only** before any edit
+- choose the smallest test-first cleanup contract only after ownership/policy
+  is confirmed
+- **no** prescribed deletion rules from docs alone
+- **no** reopening 2.4a–2.4d surfaces without proven conflict
+- **no** plan checkbox edits from docs turns
+- do **not** mark 2.4e started/complete from docs alone
 
 **Plan source (direction only):** active untracked plan
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)
 §2 still carries the broader immutable/versioned originals + lifecycle bind
 item (do **not** edit plan checkboxes here). 2.4a landed immutable originals;
-2.4b landed the manager receipt; 2.4c landed async-worker receipt persistence;
-2.4d is the sync non-default upload receipt ownership/contract investigation
+2.4b landed the manager receipt; 2.4c landed async-worker receipt
+persistence; 2.4d landed sync non-default upload receipt persistence; 2.4e
+is the immutable job-object lifecycle cleanup ownership/policy investigation
 candidate only.
+
+### Historical 2.4d ownership notes (archive; 2.4d COMPLETE @ `dfbbca0`)
+
+Landed sync non-default upload receipt wiring is in §Контракт 2.4d above.
+**Do not treat as next-work instruction.**
+
+| Surface | Module / symbols | Focused tests |
+|---------|------------------|---------------|
+| Sync rebuild helper | `api/app.py` — `_rebuild_vector_store_from_docs` + opt-in binding | `tests/test_ingestion_job_contract.py` |
+| Non-default sync upload | `api/routers/upload.py` | `tests/test_ingestion_job_contract.py` |
+| Opt-in manager entrypoint (consumed; not re-opened) | `vectordb.manager.build_vector_store_with_publication` | already covered by 2.4b |
+| Async worker receipt (not re-opened) | `tasks/ingest_task.py` | already covered by 2.4c |
+
+**Gap closed by 2.4d:** non-default sync upload now persists exact available
+publication receipt under durable `IngestionJob.result.index_publication`
+(or `null`). Together with 2.4c, both accepted upload execution paths record
+the exact available receipt in existing job result JSON. **Gap still open:**
+full immutable lifecycle cleanup (GC/retention/orphan) — that is the
+**2.4e** candidate direction, not a claim that full plan step 2 is complete.
 
 ### Historical 2.4c ownership notes (archive; 2.4c COMPLETE @ `999c90f`)
 
@@ -759,9 +878,8 @@ treat as next-work instruction.**
 
 **Gap closed by 2.4c (async-worker only):** durable `IngestionJob.result`
 now carries `index_publication` from the exact opt-in manager invocation via
-lease/CAS completion. **Gap still open:** non-default sync upload path
-remains bool-only/unwired — that is the **2.4d** candidate direction, not a
-claim that full cross-path linkage is complete.
+lease/CAS completion. **Later closed by 2.4d:** non-default sync upload path
+receipt persistence.
 
 ### Historical 2.4a ownership notes (archive; 2.4a COMPLETE @ `a1dcd5c`)
 
@@ -785,16 +903,17 @@ corpus scanning.
 
 ### Explicit non-goals (next candidate and standing)
 
-- Re-opening completed 2.4c async-worker surfaces, 2.4b manager receipt
-  surfaces, 2.4a upload write path, or retention operator surfaces without
-  proven conflict
+- Re-opening completed 2.4d sync upload receipt surfaces, 2.4c async-worker
+  surfaces, 2.4b manager receipt surfaces, 2.4a upload write path, or
+  retention operator surfaces without proven conflict
 - Settings/policy rewrite, UI, Helm/PVC/object-storage migration
-- Inventing an API for 2.4d before ownership confirmation
+- Prescribing deletion rules for 2.4e before ownership/policy confirmation
+- Editing plan checkboxes from docs turns
 - DB migration / model field for index version/collection without proven need
 - Full fault-injection matrix; concurrent multi-tenant load drills
 - Live PostgreSQL/Redis/Celery/Chroma; push; deploy; production readiness
-- Claiming full plan step 2, full immutable lifecycle, or full cross-path
-  job/index-version binding “done” from async-worker wiring alone
+- Claiming full plan step 2 or full immutable lifecycle “done” from receipt
+  wiring alone
 
 ### Stop / re-scope conditions
 
@@ -804,14 +923,17 @@ corpus scanning.
   reindex + migration) in one turn
 - Second independent verification fails after one allowed narrow correction
 - Any push/deploy/live/destructive Git pressure without user authorization
-- Exact owners cannot be confirmed read-only without inventing APIs — stop and
-  report rather than guess
+- Exact owners cannot be confirmed read-only without inventing APIs or
+  deletion rules — stop and report rather than guess
 
 This docs-only turn did **not** run project tests and did **not** start the
 next candidate.
 
 ## Definition of done / stop conditions
 
+- **2.4d is complete** at implementation commit `dfbbca0` with the
+  verification ledger above, **only at the bounded sync non-default upload
+  scope**. **Do not re-select 2.4d.**
 - **2.4c is complete** at implementation commit `999c90f` with the
   verification ledger above, **only at the bounded async-worker scope**.
   **Do not re-select 2.4c.**
@@ -820,11 +942,11 @@ next candidate.
 - **2.4a is complete** at implementation commit `a1dcd5c`. **Do not
   re-select 2.4a.**
 - **Do not re-select 2.3i** (`ac4b317`) or **2.1–2.3h.**
-- Next candidate **2.4d** is **done only after** read-only ownership
-  confirmation, a chosen smallest test-first receipt propagation contract,
-  Grok tests-first evidence for that bounded contract, one independent
+- Next candidate **2.4e** is **done only after** read-only ownership/policy
+  confirmation, a chosen smallest test-first cleanup contract, Grok
+  tests-first evidence for that bounded contract, one independent
   proportional gate, protected-surface checks, scoped diff-check, and local
-  explicit-path commit. Do **not** mark 2.4d started/complete from docs alone.
+  explicit-path commit. Do **not** mark 2.4e started/complete from docs alone.
 - **No** full-suite / live / deploy / push / production-readiness claims.
 - **Stop/yield after one named slice** because one user turn equals one
   slice.
