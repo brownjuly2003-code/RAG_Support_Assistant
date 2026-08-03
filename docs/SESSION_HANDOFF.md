@@ -1,16 +1,18 @@
 # Session handoff
 
-**Обновлено:** 2026-08-03 (Update-51 docs-only record of completed slice
-**2.4d**; latest implementation `dfbbca0`; previous docs `7e2fa84`; previous
-implementation `999c90f` / **2.4c**; next candidate **2.4e immutable
-job-object lifecycle cleanup ownership/policy investigation** not started)
+**Обновлено:** 2026-08-03 (Update-52 docs-only / transparency-only after
+completed Update-51 docs `ecf73fe`; latest implementation remains `dfbbca0`
+/ **2.4d**; previous implementation `999c90f` / **2.4c**; next candidate
+**2.4e immutable job-object lifecycle cleanup ownership/policy
+investigation** not started)
 
 **Назначение:** самодостаточный next-session handoff для coding agent после
 compacted context. История срезов — в [`AGENT_STATE.md`](../AGENT_STATE.md)
-(**только верхний блок Update-51** — routing authority; older blocks including
-literal `✅ START HERE` headings are archival). Evidence 2.4d — ниже; 2.4c —
-Update-50; 2.4b — Update-49; 2.4a — Update-48; 2.3i — Update-46; 2.3h —
-Update-45; 2.3g — Update-43; детали 2.3f/2.3e/2.3d/2.3c/2.3b/2.3a —
+(**только верхний блок Update-52** — routing authority; older blocks including
+literal `✅ START HERE` headings are archival). Evidence 2.4d — ниже +
+Update-51 / `ecf73fe`; 2.4c — Update-50; 2.4b — Update-49; 2.4a — Update-48;
+2.3i — Update-46; 2.3h — Update-45; 2.3g — Update-43; детали
+2.3f/2.3e/2.3d/2.3c/2.3b/2.3a —
 Update-42/Update-41/Update-40/Update-39/Update-37/Update-36. Активный plan
 source — untracked/protected
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
@@ -23,10 +25,10 @@ source — untracked/protected
 | Факт | Значение |
 |------|----------|
 | Latest implementation | `dfbbca0` (`feat(ingestion): persist sync upload publication receipt`) — **2.4d** (bounded sync non-default upload scope) |
-| Previous docs commit | `7e2fa84` (`docs: record async worker publication receipt`) |
+| Latest completed docs commit (before this turn) | `ecf73fe` (`docs: record sync upload publication receipt`) — actual Update-51 docs commit |
 | Previous implementation | `999c90f` (slice **2.4c**) |
-| Future Update-51 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
-| Branch advisory | `master...origin/master [ahead 86]` — **refresh mandatory** |
+| This Update-52 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
+| Branch advisory | `master...origin/master [ahead 87]` — **refresh mandatory** |
 | Active writer | **none** |
 | Unfinished WIP in next targets | **none known** |
 | Locally complete (documented scopes) | **2.1–2.4d** |
@@ -34,19 +36,24 @@ source — untracked/protected
 | Next allowed candidate | **2.4e immutable job-object lifecycle cleanup ownership/policy investigation** (**not started**) |
 | Gates | no push / deploy / live services / destructive Git / production claims |
 
-**Known verification caveats (2.4d):** tests-first red 3 failed; one allowed
-green diagnostic correction (helper test monkeypatch target only); Grok
-focused green 33 passed + scoped Ruff/Mypy/diff-check clean; Codex review
-found one concrete test-isolation defect only; Grok QA/fix run ended
-`cancelled` after applying only that isolation fix and after pytest/Ruff/
-diff-check had passed (exact pytest count not exposed — do **not** invent
-one; do **not** call it an unqualified normal completion); independent Codex
-final proportional gate 8 passed + two known deprecation warnings; full
-suite/live services **not** run. Remaining honest limitations: both accepted
-upload paths now record exact available publication receipt in job result
-JSON, but full immutable lifecycle is still incomplete (no GC/retention for
-`job-objects`/`legacy-previous`, no orphan cleanup, no DB model/migration
-field). **No** full/live suite in 2.4d or this docs-only Update-51.
+**Transparency-only Update-52:** no implementation/test/plan/backlog/user-WIP
+change and **no** project test rerun in this docs turn. Implementation state
+is unchanged after `dfbbca0` / **2.4d**.
+
+**Known verification caveats (2.4d; unchanged):** tests-first red 3 failed;
+one allowed green diagnostic correction (helper test monkeypatch target
+only); Grok focused green 33 passed + scoped Ruff/Mypy/diff-check clean;
+Codex review found one concrete test-isolation defect only; Grok QA/fix
+run ended `cancelled` after applying only that isolation fix and after
+pytest/Ruff/diff-check had passed (exact pytest count not exposed — do
+**not** invent one; do **not** call it an unqualified normal completion);
+independent Codex final proportional gate 8 passed + two known deprecation
+warnings; full suite/live services **not** run. Remaining honest
+limitations: both accepted upload paths now record exact available
+publication receipt in job result JSON, but full immutable lifecycle is
+still incomplete (no GC/retention for `job-objects`/`legacy-previous`, no
+orphan cleanup, no DB model/migration field). **No** full/live suite in
+2.4d, Update-51 (`ecf73fe`), or this docs-only Update-52.
 
 **Protected state (do not touch/stage/remove without explicit request):**
 
@@ -69,10 +76,11 @@ next-candidate WIP на момент этого handoff.
 1. **Cycle-guard preflight** on the latest user message.
 2. `cd D:\RAG_Support_Assistant`; run fresh `git status --short --branch` and
    `git log -5 --oneline` as **separate** commands; **actual Git wins** over
-   embedded hashes/counts (including the future Update-51 docs commit SHA).
-3. Read **only** top **Update-51** in `AGENT_STATE.md` + this
-   **Нулевая неоднозначность** capsule first; treat older Update blocks as
-   archive. Do **not** reselect 2.1–2.4d.
+   embedded hashes/counts (including the future Update-52 docs commit SHA;
+   known completed Update-51 docs commit is `ecf73fe`).
+3. Read **only** top **Update-52** in `AGENT_STATE.md` + this
+   **Нулевая неоднозначность** capsule first; treat older Update blocks
+   (including Update-51) as archive. Do **not** reselect 2.1–2.4d.
 4. Confirm **2.4e ownership/policy read-only** before any edit (current
    durable evidence only: 2.4a creates `job-objects/<job_id>/...` and
    `job-objects/legacy-previous/<sha256>/...`; current handoff states no GC
@@ -101,10 +109,10 @@ opt-in and must **not** be selected as the default next slice.
 
 1. `git status --short --branch` и `git log -5 --oneline` — авторитетный
    источник текущего filesystem/Git state.
-2. Далее: верхний блок `AGENT_STATE.md` (**Update-51**) и эта капсула.
+2. Далее: верхний блок `AGENT_STATE.md` (**Update-52**) и эта капсула.
 3. `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26` и их
    dirty working-tree contents — protected user state; могут быть stale. Они
-   **не** переопределяют Update-51 и **не** дают права повторять уже
+   **не** переопределяют Update-52 и **не** дают права повторять уже
    завершённые срезы 2.1–2.4d.
 4. `rag-remediation-plan-2026-08-03.md` — активный plan source
    (untracked/protected). Do **not** edit its checkboxes from docs turns.
@@ -114,12 +122,14 @@ opt-in and must **not** be selected as the default next slice.
 **Authoritative implementation state:** latest implementation is `dfbbca0`
 (`feat(ingestion): persist sync upload publication receipt`) — slice **2.4d**
 locally complete/verified at the **bounded sync non-default upload scope**.
-Previous docs commit: `7e2fa84` (`docs: record async worker publication
-receipt`). Previous implementation: `999c90f` (slice **2.4c**). Do **not**
-embed a guessed future docs commit hash; next session reads actual `git log`.
-Branch was observed as `master...origin/master [ahead 86]` immediately after
-implementation — ahead counts/timestamps are **advisory only**. Push/deploy
-not authorized.
+Latest completed docs commit before this turn: `ecf73fe` (`docs: record sync
+upload publication receipt`) — actual Update-51 docs commit. Previous
+implementation: `999c90f` (slice **2.4c**). Do **not** embed a guessed future
+Update-52 docs commit hash; next session reads actual `git log`. Branch was
+observed as `master...origin/master [ahead 87]` — ahead counts/timestamps are
+**advisory only** and must be refreshed. Push/deploy not authorized.
+Update-52 is transparency-only/docs-only and does **not** change
+implementation, tests, plan, backlog, or user WIP.
 
 ## Карта реализации
 
@@ -139,7 +149,7 @@ not authorized.
 | **2.4a** | immutable upload originals (job-objects + flat current view) | `a1dcd5c` | Update-48 |
 | **2.4b** | build publication receipt (manager opt-in, unwired) | `29be31a` | Update-49 |
 | **2.4c** | async-worker index publication receipt persistence | `999c90f` | Update-50 |
-| **2.4d** | sync non-default upload index publication receipt persistence | `dfbbca0` | Update-51 + this handoff |
+| **2.4d** | sync non-default upload index publication receipt persistence | `dfbbca0` | Update-51 `ecf73fe` + Update-52 handoff |
 
 Срезы **2.1, 2.2, 2.3a, 2.3b, 2.3c, 2.3d, 2.3e, 2.3f, 2.3g, 2.3h, 2.3i, 2.4a,
 2.4b, 2.4c, 2.4d** локально complete и verified (**2.4d only at bounded sync

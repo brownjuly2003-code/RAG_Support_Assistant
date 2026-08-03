@@ -1,12 +1,80 @@
 # Agent State
 
+## 2026-08-03 Update-52 — docs-only transparency after Update-51 @ `ecf73fe` ✅ START HERE
+
+> **Routing authority:** Update-52 is **docs-only / transparency-only** and
+> supersedes Update-51 **only for start-point routing**. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`, are
+> **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
+>
+> **No new implementation in this docs turn.** Code, tests, plans, backlog,
+> README, audit, settings, and API paths were **not** edited here. Project
+> tests were **not** rerun. No implementation, test, plan, backlog, or
+> user-WIP change. Protected dirty `BACKLOG.md`, `README.md`,
+> `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and existing untracked
+> artifacts (including the active plan, prompts, pytest temp dirs, and
+> presentation/explainer files) were not touched.
+>
+> **Known lineage (actual Git wins):**
+> - Latest completed docs commit before this turn: `ecf73fe`
+>   (`docs: record sync upload publication receipt`) — that is the actual
+>   Update-51 docs commit.
+> - Latest implementation remains `dfbbca0`
+>   (`feat(ingestion): persist sync upload publication receipt`) — slice
+>   **2.4d**.
+> - Previous implementation before 2.4d: `999c90f` (slice **2.4c**).
+> - The future docs commit that records Update-52 **cannot** be known inside
+>   its own content; next session must obtain it from `git log -5 --oneline`.
+>
+> **Completion truth (unchanged):** slices **2.1 through 2.4d** remain
+> locally complete and verified **only at documented scopes**. Full plan
+> step 2 and full immutable-original lifecycle remain **incomplete**. Open
+> boundaries unchanged: **no** GC/retention policy/executor for `job-objects`
+> or `legacy-previous`, **no** failed-transition orphan cleanup, **no** DB
+> model/migration field, **no** full/live verification, **no** push/deploy
+> or production-readiness claim.
+>
+> **Active writer / WIP:** none. No unfinished next-candidate WIP. No active
+> Grok/delegated writer at this handoff.
+>
+> **Next candidate only (not started):** **2.4e immutable job-object
+> lifecycle cleanup ownership/policy investigation**. Do **not** invent
+> deletion rules, edit plan checkboxes, or mark 2.4e started/complete.
+> Restore route: confirm owners, retention safety invariants, job/index
+> references, and tests **read-only** before selecting the smallest
+> test-first contract. Current durable evidence only: 2.4a creates
+> `job-objects/<job_id>/...` and `job-objects/legacy-previous/<sha256>/...`;
+> current handoff states no GC or orphan cleanup exists. Details:
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+>
+> **Protected dirty / untracked state:** see handoff capsule; do not
+> touch/stage/remove without explicit request. Do **not** edit the active
+> untracked plan or its checkboxes.
+>
+> **External gates (not authorized):** push, deploy, live services,
+> destructive Git, production-readiness claims. Live
+> PostgreSQL/Redis/Celery/Chroma drills require explicit opt-in and must
+> **not** be the default next slice.
+>
+> **Standing execution preference:** **Grok** implements/content-writes;
+> orchestrator protects files, verifies independently, commits scoped
+> results. One user turn = **one** named atomic slice. Explicit-path local
+> commit only. Do **not** re-select 2.1–2.4d.
+>
+> **Git advisory only:** branch observed as
+> `master...origin/master [ahead 87]` — refresh next session.
+
 ## 2026-08-03 Update-51 — record completed slice 2.4d @ `dfbbca0` ✅ START HERE
 
-> **Routing authority:** Update-51 is **docs-only** and supersedes Update-50
-> **only for start-point routing**. All older Update blocks below, including
-> headings that literally contain `✅ START HERE`, are **archival**. **Only the
-> first/topmost Update block in this file is authoritative.** Never select work
-> by grepping old `START HERE` markers.
+> **Historical handoff (superseded by Update-52 for start-point routing).**
+> Older `✅ START HERE` markers in this archive are **not** routing authority.
+> Refresh `git status` first. This Update-51 block previously superseded
+> Update-50 as the start point. That turn was **docs-only** and supersedes
+> Update-50 **only for start-point routing** at that time. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`,
+> remain **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
 >
 > **No new implementation in this docs turn.** Code, tests, plans, backlog,
 > README, audit, settings, and API paths were **not** edited here. Project
@@ -19,9 +87,9 @@
 > publication receipt`). Slice **2.4d is locally complete and verified** at
 > the bounded sync non-default upload scope. Previous docs commit: `7e2fa84`
 > (`docs: record async worker publication receipt`). Previous implementation:
-> `999c90f` (slice **2.4c**). The future docs commit that records Update-51
-> **cannot** be known inside its own content; next session must obtain it from
-> `git log -5 --oneline`. Actual Git wins over embedded hashes/counts.
+> `999c90f` (slice **2.4c**). Actual Update-51 docs commit is now known as
+> `ecf73fe` (`docs: record sync upload publication receipt`); future sessions
+> still prefer `git log -5 --oneline` over embedded hashes/counts.
 >
 > **Implementation paths changed in `dfbbca0` only:**
 > - `api/app.py`
