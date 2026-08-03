@@ -1,4 +1,4 @@
-"""Lock-consistent index retention previews and rollback commands."""
+"""Lock-consistent index retention previews, execution, and rollback commands."""
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -12,6 +12,7 @@ from vectordb.index_manifest import (
 )
 from vectordb.index_retention import (
     bounded_retention_candidates,
+    execute_bounded_retention,
     read_retention_inventory,
 )
 from vectordb.tenant_lock import TenantIndexLockToken, tenant_index_lock
@@ -29,6 +30,18 @@ class IndexRollbackConflict(IndexRollbackCommandError):
     """Raised when expected generation/target no longer match durable state."""
 
 
+class IndexRetentionExecutionCommandError(RuntimeError):
+    """Base class for retention execution command contract failures."""
+
+
+class IndexRetentionExecutionValidationError(IndexRetentionExecutionCommandError):
+    """Raised when retention execution command inputs are invalid."""
+
+
+class IndexRetentionExecutionConflict(IndexRetentionExecutionCommandError):
+    """Raised when expected generation/candidates no longer match durable state."""
+
+
 @dataclass(frozen=True)
 class IndexRetentionPreview:
     tenant_id: str
@@ -38,6 +51,15 @@ class IndexRetentionPreview:
     previous_collection: str | None
     inventory_collections: tuple[str, ...]
     deletion_candidates: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class IndexRetentionExecutionResult:
+    tenant_id: str
+    max_versions: int
+    expected_generation: int
+    expected_candidates: tuple[str, ...]
+    deleted_collections: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -97,6 +119,86 @@ def preview_index_retention(
         previous_collection=manifest.previous_collection,
         inventory_collections=inventory_collections,
         deletion_candidates=deletion_candidates,
+    )
+
+
+def execute_index_retention(
+    tenant_id: str,
+    *,
+    max_versions: int,
+    expected_generation: int,
+    expected_candidates: tuple[str, ...],
+    delete_collection_if_exists: Callable[[str], None],
+    chroma_directory: str | Path | None = None,
+) -> IndexRetentionExecutionResult:
+    """Execute fail-closed bounded retention under the tenant index lock.
+
+    Requires an explicit expected manifest generation and the exact ordered
+    candidate tuple from a prior ``preview_index_retention`` call. Re-reads
+    durable state under one held tenant lock and refuses mutation when either
+    expectation differs. Delegates deletion/pruning to
+    ``execute_bounded_retention`` with the injected callback.
+    """
+    if (
+        not isinstance(expected_generation, int)
+        or isinstance(expected_generation, bool)
+        or expected_generation < 1
+    ):
+        raise IndexRetentionExecutionValidationError(
+            "expected_generation must be a positive int"
+        )
+    if not isinstance(expected_candidates, tuple):
+        raise IndexRetentionExecutionValidationError(
+            "expected_candidates must be a tuple of unique non-empty str"
+        )
+    seen: set[str] = set()
+    for candidate in expected_candidates:
+        if not isinstance(candidate, str) or not candidate:
+            raise IndexRetentionExecutionValidationError(
+                "expected_candidates must be a tuple of unique non-empty str"
+            )
+        if candidate in seen:
+            raise IndexRetentionExecutionValidationError(
+                "expected_candidates must be a tuple of unique non-empty str"
+            )
+        seen.add(candidate)
+
+    normalized_tenant = str(tenant_id or "default")
+    with tenant_index_lock(normalized_tenant) as lock_token:
+        current_candidates = bounded_retention_candidates(
+            normalized_tenant,
+            max_versions=max_versions,
+            chroma_directory=chroma_directory,
+        )
+        manifest = read_index_manifest(
+            normalized_tenant,
+            chroma_directory=chroma_directory,
+        )
+        if manifest is None:
+            raise IndexRetentionExecutionConflict(
+                "index version manifest is missing"
+            )
+        if manifest.generation != expected_generation:
+            raise IndexRetentionExecutionConflict(
+                "expected_generation does not match durable manifest generation"
+            )
+        if current_candidates != expected_candidates:
+            raise IndexRetentionExecutionConflict(
+                "expected_candidates do not match current retention candidates"
+            )
+        deleted = execute_bounded_retention(
+            normalized_tenant,
+            max_versions=max_versions,
+            lock_token=lock_token,
+            delete_collection_if_exists=delete_collection_if_exists,
+            chroma_directory=chroma_directory,
+        )
+    return IndexRetentionExecutionResult(
+        tenant_id=normalized_tenant,
+        max_versions=max_versions,
+        expected_generation=expected_generation,
+        expected_candidates=expected_candidates,
+        deleted_collections=deleted,
     )
 
 

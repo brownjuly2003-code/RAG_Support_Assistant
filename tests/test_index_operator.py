@@ -832,7 +832,9 @@ def test_operator_module_has_no_chroma_or_runtime_wiring() -> None:
     lowered = source.lower()
 
     # Token-boundary checks avoid false positives such as "get_collection"
-    # appearing inside the legitimate field name "target_collection".
+    # appearing inside the legitimate field name "target_collection", and
+    # "delete_collection" inside the injected callback name
+    # "delete_collection_if_exists".
     forbidden_tokens = (
         "chromadb",
         "chroma.client",
@@ -859,10 +861,14 @@ def test_operator_module_has_no_chroma_or_runtime_wiring() -> None:
 
     assert "tenant_index_lock" in source
     assert "bounded_retention_candidates" in source
+    assert "execute_bounded_retention" in source
     assert "read_index_manifest" in source
     assert "read_retention_inventory" in source
     assert "IndexRetentionPreview" in source
     assert "preview_index_retention" in source
+    assert "execute_index_retention" in source
+    assert "delete_collection_if_exists" in source
+    assert "IndexRetentionExecutionResult" in source
     assert "rollback_active_collection" in source
     assert "rollback_index_version" in source
     assert "IndexRollbackResult" in source
@@ -1027,3 +1033,806 @@ def test_rollback_target_validator_failure_preserves_manifest_bytes(
 
     assert mutation_calls == []
     assert manifest_path.read_bytes() == before_bytes
+
+
+def test_execute_retention_matching_expectations_deletes_oldest_first(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_retention import read_retention_inventory
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = _seed_four_versions(
+        tenant_id="acme",
+        chroma_directory=chroma_directory,
+        monkeypatch=monkeypatch,
+    )
+    _stub_tenant_lock(monkeypatch)
+
+    preview = operator.preview_index_retention(
+        "acme",
+        max_versions=2,
+        chroma_directory=chroma_directory,
+    )
+    assert preview.manifest_generation == 4
+    assert preview.deletion_candidates == versions[:2]
+
+    deleted_calls: list[str] = []
+
+    result = operator.execute_index_retention(
+        "acme",
+        max_versions=2,
+        expected_generation=4,
+        expected_candidates=preview.deletion_candidates,
+        delete_collection_if_exists=deleted_calls.append,
+        chroma_directory=chroma_directory,
+    )
+
+    assert result == operator.IndexRetentionExecutionResult(
+        tenant_id="acme",
+        max_versions=2,
+        expected_generation=4,
+        expected_candidates=versions[:2],
+        deleted_collections=versions[:2],
+    )
+    assert deleted_calls == list(versions[:2])
+    inventory = read_retention_inventory(
+        "acme",
+        chroma_directory=chroma_directory,
+    )
+    assert inventory is not None
+    assert tuple(entry.collection_name for entry in inventory.collections) == (
+        versions[2],
+        versions[3],
+    )
+
+
+def test_execute_retention_normalizes_tenant_and_forwards_to_executor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+
+    yielded_token = object()
+    seen: dict[str, Any] = {}
+    lock_held = False
+    held_during: dict[str, bool] = {}
+
+    @contextmanager
+    def _fake_lock(tenant_id: str) -> Iterator[object]:
+        nonlocal lock_held
+        seen["lock_tenant"] = tenant_id
+        lock_held = True
+        try:
+            yield yielded_token
+        finally:
+            lock_held = False
+
+    class _Manifest:
+        generation = 3
+
+    def _candidates(
+        tenant_id: str,
+        *,
+        max_versions: int,
+        chroma_directory: Any = None,
+    ) -> tuple[str, ...]:
+        held_during["candidates"] = lock_held
+        seen["candidates_tenant"] = tenant_id
+        seen["candidates_budget"] = max_versions
+        seen["candidates_directory"] = chroma_directory
+        return ("old_a", "old_b")
+
+    def _manifest(
+        tenant_id: str,
+        *,
+        chroma_directory: Any = None,
+    ) -> _Manifest:
+        held_during["manifest"] = lock_held
+        seen["manifest_tenant"] = tenant_id
+        seen["manifest_directory"] = chroma_directory
+        return _Manifest()
+
+    def _executor(
+        tenant_id: str,
+        *,
+        max_versions: int,
+        lock_token: object,
+        delete_collection_if_exists: Any,
+        chroma_directory: Any = None,
+    ) -> tuple[str, ...]:
+        held_during["executor"] = lock_held
+        seen["executor_tenant"] = tenant_id
+        seen["executor_budget"] = max_versions
+        seen["executor_lock_token"] = lock_token
+        seen["executor_callback"] = delete_collection_if_exists
+        seen["executor_directory"] = chroma_directory
+        return ("old_a", "old_b")
+
+    callback = object()
+    directory = Path("tmp-chroma")
+
+    monkeypatch.setattr(operator, "tenant_index_lock", _fake_lock)
+    monkeypatch.setattr(operator, "bounded_retention_candidates", _candidates)
+    monkeypatch.setattr(operator, "read_index_manifest", _manifest)
+    monkeypatch.setattr(operator, "execute_bounded_retention", _executor)
+
+    result = operator.execute_index_retention(
+        "",
+        max_versions=3,
+        expected_generation=3,
+        expected_candidates=("old_a", "old_b"),
+        delete_collection_if_exists=callback,  # type: ignore[arg-type]
+        chroma_directory=directory,
+    )
+
+    assert seen["lock_tenant"] == "default"
+    assert seen["candidates_tenant"] == "default"
+    assert seen["manifest_tenant"] == "default"
+    assert seen["executor_tenant"] == "default"
+    assert seen["candidates_budget"] == 3
+    assert seen["executor_budget"] == 3
+    assert seen["candidates_directory"] == directory
+    assert seen["manifest_directory"] == directory
+    assert seen["executor_directory"] == directory
+    assert seen["executor_lock_token"] is yielded_token
+    assert seen["executor_callback"] is callback
+    assert held_during == {
+        "candidates": True,
+        "manifest": True,
+        "executor": True,
+    }
+    assert result == operator.IndexRetentionExecutionResult(
+        tenant_id="default",
+        max_versions=3,
+        expected_generation=3,
+        expected_candidates=("old_a", "old_b"),
+        deleted_collections=("old_a", "old_b"),
+    )
+
+
+@pytest.mark.parametrize("expected_generation", [3, 5])
+def test_execute_retention_generation_conflict_preserves_bytes(
+    expected_generation: int,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import index_manifest_path
+    from vectordb.index_retention import index_retention_path
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = _seed_four_versions(
+        tenant_id="acme",
+        chroma_directory=chroma_directory,
+        monkeypatch=monkeypatch,
+    )
+    _stub_tenant_lock(monkeypatch)
+
+    preview = operator.preview_index_retention(
+        "acme",
+        max_versions=2,
+        chroma_directory=chroma_directory,
+    )
+    assert preview.manifest_generation == 4
+    assert preview.deletion_candidates == versions[:2]
+
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    inventory_path = index_retention_path("acme", chroma_directory=chroma_directory)
+    before_manifest = manifest_path.read_bytes()
+    before_inventory = inventory_path.read_bytes()
+    delete_calls: list[str] = []
+    executor_calls: list[object] = []
+    real_executor = operator.execute_bounded_retention
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        executor_calls.append((args, kwargs))
+        return real_executor(*args, **kwargs)
+
+    monkeypatch.setattr(operator, "execute_bounded_retention", _spy)
+
+    with pytest.raises(operator.IndexRetentionExecutionConflict):
+        operator.execute_index_retention(
+            "acme",
+            max_versions=2,
+            expected_generation=expected_generation,
+            expected_candidates=preview.deletion_candidates,
+            delete_collection_if_exists=delete_calls.append,
+            chroma_directory=chroma_directory,
+        )
+
+    assert delete_calls == []
+    assert executor_calls == []
+    assert manifest_path.read_bytes() == before_manifest
+    assert inventory_path.read_bytes() == before_inventory
+
+
+def test_execute_retention_candidate_membership_order_length_conflicts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import index_manifest_path
+    from vectordb.index_retention import index_retention_path
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = _seed_four_versions(
+        tenant_id="acme",
+        chroma_directory=chroma_directory,
+        monkeypatch=monkeypatch,
+    )
+    _stub_tenant_lock(monkeypatch)
+
+    mismatches = [
+        (versions[0],),  # length
+        (versions[0], versions[2]),  # membership
+        (versions[1], versions[0]),  # order
+    ]
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    inventory_path = index_retention_path("acme", chroma_directory=chroma_directory)
+    before_manifest = manifest_path.read_bytes()
+    before_inventory = inventory_path.read_bytes()
+    delete_calls: list[str] = []
+    executor_calls: list[object] = []
+    real_executor = operator.execute_bounded_retention
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        executor_calls.append((args, kwargs))
+        return real_executor(*args, **kwargs)
+
+    monkeypatch.setattr(operator, "execute_bounded_retention", _spy)
+
+    for candidates in mismatches:
+        with pytest.raises(operator.IndexRetentionExecutionConflict):
+            operator.execute_index_retention(
+                "acme",
+                max_versions=2,
+                expected_generation=4,
+                expected_candidates=candidates,
+                delete_collection_if_exists=delete_calls.append,
+                chroma_directory=chroma_directory,
+            )
+
+    assert delete_calls == []
+    assert executor_calls == []
+    assert manifest_path.read_bytes() == before_manifest
+    assert inventory_path.read_bytes() == before_inventory
+
+
+def test_execute_retention_missing_manifest_is_conflict(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import index_manifest_path
+    from vectordb.index_retention import (
+        index_retention_path,
+        record_retention_collection,
+    )
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    version = _versioned_name("acme", 1)
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        record_retention_collection(
+            "acme",
+            version,
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+
+    _stub_tenant_lock(monkeypatch)
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    inventory_path = index_retention_path("acme", chroma_directory=chroma_directory)
+    before_inventory = inventory_path.read_bytes()
+    delete_calls: list[str] = []
+    executor_calls: list[object] = []
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        executor_calls.append((args, kwargs))
+        raise AssertionError("executor must not run")
+
+    monkeypatch.setattr(operator, "execute_bounded_retention", _spy)
+
+    with pytest.raises(operator.IndexRetentionExecutionConflict):
+        operator.execute_index_retention(
+            "acme",
+            max_versions=2,
+            expected_generation=1,
+            expected_candidates=(),
+            delete_collection_if_exists=delete_calls.append,
+            chroma_directory=chroma_directory,
+        )
+
+    assert delete_calls == []
+    assert executor_calls == []
+    assert not manifest_path.exists()
+    assert inventory_path.read_bytes() == before_inventory
+
+
+@pytest.mark.parametrize(
+    "expected_generation",
+    [True, 0, -1, 2.0],
+)
+def test_execute_retention_invalid_generation_fails_before_lock(
+    expected_generation: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    lock_calls: list[str] = []
+    delete_calls: list[str] = []
+    executor_calls: list[object] = []
+
+    @contextmanager
+    def _fake_lock(tenant_id: str) -> Iterator[object]:
+        lock_calls.append(tenant_id)
+        yield object()
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        executor_calls.append((args, kwargs))
+        raise AssertionError("executor must not run")
+
+    monkeypatch.setattr(operator, "tenant_index_lock", _fake_lock)
+    monkeypatch.setattr(operator, "execute_bounded_retention", _spy)
+
+    with pytest.raises(operator.IndexRetentionExecutionValidationError):
+        operator.execute_index_retention(
+            "acme",
+            max_versions=2,
+            expected_generation=expected_generation,
+            expected_candidates=(),
+            delete_collection_if_exists=delete_calls.append,
+        )
+
+    assert lock_calls == []
+    assert delete_calls == []
+    assert executor_calls == []
+
+
+@pytest.mark.parametrize(
+    "expected_candidates",
+    [
+        ["a"],  # list, not tuple
+        ("",),  # empty member
+        (123,),  # non-str member
+        ("a", "a"),  # duplicate
+        {"a"},  # set
+        "abc",  # str is iterable of chars but not a tuple of names
+    ],
+)
+def test_execute_retention_invalid_candidates_fail_before_lock(
+    expected_candidates: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    lock_calls: list[str] = []
+    delete_calls: list[str] = []
+    executor_calls: list[object] = []
+
+    @contextmanager
+    def _fake_lock(tenant_id: str) -> Iterator[object]:
+        lock_calls.append(tenant_id)
+        yield object()
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        executor_calls.append((args, kwargs))
+        raise AssertionError("executor must not run")
+
+    monkeypatch.setattr(operator, "tenant_index_lock", _fake_lock)
+    monkeypatch.setattr(operator, "execute_bounded_retention", _spy)
+
+    with pytest.raises(operator.IndexRetentionExecutionValidationError):
+        operator.execute_index_retention(
+            "acme",
+            max_versions=2,
+            expected_generation=1,
+            expected_candidates=expected_candidates,
+            delete_collection_if_exists=delete_calls.append,
+        )
+
+    assert lock_calls == []
+    assert delete_calls == []
+    assert executor_calls == []
+
+
+@pytest.mark.parametrize("max_versions", [True, 1, 2.0])
+def test_execute_retention_invalid_budget_propagates_without_mutation(
+    max_versions: Any,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import index_manifest_path
+    from vectordb.index_retention import (
+        IndexRetentionValidationError,
+        index_retention_path,
+    )
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = _seed_four_versions(
+        tenant_id="acme",
+        chroma_directory=chroma_directory,
+        monkeypatch=monkeypatch,
+    )
+    _stub_tenant_lock(monkeypatch)
+
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    inventory_path = index_retention_path("acme", chroma_directory=chroma_directory)
+    before_manifest = manifest_path.read_bytes()
+    before_inventory = inventory_path.read_bytes()
+    delete_calls: list[str] = []
+    executor_calls: list[object] = []
+    real_executor = operator.execute_bounded_retention
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        executor_calls.append((args, kwargs))
+        return real_executor(*args, **kwargs)
+
+    monkeypatch.setattr(operator, "execute_bounded_retention", _spy)
+
+    with pytest.raises(IndexRetentionValidationError, match="max_versions"):
+        operator.execute_index_retention(
+            "acme",
+            max_versions=max_versions,
+            expected_generation=4,
+            expected_candidates=versions[:2],
+            delete_collection_if_exists=delete_calls.append,
+            chroma_directory=chroma_directory,
+        )
+
+    assert delete_calls == []
+    assert executor_calls == []
+    assert manifest_path.read_bytes() == before_manifest
+    assert inventory_path.read_bytes() == before_inventory
+
+
+def test_execute_retention_propagates_corrupt_manifest_without_mutation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import IndexManifestCorrupt, index_manifest_path
+    from vectordb.index_retention import (
+        index_retention_path,
+        record_retention_collection,
+    )
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    version = _versioned_name("acme", 1)
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        record_retention_collection(
+            "acme",
+            version,
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    inventory_path = index_retention_path("acme", chroma_directory=chroma_directory)
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    raw_manifest = b'{"schema_version": 1, "active_collection": '
+    manifest_path.write_bytes(raw_manifest)
+    before_inventory = inventory_path.read_bytes()
+    _stub_tenant_lock(monkeypatch)
+
+    delete_calls: list[str] = []
+    executor_calls: list[object] = []
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        executor_calls.append((args, kwargs))
+        raise AssertionError("executor must not run")
+
+    monkeypatch.setattr(operator, "execute_bounded_retention", _spy)
+
+    with pytest.raises(IndexManifestCorrupt, match="manifest"):
+        operator.execute_index_retention(
+            "acme",
+            max_versions=2,
+            expected_generation=1,
+            expected_candidates=(),
+            delete_collection_if_exists=delete_calls.append,
+            chroma_directory=chroma_directory,
+        )
+
+    assert delete_calls == []
+    assert executor_calls == []
+    assert manifest_path.read_bytes() == raw_manifest
+    assert inventory_path.read_bytes() == before_inventory
+
+
+def test_execute_retention_propagates_corrupt_inventory_without_mutation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import index_manifest_path, publish_active_collection
+    from vectordb.index_retention import IndexRetentionCorrupt, index_retention_path
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    version = _versioned_name("acme", 1)
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        publish_active_collection(
+            "acme",
+            version,
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+
+    inventory_path = index_retention_path("acme", chroma_directory=chroma_directory)
+    inventory_path.parent.mkdir(parents=True, exist_ok=True)
+    raw_inventory = b'{"schema_version": 1, "collections": '
+    inventory_path.write_bytes(raw_inventory)
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    before_manifest = manifest_path.read_bytes()
+    _stub_tenant_lock(monkeypatch)
+
+    delete_calls: list[str] = []
+    executor_calls: list[object] = []
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        executor_calls.append((args, kwargs))
+        raise AssertionError("executor must not run")
+
+    monkeypatch.setattr(operator, "execute_bounded_retention", _spy)
+
+    with pytest.raises(IndexRetentionCorrupt, match="inventory"):
+        operator.execute_index_retention(
+            "acme",
+            max_versions=2,
+            expected_generation=1,
+            expected_candidates=(),
+            delete_collection_if_exists=delete_calls.append,
+            chroma_directory=chroma_directory,
+        )
+
+    assert delete_calls == []
+    assert executor_calls == []
+    assert inventory_path.read_bytes() == raw_inventory
+    assert manifest_path.read_bytes() == before_manifest
+
+
+def test_execute_retention_propagates_tenant_lock_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.tenant_lock import TenantIndexLockUnavailable
+
+    delete_calls: list[str] = []
+    executor_calls: list[object] = []
+
+    @contextmanager
+    def _fail_lock(tenant_id: str) -> Iterator[object]:
+        raise TenantIndexLockUnavailable("lock unavailable for test")
+        yield object()  # pragma: no cover
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        executor_calls.append((args, kwargs))
+        raise AssertionError("executor must not run")
+
+    monkeypatch.setattr(operator, "tenant_index_lock", _fail_lock)
+    monkeypatch.setattr(operator, "execute_bounded_retention", _spy)
+
+    with pytest.raises(TenantIndexLockUnavailable, match="lock unavailable"):
+        operator.execute_index_retention(
+            "acme",
+            max_versions=2,
+            expected_generation=1,
+            expected_candidates=(),
+            delete_collection_if_exists=delete_calls.append,
+        )
+
+    assert delete_calls == []
+    assert executor_calls == []
+
+
+def test_execute_retention_empty_candidates_still_invokes_executor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import index_manifest_path, publish_active_collection
+    from vectordb.index_retention import (
+        index_retention_path,
+        record_retention_collection,
+    )
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = tuple(_versioned_name("acme", ordinal) for ordinal in range(1, 3))
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        for collection_name in versions:
+            record_retention_collection(
+                "acme",
+                collection_name,
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+            publish_active_collection(
+                "acme",
+                collection_name,
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+
+    _stub_tenant_lock(monkeypatch)
+    preview = operator.preview_index_retention(
+        "acme",
+        max_versions=2,
+        chroma_directory=chroma_directory,
+    )
+    assert preview.deletion_candidates == ()
+    assert preview.manifest_generation == 2
+
+    delete_calls: list[str] = []
+    executor_calls: list[object] = []
+    real_executor = operator.execute_bounded_retention
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        executor_calls.append((args, kwargs))
+        return real_executor(*args, **kwargs)
+
+    monkeypatch.setattr(operator, "execute_bounded_retention", _spy)
+
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    inventory_path = index_retention_path("acme", chroma_directory=chroma_directory)
+    before_manifest = manifest_path.read_bytes()
+    before_inventory = inventory_path.read_bytes()
+
+    result = operator.execute_index_retention(
+        "acme",
+        max_versions=2,
+        expected_generation=2,
+        expected_candidates=(),
+        delete_collection_if_exists=delete_calls.append,
+        chroma_directory=chroma_directory,
+    )
+
+    assert result == operator.IndexRetentionExecutionResult(
+        tenant_id="acme",
+        max_versions=2,
+        expected_generation=2,
+        expected_candidates=(),
+        deleted_collections=(),
+    )
+    assert delete_calls == []
+    assert len(executor_calls) == 1
+    assert manifest_path.read_bytes() == before_manifest
+    assert inventory_path.read_bytes() == before_inventory
+
+
+def test_execute_retention_delete_failure_partial_then_fresh_command_completes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_retention import IndexRetentionDeletionError
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = _seed_four_versions(
+        tenant_id="acme",
+        chroma_directory=chroma_directory,
+        monkeypatch=monkeypatch,
+    )
+    _stub_tenant_lock(monkeypatch)
+
+    preview = operator.preview_index_retention(
+        "acme",
+        max_versions=2,
+        chroma_directory=chroma_directory,
+    )
+    assert preview.deletion_candidates == versions[:2]
+
+    delete_calls: list[str] = []
+
+    def _delete_once_fail(collection_name: str) -> None:
+        delete_calls.append(collection_name)
+        if collection_name == versions[1]:
+            raise RuntimeError("delete failed")
+
+    with pytest.raises(IndexRetentionDeletionError, match="deletion failed") as error:
+        operator.execute_index_retention(
+            "acme",
+            max_versions=2,
+            expected_generation=4,
+            expected_candidates=preview.deletion_candidates,
+            delete_collection_if_exists=_delete_once_fail,
+            chroma_directory=chroma_directory,
+        )
+
+    assert error.value.failed_collection == versions[1]
+    assert error.value.deleted_collections == (versions[0],)
+    assert delete_calls == list(versions[:2])
+
+    remaining_preview = operator.preview_index_retention(
+        "acme",
+        max_versions=2,
+        chroma_directory=chroma_directory,
+    )
+    assert remaining_preview.manifest_generation == 4
+    assert remaining_preview.deletion_candidates == (versions[1],)
+
+    finish_calls: list[str] = []
+    result = operator.execute_index_retention(
+        "acme",
+        max_versions=2,
+        expected_generation=4,
+        expected_candidates=remaining_preview.deletion_candidates,
+        delete_collection_if_exists=finish_calls.append,
+        chroma_directory=chroma_directory,
+    )
+    assert result.deleted_collections == (versions[1],)
+    assert finish_calls == [versions[1]]
+
+
+def test_execute_retention_metadata_prune_failure_then_idempotent_retry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb import index_retention as retention_mod
+    from vectordb.index_retention import IndexRetentionMetadataUpdateError
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = _seed_four_versions(
+        tenant_id="acme",
+        chroma_directory=chroma_directory,
+        monkeypatch=monkeypatch,
+    )
+    _stub_tenant_lock(monkeypatch)
+
+    preview = operator.preview_index_retention(
+        "acme",
+        max_versions=2,
+        chroma_directory=chroma_directory,
+    )
+    assert preview.deletion_candidates == versions[:2]
+
+    delete_calls: list[str] = []
+    real_replace = retention_mod.os.replace
+
+    def _fail_first_replace(source: str | Path, destination: str | Path) -> None:
+        _ = source, destination
+        raise OSError("retention prune replace failed")
+
+    monkeypatch.setattr(retention_mod.os, "replace", _fail_first_replace)
+
+    with pytest.raises(
+        IndexRetentionMetadataUpdateError,
+        match="metadata update failed",
+    ) as error:
+        operator.execute_index_retention(
+            "acme",
+            max_versions=2,
+            expected_generation=4,
+            expected_candidates=preview.deletion_candidates,
+            delete_collection_if_exists=delete_calls.append,
+            chroma_directory=chroma_directory,
+        )
+
+    assert error.value.deleted_collection == versions[0]
+    assert error.value.deleted_collections == (versions[0],)
+    assert delete_calls == [versions[0]]
+
+    # Candidate tuple remains the same because inventory was not pruned.
+    retry_preview = operator.preview_index_retention(
+        "acme",
+        max_versions=2,
+        chroma_directory=chroma_directory,
+    )
+    assert retry_preview.deletion_candidates == versions[:2]
+    assert retry_preview.manifest_generation == 4
+
+    monkeypatch.setattr(retention_mod.os, "replace", real_replace)
+    retry_calls: list[str] = []
+
+    def _idempotent_delete(collection_name: str) -> None:
+        retry_calls.append(collection_name)
+
+    result = operator.execute_index_retention(
+        "acme",
+        max_versions=2,
+        expected_generation=4,
+        expected_candidates=retry_preview.deletion_candidates,
+        delete_collection_if_exists=_idempotent_delete,
+        chroma_directory=chroma_directory,
+    )
+    assert result.deleted_collections == versions[:2]
+    assert retry_calls == list(versions[:2])
