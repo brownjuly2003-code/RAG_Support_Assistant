@@ -1,10 +1,11 @@
 # Session handoff
 
-**Обновлено:** 2026-08-03 (после plan 2.3d / `7b8d14c`)
+**Обновлено:** 2026-08-03 (после plan 2.3e / `457cbf0`)
 
 **Назначение:** самодостаточный next-session handoff для coding agent после
 compacted context. История срезов — в [`AGENT_STATE.md`](../AGENT_STATE.md)
-(верхний блок Update-40; детали 2.3c/2.3b/2.3a — Update-39/Update-37/Update-36).
+(верхний блок Update-41; детали 2.3d/2.3c/2.3b/2.3a — Update-40/Update-39/
+Update-37/Update-36).
 Активный plan source — untracked/protected
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
 
@@ -15,14 +16,14 @@ compacted context. История срезов — в [`AGENT_STATE.md`](../AGEN
 2. Далее: верхний блок `AGENT_STATE.md` и этот handoff.
 3. `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26` и их
    dirty working-tree contents — protected user state; могут быть stale. Они
-   **не** переопределяют Update-40 и **не** дают права повторять уже
-   завершённые срезы 2.1–2.3d.
+   **не** переопределяют Update-41 и **не** дают права повторять уже
+   завершённые срезы 2.1–2.3e.
 4. `rag-remediation-plan-2026-08-03.md` — активный plan source
    (untracked/protected). Старый `plan_sol_23_07_26` — protected legacy.
 5. Один user turn = максимум один named atomic slice.
 
-Baseline pre-refresh HEAD: `7b8d14c` (`feat(index): make runtime rollback
-idempotent`). Eventual docs commit будет descendant of `7b8d14c` — next session
+Baseline pre-refresh HEAD: `457cbf0` (`feat(api): expose idempotent index
+rollback`). Eventual docs commit будет descendant of `457cbf0` — next session
 берёт actual hash из `git log`, не ожидает embedded self-hash. Ветка локально
 ahead of origin; push/deploy не разрешены автоматически.
 
@@ -35,41 +36,43 @@ ahead of origin; push/deploy не разрешены автоматически.
 | **2.3a** | lock-consistent read-only retention preview primitive | `5bbc329` | `3976366` |
 | **2.3b** | tenant-scoped admin retention preview endpoint | `32748d9` | `37987df` |
 | **2.3c** | unwired idempotent rollback command contract | `dda4bb2` | `5487445` |
-| **2.3d** | idempotent validated runtime rollback | `7b8d14c` | (docs refresh after this handoff) |
+| **2.3d** | idempotent validated runtime rollback | `7b8d14c` | `7591c22` |
+| **2.3e** | tenant-scoped admin idempotent rollback endpoint | `457cbf0` | (docs refresh after this handoff) |
 
-Срезы **2.1, 2.2, 2.3a, 2.3b, 2.3c, 2.3d** локально complete и verified.
-Полный plan step 2, operator surface, project и release — **не** complete.
+Срезы **2.1, 2.2, 2.3a, 2.3b, 2.3c, 2.3d, 2.3e** локально complete и verified.
+Полный plan step 2, operator surface, project и release — **не** complete:
+operator retention execution/deletion still absent.
 
-## Контракт 2.3d (idempotent validated runtime rollback)
+## Контракт 2.3e (HTTP admin idempotent index rollback)
 
-Runtime surface in `vectordb/manager.py` + operator validator in
-`vectordb/index_operator.py`:
+Admin surface in `api/routers/admin_ops.py` + endpoint contracts in
+`tests/test_admin_index_operator.py`:
 
-- `rollback_vector_store(..., *, expected_generation, target_collection)` —
-  keyword-only generation/target; routes through `rollback_index_version`
-  instead of calling manifest rollback directly
-- optional generic operator `target_validator` runs **exactly once** under the
-  already-held tenant lock **only after** durable command classification:
-  - first apply: validate before mutation
-  - exact retry: validate then return `applied=False`
-  - invalid / conflict / missing / corrupt paths: do **not** open the target
-- manager opens only the explicit target with
-  `create_collection_if_not_exists=False`, restores/dimension/known-query
-  validates it under that same lock, then updates cache from
-  `IndexRollbackResult.active_collection` and `.manifest_generation` after
-  apply or retry
-- exact runtime retry preserves manifest bytes/generation/active/previous and
-  cannot oscillate; target validation failure preserves manifest and active
-  cache
+- `POST /api/admin/index/rollback` requires the existing admin role
+- tenant is derived only from JWT/context/default; body must not supply tenant
+- strict extra-forbid JSON body requires `expected_generation` and
+  `target_collection`; body `tenant_id`/unknown keys and coerced types are
+  rejected **422** before runtime/audit; semantic invalid values reach the
+  domain contract
+- handler calls only `rollback_vector_store` through `asyncio.to_thread` with
+  the explicit command key and **no** embeddings
+- first apply and exact retry return the same safe `status: active` response
+  with expected generation + 1 and explicit target; response does **not** claim
+  `applied` or expose store/chunks
+- mapped validation/conflict/unavailable/corrupt/target-validation/lock
+  failures return safe **400/409/503** details and exactly one tenant-scoped
+  `index_rollback` audit; success also audits once
+- auth failures, body-schema 422, and unrelated exceptions skip runtime and/or
+  audit as applicable (no double audit on mapped paths)
 
-**Preserved 2.3c domain semantics (not re-implemented here):**
-`rollback_index_version` still owns first-apply / exact-retry classification,
-typed validation/conflict errors, and atomic manifest rollback under one
-tenant lock.
+**Preserved 2.3d runtime foundation (not re-implemented here):**
+`rollback_vector_store` still requires keyword-only expected generation/target,
+routes through `rollback_index_version`, validates the explicit target under
+the operator lock, and returns a non-oscillating exact-retry result.
 
-**Boundary:** runtime wiring only. **Нет** HTTP/API/admin auth/audit, retention
-execution/deletion, settings/migrations, live Chroma/PostgreSQL/Redis/provider,
-deploy, push, Qdrant rollback, or production readiness.
+**Boundary:** HTTP admin exposure only. **Нет** retention execution/deletion,
+direct Chroma/manifest/operator mutation wiring, settings/migrations, UI, live
+services, Qdrant rollback, deploy, push, or production readiness.
 
 ## Уже существующее durable lifecycle-поведение
 
@@ -87,13 +90,34 @@ deploy, push, Qdrant rollback, or production readiness.
 - Runtime rollback (2.3d): manager requires the same expected generation/target,
   validates the explicit target under the operator lock, and updates cache from
   the rollback result without oscillation on exact retry.
+- Admin rollback API (2.3e): existing-admin POST endpoint with strict body,
+  tenant-from-auth only, safe typed mapping, `asyncio.to_thread`, and
+  tenant-scoped `index_rollback` audit.
 
 **Не утверждать:** Qdrant operator support, live services, production
 readiness, immutable uploads, complete fault injection.
 
 ## Доказательства верификации (не перезапускать без new code/failure)
 
-### 2.3d (latest)
+### 2.3e (latest)
+
+- Grok: route `local_grok_cli`; CLI-selected model `grok-4.5`, actual reported
+  `grok-4.5-build`; red `26 failed, 14 deselected`; focused final `128 passed`
+  with one known Starlette warning; Ruff/diff clean.
+- Codex independent: `40 passed` with one known warning; scoped Ruff clean;
+  narrowed Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4 passed with only existing
+  `dict-item` disabled; protected hashes/route search/diff clean; final
+  key-contract gate `19 passed`, Ruff/diff clean.
+- Direct Mypy на весь `admin_ops.py`: pre-existing `dict-item` на **unchanged**
+  logic at line **223** (commit `3c1e7b7d`, line shifted by inserted rollback
+  code). Narrowed Python 3.11 + mypy 1.19.1 + NumPy 2.4.4 с
+  `--disable-error-code=dict-item` — passed. **Никогда** не называть весь файл
+  unconditionally Mypy-clean.
+- Real Chroma/PostgreSQL/Redis, full suite, push, deploy, production
+  readiness — **не** было и **не** утверждается.
+- Этот docs-only refresh **не** перезапускал tests.
+
+### 2.3d (summary)
 
 - Grok: route `local_grok_cli`; CLI-selected model `grok-4.5`, actual reported
   `grok-4.5-build`; initial red `18 failed, 18 passed`; final focused gate
@@ -103,9 +127,6 @@ readiness, immutable uploads, complete fault injection.
   search found no production call sites; protected hashes/diff clean. One Grok
   QA follow-up corrected only the stale module word `unwired`; final
   key-contract gate `9 passed`, Ruff/diff clean.
-- Real Chroma/PostgreSQL/Redis, full suite, push, deploy, production
-  readiness — **не** было и **не** утверждается.
-- Этот docs-only refresh **не** перезапускал tests.
 
 ### 2.3c (summary)
 
@@ -124,21 +145,19 @@ readiness, immutable uploads, complete fault injection.
 - Codex independent closure: **103** passed, 1 known FastAPI TestClient
   deprecation warning; scoped Ruff clean; protected hashes + cached diff check
   clean.
-- Direct Mypy на весь `admin_ops.py`: pre-existing `dict-item` на **unchanged**
-  line **215** (commit `3c1e7b7d`). Narrowed Python 3.11 + mypy 1.19.1 +
-  NumPy 2.4.4 с `--disable-error-code=dict-item` — passed. **Никогда** не
-  называть весь файл unconditionally Mypy-clean.
+- Direct Mypy caveat originally reported at unchanged line **215**; later
+  shifted by inserted lines (see 2.3e caveat at **223**).
 
 ### 2.3a (summary)
 
 - Grok: **46** focused passes; Codex: **79**-pass closure.
 
-### Reference commands (2.3d) — только при new code/failure
+### Reference commands (2.3e) — только при new code/failure
 
 ```powershell
-python -m pytest tests/test_index_operator.py tests/test_index_runtime_switch.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-3d-codex-20260803
-python -m ruff check vectordb/index_operator.py vectordb/manager.py tests/test_index_operator.py tests/test_index_runtime_switch.py
-uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy vectordb/index_operator.py vectordb/manager.py --no-incremental --show-error-codes
+python -m pytest tests/test_admin_index_operator.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-3e-codex-20260803
+python -m ruff check api/routers/admin_ops.py tests/test_admin_index_operator.py
+uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy api/routers/admin_ops.py --no-incremental --show-error-codes --disable-error-code=dict-item
 ```
 
 На этом Windows host обязателен unique ignored basetemp
@@ -148,28 +167,31 @@ blocked unmarked Linux-only `nvidia-cufile` wheel; не retry install без
 
 ## Что остаётся открытым / следующий safe slice
 
-**Не начато (вне 2.3e):**
+**Не начато (вне 2.3f):**
 
-- retention execution/deletion operator action;
+- retention execution/deletion operator action (HTTP/API still out of 2.3f);
 - immutable/versioned originals, broader fault injection, live drills,
   release gates, project completion.
 
-### Следующий named slice: **2.3e only** (не начат)
+### Следующий named slice: **2.3f only** (не начат)
 
-Expose the now-idempotent validated runtime rollback through a tenant-scoped
-existing-admin endpoint with explicit expected generation/target, safe typed
-error mapping, `asyncio.to_thread`, and tenant-scoped audit outcome.
+Add an unwired tenant-locked retention execution command contract that requires
+an explicit expected manifest generation and exact preview candidate tuple
+before invoking the existing bounded retention executor, so changed
+state/candidates fail closed and partial delete/prune remains
+repeatable/observable.
 
-В **2.3e не** добавлять: retention deletion/execution, live service calls,
-deploy, push.
+В **2.3f не** добавлять: HTTP/API, new deletion adapter/policy, live service
+calls, deploy, push.
 
 **Точки входа для исследования** (только investigation; **не** authorization
-расширять scope beyond named slice 2.3e):
+расширять scope beyond named slice 2.3f):
 
-- `api/routers/admin_ops.py` — existing admin operator surface patterns
-  (auth, tenant derivation, `asyncio.to_thread`, audit);
-- `tests/test_admin_index_operator.py` — endpoint contract patterns from
-  retention preview and related admin index tests.
+- `vectordb/index_operator.py` — existing operator/command patterns and lock
+  semantics;
+- `vectordb/chroma_retention.py` — existing bounded retention executor surface;
+- `vectordb/index_retention.py` — retention policy/candidate helpers;
+- focused tests for the above modules.
 
 ## Защищённое локальное состояние
 

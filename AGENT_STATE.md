@@ -1,5 +1,65 @@
 # Agent State
 
+## 2026-08-03 Update-41 (plan 2.3e / idempotent index rollback API @ `457cbf0`) ✅ START HERE
+
+> **Next-session handoff:** refresh `git status` first. This Update-41 block
+> supersedes Update-40 as the current durable handoff. Protected dirty
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and
+> existing untracked artifacts were not touched. Older docs may still point to
+> plan 2.3d / next-slice 2.3e and must not cause completed work to be repeated.
+>
+> **Implementation commit:** `457cbf0` (`feat(api): expose idempotent index
+> rollback`). Slice **2.3e is locally complete and verified**.
+> - `POST /api/admin/index/rollback` requires the existing admin role and
+>   derives tenant only from JWT/context/default
+> - strict extra-forbid JSON body requires `expected_generation` and
+>   `target_collection`; body `tenant_id`/unknown keys and coerced types are
+>   rejected 422 before runtime/audit; semantic invalid values reach the domain
+>   contract
+> - handler calls only `rollback_vector_store` through `asyncio.to_thread` with
+>   explicit command key and no embeddings
+> - first apply and exact retry return the same safe `status: active` response
+>   with expected generation + 1 and explicit target, without claiming
+>   `applied` or exposing store/chunks
+> - mapped validation/conflict/unavailable/corrupt/target-validation/lock
+>   failures return safe 400/409/503 details and exactly one tenant-scoped
+>   `index_rollback` audit; success also audits once; auth/body-schema/
+>   unrelated failures skip runtime/audit as applicable
+>
+> **Boundary:** no retention execution/deletion, direct Chroma/manifest/
+> operator mutation wiring, settings/migrations, UI, live services, Qdrant
+> rollback, deploy, push, or production readiness.
+>
+> **Verification — Grok:** route `local_grok_cli`; CLI-selected model
+> `grok-4.5`, actual reported `grok-4.5-build`; red `26 failed, 14 deselected`;
+> focused final `128 passed` with one known Starlette warning; Ruff/diff clean.
+>
+> **Verification — Codex independent:** `40 passed` with one known warning;
+> scoped Ruff clean; narrowed Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4 passed
+> with only existing `dict-item` disabled; protected hashes/route search/diff
+> clean; final key-contract gate `19 passed`, Ruff/diff clean.
+>
+> **Mypy caveat:** direct Mypy still reports exactly one pre-existing
+> `dict-item` issue, introduced by commit `3c1e7b7d`, now shifted by inserted
+> lines to unchanged logic at `admin_ops.py:223`; never claim the whole file
+> unconditionally Mypy-clean.
+>
+> **Current truth:** slices **2.1, 2.2, 2.3a, 2.3b, 2.3c, 2.3d, 2.3e** are
+> locally complete and verified. Broader operator surface, plan step 2,
+> project, and release are **not** complete because operator retention
+> execution/deletion is still absent. Next safe named slice is **2.3f only**
+> (not started): add an unwired tenant-locked retention execution command
+> contract that requires an explicit expected manifest generation and exact
+> preview candidate tuple before invoking the existing bounded retention
+> executor, so changed state/candidates fail closed and partial delete/prune
+> remains repeatable/observable. No HTTP/API, no new deletion adapter/policy,
+> no live calls, deploy, or push. Treat 2.3f as the next
+> investigation/implementation candidate, not as completed work. Full contract,
+> evidence, and protected-state details: refreshed
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md). Eventual docs refresh
+> commit will be a descendant of `457cbf0`; next session takes the actual hash
+> from `git log`, not an embedded self-hash.
+
 ## 2026-08-03 Update-40 (plan 2.3d / idempotent validated runtime rollback @ `7b8d14c`) ✅ START HERE
 
 > **Next-session handoff:** refresh `git status` first. This Update-40 block
