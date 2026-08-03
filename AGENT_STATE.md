@@ -1,5 +1,61 @@
 # Agent State
 
+## 2026-08-03 Update-40 (plan 2.3d / idempotent validated runtime rollback @ `7b8d14c`) ✅ START HERE
+
+> **Next-session handoff:** refresh `git status` first. This Update-40 block
+> supersedes Update-39 as the current durable handoff. Protected dirty
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and
+> existing untracked artifacts were not touched. Older docs may still point to
+> plan 2.3c / next-slice 2.3d and must not cause completed work to be repeated.
+>
+> **Implementation commit:** `7b8d14c` (`feat(index): make runtime rollback
+> idempotent`). Slice **2.3d is locally complete and verified**.
+> - `rollback_vector_store` now requires keyword-only `expected_generation` and
+>   `target_collection` and routes through `rollback_index_version` instead of
+>   directly calling manifest rollback
+> - the operator's optional generic `target_validator` runs exactly once under
+>   the already-held tenant lock only after durable command classification;
+>   first apply validates before mutation, exact retry validates then returns
+>   `applied=False`, invalid/conflict/missing/corrupt paths do not open the
+>   target
+> - manager opens only the explicit target with
+>   `create_collection_if_not_exists=False`, restores/dimension/known-query
+>   validates it under that same lock, then updates cache from
+>   `IndexRollbackResult.active_collection` and `.manifest_generation` after
+>   apply or retry
+> - exact runtime retry preserves manifest bytes/generation/active/previous and
+>   cannot oscillate; target validation failure preserves manifest and active
+>   cache
+>
+> **Boundary:** no HTTP/API/admin auth/audit, retention execution/deletion,
+> settings/migrations, live Chroma/PostgreSQL/Redis/provider, deploy, push,
+> Qdrant rollback, or production readiness.
+>
+> **Verification — Grok:** route `local_grok_cli`; CLI-selected model
+> `grok-4.5`, actual reported `grok-4.5-build`; initial red
+> `18 failed, 18 passed`; final focused gate `90 passed` with two pre-existing
+> warnings; Ruff/diff clean.
+>
+> **Verification — Codex independent:** `53 passed` with one known
+> FastAPI/Starlette warning; scoped Ruff clean; Python 3.11 / Mypy 1.19.1 /
+> NumPy 2.4.4 clean; caller search found no production call sites; protected
+> hashes/diff clean. One Grok QA follow-up corrected only the stale module word
+> `unwired`; final key-contract gate `9 passed`, Ruff/diff clean.
+>
+> **Current truth:** slices **2.1, 2.2, 2.3a, 2.3b, 2.3c, 2.3d** are locally
+> complete and verified. Broader operator surface, plan step 2, project, and
+> release are **not** complete. Next safe named slice is **2.3e only** (not
+> started): expose the now-idempotent validated runtime rollback through a
+> tenant-scoped existing-admin endpoint with explicit expected
+> generation/target, safe typed error mapping, `asyncio.to_thread`, and
+> tenant-scoped audit outcome. Do not add retention deletion/execution, live
+> calls, deploy, or push. Treat 2.3e as the next investigation/implementation
+> candidate, not as completed work. Full contract, evidence, and
+> protected-state details: refreshed
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md). Eventual docs refresh
+> commit will be a descendant of `7b8d14c`; next session takes the actual hash
+> from `git log`, not an embedded self-hash.
+
 ## 2026-08-03 Update-39 (plan 2.3c / idempotent rollback command @ `dda4bb2`) ✅ START HERE
 
 > **Next-session handoff:** refresh `git status` first. This Update-39 block
