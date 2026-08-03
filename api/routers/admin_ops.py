@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictStr
 
 from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant
@@ -24,6 +24,13 @@ class IndexRollbackRequest(BaseModel):
 
     expected_generation: int = Field(strict=True)
     target_collection: str = Field(strict=True)
+
+
+class IndexRetentionExecutionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expected_generation: int = Field(strict=True)
+    expected_candidates: tuple[StrictStr, ...]
 
 
 def _async_session() -> Any:
@@ -570,5 +577,221 @@ async def admin_index_rollback(
             "target_collection": payload.target_collection,
             "manifest_generation": payload.expected_generation + 1,
             "active_collection": payload.target_collection,
+        },
+    )
+
+
+async def _audit_index_retention(
+    *,
+    request: Request,
+    user: dict[str, Any],
+    tenant_id: str,
+    detail: dict[str, Any],
+) -> None:
+    await _log_audit(
+        actor=user.get("sub", "anonymous"),
+        action="index_retention",
+        resource="index/retention",
+        tenant_id=tenant_id,
+        detail=detail,
+        ip_address=request.client.host if request.client else None,
+    )
+
+
+@router.post("/admin/index/retention")
+async def admin_index_retention(
+    request: Request,
+    payload: IndexRetentionExecutionRequest,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    """Apply guarded idempotent retention execution for the tenant."""
+    from vectordb.index_manifest import IndexManifestCorrupt  # noqa: PLC0415
+    from vectordb.index_operator import (  # noqa: PLC0415
+        IndexRetentionExecutionConflict,
+        IndexRetentionExecutionValidationError,
+    )
+    from vectordb.index_retention import (  # noqa: PLC0415
+        IndexRetentionCorrupt,
+        IndexRetentionDeletionError,
+        IndexRetentionMetadataUpdateError,
+        IndexRetentionValidationError,
+    )
+    from vectordb.index_staging import IndexStagingValidationError  # noqa: PLC0415
+    from vectordb.manager import execute_vector_store_retention  # noqa: PLC0415
+    from vectordb.tenant_lock import TenantIndexLockError  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    expected_candidates = payload.expected_candidates
+    expected_candidates_list = list(expected_candidates)
+
+    try:
+        result = await asyncio.to_thread(
+            execute_vector_store_retention,
+            tenant,
+            expected_generation=payload.expected_generation,
+            expected_candidates=expected_candidates,
+        )
+    except (
+        IndexRetentionExecutionValidationError,
+        IndexRetentionValidationError,
+    ) as exc:
+        await _audit_index_retention(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "rejected",
+                "expected_generation": payload.expected_generation,
+                "expected_candidates": expected_candidates_list,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="invalid index retention command",
+        ) from None
+    except IndexRetentionExecutionConflict as exc:
+        await _audit_index_retention(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "conflict",
+                "expected_generation": payload.expected_generation,
+                "expected_candidates": expected_candidates_list,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="index retention conflicts with current state",
+        ) from None
+    except (IndexRetentionCorrupt, IndexManifestCorrupt) as exc:
+        await _audit_index_retention(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "metadata_corrupt",
+                "expected_generation": payload.expected_generation,
+                "expected_candidates": expected_candidates_list,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="index retention metadata is corrupt",
+        ) from None
+    except IndexStagingValidationError as exc:
+        await _audit_index_retention(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "unavailable",
+                "expected_generation": payload.expected_generation,
+                "expected_candidates": expected_candidates_list,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="index retention is unavailable",
+        ) from None
+    except TenantIndexLockError as exc:
+        await _audit_index_retention(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "lock_unavailable",
+                "expected_generation": payload.expected_generation,
+                "expected_candidates": expected_candidates_list,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="index retention is temporarily unavailable",
+        ) from None
+    except IndexRetentionDeletionError as exc:
+        deleted_collections = list(exc.deleted_collections)
+        await _audit_index_retention(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "deletion_failed",
+                "expected_generation": payload.expected_generation,
+                "expected_candidates": expected_candidates_list,
+                "error_type": type(exc).__name__,
+                "failed_collection": exc.failed_collection,
+                "deleted_collections": deleted_collections,
+            },
+        )
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": "index retention deletion failed",
+                "failed_collection": exc.failed_collection,
+                "deleted_collections": deleted_collections,
+            },
+        )
+    except IndexRetentionMetadataUpdateError as exc:
+        deleted_collections = list(exc.deleted_collections)
+        await _audit_index_retention(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "metadata_update_failed",
+                "expected_generation": payload.expected_generation,
+                "expected_candidates": expected_candidates_list,
+                "error_type": type(exc).__name__,
+                "deleted_collection": exc.deleted_collection,
+                "deleted_collections": deleted_collections,
+            },
+        )
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": "index retention metadata update failed",
+                "deleted_collection": exc.deleted_collection,
+                "deleted_collections": deleted_collections,
+            },
+        )
+
+    await _audit_index_retention(
+        request=request,
+        user=_user,
+        tenant_id=tenant,
+        detail={
+            "tenant": tenant,
+            "outcome": "success",
+            "expected_generation": result.expected_generation,
+            "expected_candidates": list(result.expected_candidates),
+            "max_versions": result.max_versions,
+            "deleted_collections": list(result.deleted_collections),
+            "deleted_count": len(result.deleted_collections),
+            "status": "complete",
+        },
+    )
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "complete",
+            "tenant_id": result.tenant_id,
+            "max_versions": result.max_versions,
+            "expected_generation": result.expected_generation,
+            "expected_candidates": list(result.expected_candidates),
+            "deleted_collections": list(result.deleted_collections),
         },
     )
