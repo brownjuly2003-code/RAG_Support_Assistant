@@ -145,13 +145,14 @@ def test_two_tenants_get_different_retrievers(
     monkeypatch.setattr(manager, "get_embeddings", lambda model_name=None: None)
     manager.reset_retriever_cache()
 
+    chroma_directory = tmp_path / "vectordb" / "chroma"
     acme = manager.get_retriever(
-        persist_directory=str(tmp_path),
+        persist_directory=str(chroma_directory),
         embeddings=None,
         tenant_id="acme",
     )
     mega = manager.get_retriever(
-        persist_directory=str(tmp_path),
+        persist_directory=str(chroma_directory),
         embeddings=None,
         tenant_id="megacorp",
     )
@@ -180,13 +181,14 @@ def test_retriever_is_cached_per_tenant(
     monkeypatch.setattr(manager, "get_embeddings", lambda model_name=None: None)
     manager.reset_retriever_cache()
 
+    chroma_directory = tmp_path / "vectordb" / "chroma"
     first = manager.get_retriever(
-        persist_directory=str(tmp_path),
+        persist_directory=str(chroma_directory),
         embeddings=None,
         tenant_id="acme",
     )
     second = manager.get_retriever(
-        persist_directory=str(tmp_path),
+        persist_directory=str(chroma_directory),
         embeddings=None,
         tenant_id="acme",
     )
@@ -240,22 +242,24 @@ def test_build_store_invalidates_cache(
         def as_retriever(self, **kwargs):
             return object()
 
+    chroma_directory = tmp_path / "vectordb" / "chroma"
     monkeypatch.setattr(manager, "Chroma", FakeChroma, raising=False)
     monkeypatch.setattr(manager, "get_embeddings", lambda model_name=None: _Embeddings())
     monkeypatch.setattr(manager, "get_settings", lambda: SimpleNamespace(
         vector_backend="chroma",
-        vectordb_chroma_dir=tmp_path,
+        vectordb_chroma_dir=chroma_directory,
         vectordb_collection_prefix="rag_docs",
         chunk_size=800,
         chunk_overlap=200,
         contextual_headers=False,
         rag_device="cpu",
+        vectordb_retention_max_versions=2,
     ))
     monkeypatch.setattr(manager._base_manager, "select_chunks", lambda *args, **kwargs: docs)
     manager.reset_retriever_cache()
 
     first = manager.get_retriever(
-        persist_directory=str(tmp_path),
+        persist_directory=str(chroma_directory),
         embeddings=_Embeddings(),
         tenant_id="acme",
     )
@@ -266,7 +270,7 @@ def test_build_store_invalidates_cache(
         tenant_id="acme",
     )
     second = manager.get_retriever(
-        persist_directory=str(tmp_path),
+        persist_directory=str(chroma_directory),
         embeddings=None,
         tenant_id="acme",
     )

@@ -170,11 +170,12 @@ def test_build_vector_store_stamps_chunk_index(
     monkeypatch.setattr(
         manager._base_manager, "_build_text_splitter", lambda *args, **kwargs: splitter
     )
+    chroma_directory = tmp_path / "vectordb" / "chroma"
     settings = get_settings()
     monkeypatch.setattr(settings, "structural_chunking", False, raising=False)
     monkeypatch.setattr(settings, "semantic_chunking", False, raising=False)
     monkeypatch.setattr(settings, "contextual_headers", False, raising=False)
-    monkeypatch.setattr(settings, "vectordb_chroma_dir", tmp_path, raising=False)
+    monkeypatch.setattr(settings, "vectordb_chroma_dir", chroma_directory, raising=False)
 
     _store, chunks = manager.build_vector_store(
         docs,

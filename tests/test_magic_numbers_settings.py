@@ -113,16 +113,18 @@ def test_tenant_vector_store_uses_settings_chunk_defaults(
         captured["chunk_overlap"] = chunk_overlap
         return splitter
 
+    chroma_directory = tmp_path / "vectordb" / "chroma"
     monkeypatch.setattr(
         tenant_manager,
         "get_settings",
         lambda: SimpleNamespace(
             vector_backend="chroma",
             semantic_chunking=False,
-            vectordb_chroma_dir=tmp_path,
+            vectordb_chroma_dir=chroma_directory,
             vectordb_collection_prefix="rag_docs",
             chunk_size=345,
             chunk_overlap=67,
+            vectordb_retention_max_versions=2,
         ),
     )
     monkeypatch.setattr(tenant_manager, "Chroma", FakeChroma)

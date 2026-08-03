@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 from config.settings import get_settings
 from utils.tenant_naming import physical_tenant_component
 from vectordb import _base_manager
+from vectordb.chroma_retention import execute_chroma_retention
 from vectordb.index_manifest import (
     IndexManifestRollbackUnavailable,
     IndexVersionManifest,
@@ -278,6 +279,14 @@ def build_vector_store(
                     lock_token=lock_token,
                 )
                 raise
+            # Retention runs only after successful publish and outside the
+            # unpublished-candidate discard path. Failures propagate as-is.
+            execute_chroma_retention(
+                tenant,
+                max_versions=settings.vectordb_retention_max_versions,
+                lock_token=lock_token,
+                chroma_directory=persist_directory,
+            )
             store = candidate.store
             index_cache_key = _index_cache_key(persist_directory, manifest)
 

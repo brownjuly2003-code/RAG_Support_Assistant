@@ -132,6 +132,7 @@ def _settings(chroma_directory: Path) -> SimpleNamespace:
         vector_backend="chroma",
         vectordb_chroma_dir=chroma_directory,
         vectordb_collection_prefix="rag_docs",
+        vectordb_retention_max_versions=3,
         chunk_size=100,
         chunk_overlap=0,
         contextual_headers=False,
@@ -208,6 +209,15 @@ def test_rebuild_validates_known_query_then_atomically_publishes_candidate(
     docs = [manager.Document(page_content="new known content", metadata={"source": "new.md"})]
     real_record_retention = manager.record_retention_collection
     real_publish = manager.publish_active_collection
+    issued_lock: dict[str, Any] = {}
+    real_tenant_lock = manager.tenant_index_lock
+    retention_calls: list[dict[str, Any]] = []
+
+    @contextmanager
+    def _capture_lock(tenant_id: str) -> Iterator[Any]:
+        with real_tenant_lock(tenant_id) as lock_token:
+            issued_lock["token"] = lock_token
+            yield lock_token
 
     def _spy_record_retention(*args: Any, **kwargs: Any) -> Any:
         collection_name = args[1]
@@ -219,6 +229,25 @@ def test_rebuild_validates_known_query_then_atomically_publishes_candidate(
         state.events.append(f"publish:{collection_name}")
         return real_publish(*args, **kwargs)
 
+    def _spy_retention(
+        tenant_id: str,
+        *,
+        max_versions: int,
+        lock_token: Any,
+        chroma_directory: str | Path,
+    ) -> tuple[str, ...]:
+        retention_calls.append(
+            {
+                "tenant_id": tenant_id,
+                "max_versions": max_versions,
+                "lock_token": lock_token,
+                "chroma_directory": chroma_directory,
+            }
+        )
+        state.events.append(f"retention:{tenant_id}:{max_versions}")
+        return ()
+
+    monkeypatch.setattr(manager, "tenant_index_lock", _capture_lock)
     monkeypatch.setattr(
         manager,
         "record_retention_collection",
@@ -226,6 +255,12 @@ def test_rebuild_validates_known_query_then_atomically_publishes_candidate(
         raising=False,
     )
     monkeypatch.setattr(manager, "publish_active_collection", _spy_publish)
+    monkeypatch.setattr(
+        manager,
+        "execute_chroma_retention",
+        _spy_retention,
+        raising=False,
+    )
 
     store, chunks = manager.build_vector_store(
         docs,
@@ -246,6 +281,14 @@ def test_rebuild_validates_known_query_then_atomically_publishes_candidate(
     assert state.events.index(
         f"record-inventory:{store.collection_name}"
     ) < state.events.index(f"publish:{store.collection_name}")
+    assert state.events.index(f"publish:{store.collection_name}") < state.events.index(
+        "retention:acme:3"
+    )
+    assert len(retention_calls) == 1
+    assert retention_calls[0]["tenant_id"] == "acme"
+    assert retention_calls[0]["max_versions"] == 3
+    assert retention_calls[0]["lock_token"] is issued_lock["token"]
+    assert Path(retention_calls[0]["chroma_directory"]) == chroma_directory
     assert store.collection_name not in state.deleted_names
     assert state.deleted_names == []
     inventory = read_retention_inventory("acme", chroma_directory=chroma_directory)
@@ -281,6 +324,18 @@ def test_known_query_failure_removes_candidate_without_changing_active(
     manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
     manifest_before = manifest_path.read_bytes()
     state.fail_known_query = True
+    retention_calls: list[str] = []
+
+    def _spy_retention(*args: Any, **kwargs: Any) -> tuple[str, ...]:
+        retention_calls.append("called")
+        return ()
+
+    monkeypatch.setattr(
+        manager,
+        "execute_chroma_retention",
+        _spy_retention,
+        raising=False,
+    )
 
     with pytest.raises(IndexStagingValidationError, match="known-query"):
         manager.build_vector_store(
@@ -294,6 +349,7 @@ def test_known_query_failure_removes_candidate_without_changing_active(
     assert state.deleted_names == [candidate_name]
     assert active_name in state.documents
     assert manifest_path.read_bytes() == manifest_before
+    assert retention_calls == []
 
 
 def test_inventory_record_failure_does_not_publish_and_discards_candidate(
@@ -314,6 +370,7 @@ def test_inventory_record_failure_does_not_publish_and_discards_candidate(
     manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
     manifest_before = manifest_path.read_bytes()
     publish_calls: list[str] = []
+    retention_calls: list[str] = []
     real_publish = manager.publish_active_collection
 
     def _fail_record(*args: Any, **kwargs: Any) -> None:
@@ -325,6 +382,10 @@ def test_inventory_record_failure_does_not_publish_and_discards_candidate(
         state.events.append(f"publish:{args[1]}")
         return real_publish(*args, **kwargs)
 
+    def _spy_retention(*args: Any, **kwargs: Any) -> tuple[str, ...]:
+        retention_calls.append("called")
+        return ()
+
     monkeypatch.setattr(
         manager,
         "record_retention_collection",
@@ -332,6 +393,12 @@ def test_inventory_record_failure_does_not_publish_and_discards_candidate(
         raising=False,
     )
     monkeypatch.setattr(manager, "publish_active_collection", _spy_publish)
+    monkeypatch.setattr(
+        manager,
+        "execute_chroma_retention",
+        _spy_retention,
+        raising=False,
+    )
 
     with pytest.raises(RuntimeError, match="inventory record failed"):
         manager.build_vector_store(
@@ -351,6 +418,7 @@ def test_inventory_record_failure_does_not_publish_and_discards_candidate(
     assert (
         read_retention_inventory("acme", chroma_directory=chroma_directory) is None
     )
+    assert retention_calls == []
 
 
 def test_publish_failure_removes_unpublished_candidate_and_preserves_manifest(
@@ -370,11 +438,22 @@ def test_publish_failure_removes_unpublished_candidate_and_preserves_manifest(
     _publish(monkeypatch, chroma_directory, active_name)
     manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
     manifest_before = manifest_path.read_bytes()
+    retention_calls: list[str] = []
 
     def _fail_publish(*args: Any, **kwargs: Any) -> None:
         raise RuntimeError("manifest publish failed")
 
+    def _spy_retention(*args: Any, **kwargs: Any) -> tuple[str, ...]:
+        retention_calls.append("called")
+        return ()
+
     monkeypatch.setattr(manager, "publish_active_collection", _fail_publish, raising=False)
+    monkeypatch.setattr(
+        manager,
+        "execute_chroma_retention",
+        _spy_retention,
+        raising=False,
+    )
 
     with pytest.raises(RuntimeError, match="manifest publish failed"):
         manager.build_vector_store(
@@ -396,6 +475,90 @@ def test_publish_failure_removes_unpublished_candidate_and_preserves_manifest(
     assert [entry.collection_name for entry in inventory.collections] == [
         candidate_name
     ]
+    assert retention_calls == []
+
+
+def test_retention_failure_after_publish_propagates_without_rollback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from vectordb.index_manifest import read_index_manifest
+    from vectordb.index_retention import read_retention_inventory
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    previous_name = "rag_docs-v-acme-1111111111111111"
+    state.documents[previous_name] = [
+        manager.Document(page_content="previous active", metadata={"chunk_index": 0})
+    ]
+    _publish(monkeypatch, chroma_directory, previous_name)
+    real_publish = manager.publish_active_collection
+    publish_events: list[str] = []
+    retention_calls: list[dict[str, Any]] = []
+
+    def _spy_publish(*args: Any, **kwargs: Any) -> Any:
+        collection_name = args[1]
+        publish_events.append(collection_name)
+        state.events.append(f"publish:{collection_name}")
+        return real_publish(*args, **kwargs)
+
+    def _fail_retention(
+        tenant_id: str,
+        *,
+        max_versions: int,
+        lock_token: Any,
+        chroma_directory: str | Path,
+    ) -> tuple[str, ...]:
+        retention_calls.append(
+            {
+                "tenant_id": tenant_id,
+                "max_versions": max_versions,
+                "lock_token": lock_token,
+                "chroma_directory": chroma_directory,
+            }
+        )
+        state.events.append(f"retention-fail:{tenant_id}")
+        raise RuntimeError("chroma retention failed")
+
+    monkeypatch.setattr(manager, "publish_active_collection", _spy_publish)
+    monkeypatch.setattr(
+        manager,
+        "execute_chroma_retention",
+        _fail_retention,
+        raising=False,
+    )
+
+    with pytest.raises(RuntimeError, match="chroma retention failed"):
+        manager.build_vector_store(
+            [manager.Document(page_content="new active", metadata={"source": "new.md"})],
+            {"chunk_size": 100, "chunk_overlap": 0},
+            embeddings=_Embeddings(),
+            tenant_id="acme",
+        )
+
+    candidate_name = state.built_names[-1]
+    assert publish_events == [candidate_name]
+    assert state.events.index(f"publish:{candidate_name}") < state.events.index(
+        "retention-fail:acme"
+    )
+    assert len(retention_calls) == 1
+    assert retention_calls[0]["tenant_id"] == "acme"
+    assert retention_calls[0]["max_versions"] == 3
+    assert Path(retention_calls[0]["chroma_directory"]) == chroma_directory
+    assert candidate_name not in state.deleted_names
+    assert candidate_name in state.documents
+    assert previous_name in state.documents
+    assert state.deleted_names == []
+
+    manifest = read_index_manifest("acme", chroma_directory=chroma_directory)
+    assert manifest is not None
+    assert manifest.active_collection == candidate_name
+    assert manifest.previous_collection == previous_name
+
+    inventory = read_retention_inventory("acme", chroma_directory=chroma_directory)
+    assert inventory is not None
+    assert candidate_name in [entry.collection_name for entry in inventory.collections]
 
 
 def test_retriever_cache_invalidates_when_manifest_generation_changes(

@@ -266,14 +266,16 @@ def test_main_and_factcard_rebuilds_hold_the_tenant_lock(
             generation=1,
         )
 
+    chroma_directory = tmp_path / "vectordb" / "chroma"
     settings = SimpleNamespace(
         vector_backend="chroma",
-        vectordb_chroma_dir=tmp_path,
+        vectordb_chroma_dir=chroma_directory,
         vectordb_collection_prefix="rag_docs",
         chunk_size=100,
         chunk_overlap=0,
         contextual_headers=False,
         rag_device="cpu",
+        vectordb_retention_max_versions=2,
     )
     docs = [manager.Document(page_content="document", metadata={"source": "doc.md"})]
 

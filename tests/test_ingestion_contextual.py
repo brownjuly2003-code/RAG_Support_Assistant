@@ -128,6 +128,7 @@ def test_build_vector_store_adds_contextual_headers_when_enabled(
     embeddings = MagicMock()
     embeddings.embed_query.return_value = [0.0, 0.0, 0.0]
 
+    chroma_directory = tmp_path / "vectordb" / "chroma"
     monkeypatch.setattr(
         tenant_manager,
         "get_settings",
@@ -135,8 +136,9 @@ def test_build_vector_store_adds_contextual_headers_when_enabled(
             vector_backend="chroma",
             semantic_chunking=False,
             contextual_headers=True,
-            vectordb_chroma_dir=tmp_path,
+            vectordb_chroma_dir=chroma_directory,
             vectordb_collection_prefix="rag_docs",
+            vectordb_retention_max_versions=2,
         ),
     )
     monkeypatch.setattr(tenant_manager, "Chroma", FakeChroma)
@@ -212,6 +214,7 @@ def test_build_vector_store_skips_contextual_headers_when_disabled(
     embeddings = MagicMock()
     embeddings.embed_query.return_value = [0.0, 0.0, 0.0]
 
+    chroma_directory = tmp_path / "vectordb" / "chroma"
     monkeypatch.setattr(
         tenant_manager,
         "get_settings",
@@ -219,8 +222,9 @@ def test_build_vector_store_skips_contextual_headers_when_disabled(
             vector_backend="chroma",
             semantic_chunking=False,
             contextual_headers=False,
-            vectordb_chroma_dir=tmp_path,
+            vectordb_chroma_dir=chroma_directory,
             vectordb_collection_prefix="rag_docs",
+            vectordb_retention_max_versions=2,
         ),
     )
     monkeypatch.setattr(tenant_manager, "Chroma", FakeChroma)
