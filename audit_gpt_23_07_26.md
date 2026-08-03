@@ -5,12 +5,12 @@
 **Проверенный commit:** `383cfe90e8a5b75e831e8ad5b5fea792b15f7c9f` (`master`, синхронизирован с `origin/master`)
 **Тип аудита:** архитектура, RAG-качество, multi-tenancy, безопасность, надёжность, ingestion, эксплуатация, CI/CD и тестовая стратегия.
 
-> ## 2026-08-02 revalidation + local remediation (active)
+> ## 2026-08-03 revalidation + local remediation (active)
 >
 > **Статус аудита: ACTIVE.** Detailed findings below remain the **2026-07-23
 > audit snapshot** @ `383cfe9` — historical defect evidence, not rewritten as
 > if the defects never existed. This top layer records later revalidation and
-> local remediation against HEAD `d13804b`. Project/production release is
+> local remediation against HEAD `705a3cc`. Project/production release is
 > **not** complete.
 >
 > **Решение владельца (HF):** Hugging Face **не** является publication target
@@ -35,17 +35,20 @@
 > | ING-01 step 4.4 bounded upload retry/idempotency | `1cebd14` | Tenant-scoped hashed `Idempotency-Key`; payload fingerprint conflict detection; partial unique migration `021`; deterministic task identity reserved before publish; queued-only source readiness; bounded off-loop Celery broker-publish retry; 503 replay header + CORS/docs. Independent Codex: 73 focused tests / 2 expected warnings; Ruff clean; locked core/API mypy clean; `alembic heads` = `021 (head)`; diff checks clean | Queue-age metric/alert; post-mutation task autoretry intentionally disabled while ING-02 is open; live outage/recovery and real migration drills; ING-02 and TEN-03 remain open |
 > | ING-01 step 4.5 queue-age observability | `35e4bb9` | Label-free oldest-queued async age gauge refreshed by the independent reaper; `source_ready_at` with legacy `created_at` fallback; empty queue resets to 0; warning fires after `>300s` for `5m` before default 900-second terminal timeout. Test-first 3 red → 7 green; closure gate 87 passed / 1 expected warning; Ruff and locked strict Mypy clean; diff checks clean | Live Redis/Postgres/Celery worker-outage/recovery drill; real PostgreSQL migration drills; ING-02 and TEN-03 remain open |
 > | TEN-03 step 4.6 collision-resistant physical naming | `d13804b` | Lowercase-safe tenant IDs remain stable; uppercase, Windows-reserved, lossy, or truncated IDs receive a deterministic 16-hex SHA-256 suffix across Chroma document/fact-card collections and uploads. Explicit reindex/fact-card cache paths share the mapping; ambiguous hashed `reindex --all` discovery fails closed. Test-first 3 failures / 6 passes → 18 passes; batched QA 3 failures / 9 passes → 21 passes; final adjacent gate 109 passed / 2 expected warnings; Ruff, locked strict Mypy, and diff checks clean | Per-tenant distributed locking; ING-02 atomic/versioned publish + rollback; live drills |
+> | ING-02 step 4.7 per-tenant rebuild lock | `705a3cc` | Canonical-tenant PostgreSQL session advisory lock serializes document/fact-card mutation across API, Celery, and CLI; distinct tenants remain independent; bounded timeout and coordination/ownership failures fail closed. Test-first 7 failures → 7 passes; single QA follow-up 59 passed; final worker/job/upload/docs gate 105 passed / 2 expected warnings; Ruff, locked strict Mypy, and diff checks clean | Versioned staging, validation, atomic active-version switch, rollback; live PostgreSQL contention drill |
 >
 > **P0 release-blocker implementation is locally remediated and mechanically
 > verified; OBS-01 is locally remediated at `5a9f857`; ING-01 is further
 > partially locally remediated at `35e4bb9` (durable job/status + Compose/Helm
 > worker topology/health/readiness + durable lease/heartbeat + stale
 > recovery/reaper + bounded broker-publish retry/idempotency + queue-age
-> observability); TEN-03 is locally remediated at `d13804b`.** Production release remains gated by the live/external
+> observability); TEN-03 is locally remediated at `d13804b`; ING-02 race
+> protection is partially locally remediated at `705a3cc`.** Production release
+> remains gated by the live/external
 > checks above. Plan step 4 is **in progress**, not complete. Do **not** treat
 > the whole audit plan, OPS-01 operational DoD, or project closure as complete.
 >
-> ### Status matrix @ `d13804b`
+> ### Status matrix @ `705a3cc`
 >
 > | ID | Priority | Status | Evidence @ HEAD |
 > |---|---|---|---|
@@ -57,7 +60,7 @@
 > | RAG-02 | P1 | **open** | Route still quality/relevance-centric; factuality / knowledge_gap not auto-route gates |
 > | ESC-01 | P1 | **open** | `route="human"` still metric/badge without mandatory durable ticket |
 > | ING-01 | P1 | **partially locally remediated** @ `35e4bb9` | **4.1** durable job: ORM `IngestionJob` + migration `019`; `/api/upload` returns durable `job_id` + real tenant; `/api/jobs/{job_id}` and `/api/tasks/{identifier}` read DB only; worker verifies identity, propagates tenant, records DB lifecycle; sync paths fail closed on unpersistable transitions; Celery progress best-effort only; phase-level error redaction. **4.2** topology: Compose one `worker` (same build/env/DB/Redis/data as app; no ports; concurrency 1; `ingest@%h`; exact-node health; 3600s warm shutdown); Helm enabled-by-default Celery sidecar in one-replica app pod (RWO co-located); shares image/envFrom/data/security/resources/checksum; exact worker readiness/liveness + 3600s grace; fails closed if persistence off / `replicaCount != 1` / concurrency != 1; `tasks.worker_health` pings only `ingest@socket.gethostname()`, validates pong, fail-closed on malformed/broker errors. **4.3** liveness/recovery: migration `020`; persisted opaque worker lease token with heartbeat/expiry; atomic queued→running claim; tenant/token/status CAS for heartbeat and terminal transitions; background interruptible heartbeat; independent FastAPI stale queued/expired-lease/legacy-running reaper (only async jobs reaped); recovery clears active ownership/stale result while preserving last heartbeat; sync SQL reaper off event loop; shutdown cancels+awaits reaper; runtime liveness config fails closed (blank explicit env; heartbeat ≥ lease). **4.4** retry/idempotency: migration `021`; tenant-scoped hashed idempotency key + payload fingerprint conflict; deterministic task identity before publish; queued-only source readiness; bounded off-loop broker-publish retry; 503 replay identity; no post-mutation worker autoretry. **4.5** queue age: label-free oldest queued async age gauge + pre-timeout Prometheus warning. **Still open:** live Redis/Postgres/Celery worker-outage/recovery drill; real PostgreSQL upgrade/downgrade through migrations `019`/`020`/`021`. Original finding prose below is the 2026-07-23 audit snapshot |
-> | ING-02 | P1 | **open** | Rebuild still delete-then-build pattern in `vectordb` manager; atomic/versioned index publish + rollback not done |
+> | ING-02 | P1 | **partially locally remediated** @ `705a3cc` | PostgreSQL canonical-tenant advisory lock now serializes document/fact-card mutation across API, Celery, and CLI and fails closed on contention/coordination loss. Rebuild still uses delete-then-build; versioned staging, validation, atomic active-version switch, rollback, and live Postgres contention drill remain open |
 > | TEN-03 | P1 | **locally remediated** @ `d13804b` | Shared deterministic physical naming preserves lowercase-safe IDs and hash-suffixes uppercase, Windows-reserved, lossy, or truncated canonical IDs across Chroma, uploads, reindex, and fact-card cache paths; ambiguous hashed `reindex --all` discovery fails closed. Legacy ambiguous directory ownership still requires explicit operator verification/move or re-ingest |
 > | OBS-01 | P1 | **locally remediated** @ `5a9f857` | `traces.trace_id` is always a fresh internal UUID4; external `X-Request-Id` stored in nullable indexed `traces.correlation_id` (may repeat); old SQLite schemas migrate append-only (historic rows NULL); legacy `start_trace(trace_id=...)` accepted as correlation alias only; graph state / `AskResponse.trace_id` use internal UUID; response `X-Request-Id` header remains external correlation. No idempotency/replay behavior added. Original finding prose below is the 2026-07-23 audit snapshot |
 > | EVAL-01 | P1 | **open** | Mock regression executor still can synthesize expected answers |
@@ -69,11 +72,11 @@
 > | DEP-01 | P2 | **open** | Docs-site dependency posture not re-audited this pass |
 > | MAINT-01 | P2 | **open** | Large orchestration modules still dual contracts |
 >
-> **Latest implementation slice:** plan step **4.6 / TEN-03** collision-resistant
-> physical tenant naming is locally complete at `d13804b`. Do **not** claim
-> distributed locking, atomic index publish, or live/external drills complete.
-> Step 4 is **in progress** (4.1–4.6 done at `b7faa19` / `4f93038` / `6dc6fe4` /
-> `1cebd14` / `35e4bb9` / `d13804b`).
+> **Latest implementation slice:** plan step **4.7** per-tenant distributed
+> index locking is locally complete at `705a3cc`. Do **not** claim
+> atomic/versioned publish + rollback or live/external drills complete. Step 4
+> is **in progress** (4.1–4.7 done at `b7faa19` / `4f93038` / `6dc6fe4` /
+> `1cebd14` / `35e4bb9` / `d13804b` / `705a3cc`).
 > No next implementation slice was selected in this
 > turn; remaining open P1/P2 findings keep their prior status without new evidence.
 >

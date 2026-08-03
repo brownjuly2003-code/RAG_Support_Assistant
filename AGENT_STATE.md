@@ -1,6 +1,37 @@
 # Agent State
 
-## 2026-08-02 Update-21 (step 4.6 collision-resistant tenant naming @ `d13804b`) ✅ START HERE
+## 2026-08-03 Update-22 (step 4.7 per-tenant distributed index lock @ `705a3cc`) ✅ START HERE
+
+> **Implementation commit:** `705a3cc` (`fix(ingestion): serialize tenant index
+> rebuilds`). Plan slice **4.7 is locally complete and verified**:
+> - every document and fact-card rebuild acquires a PostgreSQL session advisory
+>   lock derived from the canonical tenant ID; API, Celery, and CLI therefore
+>   share one cross-process coordination boundary
+> - same-tenant mutation is serialized while different tenant keys remain
+>   independent; the connection stays in autocommit and process/connection loss
+>   releases the session lock
+> - `INGESTION_TENANT_LOCK_WAIT_SEC` bounds contention; timeout, database
+>   failure, release failure, or lost ownership fails the rebuild closed without
+>   exposing the database URL
+> - unit tests isolate the real coordination connection; the dedicated contract
+>   exercises concurrent contenders, timeout, cleanup, redaction, and both
+>   destructive rebuild paths
+>
+> **Verification:** test-first contract was **7 expected failures**, then 7
+> passes. The single batched QA follow-up passed **59 tests**; the final
+> worker/job/upload/docs gate passed **105 tests** with two expected deprecation
+> warnings. Scoped Ruff and locked Python 3.11 / mypy 1.19.1 / NumPy 2.4.4 are
+> clean; staged diff checks are clean.
+>
+> **Current truth:** plan step 4 remains in progress. Same-tenant concurrent
+> rebuild mutation is locally serialized, but ING-02 remains partially open:
+> versioned staging, atomic active-version switch, validation, and rollback are
+> not implemented. Live PostgreSQL advisory-lock contention plus existing
+> Redis/Postgres/Celery and migration drills remain open. No next implementation
+> slice was selected. No Grok/delegation, push, deploy, or live service calls
+> occurred; protected untracked user artifacts remain unstaged and untouched.
+
+## 2026-08-02 Update-21 (step 4.6 collision-resistant tenant naming @ `d13804b`) — SUPERSEDED by Update-22
 
 > **Implementation commit:** `d13804b` (`fix(tenancy): prevent physical
 > namespace collisions`). Plan slice **4.6 / TEN-03 is locally complete and
