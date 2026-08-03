@@ -1,6 +1,6 @@
 # Backlog
 
-## Active source (2026-08-03) — step 4.8d3b locally verified @ `9534f5b`
+## Active source (2026-08-03) — step 4.8d3c locally verified @ `196785d`
 
 **Sole active backlog:** [`plan_sol_23_07_26`](plan_sol_23_07_26)
 (status matrix in [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md)).
@@ -14,25 +14,27 @@ progress**: slices **4.1** (`b7faa19`), **4.2** (`4f93038`), **4.3**
 (`d13804b`), **4.7** (`705a3cc`), **4.8a** (`c015ba8`, `ca15c1a`), and
 **4.8b** (`74d187c`), **4.8c** (`8594675`), **4.8d1** (`c160af8`), and
 **4.8d2** (`bb3f00b`) plus **4.8d3a** (`47902f5`) and **4.8d3b** (`9534f5b`)
-are locally verified
+plus **4.8d3c** (`196785d`) are locally verified
 (ING-01 further partially locally remediated; TEN-03 locally remediated;
 ING-02 lock + manifest + staging + runtime-publish + validated manager rollback
-and trusted retention inventory/bounded-policy contracts partially remediated).
+and trusted retention inventory/policy/unwired-executor contracts partially
+remediated).
 Full plan DoD / production release / project closure are **not** complete.
 Historical autopilot/safe tasks below remain evidence only — not the active
 queue.
 
 ### Latest atomic slice (local code)
 
-**Plan step 4.8d3b bounded retention plan is locally complete at `9534f5b`.**
+**Plan step 4.8d3c unwired retention executor is locally complete at `196785d`.**
 
-A strict `max_versions >= 2` budget protects manifest active/previous first,
-keeps the newest remaining trusted inventory entries, and returns only oldest
-excess entries. Non-tail protected versions and unrecorded collections cannot
-be selected. Focused red→green evidence and the adjacent closure gate passed
-**56 tests**; scoped Ruff, locked Mypy, boundary, and diff checks are clean.
-Actual deletion execution and runtime wiring, broader fault injection, operator
-wiring, and immutable/versioned originals remain open.
+Under the current tenant lock, the executor invokes an injected idempotent
+delete only for bounded oldest-first candidates and atomically prunes metadata
+after each success. Delete failure stops later work; metadata failure reports
+the already-deleted target while prior inventory bytes remain intact. Focused
+red→green evidence and the adjacent closure gate passed **60 tests**; scoped
+Ruff, locked Mypy, boundary, and diff checks are clean. A concrete Chroma
+adapter/runtime wiring, broader fault injection, operator wiring, and
+immutable/versioned originals remain open; no real collection was deleted.
 
 ### Live / external P0 gates (not local-complete)
 
@@ -48,14 +50,14 @@ Track separately from the next code slice — do **not** list as done work:
   real PostgreSQL
   upgrade/downgrade through migrations `019`/`020`/`021`
 
-Step 4 remains **in progress** (4.1–4.8c plus 4.8d1–d3b locally done; 4.8d
+Step 4 remains **in progress** (4.1–4.8c plus 4.8d1–d3c locally done; 4.8d
 remainder and live step-4 DoD open). Step 5 remains **open / partially
 remediated** (trace identity done; timeout cancellation, bounded capacity,
 session concurrency/history ordering, sticky experiment propagation still open).
 Steps 6–10 remain open. ING-02 is **partially locally remediated** by the
 same-tenant mutation lock plus manifest/staging/runtime-publish and validated
 manager rollback plus trusted retention inventory contracts; retention
-deletion execution/wiring and operational rollback remain open.
+Chroma adapter/runtime wiring and operational rollback remain open.
 Live GraceKelly/Mistral benchmarks remain explicit opt-in only and are **not**
 this slice.
 

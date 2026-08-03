@@ -1,6 +1,32 @@
 # Agent State
 
-## 2026-08-03 Update-30 (step 4.8d3b bounded retention plan @ `9534f5b`) ✅ START HERE
+## 2026-08-03 Update-31 (step 4.8d3c unwired retention executor @ `196785d`) ✅ START HERE
+
+> **Implementation commit:** `196785d` (`feat(index): execute bounded
+> retention`). Plan sub-slice **4.8d3c is locally complete and verified**:
+> - an executor requires the current matching tenant-lock token and processes
+>   only 4.8d3b's oldest-first bounded candidates
+> - each successful injected idempotent delete is followed by an atomic
+>   inventory prune; remaining entries preserve order with contiguous sequence
+> - delete failure stops before later candidates and reports prior durable
+>   progress; metadata-update failure explicitly reports the already-deleted
+>   collection while preserving the prior inventory bytes for safe retry
+> - the executor remains unwired and imports no Chroma client; no real
+>   collection, runtime path, live backend, or production data was touched
+>
+> **Verification:** four executor contracts first failed while 13 prior tests
+> passed; focused green is **17 tests**. The retention/runtime/manifest/staging/
+> chunk-restore/tenant-lock closure gate passed **60 tests** with one expected
+> warning. Scoped Ruff, locked Python 3.11 / mypy 1.19.1 / NumPy 2.4.4,
+> boundary checks, and staged diff checks are clean.
+>
+> **Current truth:** plan step 4 and 4.8d remain in progress. The local
+> deletion/pruning protocol exists, but a concrete idempotent Chroma adapter
+> and runtime wiring, broader fault injection, an operator surface,
+> immutable/versioned originals, and live drills remain open. No next slice
+> was started; protected untracked user artifacts remain untouched.
+
+## 2026-08-03 Update-30 (step 4.8d3b bounded retention plan @ `9534f5b`) — SUPERSEDED by Update-31
 
 > **Implementation commit:** `9534f5b` (`feat(index): bound retention
 > candidates`). Plan sub-slice **4.8d3b is locally complete and verified**:
