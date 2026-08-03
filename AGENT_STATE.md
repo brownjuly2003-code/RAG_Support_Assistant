@@ -1,9 +1,54 @@
 # Agent State
 
-## 2026-08-03 Update-43 (plan 2.3g / guarded Chroma retention bridge @ `f966fac`) ✅ START HERE
+## 2026-08-03 Update-44 (transparent next-session handoff; no new slice) ✅ START HERE
+
+> **Docs-only clarity work — not implementation.** This Update-44 block
+> supersedes Update-43 as the start point for the next session. No code,
+> tests, plans, backlog, or other artifacts were changed in this turn. Grok
+> used docs read/edit only (no commands or tests). Codex ran read-only Git
+> status/log, scoped diff/diff-check, and SHA-256 protection checks; project
+> tests and runtime/code verification suites were not rerun. Protected dirty
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+> `plan_sol_23_07_26`, and existing untracked artifacts were not touched.
+>
+> **Authoritative implementation state (unchanged):**
+> - Latest implementation remains `f966fac` (`feat(index): bridge guarded
+>   Chroma retention`). Slice **2.3g is locally complete and verified**.
+> - Latest pre-refresh docs HEAD at handoff inspection: `1f40a57`
+>   (`docs: record guarded Chroma retention bridge`). Do **not** embed or
+>   guess a future docs commit hash; next session reads actual `git log`.
+> - Slices **2.1 through 2.3g** are locally complete and verified.
+> - Slice **2.3h is not started**.
+> - No active Grok / delegated writer exists at handoff time.
+> - No uncommitted task WIP exists in the intended 2.3h targets.
+>
+> **Standing execution preference:** use **Grok** as implementation/content
+> worker; **Codex** orchestrates, protects files, verifies independently, and
+> commits scoped results. One next-session user turn may complete **only one
+> named atomic slice**. Push / deploy / live services are **not** authorized.
+>
+> **Next work:** named slice **2.3h only** (runtime-only manager retention
+> action candidate — **not** completed). Exact runbook, acceptance contract,
+> baseline/protected hashes, test-first evidence list, and stop conditions:
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) sections
+> «Быстрый старт следующей сессии», «Exact contract for next slice 2.3h»,
+> and «Definition of done / stop conditions».
+>
+> **Git advisory only:** branch was observed as
+> `master...origin/master [ahead 73]` at this inspection. Ahead counts and
+> timestamps are advisory; next session must run fresh
+> `git status --short --branch` and `git log -5 --oneline`. Actual Git wins
+> over any embedded hashes/counts in docs.
+>
+> **Do not re-select 2.1–2.3g.** Do not mark 2.3h complete from this docs
+> turn. Full historical evidence for 2.3g remains in Update-43 below and in
+> `docs/SESSION_HANDOFF.md`.
+
+## 2026-08-03 Update-43 (plan 2.3g / guarded Chroma retention bridge @ `f966fac`)
 
 > **Next-session handoff:** refresh `git status` first. This Update-43 block
-> supersedes Update-42 as the current durable handoff. Protected dirty
+> supersedes Update-42 as the previous durable handoff (now superseded by
+> Update-44 for start-point routing). Protected dirty
 > `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and
 > existing untracked artifacts were not touched. Older docs may still point to
 > plan 2.3f / next-slice 2.3g and must not cause completed work to be repeated.
