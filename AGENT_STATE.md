@@ -1,6 +1,64 @@
 # Agent State
 
-## 2026-08-03 Update-42 (plan 2.3f / guarded retention execution @ `f5f3f6e`) ✅ START HERE
+## 2026-08-03 Update-43 (plan 2.3g / guarded Chroma retention bridge @ `f966fac`) ✅ START HERE
+
+> **Next-session handoff:** refresh `git status` first. This Update-43 block
+> supersedes Update-42 as the current durable handoff. Protected dirty
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and
+> existing untracked artifacts were not touched. Older docs may still point to
+> plan 2.3f / next-slice 2.3g and must not cause completed work to be repeated.
+>
+> **Implementation commit:** `f966fac` (`feat(index): bridge guarded Chroma
+> retention`). Slice **2.3g is locally complete and verified**.
+> - adapter-only `execute_guarded_chroma_retention` requires explicit expected
+>   generation and exact candidate tuple, accepts no caller lock token,
+>   supplies the shared Chroma direct-delete callback to
+>   `execute_index_retention`, and returns its domain result
+> - both guarded and automatic paths share one lazy direct-delete helper: one
+>   client per invocation, client created only on first deletion, only direct
+>   `delete_collection`, `NotFoundError` idempotent, other failures propagate
+> - existing `execute_chroma_retention` signature/held-lock/tuple-return and
+>   automatic post-publish behavior remain preserved
+> - validation/conflict/corrupt/lock/empty pre-delete paths do not instantiate
+>   a client
+>
+> **Boundary:** no manager/runtime public action, HTTP/API/admin audit,
+> settings/policy change, UI, live Chroma/PostgreSQL/Redis, deploy, or push.
+> Broader operator surface, plan step 2, project, release, production
+> readiness, live drills, and retention API are **not** complete.
+>
+> **Verification — Grok:** route `local_grok_cli`; CLI-selected model
+> `grok-4.5`, actual reported `grok-4.5-build`; tests-first red: `7` guarded
+> tests failed because bridge/operator import was absent; focused final:
+> `66 passed`; Ruff and scoped diff-check clean.
+>
+> **Verification — Codex independent:** adapter/runtime-retention
+> compatibility gate: `13 passed, 23 deselected`, one known Starlette warning;
+> scoped Ruff clean; Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4: no issues in
+> `vectordb/chroma_retention.py`; scoped diff-check clean; protected
+> operator/policy/manager/API/runtime-test hashes unchanged before commit.
+>
+> **Current truth:** slices **2.1, 2.2, 2.3a, 2.3b, 2.3c, 2.3d, 2.3e, 2.3f,
+> 2.3g** are locally complete and verified. Broader operator surface, plan
+> step 2, project, and release are **not** complete because manager/runtime
+> retention action and further retention wiring remain absent. Next safe
+> named slice is **2.3h only** (not started): add a Chroma-only
+> manager/runtime retention action that requires the explicit expected
+> manifest generation and exact preview candidate tuple, derives the
+> configured Chroma directory and retention budget through existing
+> settings/runtime boundaries, and delegates to
+> `execute_guarded_chroma_retention`, while preserving the automatic
+> post-publish path. 2.3h must remain runtime-only: no HTTP/API/admin audit,
+> no settings/policy change, no UI, no live services, deploy, or push.
+> Non-Chroma behavior must fail through an explicit existing-style runtime
+> validation boundary rather than silently acting. Treat 2.3h as the next
+> investigation/implementation candidate, not as completed work. Full
+> contract, evidence, and protected-state details: refreshed
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md). Eventual docs refresh
+> commit will be a descendant of `f966fac`; next session takes the actual hash
+> from `git log`, not an embedded self-hash.
+
+## 2026-08-03 Update-42 (plan 2.3f / guarded retention execution @ `f5f3f6e`)
 
 > **Next-session handoff:** refresh `git status` first. This Update-42 block
 > supersedes Update-41 as the current durable handoff. Protected dirty
