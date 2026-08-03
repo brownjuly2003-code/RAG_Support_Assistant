@@ -1,6 +1,84 @@
 # Agent State
 
-## 2026-08-03 Update-24 (step 4.8b validated staging collection @ `74d187c`) ✅ START HERE
+## 2026-08-03 Update-26 (step 4.8c atomic runtime publish @ `8594675`) ✅ START HERE
+
+> **Implementation commit:** `8594675` (`feat(index): publish staged
+> collections atomically`). Plan slice **4.8c is locally complete and
+> verified**:
+> - document Chroma rebuild builds a versioned candidate under the existing
+>   tenant-lock token, validates count/dimension plus a deterministic known
+>   query, atomically publishes the active manifest, and retains the old
+>   collection
+> - retrieval resolves the manifest before process-cache reuse and invalidates
+>   stale retrievers by Chroma directory, active collection, and generation;
+>   corrupt manifests fail closed even when a retriever is cached
+> - API startup opens the manifest-active collection, session setup returns 503
+>   instead of reusing a stale retriever after active-index resolution failure,
+>   and KB draft publication mutates the active collection under the same
+>   tenant lock before clearing the local retriever cache
+> - the global unit-test fixture now fakes only the advisory-lock connection;
+>   production acquire, release, timeout, and token logic remain active, while
+>   dedicated lock tests can replace the connection with their own registry
+>
+> **Verification:** the three known fixture-induced lock failures were
+> reproduced before the correction. The exact nine-file closure gate then
+> passed **73 tests** with two expected deprecation warnings. Scoped Ruff is
+> clean across all 12 changed Python files; locked Python 3.11 / mypy 1.19.1 /
+> NumPy 2.4.4 reports no issues in the four changed runtime files; staged and
+> unstaged diff checks are clean. No real Chroma, PostgreSQL, push, deploy, or
+> live service was touched.
+>
+> **Current truth:** plan step 4 remains in progress. Slices 4.1–4.8c are
+> locally verified, but rollback/retention/fault injection (4.8d) and the live
+> step-4 drills remain open. Slice 4.8d was not started in this turn. The
+> untracked `_NEXT_SESSION.md` records the now-superseded pre-fix handoff and
+> remains intentionally unstaged with the other protected user artifacts.
+
+## 2026-08-03 Update-25 (step 4.8c uncommitted WIP; QA stopped at 70/3) — SUPERSEDED by Update-26
+
+> **Current HEAD:** `2c634fd`; last verified implementation commit: `74d187c`.
+> Plan slice **4.8c is not complete and has no commit**. The tracked worktree
+> contains runtime/test WIP, and `tests/test_index_runtime_switch.py` is a new
+> untracked task file. Preserve all of it; do not stage unrelated untracked
+> user artifacts.
+>
+> **Implemented WIP:** document Chroma rebuild now builds the existing 4.8b
+> versioned candidate under the active tenant-lock token, runs deterministic
+> known-query validation, publishes the candidate through the 4.8a atomic
+> manifest, and retains the old collection. Retrieval resolves the manifest
+> before using process caches and keys invalidation by directory, active name,
+> and generation. API startup resolves the active collection; session setup
+> fails with 503 rather than reusing a stale retriever after active-index
+> resolution failure. KB draft publish resolves the active collection under
+> the same tenant lock and clears the local retriever cache.
+>
+> **Evidence:** the new runtime contract demonstrated 6 expected failures on
+> the old code, then 6 passes; a separate stale-retriever contract demonstrated
+> red before its fail-closed change. The first adjacent QA batch reported 42
+> passes / 3 test-double failures. After the batched QA fixes and an additional
+> red admin-active-collection contract, the expanded nine-file gate reported
+> **70 passed / 3 failed** with two expected warnings. No real Chroma,
+> PostgreSQL, push, deploy, or live service was touched.
+>
+> **Only known blocker:**
+> `tests/conftest.py::_isolate_tenant_index_advisory_lock` globally stubs
+> `_acquire`, `_release`, and `_wait_timeout_sec`. That makes three dedicated
+> lock tests bypass production serialization/timeout/config logic:
+> `test_same_tenant_rebuilds_are_serialized`,
+> `test_lock_timeout_fails_closed_and_does_not_steal_owner`, and
+> `test_lock_wait_setting_rejects_non_finite_or_negative_values`.
+>
+> **Next session — one narrow correction only:** change the autouse fixture so
+> it patches only `_open_lock_connection` with a fake connection whose
+> `execute().scalar_one()` returns `True` and whose `close()` is a no-op. Leave
+> production `_acquire`, `_release`, and `_wait_timeout_sec` intact and keep
+> `manager.tenant_index_lock` pointing to the real context manager so callers
+> receive a genuine active `TenantIndexLockToken`. Then rerun the exact
+> nine-file command in `_NEXT_SESSION.md`. If green, run scoped Ruff/locked
+> Mypy/diff checks and create the explicit-path local 4.8c commit. Do not start
+> 4.8d in that turn. No current WIP commit or status-doc commit exists.
+
+## 2026-08-03 Update-24 (step 4.8b validated staging collection @ `74d187c`) — SUPERSEDED by Update-25
 
 > **Implementation commit:** `74d187c` (`feat(index): add validated staging
 > collections`). Plan slice **4.8b is locally complete and verified**:

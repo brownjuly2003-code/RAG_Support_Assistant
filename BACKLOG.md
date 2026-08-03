@@ -1,6 +1,6 @@
 # Backlog
 
-## Active source (2026-08-03) — audit plan reopened; step 4.8b @ `74d187c`
+## Active source (2026-08-03) — step 4.8c locally verified @ `8594675`
 
 **Sole active backlog:** [`plan_sol_23_07_26`](plan_sol_23_07_26)
 (status matrix in [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md)).
@@ -12,24 +12,26 @@ at `5a9f857`. Plan step 1 is **locally complete**. Plan step 4 is **in
 progress**: slices **4.1** (`b7faa19`), **4.2** (`4f93038`), **4.3**
 (`6dc6fe4`), **4.4** (`1cebd14`), **4.5** (`35e4bb9`), **4.6**
 (`d13804b`), **4.7** (`705a3cc`), **4.8a** (`c015ba8`, `ca15c1a`), and
-**4.8b** (`74d187c`) are locally verified (ING-01 further partially locally
-remediated; TEN-03 locally remediated; ING-02 lock + manifest + staging
-contracts partially locally remediated).
+**4.8b** (`74d187c`) and **4.8c** (`8594675`) are locally verified (ING-01
+further partially locally remediated; TEN-03 locally remediated; ING-02 lock +
+manifest + staging + runtime-publish contracts partially locally remediated).
 Full plan DoD / production release / project closure are **not** complete.
 Historical autopilot/safe tasks below remain evidence only — not the active
 queue.
 
 ### Latest atomic slice (local code)
 
-**Plan step 4.8b validated staging collection contract is locally complete at
-`74d187c`.**
+**Plan step 4.8c runtime publish/cache integration is locally complete at
+`8594675`.**
 
-The new builder creates a versioned candidate under the existing tenant lock,
-validates exact count and raw-vector embedding dimension, and cleans up only its
-own unpublished candidate on failure. It does not write the manifest or touch
-the active collection and remains unwired from runtime. Do **not** claim upload/
-reindex staging, runtime switch/cache invalidation, rollback, or live/external
-drills complete. No next implementation slice was started in this turn.
+Document rebuild now validates and publishes a versioned candidate under one
+tenant lock without deleting the former active collection. Retrieval resolves
+the active manifest before cache reuse and invalidates by directory, active
+name, and generation; API startup/session and KB draft publication follow the
+same active-version contract. The exact closure gate passed **73 tests** with
+two expected warnings; scoped Ruff, locked Mypy, and diff checks are clean.
+Rollback/retention/fault injection (4.8d) remains the next local code slice and
+was not started in this turn.
 
 ### Live / external P0 gates (not local-complete)
 
@@ -45,13 +47,13 @@ Track separately from the next code slice — do **not** list as done work:
   real PostgreSQL
   upgrade/downgrade through migrations `019`/`020`/`021`
 
-Step 4 remains **in progress** (4.1–4.8b done; runtime switch, rollback, and
-live step-4 DoD open). Step 5 remains **open / partially
+Step 4 remains **in progress** (4.1–4.8c locally done; rollback and live
+step-4 DoD open). Step 5 remains **open / partially
 remediated** (trace identity done; timeout cancellation, bounded capacity,
 session concurrency/history ordering, sticky experiment propagation still open).
 Steps 6–10 remain open. ING-02 is **partially locally remediated** by the
-same-tenant mutation lock plus unwired manifest/staging contracts;
-atomic/versioned runtime publish + rollback remains open.
+same-tenant mutation lock plus manifest/staging/runtime-publish contracts;
+rollback remains open.
 Live GraceKelly/Mistral benchmarks remain explicit opt-in only and are **not**
 this slice.
 
