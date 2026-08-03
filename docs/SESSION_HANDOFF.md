@@ -1,59 +1,62 @@
 # Session handoff
 
-**Обновлено:** 2026-08-03 (Update-45 plan 2.3h complete @ `bd01f23`;
-previous docs HEAD `90fa056`; next named slice **2.3i** not started)
+**Обновлено:** 2026-08-03 (Update-46 plan 2.3i complete @ `ac4b317`;
+previous docs HEAD `e348929`; next named slice **2.4a** not started)
 
 **Назначение:** самодостаточный next-session handoff для coding agent после
 compacted context. История срезов — в [`AGENT_STATE.md`](../AGENT_STATE.md)
-(верхний блок **Update-45**; evidence 2.3h — Update-45; 2.3g — Update-43;
-детали 2.3f/2.3e/2.3d/2.3c/2.3b/2.3a — Update-42/Update-41/Update-40/
-Update-39/Update-37/Update-36).
+(верхний блок **Update-46**; evidence 2.3i — Update-46; 2.3h — Update-45;
+2.3g — Update-43; детали 2.3f/2.3e/2.3d/2.3c/2.3b/2.3a — Update-42/Update-41/
+Update-40/Update-39/Update-37/Update-36).
 Активный plan source — untracked/protected
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
 
 ## Быстрый старт следующей сессии
 
-Точный checklist. **Нет** active writer и **нет** unfinished 2.3i WIP на
+Точный checklist. **Нет** active writer и **нет** unfinished 2.4a WIP на
 момент этого handoff.
 
 1. Cycle-guard preflight on the latest user message.
 2. `cd D:\RAG_Support_Assistant`; run fresh `git status --short --branch` and
    `git log -5 --oneline`; **actual Git wins** over embedded hashes/counts.
-3. Read Update-45 in `AGENT_STATE.md` and this handoff; do **not** reselect
-   2.1–2.3h.
-4. Confirm intended 2.3i targets (likely `api/routers/admin_ops.py` plus
-   focused admin API tests) are clean before edits; preserve all listed
-   dirty/untracked user state. Do **not** reopen completed runtime manager
-   work in `vectordb/manager.py` unless investigation proves a required
-   conflict — then stop and re-scope.
+3. Read Update-46 in `AGENT_STATE.md` and this handoff; do **not** reselect
+   2.1–2.3i.
+4. Investigate intended **2.4a** ownership before naming exact files/APIs
+   (immutable/versioned original uploads tied to job/index version without
+   losing the previous working version); preserve all listed dirty/untracked
+   user state. Do **not** reopen completed retention operator surfaces
+   (`api/routers/admin_ops.py` retention/rollback, `vectordb/manager.py`
+   retention runtime) unless investigation proves a required conflict — then
+   stop and re-scope.
 5. Use **Grok** via the local verified route for the implementation; announce
    counters `slice 1/1`, `delegated run N/3`, `QA follow-up N/1`.
-6. Execute **only 2.3i**, tests-first, independent verification, explicit-path
+6. Execute **only 2.4a**, tests-first, independent verification, explicit-path
    staging, local commit, optional scoped handoff refresh, then yield.
 
 Push / deploy / live services — **not authorized**. One user turn = one named
-atomic slice.
+atomic slice. Live PostgreSQL/Redis/Celery/Chroma drills require explicit
+opt-in and must **not** be selected as the default next slice.
 
 ## Назначение и приоритет источников
 
 1. `git status --short --branch` и `git log -5 --oneline` — авторитетный
    источник текущего filesystem/Git state.
-2. Далее: верхний блок `AGENT_STATE.md` (**Update-45**) и этот handoff.
+2. Далее: верхний блок `AGENT_STATE.md` (**Update-46**) и этот handoff.
 3. `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26` и их
    dirty working-tree contents — protected user state; могут быть stale. Они
-   **не** переопределяют Update-45 и **не** дают права повторять уже
-   завершённые срезы 2.1–2.3h.
+   **не** переопределяют Update-46 и **не** дают права повторять уже
+   завершённые срезы 2.1–2.3i.
 4. `rag-remediation-plan-2026-08-03.md` — активный plan source
    (untracked/protected). Старый `plan_sol_23_07_26` — protected legacy.
 5. Один user turn = максимум один named atomic slice.
 
-**Authoritative implementation state:** latest implementation is `bd01f23`
-(`feat(index): expose guarded runtime retention`). Previous docs HEAD at this
-handoff inspection: `90fa056` (`docs: clarify next-session retention
-handoff`). Do **not** embed a guessed future docs commit hash; next session
-reads actual `git log`. Branch was observed as
-`master...origin/master [ahead 75]` at inspection — ahead counts/timestamps
-are **advisory only**; refresh Git next session. Push/deploy not authorized.
+**Authoritative implementation state:** latest implementation is `ac4b317`
+(`feat(api): expose guarded index retention`). Previous docs HEAD at this
+handoff inspection: `e348929` (`docs: record guarded runtime retention`). Do
+**not** embed a guessed future docs commit hash; next session reads actual
+`git log`. Branch was observed as `master...origin/master [ahead 77]` at
+inspection — ahead counts/timestamps are **advisory only**; refresh Git next
+session. Push/deploy not authorized.
 
 ## Карта реализации
 
@@ -68,14 +71,52 @@ are **advisory only**; refresh Git next session. Push/deploy not authorized.
 | **2.3e** | tenant-scoped admin idempotent rollback endpoint | `457cbf0` | (docs after 2.3e) |
 | **2.3f** | unwired guarded retention execution command | `f5f3f6e` | (docs after 2.3f) |
 | **2.3g** | guarded Chroma retention adapter bridge | `f966fac` | `1f40a57` |
-| **2.3h** | runtime manager retention action (guarded) | `bd01f23` | this handoff / Update-45 |
-| **2.3i** | retention API / admin audit (candidate) | — | **not started** |
+| **2.3h** | runtime manager retention action (guarded) | `bd01f23` | `e348929` / Update-45 |
+| **2.3i** | retention API / admin audit | `ac4b317` | this handoff / Update-46 |
+| **2.4a** | immutable/versioned original uploads (candidate) | — | **not started** |
 
-Срезы **2.1, 2.2, 2.3a, 2.3b, 2.3c, 2.3d, 2.3e, 2.3f, 2.3g, 2.3h** локально
-complete и verified. Полный plan step 2, operator surface, project и release
-— **не** complete: retention HTTP/API/admin audit (2.3i) and further wiring
-still absent. **2.3h must never be selected again.** Next safe named slice is
-**2.3i only**.
+Срезы **2.1, 2.2, 2.3a, 2.3b, 2.3c, 2.3d, 2.3e, 2.3f, 2.3g, 2.3h, 2.3i**
+локально complete и verified. Локальный operator surface для retention
+preview + guarded execution и validated rollback **present**. Полный plan
+step 2, immutable/versioned original upload lifecycle, fault injection, live
+drills, project и release — **не** complete. **2.3i must never be selected
+again.** Next safe named slice is **2.4a only**.
+
+## Контракт 2.3i (retention API / admin audit) — COMPLETE
+
+Tenant-scoped admin retention execution surface in
+`api/routers/admin_ops.py` + contracts in `tests/test_admin_index_operator.py`
+at `ac4b317`:
+
+- `POST /admin/index/retention` requires the existing admin role
+- tenant is derived only from authenticated user/context/default
+- extra-forbid strict `IndexRetentionExecutionRequest` with strict
+  `expected_generation` and ordered strict-string `expected_candidates`
+- calls only `vectordb.manager.execute_vector_store_retention` through
+  `asyncio.to_thread`, passing the exact command key
+- returns safe `status: complete`, tenant, configured budget, expected
+  command key, and exact deleted collection list from
+  `IndexRetentionExecutionResult`
+- maps typed validation/conflict/corrupt/Qdrant-unavailable/lock/deletion/
+  metadata-update failures to safe 400/409/503 responses
+- audits success and each mapped failure exactly once using
+  `action=index_retention`, `resource=index/retention`, with safe structured
+  partial-progress fields for deletion/prune failures
+- auth/422/unrelated failures skip runtime/audit as applicable
+- does not call settings, Chroma, manifest, inventory, locks, embeddings,
+  caches, or lower domain adapters directly and does not alter preview,
+  rollback, or automatic post-publish retention
+
+**Implementation paths changed in `ac4b317` only:**
+
+- `api/routers/admin_ops.py`
+- `tests/test_admin_index_operator.py`
+
+**Boundary:** API/admin-audit only over the already-landed runtime guarded
+retention action. **Нет** settings/policy rewrite, UI, live
+Chroma/PostgreSQL/Redis, deploy, or push. Do **not** claim full plan step 2,
+immutable uploads, fault injection, project, release, production readiness,
+or live drills complete.
 
 ## Контракт 2.3h (runtime manager retention action) — COMPLETE
 
@@ -101,10 +142,9 @@ Runtime-only manager action in `vectordb/manager.py` + contracts in
 - `vectordb/manager.py`
 - `tests/test_index_runtime_switch.py`
 
-**Boundary:** runtime-only. **Нет** HTTP/API/admin audit, settings/policy
-change, UI, live Chroma/PostgreSQL/Redis, deploy, or push. Do **not** claim
-full operator surface, plan step 2, project, release, production readiness,
-live drills, or retention API complete.
+**Boundary:** runtime-only. **Нет** HTTP/API/admin audit in 2.3h itself
+(later landed as 2.3i @ `ac4b317`). **Нет** settings/policy change, UI, live
+Chroma/PostgreSQL/Redis, deploy, or push. Do **not** re-select 2.3h.
 
 ## Контракт 2.3g (guarded Chroma retention adapter bridge)
 
@@ -163,14 +203,51 @@ release, production readiness, live drills, or retention API complete.
   candidate tuple, derives configured Chroma directory/budget via settings,
   fails closed for Qdrant before adapter work, and returns the guarded adapter
   result unchanged, without HTTP/API/admin audit.
+- Admin retention execution API (2.3i): `POST /admin/index/retention` —
+  existing-admin role, tenant-from-auth only, strict expected generation +
+  exact candidates body, `asyncio.to_thread` to
+  `execute_vector_store_retention`, safe complete response, typed 400/409/503
+  mapping, and exactly-once `index_retention` audit with safe partial-progress
+  fields; does not alter preview, rollback, or automatic post-publish
+  retention.
 
 **Не утверждать:** Qdrant operator support, live services, production
-readiness, immutable uploads, complete fault injection, full retention API,
-complete operator surface.
+readiness, immutable uploads, complete fault injection, complete plan step 2,
+project/release readiness. Local retention preview + guarded execution +
+validated rollback operator surface is present after 2.3i.
 
 ## Доказательства верификации (не перезапускать без new code/failure)
 
-### 2.3h (latest)
+### 2.3i (latest)
+
+- Grok: route `local_grok_cli`; requested model `grok-4.5`, actual model
+  `grok-4.5-build`; first run `rag-step2-3i-20260803-a1` was cancelled before
+  edits at a denied multi-line exploratory Pydantic `python -c` probe (target
+  hashes remained unchanged); one cause-specific retry
+  `rag-step2-3i-20260803-a2` forbade interpreter/hash probes, completed
+  normally in 14 turns, and made the implementation; tests-first red:
+  `32 failed, 40 deselected` for expected 404/missing route and missing source
+  marker; focused final full admin operator file: `72 passed`, one known
+  Starlette deprecation warning; Ruff clean; direct Mypy reported exactly one
+  known pre-existing unchanged `dict-item` issue in trace-purge logic;
+  narrowed `--disable-error-code=dict-item` passed; scoped diff-check clean.
+  Do **not** claim unconditional full-file Mypy cleanliness and do **not**
+  hide the first cancelled no-edit run.
+- Codex independent: full scoped diff review found only the two allowed
+  implementation files; independent proportional pytest gate:
+  `14 passed, 58 deselected`, one known Starlette deprecation warning; scoped
+  Ruff clean; Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4 narrowed only for the
+  known pre-existing `dict-item`: no issues in the changed contract; scoped
+  diff-check clean; all eight protected hashes matched:
+  `vectordb/manager.py`, `vectordb/chroma_retention.py`,
+  `vectordb/index_operator.py`, `vectordb/index_retention.py`,
+  `config/settings.py`, `api/app.py`, `auth/dependencies.py`, and
+  `tests/test_index_runtime_switch.py`.
+- Real Chroma/PostgreSQL/Redis, full suite, push, deploy, production
+  readiness — **не** было и **не** утверждается.
+- Этот docs-only refresh **не** перезапускал project tests.
+
+### 2.3h (summary)
 
 - Grok: route `local_grok_cli`; requested model `grok-4.5`, actual model
   `grok-4.5-build`; tests-first red failed for the expected missing
@@ -189,9 +266,6 @@ complete operator surface.
   `tests/test_chroma_retention.py`, `vectordb/index_operator.py`,
   `vectordb/index_retention.py`, `config/settings.py`,
   `api/routers/admin_ops.py`).
-- Real Chroma/PostgreSQL/Redis, full suite, push, deploy, production
-  readiness — **не** было и **не** утверждается.
-- Этот docs-only refresh **не** перезапускал project tests.
 
 ### 2.3g (summary)
 
@@ -267,127 +341,116 @@ complete operator surface.
 
 - Grok: **46** focused passes; Codex: **79**-pass closure.
 
-### Reference commands (2.3h) — только при new code/failure
+### Reference commands (2.3i) — только при new code/failure
 
 ```powershell
-python -m pytest tests/test_index_runtime_switch.py tests/test_chroma_retention.py -q -k "retention or guarded" -p no:cacheprovider --basetemp=.tmp/pytest-step2-3h-<unique>
-python -m ruff check vectordb/manager.py tests/test_index_runtime_switch.py
-uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy vectordb/manager.py --no-incremental --show-error-codes
-git diff --check -- vectordb/manager.py tests/test_index_runtime_switch.py
+python -m pytest tests/test_admin_index_operator.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-3i-<unique>
+python -m ruff check api/routers/admin_ops.py tests/test_admin_index_operator.py
+uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy api/routers/admin_ops.py --no-incremental --show-error-codes --disable-error-code=dict-item
+git diff --check -- api/routers/admin_ops.py tests/test_admin_index_operator.py
 ```
 
 На этом Windows host обязателен unique ignored basetemp
 (`--basetemp=.tmp/pytest-<slice>`). Полный `requirements-dev.lock` resolution
 blocked unmarked Linux-only `nvidia-cufile` wheel; не retry install без
-отдельной portability-задачи.
+отдельной portability-задачи. Direct full-file Mypy on `admin_ops.py` still
+has the known pre-existing unchanged `dict-item` issue in trace-purge logic;
+never claim unconditional full-file Mypy cleanliness without evidence.
 
 ## Что остаётся открытым / следующий safe slice
 
-**Не начато (вне 2.3i):**
+**Не начато (вне 2.4a):**
 
-- HTTP/API/admin audit for retention execution (**2.3i**, next candidate,
-  not authorized until the next explicit one-slice turn);
-- immutable/versioned originals, broader fault injection, live drills,
+- immutable/versioned original uploads tied to job/index version without
+  losing the previous working version (**2.4a**, next candidate, not
+  authorized until the next explicit one-slice turn);
+- broader fault injection, live PostgreSQL/Redis/Celery/Chroma drills
+  (explicit opt-in only — do **not** select as default next slice),
   release gates, project completion.
 
-### Следующий named slice: **2.3i only** (не начат)
+**Superseded / do not re-select:** 2.1–2.3i are complete. Historical
+next-work text that still names **2.3i** as the next candidate is stale.
 
-Retention API / admin-audit candidate over the already-landed runtime guarded
-retention action. **Not** completed work. **Do not re-select 2.3h.** No
-active writer and no unfinished 2.3i WIP at this handoff.
+### Следующий named slice: **2.4a only** (не начат)
 
-## Exact contract for next slice 2.3i
+Smallest test-first local contract toward immutable/versioned original
+uploads tied to job/index version without losing the previous working
+version. **Not** completed work. **Do not re-select 2.3i.** No active writer
+and no unfinished 2.4a WIP at this handoff.
+
+## Exact contract for next slice 2.4a
 
 **Status:** investigation/implementation candidate only — do **not** mark
-complete from docs. Exact route/body/audit names and status mapping must be
-confirmed against existing admin operator patterns during investigation; do
-**not** pretend the API contract is already implemented.
+complete from docs. Exact files, APIs, storage layout, and acceptance tests
+must be confirmed against existing upload/job/index ownership during
+investigation; do **not** invent completed work or invent unsupported route
+details before investigation.
 
-**Derived safe direction (from active remediation plan + landed runtime
-surface + prior admin slices 2.3b/2.3e):**
+**Derived safe direction (from active remediation plan + repository
+handoff):**
 
-- expose a tenant-scoped admin retention **execution** surface that calls the
-  already-landed runtime entrypoint `execute_vector_store_retention`;
-- keep the explicit idempotent command key
-  (`expected_generation` + exact `expected_candidates`) at the API boundary;
-- derive tenant only from existing auth/context/default conventions used by
-  retention-preview / rollback admin endpoints; do not trust body tenant
-  overrides if that is the established pattern;
-- map typed runtime/operator failures to safe HTTP details without leaking
-  store/chunk internals;
-- emit exactly one tenant-scoped admin audit event for success and for mapped
-  semantic failures, following the rollback-audit style unless investigation
-  proves a narrower existing retention audit helper;
-- use `asyncio.to_thread` (or the established admin async boundary) so the
-  manager path remains sync;
-- do **not** re-implement retention policy, reopen adapter/domain locks, load
-  embeddings, mutate caches, open Chroma from the router, change settings, or
-  alter automatic post-publish retention.
+- make original uploads immutable/versioned and bind their lifecycle to
+  job/index version;
+- preserve the previous working version rather than overwriting or losing it;
+- keep the slice local, tests-first, and as small as possible;
+- do **not** select live PostgreSQL/Redis/Celery/Chroma drills without
+  explicit opt-in;
+- do **not** reopen completed retention operator surfaces unless investigation
+  proves a required conflict — then stop and re-scope.
 
-**Initial likely edit scope (confirm before coding):**
-
-- `api/routers/admin_ops.py`
-- focused admin API tests (existing retention-preview / rollback test modules
-  are the nearest patterns; exact test path chosen during investigation)
+**Initial likely edit scope:** unknown until ownership investigation. Do
+**not** hard-code file paths here; inspect existing upload/job/index modules
+before coding.
 
 **Likely protected unless proven conflict:**
 
-- `vectordb/manager.py` (2.3h complete; reopen only if a true boundary conflict
-  is proven, then stop and re-scope)
-- `vectordb/chroma_retention.py`
-- `vectordb/index_operator.py`
-- `vectordb/index_retention.py`
-- `config/settings.py`
-- unrelated admin routes/helpers outside the retention execution surface
+- completed retention operator surface (`api/routers/admin_ops.py` retention/
+  rollback paths, `vectordb/manager.py` retention runtime, chroma/index
+  retention domain/adapters)
+- unrelated admin routes/helpers outside the chosen 2.4a surface
+- settings/policy rewrites not required by the smallest local contract
 
 If investigation proves a required conflict on a protected path, **stop and
 re-scope** rather than silently expanding. Next session must re-check hashes
 against the working tree; do not trust stale baseline tables from earlier
 slices as permanent truth.
 
-### Required 2.3i test-first evidence (directional)
+### Required 2.4a test-first evidence (directional)
 
-Add focused acceptance tests around the chosen admin surface:
+Add focused acceptance tests around the chosen local contract after
+investigation finalizes ownership:
 
-1. auth/admin-role gate and tenant-from-context only;
-2. strict request body for expected generation + exact candidates; unknown
-   keys / coerced types rejected before runtime/audit where that is the
-   established pattern;
-3. happy path calls only `execute_vector_store_retention` through the
-   established async boundary and returns a safe response without store/chunk
-   leakage;
-4. mapped validation/conflict/unavailable/corrupt/lock/backend failures return
-   safe details and audit once; auth/body-schema/unrelated failures skip
-   runtime/audit as applicable;
-5. no settings/policy rewrite, no direct Chroma/manifest/inventory mutation in
-   the router, no change to automatic post-publish retention.
+1. versioned/immutable original retention semantics without losing the
+   previous working version;
+2. linkage to job/index version boundaries already present in the repo;
+3. failure/idempotency behavior appropriate to the chosen ownership surface;
+4. no accidental re-open of completed retention API/runtime contracts;
+5. no live-service drills, deploy, push, or production-readiness claims.
 
 **Recommended focused verification after new code** (unique basetemp
 required; exact paths finalized during investigation):
 
 ```powershell
-python -m pytest <focused-admin-retention-tests> -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-3i-<unique>
-python -m ruff check api/routers/admin_ops.py <focused-admin-retention-tests>
-uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy api/routers/admin_ops.py --no-incremental --show-error-codes
-git diff --check -- api/routers/admin_ops.py <focused-admin-retention-tests>
+python -m pytest <focused-2.4a-tests> -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-4a-<unique>
+python -m ruff check <focused-2.4a-paths>
+uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy <focused-2.4a-paths> --no-incremental --show-error-codes
+git diff --check -- <focused-2.4a-paths>
 ```
 
-If direct full-file Mypy reveals an existing unrelated error in
-`admin_ops.py`, document/narrow it honestly (historical `dict-item` caveat
-around unchanged logic remains known); never claim an unconditional clean
-file without evidence. This docs-only turn did **not** run project tests.
+This docs-only turn did **not** run project tests.
 
 ## Definition of done / stop conditions
 
-- **2.3i is done only after** Grok tests-first evidence, one independent
-  proportional gate, protected hashes, scoped diff-check, and local
-  explicit-path commit.
-- **Do not re-select 2.3h**; runtime manager retention is already complete at
-  `bd01f23`.
+- **2.4a is done only after** ownership investigation, Grok tests-first
+  evidence, one independent proportional gate, protected hashes, scoped
+  diff-check, and local explicit-path commit.
+- **Do not re-select 2.3i**; retention API/admin audit is already complete at
+  `ac4b317`. **Do not re-select 2.1–2.3h.**
 - **No** full-suite / live / deploy / push / production-readiness claims.
-- **Stop/yield after 2.3i** because one user turn equals one slice.
+- **Stop/yield after 2.4a** because one user turn equals one slice.
 - **Stop and report** if a target file becomes unexpectedly dirty, a second
   verification fails, or scope needs expansion.
+- **Actual Git wins** over any embedded hashes/counts in this handoff.
 
 ## Защищённое локальное состояние
 

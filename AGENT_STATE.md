@@ -1,13 +1,108 @@
 # Agent State
 
-## 2026-08-03 Update-45 (plan 2.3h / guarded runtime retention @ `bd01f23`) ✅ START HERE
+## 2026-08-03 Update-46 (plan 2.3i / guarded index retention API @ `ac4b317`) ✅ START HERE
 
-> **Next-session handoff:** refresh `git status` first. This Update-45 block
-> supersedes Update-44 as the start point for the next session. This turn is
-> **docs/status only** for the already-landed 2.3h implementation; no code,
+> **Next-session handoff:** refresh `git status` first. This Update-46 block
+> supersedes Update-45 as the start point for the next session. This turn is
+> **docs/status only** for the already-landed 2.3i implementation; no code,
 > tests, plans, backlog, README, audit, settings, or API paths were edited
 > here. Protected dirty `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
 > `plan_sol_23_07_26`, and existing untracked artifacts were not touched.
+>
+> **Implementation commit:** `ac4b317` (`feat(api): expose guarded index
+> retention`). Slice **2.3i is locally complete and verified**.
+> - `POST /admin/index/retention` requires the existing admin role
+> - tenant is derived only from authenticated user/context/default
+> - extra-forbid strict `IndexRetentionExecutionRequest` with strict
+>   `expected_generation` and ordered strict-string `expected_candidates`
+> - calls only `vectordb.manager.execute_vector_store_retention` through
+>   `asyncio.to_thread`, passing the exact command key
+> - returns safe `status: complete`, tenant, configured budget, expected
+>   command key, and exact deleted collection list from
+>   `IndexRetentionExecutionResult`
+> - maps typed validation/conflict/corrupt/Qdrant-unavailable/lock/deletion/
+>   metadata-update failures to safe 400/409/503 responses
+> - audits success and each mapped failure exactly once using
+>   `action=index_retention`, `resource=index/retention`, with safe structured
+>   partial-progress fields for deletion/prune failures
+> - auth/422/unrelated failures skip runtime/audit as applicable
+> - does not call settings, Chroma, manifest, inventory, locks, embeddings,
+>   caches, or lower domain adapters directly and does not alter preview,
+>   rollback, or automatic post-publish retention
+> - only `api/routers/admin_ops.py` and `tests/test_admin_index_operator.py`
+>   changed in the implementation commit
+>
+> **Boundary:** no settings/policy rewrite, UI, live Chroma/PostgreSQL/Redis,
+> deploy, or push in 2.3i. Broader plan step 2, immutable/versioned original
+> upload lifecycle, fault injection, live drills, project, release, and
+> production readiness remain **not** complete. Local operator surface for
+> retention preview + guarded execution and validated rollback is now present.
+>
+> **Verification — Grok:** route `local_grok_cli`; requested model `grok-4.5`,
+> actual model `grok-4.5-build`; first run `rag-step2-3i-20260803-a1` was
+> cancelled before edits at a denied multi-line exploratory Pydantic
+> `python -c` probe (target hashes remained unchanged); one cause-specific
+> retry `rag-step2-3i-20260803-a2` forbade interpreter/hash probes, completed
+> normally in 14 turns, and made the implementation; tests-first red:
+> `32 failed, 40 deselected` for expected 404/missing route and missing source
+> marker; focused final full admin operator file: `72 passed`, one known
+> Starlette deprecation warning; Ruff clean; direct Mypy reported exactly one
+> known pre-existing unchanged `dict-item` issue in trace-purge logic; narrowed
+> `--disable-error-code=dict-item` passed; scoped diff-check clean. Do **not**
+> claim unconditional full-file Mypy cleanliness and do **not** hide the first
+> cancelled no-edit run.
+>
+> **Verification — Codex independent:** full scoped diff review found only the
+> two allowed implementation files; independent proportional pytest gate:
+> `14 passed, 58 deselected`, one known Starlette deprecation warning; scoped
+> Ruff clean; Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4 narrowed only for the
+> known pre-existing `dict-item`: no issues in the changed contract; scoped
+> diff-check clean; all eight protected hashes matched:
+> `vectordb/manager.py`, `vectordb/chroma_retention.py`,
+> `vectordb/index_operator.py`, `vectordb/index_retention.py`,
+> `config/settings.py`, `api/app.py`, `auth/dependencies.py`, and
+> `tests/test_index_runtime_switch.py`.
+>
+> **Current truth:** slices **2.1 through 2.3i** are locally complete and
+> verified. Broader plan step 2, project, and release are **not** complete
+> because immutable/versioned original upload lifecycle, fault injection, live
+> drills, and further work remain open. Next safe named slice is **2.4a only**
+> (not started): the smallest test-first local contract toward
+> immutable/versioned original uploads tied to job/index version without losing
+> the previous working version. Treat 2.4a as investigation/implementation
+> candidate only; inspect existing ownership before naming exact files/APIs and
+> do not invent completed work. Do **not** select live
+> PostgreSQL/Redis/Celery/Chroma drills (explicit opt-in required). Full
+> contract, evidence, and protected-state details: refreshed
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+>
+> **Standing execution preference:** use **Grok** as implementation/content
+> worker; **Codex** orchestrates, protects files, verifies independently, and
+> commits scoped results. One next-session user turn may complete **only one
+> named atomic slice**. Push / deploy / live services are **not** authorized.
+>
+> **Git advisory only:** branch was observed as
+> `master...origin/master [ahead 77]` at this inspection; latest
+> implementation remains `ac4b317`; previous docs HEAD was `e348929`
+> (`docs: record guarded runtime retention`). Do **not** embed or guess a
+> future docs commit hash. Ahead counts and timestamps are advisory; next
+> session must run fresh `git status --short --branch` and
+> `git log -5 --oneline`. Actual Git wins over any embedded hashes/counts in
+> docs.
+>
+> **Do not re-select 2.1–2.3i.** Do not mark 2.4a complete from this docs
+> turn. Full historical evidence for 2.3i remains here and in
+> `docs/SESSION_HANDOFF.md`; 2.3h evidence remains in Update-45 below.
+
+## 2026-08-03 Update-45 (plan 2.3h / guarded runtime retention @ `bd01f23`)
+
+> **Historical handoff (superseded by Update-46 for start-point routing).**
+> Refresh `git status` first. This Update-45 block previously superseded
+> Update-44 as the start point. That turn was **docs/status only** for the
+> already-landed 2.3h implementation; no code, tests, plans, backlog, README,
+> audit, settings, or API paths were edited there. Protected dirty
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and
+> existing untracked artifacts were not touched.
 >
 > **Implementation commit:** `bd01f23` (`feat(index): expose guarded runtime
 > retention`). Slice **2.3h is locally complete and verified**.
@@ -30,7 +125,8 @@
 > **Boundary:** no HTTP/API/admin audit, settings/policy change, UI, live
 > Chroma/PostgreSQL/Redis, deploy, or push in 2.3h. Broader operator surface,
 > plan step 2, project, release, production readiness, live drills, and
-> retention API are **not** complete.
+> retention API are **not** complete at 2.3h time (retention API later landed
+> as 2.3i @ `ac4b317`; see Update-46).
 >
 > **Verification — Grok:** route `local_grok_cli`; requested model `grok-4.5`,
 > actual model `grok-4.5-build`; tests-first red failed for the expected
@@ -50,36 +146,19 @@
 > `vectordb/index_retention.py`, `config/settings.py`,
 > `api/routers/admin_ops.py`).
 >
-> **Current truth:** slices **2.1 through 2.3h** are locally complete and
-> verified. Broader operator surface, plan step 2, project, and release are
-> **not** complete because retention HTTP/API/admin audit and further wiring
-> remain absent. Next safe named slice is **2.3i only** (not started): add a
-> later named retention API/admin-audit surface that exposes the already-landed
-> runtime guarded retention action, following the existing admin operator
-> patterns from preview/rollback without inventing unsupported route details
-> before investigation. 2.3i must remain API/admin-audit scoped: no live
-> services, deploy, push, settings/policy rewrite, or production-readiness
-> claims. Treat 2.3i as the next investigation/implementation candidate, not
-> as completed work. Full contract, evidence, and protected-state details:
-> refreshed [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+> **Historical next-work pointer from Update-45:** named slice **2.3i**
+> (retention API/admin audit). That pointer is **stale** — do **not**
+> re-select 2.3i. Current next work is **2.4a** per Update-46 and
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
 >
-> **Standing execution preference:** use **Grok** as implementation/content
-> worker; **Codex** orchestrates, protects files, verifies independently, and
-> commits scoped results. One next-session user turn may complete **only one
-> named atomic slice**. Push / deploy / live services are **not** authorized.
+> **Git advisory only (historical):** branch was observed as
+> `master...origin/master [ahead 75]` at that inspection; latest
+> implementation remained `bd01f23`; previous docs HEAD was `90fa056`. Actual
+> Git always wins over embedded hashes/counts.
 >
-> **Git advisory only:** branch was observed as
-> `master...origin/master [ahead 75]` at this inspection; latest
-> implementation remains `bd01f23`; previous docs HEAD was `90fa056`
-> (`docs: clarify next-session retention handoff`). Do **not** embed or guess
-> a future docs commit hash. Ahead counts and timestamps are advisory; next
-> session must run fresh `git status --short --branch` and
-> `git log -5 --oneline`. Actual Git wins over any embedded hashes/counts in
-> docs.
->
-> **Do not re-select 2.1–2.3h.** Do not mark 2.3i complete from this docs
-> turn. Full historical evidence for 2.3h remains here and in
-> `docs/SESSION_HANDOFF.md`; 2.3g evidence remains in Update-43 below.
+> **Do not re-select 2.1–2.3h.** Full historical evidence for 2.3h remains
+> here and in `docs/SESSION_HANDOFF.md`; 2.3g evidence remains in Update-43
+> below.
 
 ## 2026-08-03 Update-44 (transparent next-session handoff; no new slice)
 
@@ -103,7 +182,8 @@
 >
 > **Historical next-work pointer from Update-44:** named slice **2.3h**
 > (runtime-only manager retention action). That pointer is **stale** — do
-> **not** re-select 2.3h. Current next work is **2.3i** per Update-45 and
+> **not** re-select 2.3h (or later-completed 2.3i). Current next work is
+> **2.4a** per Update-46 and
 > [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
 >
 > **Git advisory only (historical):** branch was observed as
