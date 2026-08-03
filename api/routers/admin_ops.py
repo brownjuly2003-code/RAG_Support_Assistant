@@ -8,6 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
 
 from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant
@@ -16,6 +17,13 @@ from db import engine as _db_engine
 from monitoring import prometheus as prometheus_metrics
 
 router = APIRouter()
+
+
+class IndexRollbackRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expected_generation: int = Field(strict=True)
+    target_collection: str = Field(strict=True)
 
 
 def _async_session() -> Any:
@@ -386,5 +394,181 @@ async def admin_index_retention_preview(
             "previous_collection": preview.previous_collection,
             "inventory_collections": list(preview.inventory_collections),
             "deletion_candidates": list(preview.deletion_candidates),
+        },
+    )
+
+
+async def _audit_index_rollback(
+    *,
+    request: Request,
+    user: dict[str, Any],
+    tenant_id: str,
+    detail: dict[str, Any],
+) -> None:
+    await _log_audit(
+        actor=user.get("sub", "anonymous"),
+        action="index_rollback",
+        resource="index/rollback",
+        tenant_id=tenant_id,
+        detail=detail,
+        ip_address=request.client.host if request.client else None,
+    )
+
+
+@router.post("/admin/index/rollback")
+async def admin_index_rollback(
+    request: Request,
+    payload: IndexRollbackRequest,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    """Apply idempotent validated runtime index rollback for the tenant."""
+    from vectordb.index_manifest import (  # noqa: PLC0415
+        IndexManifestCorrupt,
+        IndexManifestRollbackUnavailable,
+    )
+    from vectordb.index_operator import (  # noqa: PLC0415
+        IndexRollbackConflict,
+        IndexRollbackValidationError,
+    )
+    from vectordb.index_staging import IndexStagingValidationError  # noqa: PLC0415
+    from vectordb.manager import rollback_vector_store  # noqa: PLC0415
+    from vectordb.tenant_lock import TenantIndexLockError  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+
+    try:
+        await asyncio.to_thread(
+            rollback_vector_store,
+            tenant,
+            expected_generation=payload.expected_generation,
+            target_collection=payload.target_collection,
+        )
+    except IndexRollbackValidationError as exc:
+        await _audit_index_rollback(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "rejected",
+                "expected_generation": payload.expected_generation,
+                "target_collection": payload.target_collection,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="invalid index rollback command",
+        ) from None
+    except IndexRollbackConflict as exc:
+        await _audit_index_rollback(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "conflict",
+                "expected_generation": payload.expected_generation,
+                "target_collection": payload.target_collection,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="index rollback conflicts with current state",
+        ) from None
+    except IndexManifestRollbackUnavailable as exc:
+        await _audit_index_rollback(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "unavailable",
+                "expected_generation": payload.expected_generation,
+                "target_collection": payload.target_collection,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="index rollback is unavailable",
+        ) from None
+    except IndexManifestCorrupt as exc:
+        await _audit_index_rollback(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "metadata_corrupt",
+                "expected_generation": payload.expected_generation,
+                "target_collection": payload.target_collection,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="index manifest is corrupt",
+        ) from None
+    except IndexStagingValidationError as exc:
+        await _audit_index_rollback(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "target_invalid",
+                "expected_generation": payload.expected_generation,
+                "target_collection": payload.target_collection,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="index rollback target validation failed",
+        ) from None
+    except TenantIndexLockError as exc:
+        await _audit_index_rollback(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "lock_unavailable",
+                "expected_generation": payload.expected_generation,
+                "target_collection": payload.target_collection,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="index rollback is temporarily unavailable",
+        ) from None
+
+    await _audit_index_rollback(
+        request=request,
+        user=_user,
+        tenant_id=tenant,
+        detail={
+            "tenant": tenant,
+            "outcome": "success",
+            "expected_generation": payload.expected_generation,
+            "target_collection": payload.target_collection,
+            "manifest_generation": payload.expected_generation + 1,
+            "active_collection": payload.target_collection,
+            "status": "active",
+        },
+    )
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "active",
+            "tenant_id": tenant,
+            "expected_generation": payload.expected_generation,
+            "target_collection": payload.target_collection,
+            "manifest_generation": payload.expected_generation + 1,
+            "active_collection": payload.target_collection,
         },
     )

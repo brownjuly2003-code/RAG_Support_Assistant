@@ -1,4 +1,4 @@
-"""Admin HTTP surface for read-only index retention preview (plan 2.3b)."""
+"""Admin HTTP surface for index retention preview and rollback (plan 2.3b/2.3e)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -15,6 +15,12 @@ CLIENT_WITH_KEY_SETTINGS_OVERRIDES = {
 }
 
 _ENDPOINT = "/api/admin/index/retention-preview"
+_ROLLBACK_ENDPOINT = "/api/admin/index/rollback"
+_ROLLBACK_TARGET = "acme__v0000000000000004"
+_ROLLBACK_BODY = {
+    "expected_generation": 4,
+    "target_collection": _ROLLBACK_TARGET,
+}
 
 
 def _admin_headers(tenant: str = "acme", sub: str = "admin-user") -> dict[str, str]:
@@ -95,6 +101,59 @@ def _install_audit(
 
     monkeypatch.setattr("api.app.log_audit", _fake_log_audit)
     return audit_calls
+
+
+def _install_rollback(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    result: tuple[Any, list[Any]] | None = None,
+    side_effect: BaseException | None = None,
+    calls: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    recorded = calls if calls is not None else []
+
+    def _fake_rollback(
+        tenant_id: str = "default",
+        embeddings: Any | None = None,
+        *,
+        expected_generation: int,
+        target_collection: str,
+    ) -> tuple[Any, list[Any]]:
+        recorded.append(
+            {
+                "tenant_id": tenant_id,
+                "embeddings": embeddings,
+                "expected_generation": expected_generation,
+                "target_collection": target_collection,
+            }
+        )
+        if side_effect is not None:
+            raise side_effect
+        if result is not None:
+            return result
+        return (object(), [])
+
+    monkeypatch.setattr(
+        "vectordb.manager.rollback_vector_store",
+        _fake_rollback,
+    )
+    return recorded
+
+
+def _expected_rollback_response(
+    *,
+    tenant_id: str = "acme",
+    expected_generation: int = 4,
+    target_collection: str = _ROLLBACK_TARGET,
+) -> dict[str, Any]:
+    return {
+        "status": "active",
+        "tenant_id": tenant_id,
+        "expected_generation": expected_generation,
+        "target_collection": target_collection,
+        "manifest_generation": expected_generation + 1,
+        "active_collection": target_collection,
+    }
 
 
 def test_admin_success_uses_jwt_tenant_ignores_foreign_query(
@@ -395,12 +454,12 @@ def test_route_is_get_only_and_repeatable_read_only(
 
 def test_endpoint_module_has_no_chroma_or_mutation_wiring() -> None:
     source = Path("api/routers/admin_ops.py").read_text(encoding="utf-8")
-    # Narrow the retention-preview handler slice for boundary assertions.
+    # Isolate only the read-only retention-preview handler before rollback.
     marker = "retention-preview"
     assert marker in source
     start = source.index('@router.get("/admin/index/retention-preview")')
-    # Through end of file is fine; this module should not gain mutation wiring.
-    handler = source[start:]
+    end = source.index('@router.post("/admin/index/rollback")')
+    handler = source[start:end]
 
     forbidden_snippets = (
         "chromadb",
@@ -413,8 +472,395 @@ def test_endpoint_module_has_no_chroma_or_mutation_wiring() -> None:
         "publish_active_collection",
         "rollback_active_collection",
         "record_retention_collection",
+        "rollback_vector_store",
+        "rollback_index_version",
     )
     for snippet in forbidden_snippets:
         assert snippet not in handler, f"forbidden wiring: {snippet}"
     assert "preview_index_retention" in handler
+    assert "asyncio.to_thread" in handler
+
+
+def test_admin_rollback_success_uses_jwt_tenant_ignores_foreign_query(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+) -> None:
+    calls = _install_rollback(monkeypatch)
+    _install_audit(monkeypatch)
+
+    response = client_with_key.post(
+        f"{_ROLLBACK_ENDPOINT}?tenant_id=foreign",
+        headers=_admin_headers("acme", sub="ops-admin"),
+        json=_ROLLBACK_BODY,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body == _expected_rollback_response()
+    assert "store" not in body
+    assert "chunks" not in body
+    assert "applied" not in body
+    assert calls == [
+        {
+            "tenant_id": "acme",
+            "embeddings": None,
+            "expected_generation": 4,
+            "target_collection": _ROLLBACK_TARGET,
+        }
+    ]
+
+
+def test_admin_rollback_idempotent_retry_same_response_and_audit(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+) -> None:
+    calls = _install_rollback(monkeypatch)
+    audit_calls = _install_audit(monkeypatch)
+    headers = _admin_headers("acme", sub="retry-admin")
+
+    first = client_with_key.post(
+        _ROLLBACK_ENDPOINT,
+        headers=headers,
+        json=_ROLLBACK_BODY,
+    )
+    second = client_with_key.post(
+        _ROLLBACK_ENDPOINT,
+        headers=headers,
+        json=_ROLLBACK_BODY,
+    )
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json() == second.json() == _expected_rollback_response()
+    assert len(calls) == 2
+    assert calls[0] == calls[1]
+    assert len(audit_calls) == 2
+    assert all(entry["detail"]["outcome"] == "success" for entry in audit_calls)
+
+
+def test_admin_rollback_success_audit_fields(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+) -> None:
+    _install_rollback(monkeypatch)
+    audit_calls = _install_audit(monkeypatch)
+
+    response = client_with_key.post(
+        _ROLLBACK_ENDPOINT,
+        headers=_admin_headers("acme", sub="audit-admin"),
+        json=_ROLLBACK_BODY,
+    )
+
+    assert response.status_code == 200
+    assert len(audit_calls) == 1
+    entry = audit_calls[0]
+    assert entry["actor"] == "audit-admin"
+    assert entry["action"] == "index_rollback"
+    assert entry["resource"] == "index/rollback"
+    assert entry["tenant_id"] == "acme"
+    assert entry["ip_address"] is not None
+    assert entry["detail"] == {
+        "tenant": "acme",
+        "outcome": "success",
+        "expected_generation": 4,
+        "target_collection": _ROLLBACK_TARGET,
+        "manifest_generation": 5,
+        "active_collection": _ROLLBACK_TARGET,
+        "status": "active",
+    }
+
+
+@pytest.mark.parametrize(
+    ("headers", "status_code"),
+    [
+        (None, 401),
+        (_role_headers("agent"), 403),
+        (_role_headers("viewer"), 403),
+    ],
+)
+def test_admin_rollback_auth_failures_skip_runtime_and_audit(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    headers: dict[str, str] | None,
+    status_code: int,
+) -> None:
+    calls = _install_rollback(monkeypatch)
+    audit_calls = _install_audit(monkeypatch)
+
+    response = client_with_key.post(
+        _ROLLBACK_ENDPOINT,
+        headers=headers or {},
+        json=_ROLLBACK_BODY,
+    )
+
+    assert response.status_code == status_code
+    assert calls == []
+    assert audit_calls == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"expected_generation": 4},
+        {"target_collection": _ROLLBACK_TARGET},
+        {"expected_generation": True, "target_collection": _ROLLBACK_TARGET},
+        {"expected_generation": "4", "target_collection": _ROLLBACK_TARGET},
+        {"expected_generation": 4, "target_collection": 123},
+        {
+            "expected_generation": 4,
+            "target_collection": _ROLLBACK_TARGET,
+            "tenant_id": "foreign",
+        },
+    ],
+)
+def test_admin_rollback_invalid_body_is_422_without_runtime_or_audit(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    payload: dict[str, Any],
+) -> None:
+    calls = _install_rollback(monkeypatch)
+    audit_calls = _install_audit(monkeypatch)
+
+    response = client_with_key.post(
+        _ROLLBACK_ENDPOINT,
+        headers=_admin_headers("acme"),
+        json=payload,
+    )
+
+    assert response.status_code == 422
+    assert calls == []
+    assert audit_calls == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"expected_generation": 0, "target_collection": _ROLLBACK_TARGET},
+        {"expected_generation": -1, "target_collection": _ROLLBACK_TARGET},
+        {"expected_generation": 4, "target_collection": ""},
+    ],
+)
+def test_admin_rollback_semantic_invalid_maps_to_400_and_audit(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    payload: dict[str, Any],
+) -> None:
+    from vectordb.index_operator import IndexRollbackValidationError
+
+    calls = _install_rollback(
+        monkeypatch,
+        side_effect=IndexRollbackValidationError("invalid rollback command"),
+    )
+    audit_calls = _install_audit(monkeypatch)
+
+    response = client_with_key.post(
+        _ROLLBACK_ENDPOINT,
+        headers=_admin_headers("acme", sub="fail-admin"),
+        json=payload,
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "invalid index rollback command"}
+    assert "invalid rollback command" not in response.text
+    assert len(calls) == 1
+    assert calls[0]["expected_generation"] == payload["expected_generation"]
+    assert calls[0]["target_collection"] == payload["target_collection"]
+    assert len(audit_calls) == 1
+    entry = audit_calls[0]
+    assert entry["action"] == "index_rollback"
+    assert entry["resource"] == "index/rollback"
+    assert entry["tenant_id"] == "acme"
+    assert entry["detail"] == {
+        "tenant": "acme",
+        "outcome": "rejected",
+        "expected_generation": payload["expected_generation"],
+        "target_collection": payload["target_collection"],
+        "error_type": "IndexRollbackValidationError",
+    }
+
+
+@pytest.mark.parametrize(
+    ("exc_factory", "status_code", "detail", "outcome", "error_type"),
+    [
+        (
+            lambda: __import__(
+                "vectordb.index_operator", fromlist=["IndexRollbackConflict"]
+            ).IndexRollbackConflict("generation mismatch"),
+            409,
+            "index rollback conflicts with current state",
+            "conflict",
+            "IndexRollbackConflict",
+        ),
+        (
+            lambda: __import__(
+                "vectordb.index_manifest",
+                fromlist=["IndexManifestRollbackUnavailable"],
+            ).IndexManifestRollbackUnavailable("no previous"),
+            409,
+            "index rollback is unavailable",
+            "unavailable",
+            "IndexManifestRollbackUnavailable",
+        ),
+        (
+            lambda: __import__(
+                "vectordb.index_manifest", fromlist=["IndexManifestCorrupt"]
+            ).IndexManifestCorrupt("manifest corrupt"),
+            409,
+            "index manifest is corrupt",
+            "metadata_corrupt",
+            "IndexManifestCorrupt",
+        ),
+        (
+            lambda: __import__(
+                "vectordb.index_staging", fromlist=["IndexStagingValidationError"]
+            ).IndexStagingValidationError("target invalid"),
+            409,
+            "index rollback target validation failed",
+            "target_invalid",
+            "IndexStagingValidationError",
+        ),
+        (
+            lambda: __import__(
+                "vectordb.tenant_lock", fromlist=["TenantIndexLockTimeout"]
+            ).TenantIndexLockTimeout("lock timeout"),
+            503,
+            "index rollback is temporarily unavailable",
+            "lock_unavailable",
+            "TenantIndexLockTimeout",
+        ),
+        (
+            lambda: __import__(
+                "vectordb.tenant_lock", fromlist=["TenantIndexLockUnavailable"]
+            ).TenantIndexLockUnavailable("lock unavailable"),
+            503,
+            "index rollback is temporarily unavailable",
+            "lock_unavailable",
+            "TenantIndexLockUnavailable",
+        ),
+    ],
+)
+def test_admin_rollback_typed_failures_map_to_safe_http_and_audit(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    exc_factory: Any,
+    status_code: int,
+    detail: str,
+    outcome: str,
+    error_type: str,
+) -> None:
+    side_effect = exc_factory()
+    _install_rollback(monkeypatch, side_effect=side_effect)
+    audit_calls = _install_audit(monkeypatch)
+
+    response = client_with_key.post(
+        _ROLLBACK_ENDPOINT,
+        headers=_admin_headers("acme", sub="fail-admin"),
+        json=_ROLLBACK_BODY,
+    )
+
+    assert response.status_code == status_code
+    assert response.json() == {"detail": detail}
+    body_text = response.text
+    assert "generation mismatch" not in body_text
+    assert "no previous" not in body_text
+    assert "manifest corrupt" not in body_text
+    assert "target invalid" not in body_text
+    assert "lock timeout" not in body_text
+    assert "lock unavailable" not in body_text
+    assert len(audit_calls) == 1
+    entry = audit_calls[0]
+    assert entry["actor"] == "fail-admin"
+    assert entry["action"] == "index_rollback"
+    assert entry["resource"] == "index/rollback"
+    assert entry["tenant_id"] == "acme"
+    assert entry["detail"] == {
+        "tenant": "acme",
+        "outcome": outcome,
+        "expected_generation": 4,
+        "target_collection": _ROLLBACK_TARGET,
+        "error_type": error_type,
+    }
+    assert set(entry["detail"]) == {
+        "tenant",
+        "outcome",
+        "expected_generation",
+        "target_collection",
+        "error_type",
+    }
+
+
+def test_admin_rollback_unrelated_exception_is_not_rewritten(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+) -> None:
+    _install_rollback(monkeypatch, side_effect=RuntimeError("boom-internal"))
+    audit_calls = _install_audit(monkeypatch)
+
+    with pytest.raises(RuntimeError, match="boom-internal"):
+        client_with_key.post(
+            _ROLLBACK_ENDPOINT,
+            headers=_admin_headers("acme"),
+            json=_ROLLBACK_BODY,
+        )
+
+    assert audit_calls == []
+
+
+def test_admin_rollback_route_is_post_only_and_uses_to_thread() -> None:
+    source = Path("api/routers/admin_ops.py").read_text(encoding="utf-8")
+    start = source.index('@router.post("/admin/index/rollback")')
+    handler = source[start:]
+
+    assert '@router.get("/admin/index/rollback")' not in source
+    assert "asyncio.to_thread" in handler
+    assert "rollback_vector_store" in handler
+    # Tenant must not be a declared path/query/body override.
+    signature_slice = handler.split(":", 1)[0]
+    assert "tenant_id" not in signature_slice
+    assert "IndexRollbackRequest" in handler
+
+
+def test_admin_rollback_get_is_405(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+) -> None:
+    calls = _install_rollback(monkeypatch)
+    audit_calls = _install_audit(monkeypatch)
+
+    response = client_with_key.get(
+        _ROLLBACK_ENDPOINT,
+        headers=_admin_headers("acme"),
+    )
+
+    assert response.status_code == 405
+    assert calls == []
+    assert audit_calls == []
+
+
+def test_admin_rollback_handler_boundary_only_uses_manager_runtime() -> None:
+    source = Path("api/routers/admin_ops.py").read_text(encoding="utf-8")
+    start = source.index('@router.post("/admin/index/rollback")')
+    handler = source[start:]
+
+    forbidden_snippets = (
+        "chromadb",
+        "PersistentClient",
+        "list_collections",
+        "get_or_create_collection",
+        "delete_collection",
+        "execute_chroma_retention",
+        "execute_bounded_retention",
+        "publish_active_collection",
+        "rollback_active_collection",
+        "rollback_index_version",
+        "record_retention_collection",
+        "preview_index_retention",
+        "_store_cache",
+        "_chunks_cache",
+        "_index_cache_keys",
+    )
+    for snippet in forbidden_snippets:
+        assert snippet not in handler, f"forbidden wiring: {snippet}"
+    assert "rollback_vector_store" in handler
     assert "asyncio.to_thread" in handler
