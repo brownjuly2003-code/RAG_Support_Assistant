@@ -1,12 +1,110 @@
 # Agent State
 
-## 2026-08-03 Update-49 — record completed slice 2.4b @ `29be31a` ✅ START HERE
+## 2026-08-03 Update-50 — record completed slice 2.4c @ `999c90f` ✅ START HERE
 
-> **Routing authority:** Update-49 is **docs-only** and supersedes Update-48
+> **Routing authority:** Update-50 is **docs-only** and supersedes Update-49
 > **only for start-point routing**. All older Update blocks below, including
 > headings that literally contain `✅ START HERE`, are **archival**. **Only the
 > first/topmost Update block in this file is authoritative.** Never select work
 > by grepping old `START HERE` markers.
+>
+> **No new implementation in this docs turn.** Code, tests, plans, backlog,
+> README, audit, settings, and API paths were **not** edited here. Project
+> tests were **not** rerun. Protected dirty `BACKLOG.md`, `README.md`,
+> `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and existing untracked
+> artifacts (including the active plan, prompts, pytest temp dirs, and
+> presentation/explainer files) were not touched.
+>
+> **Implementation commit:** `999c90f` (`feat(ingestion): persist index
+> publication receipt`). Slice **2.4c is locally complete and verified** at
+> documented scopes. Previous docs commit: `9f59768` (`docs: record build
+> publication receipt`). Previous implementation: `29be31a` (slice **2.4b**).
+> The future docs commit that records Update-50 **cannot** be known inside its
+> own content; next session must obtain it from `git log -5 --oneline`. Actual
+> Git wins over embedded hashes/counts.
+>
+> **Implementation paths changed in `999c90f` only:**
+> - `tasks/ingest_task.py`
+> - `tests/test_ingest_task.py`
+> - `tests/test_ingestion_job_contract.py`
+> - `tests/test_ingestion_liveness.py`
+> - diff stat: 4 files changed, 187 insertions, 20 deletions
+>
+> **2.4c behavior (landed):**
+> - async worker now calls existing
+>   `build_vector_store_with_publication` exactly once;
+> - it consumes only that invocation's returned `publication`, with no later
+>   manifest reread or second build/lock;
+> - exact Chroma receipt is placed in existing durable `IngestionJob.result`
+>   under `index_publication` as a JSON dict with exactly `tenant_id`,
+>   `active_collection`, `previous_collection`, and `manifest_generation`;
+> - Qdrant/no-publication path persists `index_publication: null`, inventing
+>   no collection/generation;
+> - the same dict is passed through existing lease/CAS `sync_mark_completed`
+>   and returned by the Celery task;
+> - existing progress, load/index redaction/error boundaries, heartbeat/lease
+>   checks, terminal failure behavior, and DB schema remain unchanged;
+> - adjacent broad-test edits are only mechanical worker stub compatibility.
+>
+> **Boundary (unchanged / not in 2.4c):** full durable cross-path
+> job↔index lifecycle binding is still **not** complete. The non-default
+> synchronous upload path remains bool-only and unwired. **No** DB
+> migration/model field, sync path/API/UI, GC/retention for job/recovery
+> objects, orphan cleanup, live drills, full suite, push/deploy, or
+> production-readiness claim landed.
+>
+> **Completed scope (local, verified at documented scopes):** slices **2.1
+> through 2.4c**. Full evidence ledger for 2.4c lives in
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md). Preserve **2.1–2.4b**
+> as complete; do **not** reopen 2.1–2.4c.
+>
+> **Not complete / not claimed:** full plan step 2; full immutable lifecycle;
+> full durable cross-path job↔published index binding (async worker only;
+> sync non-default upload remains bool-only/unwired); GC/retention for job
+> objects or legacy recovery objects; orphan cleanup on failed transition;
+> live concurrency/fault-injection; full suite; live drills;
+> project/release/production readiness; push/deploy.
+>
+> **Active writer / WIP:** none. No unfinished next-candidate WIP. No active
+> Grok/delegated writer at this handoff.
+>
+> **Next candidate only (not started):** **2.4d sync non-default upload
+> receipt ownership/contract investigation**. Current read-only evidence:
+> non-default upload in `api/routers/upload.py` calls bool-returning
+> `_app._rebuild_vector_store_from_docs`; `api/app.py` owns that helper and
+> its ordinary `_build_vector_store` binding. These are shared/protected
+> surfaces, so the next session must confirm ownership/test impact
+> **read-only** before edits and choose the smallest test-first receipt
+> propagation contract. Do **not** prescribe an invented API, reopen
+> 2.4b/2.4c, or mark 2.4d started/complete. Details:
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+>
+> **Protected dirty / untracked state:** see handoff capsule; do not
+> touch/stage/remove without explicit request. Do **not** edit the active
+> untracked plan or its checkboxes.
+>
+> **External gates (not authorized):** push, deploy, live services, destructive
+> Git, production-readiness claims. Live PostgreSQL/Redis/Celery/Chroma drills
+> require explicit opt-in and must **not** be the default next slice.
+>
+> **Standing execution preference:** **Grok** implements/content-writes;
+> orchestrator protects files, verifies independently, commits scoped results.
+> One user turn = **one** named atomic slice. Do **not** re-select 2.1–2.4c.
+>
+> **Git advisory only:** branch observed as
+> `master...origin/master [ahead 84]` immediately after implementation —
+> refresh next session.
+
+## 2026-08-03 Update-49 — record completed slice 2.4b @ `29be31a` ✅ START HERE
+
+> **Historical handoff (superseded by Update-50 for start-point routing).**
+> Older `✅ START HERE` markers in this archive are **not** routing authority.
+> Refresh `git status` first. This Update-49 block previously superseded
+> Update-48 as the start point. That turn was **docs-only** and supersedes
+> Update-48 **only for start-point routing** at that time. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`,
+> remain **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
 >
 > **No new implementation in this docs turn.** Code, tests, plans, backlog,
 > README, audit, settings, and API paths were **not** edited here. Project
