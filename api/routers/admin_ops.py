@@ -261,3 +261,130 @@ async def admin_purge_audit(
     )
 
     return JSONResponse(status_code=200, content={"deleted": deleted})
+
+
+async def _audit_index_retention_preview(
+    *,
+    request: Request,
+    user: dict[str, Any],
+    tenant_id: str,
+    detail: dict[str, Any],
+) -> None:
+    await _log_audit(
+        actor=user.get("sub", "anonymous"),
+        action="index_retention_preview",
+        resource="index/retention-preview",
+        tenant_id=tenant_id,
+        detail=detail,
+        ip_address=request.client.host if request.client else None,
+    )
+
+
+@router.get("/admin/index/retention-preview")
+async def admin_index_retention_preview(
+    request: Request,
+    max_versions: int | None = None,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    """Read-only bounded retention preview for the authenticated tenant."""
+    from vectordb.index_manifest import IndexManifestCorrupt  # noqa: PLC0415
+    from vectordb.index_operator import preview_index_retention  # noqa: PLC0415
+    from vectordb.index_retention import (  # noqa: PLC0415
+        IndexRetentionCorrupt,
+        IndexRetentionValidationError,
+    )
+    from vectordb.tenant_lock import TenantIndexLockError  # noqa: PLC0415
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    settings = _app_module().get_settings()
+    resolved_max_versions = (
+        settings.vectordb_retention_max_versions
+        if max_versions is None
+        else max_versions
+    )
+    chroma_directory = settings.vectordb_chroma_dir
+
+    try:
+        preview = await asyncio.to_thread(
+            preview_index_retention,
+            tenant,
+            max_versions=resolved_max_versions,
+            chroma_directory=chroma_directory,
+        )
+    except IndexRetentionValidationError as exc:
+        await _audit_index_retention_preview(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "rejected",
+                "max_versions": resolved_max_versions,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="invalid retention preview budget",
+        ) from None
+    except (IndexRetentionCorrupt, IndexManifestCorrupt) as exc:
+        await _audit_index_retention_preview(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "metadata_corrupt",
+                "max_versions": resolved_max_versions,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="index retention metadata is corrupt",
+        ) from None
+    except TenantIndexLockError as exc:
+        await _audit_index_retention_preview(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "lock_unavailable",
+                "max_versions": resolved_max_versions,
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="index retention preview is temporarily unavailable",
+        ) from None
+
+    await _audit_index_retention_preview(
+        request=request,
+        user=_user,
+        tenant_id=tenant,
+        detail={
+            "tenant": tenant,
+            "outcome": "success",
+            "max_versions": preview.max_versions,
+            "manifest_generation": preview.manifest_generation,
+            "active_collection": preview.active_collection,
+            "previous_collection": preview.previous_collection,
+            "inventory_count": len(preview.inventory_collections),
+            "deletion_candidates": list(preview.deletion_candidates),
+        },
+    )
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "tenant_id": preview.tenant_id,
+            "max_versions": preview.max_versions,
+            "manifest_generation": preview.manifest_generation,
+            "active_collection": preview.active_collection,
+            "previous_collection": preview.previous_collection,
+            "inventory_collections": list(preview.inventory_collections),
+            "deletion_candidates": list(preview.deletion_candidates),
+        },
+    )
