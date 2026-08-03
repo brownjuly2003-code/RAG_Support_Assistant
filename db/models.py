@@ -17,6 +17,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -329,6 +330,15 @@ class IngestionJob(Base):
             "status",
             "lease_expires_at",
         ),
+        # Tenant-scoped upload idempotency; NULL keys stay non-unique.
+        Index(
+            "uq_ingestion_jobs_tenant_idempotency_key_hash",
+            "tenant_id",
+            "idempotency_key_hash",
+            unique=True,
+            postgresql_where=text("idempotency_key_hash IS NOT NULL"),
+            sqlite_where=text("idempotency_key_hash IS NOT NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -350,6 +360,13 @@ class IngestionJob(Base):
         nullable=True,
     )
     lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    # Upload idempotency internals — never public/log/audit.
+    idempotency_key_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    payload_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source_ready_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )

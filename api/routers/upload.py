@@ -14,10 +14,14 @@ from api._shared import app_module as _app_module
 from api.correlation import get_current_tenant
 from api.rate_limit import limiter
 from auth.dependencies import require_role
+from ingestion.jobs import CreateJobOutcome
 from monitoring import prometheus as prometheus_metrics
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Optional HTTP Idempotency-Key (never reuse X-Request-Id).
+_IDEMPOTENCY_KEY_RE = _re.compile(r"^[A-Za-z0-9._:~-]{16,128}$")
 
 
 class UploadResponse(BaseModel):
@@ -28,6 +32,7 @@ class UploadResponse(BaseModel):
     tenant_id: str
     task_id: str | None = None
     assigned_categories: list[str] = Field(default_factory=list)
+    idempotency_replayed: bool = False
 
 
 class JobStatusResponse(BaseModel):
@@ -47,20 +52,110 @@ class JobStatusResponse(BaseModel):
 TaskStatusResponse = JobStatusResponse
 
 
-async def _create_job_or_fail(
+def _parse_idempotency_key(request: Request) -> str | None:
+    """Read optional Idempotency-Key; validate present keys; never log raw value."""
+    raw = request.headers.get("Idempotency-Key")
+    if raw is None:
+        return None
+    # Reject whitespace-padded values as invalid (do not silently strip).
+    if not _IDEMPOTENCY_KEY_RE.fullmatch(raw):
+        raise HTTPException(status_code=400, detail="Invalid Idempotency-Key")
+    return raw
+
+
+def _publish_retry_policy(settings: object) -> dict[str, float | int]:
+    max_retries = int(getattr(settings, "ingestion_publish_max_retries", 2))
+    delay = float(getattr(settings, "ingestion_publish_retry_delay_sec", 0.2))
+    return {
+        "max_retries": max_retries,
+        "interval_start": delay,
+        "interval_step": 0,
+        "interval_max": delay,
+    }
+
+
+def _upload_response_from_job(
+    job: object,
+    *,
+    filename: str,
+    tenant_id: str,
+    replayed: bool,
+    assigned_categories: list[str] | None = None,
+) -> UploadResponse:
+    """Map durable job state to public upload response (generic messages)."""
+    status = getattr(job, "status", "queued")
+    task_id = getattr(job, "celery_task_id", None)
+    job_id_str = str(job.id)  # type: ignore[attr-defined]
+    categories = list(assigned_categories or [])
+
+    if status in ("queued", "running"):
+        message = "File uploaded. Processing in background."
+        if task_id:
+            message = f"File uploaded. Processing in background. task_id={task_id}"
+        return UploadResponse(
+            status="accepted",
+            filename=filename,
+            message=message,
+            job_id=job_id_str,
+            tenant_id=tenant_id,
+            task_id=task_id,
+            assigned_categories=categories,
+            idempotency_replayed=replayed,
+        )
+    if status == "completed":
+        return UploadResponse(
+            status="ok",
+            filename=filename,
+            message="File uploaded and indexed.",
+            job_id=job_id_str,
+            tenant_id=tenant_id,
+            task_id=task_id,
+            assigned_categories=categories,
+            idempotency_replayed=replayed,
+        )
+    # failed (and any unexpected terminal)
+    return UploadResponse(
+        status="partial",
+        filename=filename,
+        message="File saved but processing failed.",
+        job_id=job_id_str,
+        tenant_id=tenant_id,
+        task_id=task_id,
+        assigned_categories=categories,
+        idempotency_replayed=replayed,
+    )
+
+
+async def _create_or_reuse_job_or_fail(
     *,
     tenant_id: str,
     filename: str,
     source_path: str,
-) -> uuid.UUID:
-    from ingestion.jobs import create_ingestion_job
+    job_id: uuid.UUID | None,
+    celery_task_id: str | None,
+    idempotency_key_hash: str | None,
+    payload_fingerprint: str | None,
+) -> CreateJobOutcome:
+    from ingestion.jobs import (
+        IdempotencyConflictError,
+        create_or_reuse_ingestion_job,
+    )
 
     try:
-        job = await create_ingestion_job(
+        return await create_or_reuse_ingestion_job(
             tenant_id=tenant_id,
             filename=filename,
             source_path=source_path,
+            job_id=job_id,
+            celery_task_id=celery_task_id,
+            idempotency_key_hash=idempotency_key_hash,
+            payload_fingerprint=payload_fingerprint,
         )
+    except IdempotencyConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="Idempotency-Key conflict",
+        ) from exc
     except Exception as exc:
         # Boundary log: type only — raw message may contain credentials/PII.
         logger.error(
@@ -71,7 +166,6 @@ async def _create_job_or_fail(
             status_code=500,
             detail="Failed to create ingestion job",
         ) from exc
-    return job.id
 
 
 def _durable_transition_http_error(job_id: uuid.UUID, phase: str) -> HTTPException:
@@ -140,6 +234,54 @@ async def _mark_completed(
         raise _durable_transition_http_error(job_id, "completed")
 
 
+async def _mark_source_ready_or_fail(job_id: uuid.UUID, tenant_id: str) -> None:
+    from ingestion.jobs import mark_source_ready
+
+    try:
+        job = await mark_source_ready(job_id, tenant_id)
+    except Exception as exc:
+        logger.error(
+            "Failed to mark job %s source_ready error_type=%s",
+            job_id,
+            type(exc).__name__,
+        )
+        raise _durable_transition_http_error(job_id, "source_ready") from exc
+    if job is None:
+        raise _durable_transition_http_error(job_id, "source_ready")
+
+
+def _publish_async_ingest(
+    *,
+    file_path: Path,
+    job_id: uuid.UUID,
+    tenant_id: str,
+    settings: object,
+) -> None:
+    """Bounded broker publish only. Raises on failure after policy retries."""
+    from tasks.ingest_task import ingest_document
+
+    reserved = f"ingest-{job_id}"
+    ingest_document.apply_async(
+        args=[str(file_path), str(job_id), tenant_id],
+        task_id=reserved,
+        retry=True,
+        retry_policy=_publish_retry_policy(settings),
+    )
+
+
+def _publish_unavailable(job_id: uuid.UUID, exc: BaseException) -> HTTPException:
+    logger.error(
+        "Ingestion broker publish failed job_id=%s phase=publish error_type=%s",
+        job_id,
+        type(exc).__name__,
+    )
+    return HTTPException(
+        status_code=503,
+        detail="Ingestion queue temporarily unavailable",
+        headers={"X-Ingestion-Job-Id": str(job_id)},
+    )
+
+
 @router.post("/upload", response_model=UploadResponse)
 @limiter.limit("10/minute")
 async def upload_document(
@@ -160,6 +302,9 @@ async def upload_document(
             detail=f"Unsupported file type: {ext}. Allowed: {', '.join(sorted(allowed))}",
         )
 
+    # Optional idempotency key — validated before any row/file mutation.
+    raw_idem_key = _parse_idempotency_key(request)
+
     tenant = _user.get("tenant") or get_current_tenant() or "default"
     safe_name = Path(file.filename.replace("\\", "/")).name
     safe_name = _re.sub(r"[^\w\-.]", "_", safe_name)
@@ -173,11 +318,12 @@ async def upload_document(
         upload_dir = upload_root / _re.sub(r"[^A-Za-z0-9_\-]", "_", tenant)
     upload_dir.mkdir(parents=True, exist_ok=True)
 
+    # Keep tenant corpus directory + canonical safe_name (no per-job subdirs).
     file_path = upload_dir / safe_name
     settings = _app.get_settings()
     upload_limit = getattr(settings, "max_upload_bytes", 50 * 1024 * 1024)
-    docs = None
-    assigned_categories: list[str] = []
+
+    # 1) Buffer/validate body and compute fingerprint before DB/file write.
     try:
         content = bytearray()
         while True:
@@ -194,22 +340,90 @@ async def upload_document(
                     status_code=413,
                     detail=f"Upload exceeds limit of {upload_limit} bytes",
                 )
-        await asyncio.to_thread(file_path.write_bytes, bytes(content))
+        content_bytes = bytes(content)
     except HTTPException:
         raise
     except Exception as exc:
-        # Generic detail only — OSError often embeds absolute host paths.
-        raise HTTPException(status_code=500, detail="Failed to save file") from exc
+        raise HTTPException(status_code=500, detail="Failed to read upload") from exc
 
-    from ingestion.jobs import project_relative_source_path
+    from ingestion.jobs import (
+        compute_payload_fingerprint,
+        hash_idempotency_key,
+        project_relative_source_path,
+        reserved_celery_task_id,
+    )
 
     source_path = project_relative_source_path(Path(_app.PROJECT_ROOT), file_path)
-    job_id = await _create_job_or_fail(
+    fingerprint = compute_payload_fingerprint(safe_name, content_bytes)
+    key_hash = hash_idempotency_key(raw_idem_key) if raw_idem_key is not None else None
+
+    # 2) Allocate durable identity; reserve Celery id for default async path.
+    job_id = uuid.uuid4()
+    celery_task_id = reserved_celery_task_id(job_id) if tenant == "default" else None
+
+    outcome = await _create_or_reuse_job_or_fail(
         tenant_id=tenant,
         filename=safe_name,
         source_path=source_path,
+        job_id=job_id,
+        celery_task_id=celery_task_id,
+        idempotency_key_hash=key_hash,
+        payload_fingerprint=fingerprint if key_hash is not None else None,
     )
+    job = outcome.job
+    job_id = job.id
     job_id_str = str(job_id)
+    replayed = not outcome.created
+
+    # Replay path: never write file; may republish only when source-ready+queued.
+    if replayed:
+        await _app.log_audit(
+            actor=_user.get("sub", "anonymous"),
+            action="upload",
+            resource=f"document:{safe_name}",
+            tenant_id=tenant,
+            detail={"tenant": tenant, "job_id": job_id_str, "idempotency_replayed": True},
+            ip_address=request.client.host if request.client else None,
+        )
+        if (
+            tenant == "default"
+            and job.status == "queued"
+            and job.source_ready_at is not None
+            and job.celery_task_id
+        ):
+            try:
+                # Offload sync Celery client I/O so bounded broker retries
+                # never block the FastAPI event loop (health/ask stay live).
+                await asyncio.to_thread(
+                    _publish_async_ingest,
+                    file_path=file_path,
+                    job_id=job_id,
+                    tenant_id=tenant,
+                    settings=settings,
+                )
+            except Exception as exc:
+                raise _publish_unavailable(job_id, exc) from exc
+        # running/completed/failed or not-yet-source-ready: never publish.
+        return _upload_response_from_job(
+            job,
+            filename=safe_name,
+            tenant_id=tenant,
+            replayed=True,
+            assigned_categories=[],
+        )
+
+    # 3) Only the creator writes the canonical corpus file.
+    try:
+        await asyncio.to_thread(file_path.write_bytes, content_bytes)
+    except Exception as exc:
+        # Durable terminal fail; do not publish.
+        try:
+            await _mark_failed(job_id, tenant, "Failed to save file")
+        except HTTPException:
+            raise
+        raise HTTPException(status_code=500, detail="Failed to save file") from exc
+
+    await _mark_source_ready_or_fail(job_id, tenant)
 
     await _app.log_audit(
         actor=_user.get("sub", "anonymous"),
@@ -220,6 +434,8 @@ async def upload_document(
         ip_address=request.client.host if request.client else None,
     )
 
+    docs = None
+    assigned_categories: list[str] = []
     if _app._DocumentLoader is not None:
         try:
             from ingestion.categorizer import annotate_documents_with_categories
@@ -241,50 +457,38 @@ async def upload_document(
                 type(exc).__name__,
             )
 
+    # Default tenant: async Celery publish with reserved task id (no sync fallback).
     if tenant == "default":
         try:
-            from ingestion.jobs import set_celery_task_id
-            from tasks.ingest_task import ingest_document
-
-            task = ingest_document.delay(str(file_path), job_id_str, tenant)
-        except Exception as exc:
-            logger.info("Celery async upload unavailable, falling back to sync: %s", type(exc).__name__)
-        else:
-            # Fail closed: never return accepted with a task alias the DB cannot resolve.
-            try:
-                linked = await set_celery_task_id(job_id, tenant, task.id)
-            except Exception as exc:
-                logger.error(
-                    "Failed to store celery_task_id for job %s error_type=%s",
-                    job_id,
-                    type(exc).__name__,
-                )
-                raise HTTPException(
-                    status_code=500,
-                    detail="Failed to record background task identity",
-                ) from exc
-            if linked is None:
-                logger.error(
-                    "Failed to store celery_task_id for job %s: row missing",
-                    job_id,
-                )
-                raise HTTPException(
-                    status_code=500,
-                    detail="Failed to record background task identity",
-                )
-            if getattr(settings, "llm_cache_enabled", False):
-                deleted = _app.cache_delete_pattern(f"llm_resp:{tenant}:*")
-                logger.info("Invalidated %d cached LLM responses for tenant %s", deleted, tenant)
-            return UploadResponse(
-                status="accepted",
-                filename=safe_name,
-                message=f"File uploaded. Processing in background. task_id={task.id}",
-                job_id=job_id_str,
+            # Offload sync Celery client I/O so bounded broker retries
+            # never block the FastAPI event loop (health/ask stay live).
+            await asyncio.to_thread(
+                _publish_async_ingest,
+                file_path=file_path,
+                job_id=job_id,
                 tenant_id=tenant,
-                task_id=task.id,
-                assigned_categories=assigned_categories,
+                settings=settings,
             )
+        except Exception as exc:
+            # Leave source-ready queued row with reserved task id; return 503.
+            raise _publish_unavailable(job_id, exc) from exc
 
+        if getattr(settings, "llm_cache_enabled", False):
+            deleted = _app.cache_delete_pattern(f"llm_resp:{tenant}:*")
+            logger.info("Invalidated %d cached LLM responses for tenant %s", deleted, tenant)
+        task_id = job.celery_task_id or reserved_celery_task_id(job_id)
+        return UploadResponse(
+            status="accepted",
+            filename=safe_name,
+            message=f"File uploaded. Processing in background. task_id={task_id}",
+            job_id=job_id_str,
+            tenant_id=tenant,
+            task_id=task_id,
+            assigned_categories=assigned_categories,
+            idempotency_replayed=False,
+        )
+
+    # Non-default tenants: synchronous indexing (celery_task_id remains null).
     if _app._DocumentLoader is not None and _app._build_vector_store is not None:
         await _mark_running(job_id, tenant)
         try:
@@ -315,6 +519,7 @@ async def upload_document(
                         job_id=job_id_str,
                         tenant_id=tenant,
                         assigned_categories=assigned_categories,
+                        idempotency_replayed=False,
                     )
                 await _mark_failed(job_id, tenant, "File saved but indexing failed")
                 return UploadResponse(
@@ -324,6 +529,7 @@ async def upload_document(
                     job_id=job_id_str,
                     tenant_id=tenant,
                     assigned_categories=assigned_categories,
+                    idempotency_replayed=False,
                 )
             await _mark_failed(job_id, tenant, "No text content could be extracted")
             return UploadResponse(
@@ -333,6 +539,7 @@ async def upload_document(
                 job_id=job_id_str,
                 tenant_id=tenant,
                 assigned_categories=assigned_categories,
+                idempotency_replayed=False,
             )
         except HTTPException:
             raise
@@ -351,6 +558,7 @@ async def upload_document(
                 job_id=job_id_str,
                 tenant_id=tenant,
                 assigned_categories=assigned_categories,
+                idempotency_replayed=False,
             )
 
     await _mark_failed(
@@ -365,6 +573,7 @@ async def upload_document(
         job_id=job_id_str,
         tenant_id=tenant,
         assigned_categories=assigned_categories,
+        idempotency_replayed=False,
     )
 
 

@@ -240,12 +240,15 @@ def test_default_tenant_upload_creates_queued_job_and_enqueues_identity(
 
     captured: dict[str, Any] = {}
 
-    def _delay(file_path: str, job_id: str, tenant_id: str):
-        captured["args"] = (file_path, job_id, tenant_id)
-        return SimpleNamespace(id="celery-task-abc")
+    def _apply_async(*args: Any, **kwargs: Any):
+        captured["args"] = kwargs.get("args")
+        captured["task_id"] = kwargs.get("task_id")
+        captured["retry"] = kwargs.get("retry")
+        captured["retry_policy"] = kwargs.get("retry_policy")
+        return SimpleNamespace(id=kwargs["task_id"])
 
     fake_module = types.ModuleType("tasks.ingest_task")
-    fake_module.ingest_document = SimpleNamespace(delay=_delay)
+    fake_module.ingest_document = SimpleNamespace(apply_async=_apply_async)
     monkeypatch.setitem(sys.modules, "tasks.ingest_task", fake_module)
 
     async def _fake_log_audit(**kwargs) -> None:
@@ -268,13 +271,17 @@ def test_default_tenant_upload_creates_queued_job_and_enqueues_identity(
     assert body["tenant_id"] == "default"
     job_id = body["job_id"]
     uuid.UUID(job_id)
-    assert body.get("task_id") == "celery-task-abc"
-    assert "task_id=celery-task-abc" in body["message"] or body.get("task_id") == "celery-task-abc"
+    expected_task = f"ingest-{job_id}"
+    assert body.get("task_id") == expected_task
+    assert expected_task in body["message"] or body.get("task_id") == expected_task
 
     file_path, enqueued_job_id, enqueued_tenant = captured["args"]
     assert enqueued_job_id == job_id
     assert enqueued_tenant == "default"
     assert Path(file_path).name == "manual.txt"
+    assert captured["task_id"] == expected_task
+    assert captured["retry"] is True
+    assert captured["retry_policy"] is not None
     # Absolute host path is fine for the worker payload; public response must not expose it.
     assert ":" not in body["job_id"]
     assert body.get("source_path") is None
@@ -286,7 +293,7 @@ def test_default_tenant_upload_creates_queued_job_and_enqueues_identity(
     assert job.tenant_id == "default"
     assert job.status == "queued"
     assert job.filename == "manual.txt"
-    assert job.celery_task_id == "celery-task-abc"
+    assert job.celery_task_id == expected_task
     assert not Path(job.source_path).is_absolute()
     assert "manual.txt" in job.source_path
 
@@ -590,14 +597,14 @@ def test_tasks_route_resolves_secondary_celery_task_id(
 ) -> None:
     import api.app as api_app
 
-    def _delay(file_path: str, job_id: str, tenant_id: str):
-        return SimpleNamespace(id="secondary-celery-id")
+    def _apply_async(*args: Any, **kwargs: Any):
+        return SimpleNamespace(id=kwargs["task_id"])
 
     async def _fake_log_audit(**kwargs) -> None:
         return None
 
     fake_module = types.ModuleType("tasks.ingest_task")
-    fake_module.ingest_document = SimpleNamespace(delay=_delay)
+    fake_module.ingest_document = SimpleNamespace(apply_async=_apply_async)
     monkeypatch.setitem(sys.modules, "tasks.ingest_task", fake_module)
     monkeypatch.setattr(api_app, "log_audit", _fake_log_audit)
     monkeypatch.setattr(api_app, "_DocumentLoader", None)
@@ -610,14 +617,16 @@ def test_tasks_route_resolves_secondary_celery_task_id(
     )
     assert upload.status_code == 200
     job_id = upload.json()["job_id"]
+    reserved = f"ingest-{job_id}"
+    assert upload.json()["task_id"] == reserved
 
     by_task = client_with_key.get(
-        "/api/tasks/secondary-celery-id",
+        f"/api/tasks/{reserved}",
         headers={"X-API-Key": "secret123"},
     )
     assert by_task.status_code == 200
     assert by_task.json()["job_id"] == job_id
-    assert by_task.json()["task_id"] == "secondary-celery-id"
+    assert by_task.json()["task_id"] == reserved
     assert by_task.json()["status"] == "queued"
 
 
@@ -1018,29 +1027,32 @@ def test_mark_failed_failure_never_returns_partial_terminal(
     assert "failed transition lost" not in detail.lower()
 
 
-def test_set_celery_task_id_failure_returns_5xx_not_accepted(
+def test_publish_failure_returns_503_not_accepted_with_reserved_identity(
     monkeypatch: pytest.MonkeyPatch,
     client_with_key: TestClient,
     ingestion_jobs_db,
 ) -> None:
+    """Broker publish failure: 503 + job header; row stays queued with reserved id.
+
+    Replaces the pre-4.4 set_celery_task_id post-publish failure contract:
+    task id is reserved at INSERT, so orphan Celery messages are not the risk.
+    """
+    import asyncio
+
     import api.app as api_app
 
-    def _delay(file_path: str, job_id: str, tenant_id: str):
-        return SimpleNamespace(id="orphan-celery-task")
+    def _apply_async(*args: Any, **kwargs: Any):
+        raise RuntimeError("broker unavailable for publish")
 
     async def _fake_log_audit(**kwargs) -> None:
         return None
 
-    async def _boom_set_task(job_id, tenant_id, celery_task_id: str):
-        raise RuntimeError("cannot store celery_task_id")
-
     fake_module = types.ModuleType("tasks.ingest_task")
-    fake_module.ingest_document = SimpleNamespace(delay=_delay)
+    fake_module.ingest_document = SimpleNamespace(apply_async=_apply_async)
     monkeypatch.setitem(sys.modules, "tasks.ingest_task", fake_module)
     monkeypatch.setattr(api_app, "log_audit", _fake_log_audit)
     monkeypatch.setattr(api_app, "_DocumentLoader", None)
     monkeypatch.setattr(api_app, "_build_vector_store", None)
-    monkeypatch.setattr("ingestion.jobs.set_celery_task_id", _boom_set_task)
 
     resp = client_with_key.post(
         "/api/upload",
@@ -1048,38 +1060,57 @@ def test_set_celery_task_id_failure_returns_5xx_not_accepted(
         headers={"X-API-Key": "secret123"},
     )
 
-    assert resp.status_code >= 500
+    assert resp.status_code == 503
+    job_id = resp.headers.get("X-Ingestion-Job-Id")
+    assert job_id
     body = resp.json()
     if isinstance(body, dict) and "status" in body:
         assert body["status"] != "accepted"
     detail = str(body.get("detail", body))
-    assert "cannot store celery_task_id" not in detail.lower()
-    assert "orphan-celery-task" not in detail
+    assert "broker unavailable" not in detail.lower()
+
+    job = asyncio.run(_fetch_job(ingestion_jobs_db["async_session"], job_id))
+    assert job is not None
+    assert job.status == "queued"
+    assert job.celery_task_id == f"ingest-{job_id}"
+    assert job.source_ready_at is not None
 
 
-def test_set_celery_task_id_none_returns_5xx_not_accepted(
+def test_publish_failure_leaves_source_ready_queued_not_sync_fallback(
     monkeypatch: pytest.MonkeyPatch,
     client_with_key: TestClient,
     ingestion_jobs_db,
 ) -> None:
+    """No synchronous fallback on publish failure (avoids double-mutation races)."""
+    import asyncio
+
     import api.app as api_app
 
-    def _delay(file_path: str, job_id: str, tenant_id: str):
-        return SimpleNamespace(id="unlinked-celery-task")
+    rebuild_calls: list[Any] = []
+
+    def _apply_async(*args: Any, **kwargs: Any):
+        raise ConnectionError("redis down")
 
     async def _fake_log_audit(**kwargs) -> None:
         return None
 
-    async def _none_set_task(job_id, tenant_id, celery_task_id: str):
-        return None
+    class FakeLoader:
+        def __init__(self, recursive: bool = False) -> None:
+            pass
+
+        def load_documents(self, path: str):
+            return [SimpleNamespace(page_content="x", metadata={"source": "async2.txt"})]
 
     fake_module = types.ModuleType("tasks.ingest_task")
-    fake_module.ingest_document = SimpleNamespace(delay=_delay)
+    fake_module.ingest_document = SimpleNamespace(apply_async=_apply_async)
     monkeypatch.setitem(sys.modules, "tasks.ingest_task", fake_module)
     monkeypatch.setattr(api_app, "log_audit", _fake_log_audit)
-    monkeypatch.setattr(api_app, "_DocumentLoader", None)
-    monkeypatch.setattr(api_app, "_build_vector_store", None)
-    monkeypatch.setattr("ingestion.jobs.set_celery_task_id", _none_set_task)
+    monkeypatch.setattr(api_app, "_DocumentLoader", FakeLoader)
+    monkeypatch.setattr(
+        api_app,
+        "_rebuild_vector_store_from_docs",
+        lambda *a, **k: rebuild_calls.append((a, k)) or True,
+    )
 
     resp = client_with_key.post(
         "/api/upload",
@@ -1087,10 +1118,13 @@ def test_set_celery_task_id_none_returns_5xx_not_accepted(
         headers={"X-API-Key": "secret123"},
     )
 
-    assert resp.status_code >= 500
-    body = resp.json()
-    if isinstance(body, dict) and "status" in body:
-        assert body["status"] != "accepted"
+    assert resp.status_code == 503
+    assert rebuild_calls == []
+    job_id = resp.headers["X-Ingestion-Job-Id"]
+    job = asyncio.run(_fetch_job(ingestion_jobs_db["async_session"], job_id))
+    assert job is not None
+    assert job.status == "queued"
+    assert job.celery_task_id == f"ingest-{job_id}"
 
 
 def test_safe_error_message_redacts_secrets_and_pii() -> None:
@@ -1229,7 +1263,8 @@ def test_create_job_boundary_logs_omit_secret_exception_message(
     monkeypatch.setattr(api_app, "log_audit", _fake_log_audit)
     monkeypatch.setattr(api_app, "_DocumentLoader", None)
     monkeypatch.setattr(api_app, "_build_vector_store", None)
-    monkeypatch.setattr("ingestion.jobs.create_ingestion_job", _boom_create)
+    # Upload path uses create_or_reuse_ingestion_job (create_ingestion_job wraps it).
+    monkeypatch.setattr("ingestion.jobs.create_or_reuse_ingestion_job", _boom_create)
 
     with caplog.at_level(logging.ERROR, logger="api.routers.upload"):
         resp = client_with_key.post(

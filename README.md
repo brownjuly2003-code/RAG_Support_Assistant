@@ -236,7 +236,7 @@ Open:
 |---|---|---|---|
 | POST | `/api/ask` | user | Ask a question synchronously; returns answer, documents, and citations |
 | POST | `/api/ask/stream` | user | Ask a question over SSE streaming |
-| POST | `/api/upload` | agent/admin | Upload a document for indexing; returns assigned categories |
+| POST | `/api/upload` | agent/admin | Upload a document for indexing; returns assigned categories. Optional `Idempotency-Key` (16–128 chars): one key per logical upload; reuse only for network/503 retry. Same key + different payload → **409**. Broker publish failure → **503** with browser-readable `X-Ingestion-Job-Id` |
 | GET | `/api/tasks/{task_id}` | agent/admin | Check background upload task state |
 | POST | `/api/feedback` | user | Submit thumbs up/down feedback |
 | POST | `/api/escalate` | user | Escalate the current request to a human operator |

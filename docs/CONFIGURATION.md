@@ -67,6 +67,8 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `INGESTION_JOB_QUEUED_STALE_SEC` | `900` | Async jobs (`celery_task_id` set) still `queued` longer than this are marked failed by the FastAPI reaper. Synchronous uploads (no Celery id) are never reaped |
 | `INGESTION_JOB_LEGACY_RUNNING_STALE_SEC` | `1800` | Conservative age for async `running` rows that have no lease (pre-lease workers), based on `started_at`/`created_at` |
 | `INGESTION_JOB_REAPER_INTERVAL_SEC` | `60` | Interval for the in-process stale-job reaper (independent of the Celery worker so worker outage still becomes a terminal result). Initial sweep runs promptly at startup |
+| `INGESTION_PUBLISH_MAX_RETRIES` | `2` | Bounded Celery **broker publish** retries for async `/api/upload` (`apply_async(..., retry=True, retry_policy=...)`). Integer `>= 0`. Does **not** enable worker/task `autoretry_for` after load/index begins; post-mutation automatic retry remains unsafe while `vectordb` is delete-then-build (ING-02) |
+| `INGESTION_PUBLISH_RETRY_DELAY_SEC` | `0.2` | Delay (seconds) between bounded broker publish attempts. Finite float `>= 0`. On publish failure after these attempts the durable job stays `queued` with its reserved task id and the API returns HTTP 503 + `X-Ingestion-Job-Id` (no sync fallback) |
 | `RAG_AGENTIC_MODE` | `false` | Enable the tool-calling agent graph |
 | `RAG_HYDE` | `false` | Enable Hypothetical Document Embeddings |
 | `RAG_PARENT_CHILD` | `false` | Enable parent-child chunking |

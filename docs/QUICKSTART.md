@@ -174,14 +174,19 @@ through the optional GraceKelly orchestrator.
 
 ```bash
 # Document for ingestion (PDF, MD, TXT)
+# Optional Idempotency-Key (16–128 chars, [A-Za-z0-9._:~-]): one key per logical
+# upload. Reuse the same key only to retry a network/503 failure — same key with
+# different file bytes returns 409. On 503, read X-Ingestion-Job-Id and retry.
 # PowerShell (Windows) — note: curl.exe, not curl (which is the Invoke-WebRequest alias)
 curl.exe -X POST http://localhost:8000/api/upload `
     -H "Authorization: Bearer <admin-jwt>" `
+    -H "Idempotency-Key: upload-warranty-md-001" `
     -F "file=@docs/warranty.md"
 
 # Bash (Linux/macOS)
 curl -X POST http://localhost:8000/api/upload \
     -H "Authorization: Bearer <admin-jwt>" \
+    -H "Idempotency-Key: upload-warranty-md-001" \
     -F "file=@docs/warranty.md"
 
 # First query

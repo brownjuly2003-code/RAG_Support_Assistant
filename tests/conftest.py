@@ -141,6 +141,22 @@ def _build_test_client(
 
     monkeypatch.setattr(api_app, "get_settings", lambda: settings)
     monkeypatch.setattr(api_app, "initialize_vector_store", lambda: None)
+    monkeypatch.setattr(api_app, "_run_alembic_upgrade", lambda: None)
+
+    # Request-path client tests use isolated fixtures; migration and reaper
+    # behavior have dedicated contract tests and must not touch the shared DB
+    # on every TestClient startup/shutdown.
+    from ingestion import liveness as ingestion_liveness
+
+    monkeypatch.setattr(
+        ingestion_liveness,
+        "reap_stale_jobs",
+        lambda: {
+            "queued_stale": 0,
+            "lease_expired": 0,
+            "legacy_running": 0,
+        },
+    )
 
     for attr_name, value in patches.items():
         monkeypatch.setattr(api_app, attr_name, value)

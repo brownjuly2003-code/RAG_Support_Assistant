@@ -26,14 +26,18 @@ def test_async_upload_flow_reports_progress_and_completion(
     initialize_vector_store = MagicMock()
     enqueued: dict[str, str] = {}
 
-    def _delay(file_path: str, job_id: str, tenant_id: str):
-        enqueued["file_path"] = file_path
-        enqueued["job_id"] = job_id
-        enqueued["tenant_id"] = tenant_id
-        return SimpleNamespace(id="task-123")
+    def _apply_async(*args, **kwargs):
+        publish_args = kwargs.get("args") or ()
+        enqueued["file_path"] = publish_args[0]
+        enqueued["job_id"] = publish_args[1]
+        enqueued["tenant_id"] = publish_args[2]
+        enqueued["task_id"] = kwargs.get("task_id")
+        return SimpleNamespace(id=kwargs["task_id"])
 
     fake_ingest_task_module = types.ModuleType("tasks.ingest_task")
-    fake_ingest_task_module.ingest_document = types.SimpleNamespace(delay=_delay)
+    fake_ingest_task_module.ingest_document = types.SimpleNamespace(
+        apply_async=_apply_async
+    )
 
     # Celery AsyncResult must not be required for status polling.
     fake_celery_app = types.SimpleNamespace(
@@ -64,23 +68,25 @@ def test_async_upload_flow_reports_progress_and_completion(
     assert body["tenant_id"] == "default"
     job_id = body["job_id"]
     uuid.UUID(job_id)
-    assert body.get("task_id") == "task-123"
+    reserved = f"ingest-{job_id}"
+    assert body.get("task_id") == reserved
     assert enqueued["job_id"] == job_id
     assert enqueued["tenant_id"] == "default"
+    assert enqueued["task_id"] == reserved
 
     by_job = integration_client.get(
         f"/api/jobs/{job_id}",
         headers=integration_headers("default", "admin"),
     )
     by_task = integration_client.get(
-        "/api/tasks/task-123",
+        f"/api/tasks/{reserved}",
         headers=integration_headers("default", "admin"),
     )
 
     assert by_job.status_code == 200
     assert by_job.json()["job_id"] == job_id
     assert by_job.json()["status"] == "queued"
-    assert by_job.json()["task_id"] == "task-123"
+    assert by_job.json()["task_id"] == reserved
 
     assert by_task.status_code == 200
     assert by_task.json()["job_id"] == job_id

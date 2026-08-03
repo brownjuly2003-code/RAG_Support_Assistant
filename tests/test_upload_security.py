@@ -1,8 +1,11 @@
 import io
 import subprocess
 import sys
+import types
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,6 +20,17 @@ CLIENT_WITH_KEY_PATCHES = {
     "_DocumentLoader": None,
     "_build_vector_store": None,
 }
+
+
+def _stub_async_publish(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Default-tenant upload publishes via apply_async; stub broker for unit tests."""
+
+    def _apply_async(*args: Any, **kwargs: Any) -> SimpleNamespace:
+        return SimpleNamespace(id=kwargs.get("task_id") or "stub-task")
+
+    fake_module = types.ModuleType("tasks.ingest_task")
+    fake_module.ingest_document = SimpleNamespace(apply_async=_apply_async)
+    monkeypatch.setitem(sys.modules, "tasks.ingest_task", fake_module)
 
 
 def test_upload_routes_are_owned_by_upload_router(client_with_key: TestClient) -> None:
@@ -66,7 +80,9 @@ def test_upload_sanitizes_path_traversal_and_stays_in_upload_dir(
     malicious_name: str,
     expected_name: str,
     ingestion_jobs_db,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _stub_async_publish(monkeypatch)
     files = {"file": (malicious_name, io.BytesIO(b"test"), "text/plain")}
 
     resp = client_with_key.post(
@@ -101,7 +117,9 @@ def test_upload_rejects_dotfile_names(client_with_key: TestClient) -> None:
 def test_upload_sanitizes_special_characters(
     client_with_key: TestClient,
     ingestion_jobs_db,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _stub_async_publish(monkeypatch)
     files = {"file": ("my file (1).txt", io.BytesIO(b"hello"), "text/plain")}
 
     resp = client_with_key.post(
@@ -127,6 +145,7 @@ def test_job_status_reads_durable_row(
     async def _fake_log_audit(**kwargs) -> None:
         return None
 
+    _stub_async_publish(monkeypatch)
     monkeypatch.setattr(api_app, "log_audit", _fake_log_audit)
     monkeypatch.setattr(
         celery_app,
@@ -165,6 +184,7 @@ def test_task_status_alias_reads_db_not_celery(
     async def _fake_log_audit(**kwargs) -> None:
         return None
 
+    _stub_async_publish(monkeypatch)
     monkeypatch.setattr(api_app, "log_audit", _fake_log_audit)
 
     def broken_result(task_id: str):
@@ -215,13 +235,19 @@ def test_task_status_unknown_id_is_404(
 def test_file_save_failure_response_is_generic(
     client_with_key: TestClient,
     monkeypatch: pytest.MonkeyPatch,
+    ingestion_jobs_db,
 ) -> None:
-    """HTTP detail must not include raw OSError / absolute host path."""
+    """HTTP detail must not include raw OSError / absolute host path.
+
+    Job row is reserved before write; write failure terminal-fails it and
+    returns a generic 500 without publishing.
+    """
     secret_path = r"D:\host\secret\uploads\leak.txt"
 
     def _boom_write_bytes(self, data: bytes) -> None:
         raise OSError(f"[Errno 13] Permission denied: '{secret_path}'")
 
+    _stub_async_publish(monkeypatch)
     monkeypatch.setattr(Path, "write_bytes", _boom_write_bytes)
 
     resp = client_with_key.post(

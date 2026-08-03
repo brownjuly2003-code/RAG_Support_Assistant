@@ -6,9 +6,13 @@ fresh ``asyncio.run`` loops.
 
 Worker ownership uses an opaque lease token with conditional CAS updates.
 Async helpers for the synchronous upload path do not require a worker lease.
+
+Upload idempotency (plan step 4.4 core) stores only SHA-256 key hash and
+payload fingerprint; raw Idempotency-Key values never enter this module.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import re
@@ -16,11 +20,13 @@ import secrets
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import create_engine, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from db.models import IngestionJob
@@ -144,33 +150,177 @@ def job_public_dict(job: IngestionJob) -> dict[str, Any]:
     }
 
 
+class IdempotencyConflictError(ValueError):
+    """Same tenant Idempotency-Key hash with a different payload fingerprint."""
+
+
+@dataclass(frozen=True, slots=True)
+class CreateJobOutcome:
+    """Explicit created/replayed result for upload identity reservation."""
+
+    job: IngestionJob
+    created: bool
+
+    @property
+    def outcome(self) -> Literal["created", "replayed"]:
+        return "created" if self.created else "replayed"
+
+
+def hash_idempotency_key(raw_key: str) -> str:
+    """SHA-256 hex digest of the raw key; never store or log the raw value."""
+    return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+
+
+def compute_payload_fingerprint(safe_filename: str, content: bytes) -> str:
+    """Bind normalized safe filename + exact uploaded bytes."""
+    digest = hashlib.sha256()
+    digest.update(safe_filename.encode("utf-8"))
+    digest.update(b"\0")
+    digest.update(content)
+    return digest.hexdigest()
+
+
+def reserved_celery_task_id(job_id: uuid.UUID | str) -> str:
+    """Deterministic Celery task id reserved before broker publish."""
+    return f"ingest-{job_id}"
+
+
 async def create_ingestion_job(
     *,
     tenant_id: str,
     filename: str,
     source_path: str,
     job_id: uuid.UUID | None = None,
+    celery_task_id: str | None = None,
+    idempotency_key_hash: str | None = None,
+    payload_fingerprint: str | None = None,
 ) -> IngestionJob:
+    """Create a durable queued job (compatibility wrapper; always inserts)."""
+    outcome = await create_or_reuse_ingestion_job(
+        tenant_id=tenant_id,
+        filename=filename,
+        source_path=source_path,
+        job_id=job_id,
+        celery_task_id=celery_task_id,
+        idempotency_key_hash=idempotency_key_hash,
+        payload_fingerprint=payload_fingerprint,
+    )
+    return outcome.job
+
+
+async def create_or_reuse_ingestion_job(
+    *,
+    tenant_id: str,
+    filename: str,
+    source_path: str,
+    job_id: uuid.UUID | None = None,
+    celery_task_id: str | None = None,
+    idempotency_key_hash: str | None = None,
+    payload_fingerprint: str | None = None,
+) -> CreateJobOutcome:
+    """Atomically create or reuse a tenant-scoped idempotent job row.
+
+    When ``idempotency_key_hash`` is set, uniqueness is
+    ``(tenant_id, idempotency_key_hash)``. Concurrent unique-conflict races
+    roll back and re-read; same fingerprint → replayed, different → conflict.
+    """
     if not tenant_id or not tenant_id.strip():
         raise ValueError("tenant_id is required")
     if not filename:
         raise ValueError("filename is required")
     if not source_path:
         raise ValueError("source_path is required")
+    if idempotency_key_hash is not None and not payload_fingerprint:
+        raise ValueError("payload_fingerprint is required with idempotency_key_hash")
 
+    new_id = job_id or uuid.uuid4()
     job = IngestionJob(
-        id=job_id or uuid.uuid4(),
+        id=new_id,
         tenant_id=tenant_id,
         filename=filename,
         source_path=source_path,
         status="queued",
+        celery_task_id=celery_task_id,
+        idempotency_key_hash=idempotency_key_hash,
+        payload_fingerprint=payload_fingerprint,
         created_at=_utc_now(),
     )
+
     async with _async_session() as session:
-        session.add(job)
-        await session.commit()
-        await session.refresh(job)
-        return job
+        try:
+            session.add(job)
+            await session.commit()
+            await session.refresh(job)
+            return CreateJobOutcome(job=job, created=True)
+        except IntegrityError:
+            await session.rollback()
+            if not idempotency_key_hash:
+                raise
+            result = await session.execute(
+                select(IngestionJob).where(
+                    IngestionJob.tenant_id == tenant_id,
+                    IngestionJob.idempotency_key_hash == idempotency_key_hash,
+                )
+            )
+            existing = result.scalar_one_or_none()
+            if existing is None:
+                # Unexpected constraint race; do not invent a second row.
+                raise
+            if existing.payload_fingerprint != payload_fingerprint:
+                raise IdempotencyConflictError(
+                    "Idempotency-Key conflict"
+                ) from None
+            return CreateJobOutcome(job=existing, created=False)
+
+
+async def mark_source_ready(
+    job_id: uuid.UUID,
+    tenant_id: str,
+) -> IngestionJob | None:
+    """Atomically set source_ready_at only for queued, not-yet-ready jobs.
+
+    Race-safe: requires exact tenant, job, ``status == 'queued'``, and
+    ``source_ready_at IS NULL``. Terminal rows (failed/completed/running)
+    cannot transition. On a zero-row update, return an existing
+    queued+already-ready row only for idempotent success; otherwise ``None``.
+    """
+    now = _utc_now()
+    async with _async_session() as session:
+        result = await session.execute(
+            update(IngestionJob)
+            .where(
+                IngestionJob.id == job_id,
+                IngestionJob.tenant_id == tenant_id,
+                IngestionJob.status == "queued",
+                IngestionJob.source_ready_at.is_(None),
+            )
+            .values(source_ready_at=now)
+        )
+        if int(getattr(result, "rowcount", 0) or 0) == 1:
+            await session.commit()
+            refreshed = await session.execute(
+                select(IngestionJob).where(
+                    IngestionJob.id == job_id,
+                    IngestionJob.tenant_id == tenant_id,
+                )
+            )
+            return refreshed.scalar_one_or_none()
+
+        await session.rollback()
+        existing_result = await session.execute(
+            select(IngestionJob).where(
+                IngestionJob.id == job_id,
+                IngestionJob.tenant_id == tenant_id,
+            )
+        )
+        existing = existing_result.scalar_one_or_none()
+        if (
+            existing is not None
+            and existing.status == "queued"
+            and existing.source_ready_at is not None
+        ):
+            return existing
+        return None
 
 
 async def set_celery_task_id(

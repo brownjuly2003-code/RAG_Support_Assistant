@@ -455,6 +455,16 @@ class Settings:
             os.getenv("INGESTION_JOB_REAPER_INTERVAL_SEC", "60")
         )
     )
+    # Broker publish-only retry for async upload (plan step 4.4 core).
+    # Does not enable Celery worker/task autoretry after load/index begins.
+    ingestion_publish_max_retries: int = field(
+        default_factory=lambda: int(os.getenv("INGESTION_PUBLISH_MAX_RETRIES", "2"))
+    )
+    ingestion_publish_retry_delay_sec: float = field(
+        default_factory=lambda: float(
+            os.getenv("INGESTION_PUBLISH_RETRY_DELAY_SEC", "0.2")
+        )
+    )
     agentic_mode: bool = field(
         default_factory=lambda: os.getenv(
             "RAG_AGENTIC_MODE", "false"
@@ -992,6 +1002,20 @@ class Settings:
             raise RuntimeError(
                 "\nERROR: INGESTION_JOB_REAPER_INTERVAL_SEC must be positive.\n"
                 f"       Got {self.ingestion_job_reaper_interval_sec}."
+            )
+        if self.ingestion_publish_max_retries < 0:
+            raise RuntimeError(
+                "\nERROR: INGESTION_PUBLISH_MAX_RETRIES must be >= 0.\n"
+                f"       Got {self.ingestion_publish_max_retries}."
+            )
+        if (
+            self.ingestion_publish_retry_delay_sec < 0
+            or self.ingestion_publish_retry_delay_sec != self.ingestion_publish_retry_delay_sec
+            or self.ingestion_publish_retry_delay_sec == float("inf")
+        ):
+            raise RuntimeError(
+                "\nERROR: INGESTION_PUBLISH_RETRY_DELAY_SEC must be a finite float >= 0.\n"
+                f"       Got {self.ingestion_publish_retry_delay_sec}."
             )
 
         if self.rag_env == "production" and ("*" in self.cors_origins or self.cors_origins == []):

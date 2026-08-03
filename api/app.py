@@ -1702,8 +1702,14 @@ app.add_middleware(
     allow_origins=_cors_settings.cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["X-API-Key", "Content-Type", "Authorization", "X-Request-Id"],
-    expose_headers=["X-Request-Id"],
+    allow_headers=[
+        "X-API-Key",
+        "Content-Type",
+        "Authorization",
+        "X-Request-Id",
+        "Idempotency-Key",
+    ],
+    expose_headers=["X-Request-Id", "X-Ingestion-Job-Id"],
     max_age=_cors_settings.cors_max_age_sec,
 )
 
