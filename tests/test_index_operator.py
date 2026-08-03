@@ -360,12 +360,480 @@ def test_preview_propagates_corrupt_manifest_without_mutating_files(
     assert inventory_path.read_bytes() == before_inventory
 
 
+def _stub_tenant_lock(monkeypatch: pytest.MonkeyPatch) -> None:
+    from vectordb import tenant_lock
+
+    class _Connection:
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(tenant_lock, "_open_lock_connection", _Connection)
+    monkeypatch.setattr(tenant_lock, "_wait_timeout_sec", lambda: 0.0)
+    monkeypatch.setattr(tenant_lock, "_acquire", lambda *args: None)
+    monkeypatch.setattr(tenant_lock, "_release", lambda *args: None)
+
+
+def test_rollback_applies_once_and_swaps_active_previous(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import read_index_manifest
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = _seed_four_versions(
+        tenant_id="acme",
+        chroma_directory=chroma_directory,
+        monkeypatch=monkeypatch,
+    )
+    _stub_tenant_lock(monkeypatch)
+
+    before = read_index_manifest("acme", chroma_directory=chroma_directory)
+    assert before is not None
+    assert before.generation == 4
+    assert before.active_collection == versions[-1]
+    assert before.previous_collection == versions[-2]
+
+    result = operator.rollback_index_version(
+        "acme",
+        expected_generation=4,
+        target_collection=versions[-2],
+        chroma_directory=chroma_directory,
+    )
+
+    assert result == operator.IndexRollbackResult(
+        tenant_id="acme",
+        expected_generation=4,
+        target_collection=versions[-2],
+        applied=True,
+        manifest_generation=5,
+        active_collection=versions[-2],
+        previous_collection=versions[-1],
+    )
+    after = read_index_manifest("acme", chroma_directory=chroma_directory)
+    assert after is not None
+    assert after.generation == 5
+    assert after.active_collection == versions[-2]
+    assert after.previous_collection == versions[-1]
+
+
+def test_rollback_exact_retry_is_idempotent_noop(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import index_manifest_path, read_index_manifest
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = _seed_four_versions(
+        tenant_id="acme",
+        chroma_directory=chroma_directory,
+        monkeypatch=monkeypatch,
+    )
+    _stub_tenant_lock(monkeypatch)
+
+    first = operator.rollback_index_version(
+        "acme",
+        expected_generation=4,
+        target_collection=versions[-2],
+        chroma_directory=chroma_directory,
+    )
+    assert first.applied is True
+
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    before_bytes = manifest_path.read_bytes()
+    before = read_index_manifest("acme", chroma_directory=chroma_directory)
+    assert before is not None
+    before_updated_at = before.updated_at
+
+    calls: list[object] = []
+    real_rollback = operator.rollback_active_collection
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        calls.append((args, kwargs))
+        return real_rollback(*args, **kwargs)
+
+    monkeypatch.setattr(operator, "rollback_active_collection", _spy)
+
+    retry = operator.rollback_index_version(
+        "acme",
+        expected_generation=4,
+        target_collection=versions[-2],
+        chroma_directory=chroma_directory,
+    )
+
+    assert retry == operator.IndexRollbackResult(
+        tenant_id="acme",
+        expected_generation=4,
+        target_collection=versions[-2],
+        applied=False,
+        manifest_generation=5,
+        active_collection=versions[-2],
+        previous_collection=versions[-1],
+    )
+    assert calls == []
+    assert manifest_path.read_bytes() == before_bytes
+    after = read_index_manifest("acme", chroma_directory=chroma_directory)
+    assert after is not None
+    assert after.updated_at == before_updated_at
+
+
+def test_rollback_matching_generation_wrong_target_is_conflict(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import index_manifest_path
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = _seed_four_versions(
+        tenant_id="acme",
+        chroma_directory=chroma_directory,
+        monkeypatch=monkeypatch,
+    )
+    _stub_tenant_lock(monkeypatch)
+
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    before_bytes = manifest_path.read_bytes()
+
+    with pytest.raises(operator.IndexRollbackConflict):
+        operator.rollback_index_version(
+            "acme",
+            expected_generation=4,
+            target_collection=versions[0],
+            chroma_directory=chroma_directory,
+        )
+
+    assert manifest_path.read_bytes() == before_bytes
+
+
+@pytest.mark.parametrize(
+    ("expected_generation", "target_index"),
+    [
+        (3, -2),  # stale generation, previous happens to match target shape
+        (5, -1),  # future generation, active equals target but gen != expected+1
+        (6, -1),  # future generation where active equals target
+    ],
+)
+def test_rollback_stale_or_future_generation_is_conflict(
+    expected_generation: int,
+    target_index: int,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import index_manifest_path
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = _seed_four_versions(
+        tenant_id="acme",
+        chroma_directory=chroma_directory,
+        monkeypatch=monkeypatch,
+    )
+    _stub_tenant_lock(monkeypatch)
+
+    # Current: generation=4, active=versions[-1], previous=versions[-2]
+    # Case target_index=-1: active equals target but generation is not expected+1
+    # when expected_generation is 5 or 6.
+    target = versions[target_index]
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    before_bytes = manifest_path.read_bytes()
+
+    with pytest.raises(operator.IndexRollbackConflict):
+        operator.rollback_index_version(
+            "acme",
+            expected_generation=expected_generation,
+            target_collection=target,
+            chroma_directory=chroma_directory,
+        )
+
+    assert manifest_path.read_bytes() == before_bytes
+
+
+@pytest.mark.parametrize(
+    "expected_generation",
+    [True, 0, -1, 2.0],
+)
+def test_rollback_invalid_generation_raises_validation_error(
+    expected_generation: Any,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import index_manifest_path
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = _seed_four_versions(
+        tenant_id="acme",
+        chroma_directory=chroma_directory,
+        monkeypatch=monkeypatch,
+    )
+    _stub_tenant_lock(monkeypatch)
+
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    before_bytes = manifest_path.read_bytes()
+
+    with pytest.raises(operator.IndexRollbackValidationError):
+        operator.rollback_index_version(
+            "acme",
+            expected_generation=expected_generation,
+            target_collection=versions[-2],
+            chroma_directory=chroma_directory,
+        )
+
+    assert manifest_path.read_bytes() == before_bytes
+
+
+@pytest.mark.parametrize("target_collection", ["", 123])
+def test_rollback_invalid_target_raises_validation_error(
+    target_collection: Any,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import index_manifest_path
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    _seed_four_versions(
+        tenant_id="acme",
+        chroma_directory=chroma_directory,
+        monkeypatch=monkeypatch,
+    )
+    _stub_tenant_lock(monkeypatch)
+
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    before_bytes = manifest_path.read_bytes()
+
+    with pytest.raises(operator.IndexRollbackValidationError):
+        operator.rollback_index_version(
+            "acme",
+            expected_generation=4,
+            target_collection=target_collection,
+            chroma_directory=chroma_directory,
+        )
+
+    assert manifest_path.read_bytes() == before_bytes
+
+
+def test_rollback_missing_manifest_raises_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import (
+        IndexManifestRollbackUnavailable,
+        index_manifest_path,
+    )
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    _stub_tenant_lock(monkeypatch)
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+
+    with pytest.raises(IndexManifestRollbackUnavailable):
+        operator.rollback_index_version(
+            "acme",
+            expected_generation=1,
+            target_collection="any_collection",
+            chroma_directory=chroma_directory,
+        )
+
+    assert not manifest_path.exists()
+
+
+def test_rollback_manifest_without_previous_raises_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import (
+        IndexManifestRollbackUnavailable,
+        index_manifest_path,
+        publish_active_collection,
+    )
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    version = _versioned_name("acme", 1)
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        publish_active_collection(
+            "acme",
+            version,
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+
+    _stub_tenant_lock(monkeypatch)
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    before_bytes = manifest_path.read_bytes()
+
+    with pytest.raises(IndexManifestRollbackUnavailable):
+        operator.rollback_index_version(
+            "acme",
+            expected_generation=1,
+            target_collection="missing_previous",
+            chroma_directory=chroma_directory,
+        )
+
+    assert manifest_path.read_bytes() == before_bytes
+
+
+def test_rollback_propagates_corrupt_manifest_without_mutating(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import IndexManifestCorrupt, index_manifest_path
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    raw = b'{"schema_version": 1, "active_collection": '
+    manifest_path.write_bytes(raw)
+    _stub_tenant_lock(monkeypatch)
+
+    with pytest.raises(IndexManifestCorrupt, match="manifest"):
+        operator.rollback_index_version(
+            "acme",
+            expected_generation=1,
+            target_collection="anything",
+            chroma_directory=chroma_directory,
+        )
+
+    assert manifest_path.read_bytes() == raw
+
+
+def test_rollback_reads_and_mutates_while_single_tenant_lock_held(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+
+    lock_held = False
+    held_during: dict[str, bool] = {}
+    yielded_token = object()
+    seen_lock_token: list[object] = []
+
+    @contextmanager
+    def _fake_lock(tenant_id: str) -> Iterator[object]:
+        nonlocal lock_held
+        assert tenant_id == "acme"
+        lock_held = True
+        try:
+            yield yielded_token
+        finally:
+            lock_held = False
+
+    class _Manifest:
+        generation = 2
+        active_collection = "active_v2"
+        previous_collection = "prev_v1"
+
+    def _read(*_args: Any, **_kwargs: Any) -> _Manifest:
+        held_during["read"] = lock_held
+        return _Manifest()
+
+    def _rollback(
+        tenant_id: str,
+        *,
+        lock_token: object,
+        chroma_directory: Any = None,
+    ) -> Any:
+        held_during["mutate"] = lock_held
+        seen_lock_token.append(lock_token)
+        assert tenant_id == "acme"
+        return type(
+            "M",
+            (),
+            {
+                "generation": 3,
+                "active_collection": "prev_v1",
+                "previous_collection": "active_v2",
+            },
+        )()
+
+    monkeypatch.setattr(operator, "tenant_index_lock", _fake_lock)
+    monkeypatch.setattr(operator, "read_index_manifest", _read)
+    monkeypatch.setattr(operator, "rollback_active_collection", _rollback)
+
+    result = operator.rollback_index_version(
+        "acme",
+        expected_generation=2,
+        target_collection="prev_v1",
+    )
+
+    assert held_during == {"read": True, "mutate": True}
+    assert seen_lock_token == [yielded_token]
+    assert result.applied is True
+    assert result.manifest_generation == 3
+    assert result.active_collection == "prev_v1"
+    assert result.previous_collection == "active_v2"
+
+
+def test_rollback_falsey_tenant_normalizes_to_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+
+    seen: dict[str, Any] = {}
+
+    @contextmanager
+    def _fake_lock(tenant_id: str) -> Iterator[object]:
+        seen["lock_tenant"] = tenant_id
+        yield "token"
+
+    class _Manifest:
+        generation = 1
+        active_collection = "active_default"
+        previous_collection = "prev_default"
+
+    def _read(tenant_id: str, *, chroma_directory: Any = None) -> _Manifest:
+        seen["read_tenant"] = tenant_id
+        return _Manifest()
+
+    def _rollback(
+        tenant_id: str,
+        *,
+        lock_token: object,
+        chroma_directory: Any = None,
+    ) -> Any:
+        seen["mutate_tenant"] = tenant_id
+        seen["lock_token"] = lock_token
+        return type(
+            "M",
+            (),
+            {
+                "generation": 2,
+                "active_collection": "prev_default",
+                "previous_collection": "active_default",
+            },
+        )()
+
+    monkeypatch.setattr(operator, "tenant_index_lock", _fake_lock)
+    monkeypatch.setattr(operator, "read_index_manifest", _read)
+    monkeypatch.setattr(operator, "rollback_active_collection", _rollback)
+
+    result = operator.rollback_index_version(
+        "",
+        expected_generation=1,
+        target_collection="prev_default",
+    )
+
+    assert seen["lock_tenant"] == "default"
+    assert seen["read_tenant"] == "default"
+    assert seen["mutate_tenant"] == "default"
+    assert seen["lock_token"] == "token"
+    assert result.tenant_id == "default"
+    assert result.applied is True
+
+
 def test_operator_module_has_no_chroma_or_runtime_wiring() -> None:
+    import re
+
     operator = _operator_module()
     source = Path(inspect.getfile(operator)).read_text(encoding="utf-8")
     lowered = source.lower()
 
-    forbidden_substrings = (
+    # Token-boundary checks avoid false positives such as "get_collection"
+    # appearing inside the legitimate field name "target_collection".
+    forbidden_tokens = (
         "chromadb",
         "chroma.client",
         "persistentclient",
@@ -376,14 +844,17 @@ def test_operator_module_has_no_chroma_or_runtime_wiring() -> None:
         "apirouter",
         "fastapi",
         "publish_active_collection",
-        "rollback_active_collection",
+        "vectordb.manager",
         "apply_bounded_retention",
         "execute_retention",
         "audit_log",
         "record_audit",
     )
-    for fragment in forbidden_substrings:
-        assert fragment not in lowered, f"unexpected wiring fragment: {fragment}"
+    for fragment in forbidden_tokens:
+        pattern = rf"(?<![a-z0-9_]){re.escape(fragment)}(?![a-z0-9_])"
+        assert re.search(pattern, lowered) is None, (
+            f"unexpected wiring fragment: {fragment}"
+        )
 
     assert "tenant_index_lock" in source
     assert "bounded_retention_candidates" in source
@@ -391,3 +862,6 @@ def test_operator_module_has_no_chroma_or_runtime_wiring() -> None:
     assert "read_retention_inventory" in source
     assert "IndexRetentionPreview" in source
     assert "preview_index_retention" in source
+    assert "rollback_active_collection" in source
+    assert "rollback_index_version" in source
+    assert "IndexRollbackResult" in source
