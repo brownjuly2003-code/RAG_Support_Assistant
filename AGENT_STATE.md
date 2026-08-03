@@ -1,6 +1,38 @@
 # Agent State
 
-## 2026-08-03 Update-23 (step 4.8a active-version manifest @ `ca15c1a`) ✅ START HERE
+## 2026-08-03 Update-24 (step 4.8b validated staging collection @ `74d187c`) ✅ START HERE
+
+> **Implementation commit:** `74d187c` (`feat(index): add validated staging
+> collections`). Plan slice **4.8b is locally complete and verified**:
+> - document candidates use collision-resistant, 63-character-bounded
+>   `<prefix>-v-<physical-tenant>-<candidate>` names in a namespace distinct
+>   from legacy `<prefix>_<tenant>` collections
+> - the unwired builder requires the existing tenant advisory-lock token, builds
+>   only the candidate through Chroma `from_documents`, persists when supported,
+>   then validates exact chunk count and embedding dimension with a raw-vector
+>   probe
+> - neither the active manifest nor legacy collection is opened, deleted, or
+>   switched; success returns an unpublished candidate for the later 4.8c path
+> - build, count, or dimension failure deletes only that candidate; cleanup
+>   failure remains explicit and preserves the deletion root cause
+>
+> **Verification:** test-first contract was **6 expected failures**, then 6
+> passes. The single QA follow-up demonstrated **2 expected failures** for an
+> empty explicit candidate ID and overwritten cleanup cause, then 2 passes. The
+> final staging/manifest/naming/lock gate passed **33 tests** with two expected
+> deprecation warnings. Scoped Ruff, locked Python 3.11 / mypy 1.19.1 / NumPy
+> 2.4.4, and diff checks are clean.
+>
+> **Current truth:** plan step 4 remains in progress. The staging builder is
+> intentionally not called by `build_vector_store()`, upload, reindex, or
+> retrieval, and no real Chroma was mutated. Production rebuild therefore still
+> uses delete-then-build. Known-query validation + atomic manifest switch and
+> generation-aware cache invalidation (4.8c), rollback/retention/fault injection
+> (4.8d), and live drills remain open. No next slice was started. No
+> Grok/delegation, push, deploy, or live service calls occurred; protected
+> untracked user artifacts remain unstaged and untouched.
+
+## 2026-08-03 Update-23 (step 4.8a active-version manifest @ `ca15c1a`) — SUPERSEDED by Update-24
 
 > **Implementation commits:** `c015ba8` (`feat(index): add active-version
 > manifest registry`) + `ca15c1a` (`fix(index): enforce integer manifest
