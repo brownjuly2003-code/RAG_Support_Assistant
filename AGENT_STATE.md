@@ -1,6 +1,32 @@
 # Agent State
 
-## 2026-08-03 Update-27 (step 4.8d1 atomic manifest rollback @ `c160af8`) ✅ START HERE
+## 2026-08-03 Update-28 (step 4.8d2 validated runtime rollback @ `bb3f00b`) ✅ START HERE
+
+> **Implementation commit:** `bb3f00b` (`feat(index): validate runtime
+> rollbacks`). Plan sub-slice **4.8d2 is locally complete and verified**:
+> - the manager holds the tenant lock while resolving manifest.previous,
+>   opening it with Chroma auto-create disabled, restoring its persisted chunks,
+>   and validating exact count, embedding dimension, and a deterministic query
+> - only a fully validated previous collection reaches the 4.8d1 atomic
+>   manifest swap; success increments generation and repoints the tenant's
+>   store/chunk/index caches while invalidating its retriever cache
+> - missing, empty, dimension-invalid, or known-query-invalid targets preserve
+>   the active manifest and cached retriever; no collection is deleted
+>
+> **Verification:** five runtime contracts first failed while the manager API
+> was absent and seven existing tests passed. The focused file then passed
+> **12 tests**; the runtime/manifest/staging/chunk-restore/tenant-lock closure
+> gate passed **43 tests** with one expected warning. Scoped Ruff, locked Python
+> 3.11 / mypy 1.19.1 / NumPy 2.4.4, and diff checks are clean. No live Chroma,
+> PostgreSQL, push, deploy, or external service was touched.
+>
+> **Current truth:** plan step 4 and 4.8d remain in progress. The validated
+> manager-level rollback service is local-only; bounded retention/deletion,
+> broader fault injection, an explicit operator surface, immutable/versioned
+> originals, and live drills remain open. No next slice was started; protected
+> untracked user artifacts remain untouched.
+
+## 2026-08-03 Update-27 (step 4.8d1 atomic manifest rollback @ `c160af8`) — SUPERSEDED by Update-28
 
 > **Implementation commit:** `c160af8` (`feat(index): add atomic manifest
 > rollback`). Plan sub-slice **4.8d1 is locally complete and verified**:
