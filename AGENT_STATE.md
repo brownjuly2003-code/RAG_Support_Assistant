@@ -1,6 +1,32 @@
 # Agent State
 
-## 2026-08-03 Update-26 (step 4.8c atomic runtime publish @ `8594675`) ✅ START HERE
+## 2026-08-03 Update-27 (step 4.8d1 atomic manifest rollback @ `c160af8`) ✅ START HERE
+
+> **Implementation commit:** `c160af8` (`feat(index): add atomic manifest
+> rollback`). Plan sub-slice **4.8d1 is locally complete and verified**:
+> - a caller holding the current matching tenant-lock token can atomically swap
+>   manifest `active_collection` and `previous_collection`
+> - rollback reuses the existing flushed + fsynced `os.replace` publisher, so
+>   generation increments and the former active collection becomes the next
+>   rollback target
+> - absent manifest/previous state, wrong-tenant tokens, and expired tokens fail
+>   closed; replace failure leaves the prior manifest byte-for-byte unchanged
+>
+> **Verification:** four rollback contracts first failed while the API was
+> absent and the seven existing manifest tests passed. The focused file then
+> passed **11 tests**; the manifest/staging/runtime/tenant-lock closure gate
+> passed **32 tests** with one expected warning. Scoped Ruff, locked Python 3.11
+> / mypy 1.19.1 / NumPy 2.4.4, and diff checks are clean. No Chroma collection
+> was opened or deleted; no real PostgreSQL, push, deploy, or live service was
+> touched.
+>
+> **Current truth:** plan step 4 and 4.8d remain in progress. This is an unwired
+> manifest-only rollback primitive, not a complete runtime rollback. Target
+> collection validation/wiring, bounded retention, broader fault injection,
+> immutable/versioned originals, and live drills remain open. No next slice was
+> started in this turn; protected untracked user artifacts remain untouched.
+
+## 2026-08-03 Update-26 (step 4.8c atomic runtime publish @ `8594675`) — SUPERSEDED by Update-27
 
 > **Implementation commit:** `8594675` (`feat(index): publish staged
 > collections atomically`). Plan slice **4.8c is locally complete and
