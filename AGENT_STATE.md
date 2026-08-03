@@ -1,5 +1,43 @@
 # Agent State
 
+## 2026-08-03 Update-34 (plan 2.1 / 4.8d3f publication inventory wiring @ `e8da185`) ✅ START HERE
+
+> **Next-session handoff:** refresh `git status` first. This Update-34 block is
+> the current source for the completed 2.1 / 4.8d3f slice.
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md), `BACKLOG.md`, and the
+> first-slice sentence in `rag-remediation-plan-2026-08-03.md` are protected
+> pre-`e8da185` working-tree state and still point to 2.1 — do not repeat 2.1;
+> the next safe local slice is **2.2**.
+>
+> **Implementation commit:** `e8da185` (`feat(index): record published versions
+> for retention`). Plan slice **2.1 / historical 4.8d3f is locally complete and
+> verified**:
+> - in the Chroma document rebuild path, under the existing tenant lock, the
+>   durable order is known-query validation, trusted retention-inventory
+>   record, then atomic active-manifest publish
+> - successful publication records the new versioned collection exactly once
+> - inventory-record failure leaves manifest bytes/generation unchanged, does
+>   not attempt publish, and discards only the unpublished candidate
+> - publish failure after inventory record also preserves the manifest and
+>   discards the candidate; the intentional stale inventory entry is safe for
+>   the existing idempotent `NotFoundError` prune path
+> - no retention executor/deletion, operator surface, Qdrant/fact-card change,
+>   live Chroma/PostgreSQL/Redis, push, or deploy occurred
+>
+> **Verification:** Grok test-first evidence showed three expected failures
+> before production wiring, then focused gate **35 passed** with scoped Ruff
+> and diff check clean. Codex independent gate: **100 passed**, two known
+> deprecation warnings, scoped Ruff clean, Python 3.11 + mypy 1.19.1 +
+> NumPy 2.4.4 clean, read-only hashes and boundary checks clean.
+>
+> **Current truth:** plan step 2 remains in progress; this records only slice
+> 2.1 / 4.8d3f. Next safe local slice is plan **2.2**: invoke bounded retention
+> only after a successful publish, using the configured budget and existing
+> executor/adapter; it was not started. Operator API and broader fault
+> injection remain separate later work. Do not treat full plan step 2, old
+> step 4.8d, production release, live drills, or project completion as done.
+> Protected dirty/untracked user artifacts remain untouched.
+
 ## 2026-08-03 Update-33 (step 4.8d3e fail-closed retention budget @ `f899ba5`) ✅ START HERE
 
 > **Next-session handoff:** read [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md)
