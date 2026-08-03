@@ -626,17 +626,29 @@ async def upload_document(
                 # Full re-embedding of the tenant corpus — minutes of CPU work.
                 # Must not run on the event loop (it would freeze every /ask
                 # and health probe for the duration of the rebuild).
-                success = await asyncio.to_thread(
+                build_result = await asyncio.to_thread(
                     _app._rebuild_vector_store_from_docs, docs, tenant_id=tenant
                 )
-                if success:
+                if build_result:
                     if getattr(settings, "llm_cache_enabled", False):
                         deleted = _app.cache_delete_pattern(f"llm_resp:{tenant}:*")
                         logger.info("Invalidated %d cached LLM responses for tenant %s", deleted, tenant)
+                    # getattr keeps legacy bool test stubs (True/False) working.
+                    publication = getattr(build_result, "publication", None)
+                    if publication is not None:
+                        index_publication = {
+                            "tenant_id": publication.tenant_id,
+                            "active_collection": publication.active_collection,
+                            "previous_collection": publication.previous_collection,
+                            "manifest_generation": publication.manifest_generation,
+                        }
+                    else:
+                        index_publication = None
                     result_payload = {
                         "status": "ok",
                         "docs_count": len(docs),
                         "message": f"Indexed {len(docs)} document(s)",
+                        "index_publication": index_publication,
                     }
                     await _mark_completed(job_id, tenant, result_payload)
                     return UploadResponse(

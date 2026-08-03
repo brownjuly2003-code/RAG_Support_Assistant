@@ -81,6 +81,7 @@ get_current_tenant = _get_current_tenant
 if TYPE_CHECKING:
     from api.routers.conversation import Citation as CitationModel
     from config.settings import Settings
+    from vectordb.manager import BuildVectorStoreResult
 
 
 async def _stream_ollama(
@@ -137,17 +138,30 @@ except ImportError:
 
 # manager.py - vector store utilities
 _build_vector_store = None
+_build_vector_store_with_publication = None
 _get_retriever = None
 _get_embeddings = None
 try:
-    from vectordb.manager import build_vector_store, get_retriever, get_embeddings
+    from vectordb.manager import (
+        build_vector_store,
+        build_vector_store_with_publication,
+        get_retriever,
+        get_embeddings,
+    )
     _build_vector_store = build_vector_store
+    _build_vector_store_with_publication = build_vector_store_with_publication
     _get_retriever = get_retriever
     _get_embeddings = get_embeddings
 except ImportError:
     try:
-        from vectordb.manager import build_vector_store, get_retriever, get_embeddings
+        from vectordb.manager import (
+            build_vector_store,
+            build_vector_store_with_publication,
+            get_retriever,
+            get_embeddings,
+        )
         _build_vector_store = build_vector_store
+        _build_vector_store_with_publication = build_vector_store_with_publication
         _get_retriever = get_retriever
         _get_embeddings = get_embeddings
     except ImportError:
@@ -1189,12 +1203,13 @@ def initialize_vector_store() -> None:
 def _rebuild_vector_store_from_docs(
     docs: list[Any],
     tenant_id: str = "default",
-) -> bool:
+) -> BuildVectorStoreResult | None:
+    """One opt-in build; activate runtime store/chunks; return exact result or None."""
     global _vector_store, _retriever, _chunks
 
-    if _build_vector_store is None:
-        logger.warning("build_vector_store not available")
-        return False
+    if _build_vector_store_with_publication is None:
+        logger.warning("build_vector_store_with_publication not available")
+        return None
 
     with _vector_store_init_lock:
         try:
@@ -1203,11 +1218,13 @@ def _rebuild_vector_store_from_docs(
                 "chunk_size": getattr(settings, "chunk_size", 800),
                 "chunk_overlap": getattr(settings, "chunk_overlap", 200),
             }
-            _vector_store, _chunks = _build_vector_store(
+            build_result = _build_vector_store_with_publication(
                 docs,
                 chunk_config,
                 tenant_id=tenant_id,
             )
+            _vector_store = build_result.store
+            _chunks = build_result.chunks
 
             if _get_retriever is not None:
                 _retriever = _get_retriever(_vector_store, chunks=_chunks, tenant_id=tenant_id)
@@ -1219,10 +1236,10 @@ def _rebuild_vector_store_from_docs(
                     session._retriever = _retriever
 
             logger.info("Vector store rebuilt: %d chunks", len(_chunks))
-            return True
+            return build_result
         except Exception as exc:
             logger.error("Failed to rebuild vector store: %s", exc, exc_info=True)
-            return False
+            return None
 
 
 # ---------------------------------------------------------------------------

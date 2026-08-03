@@ -298,11 +298,89 @@ def test_default_tenant_upload_creates_queued_job_and_enqueues_identity(
     assert "manual.txt" in job.source_path
 
 
+def test_rebuild_vector_store_from_docs_returns_exact_publication(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Opt-in builder once; activate store/chunks; return exact result/receipt."""
+    import api.app as api_app
+
+    docs = [SimpleNamespace(page_content="doc", metadata={"source": "a.txt"})]
+    store = MagicMock(name="store")
+    chunks = [SimpleNamespace(page_content="chunk")]
+    receipt = SimpleNamespace(
+        tenant_id="pub-tenant",
+        active_collection="rag_docs_pub-tenant_g2",
+        previous_collection="rag_docs_pub-tenant_g1",
+        manifest_generation=2,
+    )
+    build_result = SimpleNamespace(store=store, chunks=chunks, publication=receipt)
+    opt_in_calls: list[dict[str, Any]] = []
+    ordinary_calls: list[Any] = []
+
+    def fake_with_publication(
+        loaded_docs,
+        chunk_config,
+        embeddings=None,
+        tenant_id: str = "default",
+        **kwargs,
+    ):
+        opt_in_calls.append(
+            {
+                "docs": loaded_docs,
+                "tenant_id": tenant_id,
+                "chunk_config": chunk_config,
+            }
+        )
+        return build_result
+
+    def fake_ordinary(*args, **kwargs):
+        ordinary_calls.append((args, kwargs))
+        raise AssertionError("ordinary build_vector_store must not be called")
+
+    def fake_get_retriever(vs, chunks=None, tenant_id: str = "default"):
+        return f"retriever:{tenant_id}"
+
+    monkeypatch.setattr(
+        api_app, "_build_vector_store_with_publication", fake_with_publication
+    )
+    monkeypatch.setattr(api_app, "_build_vector_store", fake_ordinary)
+    monkeypatch.setattr(api_app, "_get_retriever", fake_get_retriever)
+    monkeypatch.setattr(
+        api_app,
+        "get_settings",
+        lambda: SimpleNamespace(chunk_size=100, chunk_overlap=10),
+    )
+    monkeypatch.setattr(api_app, "_vector_store", None)
+    monkeypatch.setattr(api_app, "_chunks", [])
+    monkeypatch.setattr(api_app, "_retriever", None)
+    monkeypatch.setattr(api_app, "_sessions", {})
+
+    result = api_app._rebuild_vector_store_from_docs(docs, tenant_id="pub-tenant")
+
+    assert result is build_result
+    assert result.publication is receipt
+    assert result.store is store
+    assert result.chunks is chunks
+    assert len(opt_in_calls) == 1
+    assert opt_in_calls[0]["docs"] is docs
+    assert opt_in_calls[0]["tenant_id"] == "pub-tenant"
+    assert opt_in_calls[0]["chunk_config"] == {
+        "chunk_size": 100,
+        "chunk_overlap": 10,
+    }
+    assert ordinary_calls == []
+    assert api_app._vector_store is store
+    assert api_app._chunks is chunks
+    assert api_app._retriever == "retriever:pub-tenant"
+    assert bool(result) is True
+
+
 def test_non_default_upload_reuses_job_and_completes_durably(
     monkeypatch: pytest.MonkeyPatch,
     client_with_key: TestClient,
     ingestion_jobs_db,
 ) -> None:
+    """Chroma-style receipt from the exact rebuild is durable under result."""
     import api.app as api_app
 
     class FakeLoader:
@@ -312,9 +390,16 @@ def test_non_default_upload_reuses_job_and_completes_durably(
         def load_documents(self, path: str):
             return [SimpleNamespace(page_content="doc", metadata={"source": "guide.txt"})]
 
-    def _fake_rebuild(docs, tenant_id: str = "default") -> bool:
+    receipt = SimpleNamespace(
+        tenant_id="acme-corp",
+        active_collection="rag_docs_acme-corp_g2",
+        previous_collection="rag_docs_acme-corp_g1",
+        manifest_generation=2,
+    )
+
+    def _fake_rebuild(docs, tenant_id: str = "default"):
         assert tenant_id == "acme-corp"
-        return True
+        return SimpleNamespace(store="store", chunks=list(docs), publication=receipt)
 
     async def _fake_log_audit(**kwargs) -> None:
         return None
@@ -334,11 +419,19 @@ def test_non_default_upload_reuses_job_and_completes_durably(
     assert body["status"] == "ok"
     assert body["tenant_id"] == "acme-corp"
     assert body["tenant_id"] != "default"
+    # Public response shape is unchanged (receipt is durable-only).
+    assert "index_publication" not in body
     job_id = body["job_id"]
     uuid.UUID(job_id)
 
     import asyncio
 
+    expected = {
+        "tenant_id": "acme-corp",
+        "active_collection": "rag_docs_acme-corp_g2",
+        "previous_collection": "rag_docs_acme-corp_g1",
+        "manifest_generation": 2,
+    }
     job = asyncio.run(_fetch_job(ingestion_jobs_db["async_session"], job_id))
     assert job is not None
     assert job.tenant_id == "acme-corp"
@@ -347,6 +440,61 @@ def test_non_default_upload_reuses_job_and_completes_durably(
     assert job.error is None
     assert isinstance(job.result, dict)
     assert job.started_at is not None
+    assert job.result["index_publication"] == expected
+    assert set(job.result["index_publication"]) == {
+        "tenant_id",
+        "active_collection",
+        "previous_collection",
+        "manifest_generation",
+    }
+
+
+def test_non_default_upload_persists_null_publication(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    ingestion_jobs_db,
+) -> None:
+    """Qdrant/no-publication sync success must durable-store index_publication: null."""
+    import api.app as api_app
+
+    class FakeLoader:
+        def __init__(self, recursive: bool = False) -> None:
+            pass
+
+        def load_documents(self, path: str):
+            return [SimpleNamespace(page_content="doc", metadata={"source": "q.txt"})]
+
+    def _fake_rebuild(docs, tenant_id: str = "default"):
+        assert tenant_id == "qdrant-tenant"
+        return SimpleNamespace(store="store", chunks=list(docs), publication=None)
+
+    async def _fake_log_audit(**kwargs) -> None:
+        return None
+
+    monkeypatch.setattr(api_app, "_DocumentLoader", FakeLoader)
+    monkeypatch.setattr(api_app, "_rebuild_vector_store_from_docs", _fake_rebuild)
+    monkeypatch.setattr(api_app, "log_audit", _fake_log_audit)
+
+    resp = client_with_key.post(
+        "/api/upload",
+        files={"file": ("q.txt", io.BytesIO(b"content"), "text/plain")},
+        headers=_headers("qdrant-tenant"),
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert "index_publication" not in body
+    job_id = body["job_id"]
+
+    import asyncio
+
+    job = asyncio.run(_fetch_job(ingestion_jobs_db["async_session"], job_id))
+    assert job is not None
+    assert job.status == "completed"
+    assert isinstance(job.result, dict)
+    assert "index_publication" in job.result
+    assert job.result["index_publication"] is None
 
 
 @pytest.mark.parametrize(
