@@ -12,13 +12,19 @@ from typing import TYPE_CHECKING, Any
 from config.settings import get_settings
 from utils.tenant_naming import physical_tenant_component
 from vectordb import _base_manager
-from vectordb.chroma_retention import execute_chroma_retention
+from vectordb.chroma_retention import (
+    execute_chroma_retention,
+    execute_guarded_chroma_retention,
+)
 from vectordb.index_manifest import (
     IndexVersionManifest,
     publish_active_collection,
     read_index_manifest,
 )
-from vectordb.index_operator import rollback_index_version
+from vectordb.index_operator import (
+    IndexRetentionExecutionResult,
+    rollback_index_version,
+)
 from vectordb.index_retention import record_retention_collection
 from vectordb.index_staging import (
     IndexStagingValidationError,
@@ -395,6 +401,35 @@ def rollback_vector_store(
         )
 
     return store, chunks
+
+
+def execute_vector_store_retention(
+    tenant_id: str = "default",
+    *,
+    expected_generation: int,
+    expected_candidates: tuple[str, ...],
+) -> IndexRetentionExecutionResult:
+    """Execute guarded retention for the configured Chroma vector store.
+
+    Requires the idempotent command key
+    ``(expected_generation, expected_candidates)`` and routes durable
+    classification/mutation through ``execute_guarded_chroma_retention``.
+    Callers cannot override the configured retention budget or chroma
+    directory; Qdrant fails closed before any adapter work.
+    """
+    tenant = tenant_id or "default"
+    settings = get_settings()
+    if getattr(settings, "vector_backend", "chroma") == "qdrant":
+        raise IndexStagingValidationError(
+            "Vector store retention is unavailable for the Qdrant backend"
+        )
+    return execute_guarded_chroma_retention(
+        tenant,
+        max_versions=settings.vectordb_retention_max_versions,
+        expected_generation=expected_generation,
+        expected_candidates=expected_candidates,
+        chroma_directory=settings.vectordb_chroma_dir,
+    )
 
 
 def build_factcard_store(

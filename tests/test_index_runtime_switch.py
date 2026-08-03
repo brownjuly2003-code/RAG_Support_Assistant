@@ -1190,3 +1190,487 @@ async def test_api_session_resolution_does_not_fall_back_to_stale_retriever(
         await api_app._get_or_create_session(None, tenant_id="acme")
 
     assert exc_info.value.status_code == 503
+
+
+def test_runtime_retention_forwards_normalized_tenant_budget_directory_and_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from vectordb.index_operator import IndexRetentionExecutionResult
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    settings = _settings(chroma_directory)
+    settings.vectordb_retention_max_versions = 2
+    monkeypatch.setattr(manager, "get_settings", lambda: settings)
+
+    expected = IndexRetentionExecutionResult(
+        tenant_id="default",
+        max_versions=2,
+        expected_generation=4,
+        expected_candidates=("old_a", "old_b"),
+        deleted_collections=("old_a", "old_b"),
+    )
+    seen: dict[str, Any] = {}
+    provider_calls: list[str] = []
+
+    def _track_embeddings(*args: Any, **kwargs: Any) -> Any:
+        provider_calls.append("embeddings")
+        return _Embeddings()
+
+    def _fake_guarded(
+        tenant_id: str,
+        *,
+        max_versions: int,
+        expected_generation: int,
+        expected_candidates: tuple[str, ...],
+        chroma_directory: str | Path,
+        client_factory: Any = None,
+    ) -> IndexRetentionExecutionResult:
+        seen["tenant_id"] = tenant_id
+        seen["max_versions"] = max_versions
+        seen["expected_generation"] = expected_generation
+        seen["expected_candidates"] = expected_candidates
+        seen["chroma_directory"] = chroma_directory
+        seen["client_factory"] = client_factory
+        return expected
+
+    monkeypatch.setattr(manager, "get_embeddings", _track_embeddings)
+    monkeypatch.setattr(manager, "execute_guarded_chroma_retention", _fake_guarded)
+
+    result = manager.execute_vector_store_retention(
+        "",
+        expected_generation=4,
+        expected_candidates=("old_a", "old_b"),
+    )
+
+    assert result is expected
+    assert seen == {
+        "tenant_id": "default",
+        "max_versions": 2,
+        "expected_generation": 4,
+        "expected_candidates": ("old_a", "old_b"),
+        "chroma_directory": chroma_directory,
+        "client_factory": None,
+    }
+    assert provider_calls == []
+    assert state.opened_names == []
+    assert state.deleted_names == []
+    assert state.built_names == []
+
+
+def test_runtime_retention_skips_embeddings_cache_chroma_manifest_and_second_lock(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from vectordb.index_manifest import index_manifest_path
+    from vectordb.index_operator import IndexRetentionExecutionResult
+    from vectordb.index_retention import index_retention_path
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    first_name = "rag_docs-v-acme-1111111111111111"
+    state.documents[first_name] = [
+        manager.Document(page_content="active", metadata={"chunk_index": 0})
+    ]
+    _publish(monkeypatch, chroma_directory, first_name)
+    manager.get_retriever(
+        tenant_id="acme",
+        persist_directory=chroma_directory,
+        embeddings=_Embeddings(),
+    )
+
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    inventory_path = index_retention_path("acme", chroma_directory=chroma_directory)
+    manifest_before = manifest_path.read_bytes()
+    inventory_before = (
+        inventory_path.read_bytes() if inventory_path.exists() else None
+    )
+    cache_before = {
+        "index": dict(manager._index_cache_keys),
+        "store": dict(manager._store_cache),
+        "chunks": {k: list(v) for k, v in manager._chunks_cache.items()},
+        "retriever": dict(manager._retriever_cache),
+    }
+    opened_before = list(state.opened_names)
+    lock_calls: list[str] = []
+    provider_calls: list[str] = []
+    real_lock = manager.tenant_index_lock
+
+    @contextmanager
+    def _count_lock(tenant_id: str) -> Iterator[Any]:
+        lock_calls.append(tenant_id)
+        with real_lock(tenant_id) as token:
+            yield token
+
+    def _track_embeddings(*args: Any, **kwargs: Any) -> Any:
+        provider_calls.append("embeddings")
+        return _Embeddings()
+
+    expected = IndexRetentionExecutionResult(
+        tenant_id="acme",
+        max_versions=3,
+        expected_generation=1,
+        expected_candidates=(),
+        deleted_collections=(),
+    )
+
+    def _fake_guarded(*args: Any, **kwargs: Any) -> IndexRetentionExecutionResult:
+        return expected
+
+    monkeypatch.setattr(manager, "tenant_index_lock", _count_lock)
+    monkeypatch.setattr(manager, "get_embeddings", _track_embeddings)
+    monkeypatch.setattr(manager, "execute_guarded_chroma_retention", _fake_guarded)
+
+    result = manager.execute_vector_store_retention(
+        tenant_id="acme",
+        expected_generation=1,
+        expected_candidates=(),
+    )
+
+    assert result is expected
+    assert provider_calls == []
+    assert lock_calls == []
+    assert state.opened_names == opened_before
+    assert state.deleted_names == []
+    assert state.built_names == []
+    assert manager._index_cache_keys == cache_before["index"]
+    assert manager._store_cache == cache_before["store"]
+    assert {k: list(v) for k, v in manager._chunks_cache.items()} == cache_before[
+        "chunks"
+    ]
+    assert manager._retriever_cache == cache_before["retriever"]
+    assert manifest_path.read_bytes() == manifest_before
+    if inventory_before is None:
+        assert not inventory_path.exists()
+    else:
+        assert inventory_path.read_bytes() == inventory_before
+
+
+def test_runtime_retention_qdrant_fail_closed_before_guarded_adapter(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from vectordb.index_staging import IndexStagingValidationError
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    settings = _settings(chroma_directory)
+    settings.vector_backend = "qdrant"
+    monkeypatch.setattr(manager, "get_settings", lambda: settings)
+    adapter_calls: list[str] = []
+    provider_calls: list[str] = []
+
+    def _track_embeddings(*args: Any, **kwargs: Any) -> Any:
+        provider_calls.append("embeddings")
+        return _Embeddings()
+
+    def _fail_guarded(*args: Any, **kwargs: Any) -> Any:
+        adapter_calls.append("guarded")
+        raise AssertionError("Qdrant path must not reach guarded adapter")
+
+    monkeypatch.setattr(manager, "get_embeddings", _track_embeddings)
+    monkeypatch.setattr(manager, "execute_guarded_chroma_retention", _fail_guarded)
+
+    with pytest.raises(IndexStagingValidationError, match="Qdrant"):
+        manager.execute_vector_store_retention(
+            tenant_id="acme",
+            expected_generation=1,
+            expected_candidates=("old_a",),
+        )
+
+    assert adapter_calls == []
+    assert provider_calls == []
+    assert state.opened_names == []
+    assert state.deleted_names == []
+
+
+@pytest.mark.parametrize(
+    "error_name",
+    [
+        "IndexRetentionExecutionValidationError",
+        "IndexRetentionExecutionConflict",
+        "IndexRetentionCorrupt",
+        "TenantIndexLockTimeout",
+        "IndexRetentionDeletionError",
+        "IndexRetentionMetadataUpdateError",
+    ],
+)
+def test_runtime_retention_propagates_guarded_failures_unchanged(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    error_name: str,
+) -> None:
+    from vectordb import index_operator, index_retention, tenant_lock
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    if error_name == "IndexRetentionExecutionValidationError":
+        error: Exception = index_operator.IndexRetentionExecutionValidationError(
+            "expected_generation must be a positive int"
+        )
+    elif error_name == "IndexRetentionExecutionConflict":
+        error = index_operator.IndexRetentionExecutionConflict(
+            "expected_candidates do not match current retention candidates"
+        )
+    elif error_name == "IndexRetentionCorrupt":
+        error = index_retention.IndexRetentionCorrupt(
+            "retention inventory is corrupt"
+        )
+    elif error_name == "TenantIndexLockTimeout":
+        error = tenant_lock.TenantIndexLockTimeout("tenant index lock timed out")
+    elif error_name == "IndexRetentionDeletionError":
+        error = index_retention.IndexRetentionDeletionError(
+            failed_collection="old_a",
+            deleted_collections=(),
+        )
+    else:
+        error = index_retention.IndexRetentionMetadataUpdateError(
+            deleted_collection="old_a",
+            deleted_collections=("old_a",),
+        )
+
+    def _raise(*args: Any, **kwargs: Any) -> Any:
+        raise error
+
+    monkeypatch.setattr(manager, "execute_guarded_chroma_retention", _raise)
+
+    with pytest.raises(type(error)) as exc_info:
+        manager.execute_vector_store_retention(
+            tenant_id="acme",
+            expected_generation=4,
+            expected_candidates=("old_a",),
+        )
+
+    assert exc_info.value is error
+    assert state.opened_names == []
+    assert state.deleted_names == []
+
+
+def test_runtime_retention_empty_tuple_passthrough_without_runtime_chroma(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from vectordb.index_operator import IndexRetentionExecutionResult
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    expected = IndexRetentionExecutionResult(
+        tenant_id="acme",
+        max_versions=3,
+        expected_generation=2,
+        expected_candidates=(),
+        deleted_collections=(),
+    )
+    seen_candidates: list[tuple[str, ...]] = []
+
+    def _fake_guarded(
+        tenant_id: str,
+        *,
+        max_versions: int,
+        expected_generation: int,
+        expected_candidates: tuple[str, ...],
+        chroma_directory: str | Path,
+        client_factory: Any = None,
+    ) -> IndexRetentionExecutionResult:
+        seen_candidates.append(expected_candidates)
+        return expected
+
+    monkeypatch.setattr(manager, "execute_guarded_chroma_retention", _fake_guarded)
+
+    result = manager.execute_vector_store_retention(
+        tenant_id="acme",
+        expected_generation=2,
+        expected_candidates=(),
+    )
+
+    assert result is expected
+    assert seen_candidates == [()]
+    assert state.opened_names == []
+    assert state.deleted_names == []
+    assert state.built_names == []
+    assert state.events == []
+
+
+def test_rebuild_retention_still_routes_to_execute_chroma_retention_not_guarded(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import inspect
+    import re
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    docs = [
+        manager.Document(
+            page_content="new known content",
+            metadata={"source": "new.md"},
+        )
+    ]
+    auto_calls: list[dict[str, Any]] = []
+    guarded_calls: list[str] = []
+
+    def _spy_auto(
+        tenant_id: str,
+        *,
+        max_versions: int,
+        lock_token: Any,
+        chroma_directory: str | Path,
+    ) -> tuple[str, ...]:
+        auto_calls.append(
+            {
+                "tenant_id": tenant_id,
+                "max_versions": max_versions,
+                "lock_token": lock_token,
+                "chroma_directory": chroma_directory,
+            }
+        )
+        return ()
+
+    def _spy_guarded(*args: Any, **kwargs: Any) -> Any:
+        guarded_calls.append("called")
+        raise AssertionError("rebuild must not call guarded retention")
+
+    monkeypatch.setattr(
+        manager,
+        "execute_chroma_retention",
+        _spy_auto,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        manager,
+        "execute_guarded_chroma_retention",
+        _spy_guarded,
+        raising=False,
+    )
+
+    build_source = inspect.getsource(manager.build_vector_store)
+    assert re.search(
+        r"(?<![a-zA-Z0-9_])execute_chroma_retention(?![a-zA-Z0-9_])",
+        build_source,
+    )
+    assert re.search(
+        r"(?<![a-zA-Z0-9_])execute_guarded_chroma_retention(?![a-zA-Z0-9_])",
+        build_source,
+    ) is None
+    assert re.search(
+        r"(?<![a-zA-Z0-9_])execute_vector_store_retention(?![a-zA-Z0-9_])",
+        build_source,
+    ) is None
+
+    manager.build_vector_store(
+        docs,
+        {"chunk_size": 100, "chunk_overlap": 0},
+        embeddings=_Embeddings(),
+        tenant_id="acme",
+    )
+
+    assert len(auto_calls) == 1
+    assert auto_calls[0]["tenant_id"] == "acme"
+    assert auto_calls[0]["max_versions"] == 3
+    assert Path(auto_calls[0]["chroma_directory"]) == chroma_directory
+    assert auto_calls[0]["lock_token"] is not None
+    assert guarded_calls == []
+
+
+def test_runtime_retention_signature_source_boundary_and_no_production_callers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import inspect
+    import re
+    from pathlib import Path as PathlibPath
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+
+    assert hasattr(manager, "execute_vector_store_retention")
+    signature = inspect.signature(manager.execute_vector_store_retention)
+    assert list(signature.parameters) == [
+        "tenant_id",
+        "expected_generation",
+        "expected_candidates",
+    ]
+    assert (
+        signature.parameters["expected_generation"].kind
+        is inspect.Parameter.KEYWORD_ONLY
+    )
+    assert (
+        signature.parameters["expected_candidates"].kind
+        is inspect.Parameter.KEYWORD_ONLY
+    )
+    for forbidden in ("lock_token", "max_versions", "chroma_directory", "embeddings"):
+        assert forbidden not in signature.parameters
+
+    source = inspect.getsource(manager.execute_vector_store_retention)
+    assert "execute_guarded_chroma_retention" in source
+    assert "get_settings" in source
+    assert "vectordb_retention_max_versions" in source
+    assert "vectordb_chroma_dir" in source
+    assert "IndexStagingValidationError" in source
+    for fragment in (
+        "get_embeddings",
+        "tenant_index_lock",
+        "read_index_manifest",
+        "read_retention_inventory",
+        "record_retention_collection",
+        "publish_active_collection",
+        "_get_chroma",
+        "list_collections",
+        "delete_collection",
+        "audit",
+        "fastapi",
+        "APIRouter",
+    ):
+        assert re.search(
+            rf"(?<![a-zA-Z0-9_]){re.escape(fragment)}(?![a-zA-Z0-9_])",
+            source,
+        ) is None, fragment
+    # Automatic rebuild path name must not be invoked from the guarded entrypoint.
+    assert re.search(
+        r"(?<![a-zA-Z0-9_])execute_chroma_retention(?![a-zA-Z0-9_])",
+        source,
+    ) is None
+
+    with pytest.raises(TypeError):
+        manager.execute_vector_store_retention(  # type: ignore[call-arg]
+            tenant_id="acme",
+        )
+    with pytest.raises(TypeError):
+        manager.execute_vector_store_retention(  # type: ignore[call-arg]
+            tenant_id="acme",
+            expected_generation=1,
+        )
+    with pytest.raises(TypeError):
+        manager.execute_vector_store_retention(  # type: ignore[call-arg]
+            tenant_id="acme",
+            expected_candidates=(),
+        )
+
+    root = PathlibPath(__file__).resolve().parents[1]
+    production_hits: list[str] = []
+    for path in (
+        root / "vectordb",
+        root / "api",
+        root / "config",
+        root / "ingestion",
+        root / "scripts",
+    ):
+        if not path.exists():
+            continue
+        for candidate in path.rglob("*.py"):
+            if candidate.name == "manager.py" and candidate.parent.name == "vectordb":
+                continue
+            text = candidate.read_text(encoding="utf-8")
+            if "execute_vector_store_retention" in text:
+                production_hits.append(
+                    str(candidate.relative_to(root)).replace("\\", "/")
+                )
+    assert production_hits == []
