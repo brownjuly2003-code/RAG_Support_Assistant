@@ -1,5 +1,65 @@
 # Agent State
 
+## 2026-08-03 Update-42 (plan 2.3f / guarded retention execution @ `f5f3f6e`) ✅ START HERE
+
+> **Next-session handoff:** refresh `git status` first. This Update-42 block
+> supersedes Update-41 as the current durable handoff. Protected dirty
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and
+> existing untracked artifacts were not touched. Older docs may still point to
+> plan 2.3e / next-slice 2.3f and must not cause completed work to be repeated.
+>
+> **Implementation commit:** `f5f3f6e` (`feat(index): guard retention
+> execution`). Slice **2.3f is locally complete and verified**.
+> - `vectordb.index_operator.execute_index_retention` is an unwired domain
+>   command
+> - validates expected generation and exact ordered candidate tuple before
+>   lock; falsey tenant normalizes to `default`
+> - under one tenant lock recomputes bounded candidates, reads manifest,
+>   conflicts on missing/mismatched generation or tuple before mutation, then
+>   calls existing `execute_bounded_retention` with the held token and injected
+>   idempotent delete callback
+> - result reports tenant/budget/expected command key and exact deleted tuple
+> - empty exact tuple still goes through the existing executor
+> - existing corrupt metadata, lock, delete, and metadata-prune errors
+>   propagate typed and observable
+> - partial delete followed by successful prune requires a fresh
+>   preview/command for the remaining tuple; metadata-prune failure preserves
+>   the tuple so an exact retry with idempotent deletion remains safe
+>
+> **Boundary:** no Chroma adapter/runtime/manager/HTTP/admin/audit/UI wiring;
+> no new deletion adapter or policy; no live Chroma/PostgreSQL/Redis; no
+> deploy/push. Broader operator surface, plan step 2, project, release,
+> production readiness, live drills, and retention API are **not** complete.
+>
+> **Verification — Grok:** route `local_grok_cli`; CLI-selected model
+> `grok-4.5`, actual reported `grok-4.5-build`; first attempt cancelled before
+> edits at a denied redundant `python -c` hash command; one cause-specific
+> follow-up completed in 11 turns; tests-first red: `26 failed` due missing
+> execution contract; final focused aggregate: `76 passed`, one known
+> Starlette warning; Grok Ruff and scoped diff-check clean.
+>
+> **Verification — Codex independent:** new execution/boundary gate:
+> `26 passed, 28 deselected`, one known Starlette warning; scoped Ruff clean;
+> Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4: no issues in
+> `vectordb/index_operator.py`; scoped `git diff --check` clean; protected
+> implementation/dependency/runtime/API hashes unchanged before commit.
+>
+> **Current truth:** slices **2.1, 2.2, 2.3a, 2.3b, 2.3c, 2.3d, 2.3e, 2.3f**
+> are locally complete and verified. Broader operator surface, plan step 2,
+> project, and release are **not** complete because Chroma-side adapter bridge
+> and further retention wiring remain absent. Next safe named slice is
+> **2.3g only** (not started): add a Chroma-side guarded adapter bridge for the
+> new command, requiring explicit expected generation/candidates and supplying
+> the existing idempotent direct-delete behavior, while preserving the
+> existing automatic post-publish `execute_chroma_retention` contract. 2.3g
+> must remain adapter-only: no manager/runtime public action, no HTTP/API/
+> admin audit, no settings/policy change, no live services, deploy, or push.
+> Treat 2.3g as the next investigation/implementation candidate, not as
+> completed work. Full contract, evidence, and protected-state details:
+> refreshed [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md). Eventual docs
+> refresh commit will be a descendant of `f5f3f6e`; next session takes the
+> actual hash from `git log`, not an embedded self-hash.
+
 ## 2026-08-03 Update-41 (plan 2.3e / idempotent index rollback API @ `457cbf0`) ✅ START HERE
 
 > **Next-session handoff:** refresh `git status` first. This Update-41 block
