@@ -1,5 +1,46 @@
 # Agent State
 
+## 2026-08-03 Update-36 (plan 2.3a / lock-consistent retention preview @ `5bbc329`) ✅ START HERE
+
+> **Next-session handoff:** refresh `git status` first. This Update-36 block
+> supersedes Update-35 as the current durable handoff. Protected dirty
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md), `plan_sol_23_07_26`, and
+> existing untracked artifacts were not touched. Older docs may still point to
+> plan 2.1/2.2 and must not cause that work to be repeated.
+>
+> **Implementation commit:** `5bbc329` (`feat(index): preview bounded
+> retention`). Slice **2.3a** adds frozen `IndexRetentionPreview` and
+> `preview_index_retention` in `vectordb/index_operator.py`:
+> - normalizes falsey tenant to `default`
+> - holds one tenant index lock across the existing bounded-candidate policy
+>   plus manifest/inventory reads
+> - returns requested budget, manifest generation, active/previous, ordered
+>   inventory, and deletion candidates
+> - read-only and intentionally unwired: no Chroma import/client/list/open/
+>   delete, no API route, rollback/publish/execution, runtime wiring, or audit
+>   logging
+> - existing validation/corrupt-metadata errors propagate; tests cover missing
+>   state, invalid budget, corrupt inventory/manifest, lock ownership during
+>   all reads, and byte preservation
+>
+> **Verification:** Grok TDD evidence: initial red run `10 failed` with missing
+> module; focused gate `46 passed`; Ruff and diff check clean. Actual local
+> delegate route/model was local Grok CLI / `grok-4.5-build`. Independent Codex
+> evidence: closure gate `79 passed` with one known FastAPI TestClient
+> deprecation warning; scoped Ruff clean; Python 3.11 + mypy 1.19.1 +
+> NumPy 2.4.4 clean; protected source hashes unchanged; cached diff check
+> clean. No real Chroma client, live Chroma/PostgreSQL/Redis, push, or deploy
+> occurred.
+>
+> **Current truth:** plan step 2 and the broader operator surface remain in
+> progress. Only the domain dry-run primitive **2.3a** is complete. Next safe
+> named slice is **2.3b**: a tenant-scoped admin HTTP endpoint exposing only
+> retention preview, with existing admin auth/tenant derivation and audit
+> outcome. Retention execution/deletion and rollback action remain separate,
+> unstarted slices. Immutable/versioned originals, broader fault injection,
+> live drills, release, and whole-project completion remain open.
+
 ## 2026-08-03 Update-35 (plan 2.2 / post-publish bounded retention @ `f0cb6ee`) ✅ START HERE
 
 > **Next-session handoff:** refresh `git status` first. This Update-35 block is
