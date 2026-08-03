@@ -126,6 +126,22 @@ groups:
             immediately: identify slow queries or a connection leak,
             consider raising pool_size/max_overflow as a temporary fix.
 
+  - name: rag-ingestion
+    interval: 30s
+    rules:
+      - alert: IngestionQueueStalled
+        expr: rag_ingestion_queue_oldest_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+          component: ingestion
+        annotations:
+          summary: "Oldest ingestion job has waited over 5 minutes"
+          description: |
+            The oldest asynchronous ingestion job has remained queued for at
+            least 10 minutes. Check Celery worker health and Redis connectivity
+            before the default 15-minute stale-job timeout marks it failed.
+
   - name: rag-quality
     interval: 1m
     rules:

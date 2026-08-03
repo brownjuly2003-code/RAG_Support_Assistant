@@ -203,6 +203,7 @@ coloring for operators and admins.
   `rag_stale_important_docs_count`, `llm_cache_hits_total{tenant}`,
   `llm_cache_misses_total{tenant}`, `rag_traces_purged_total{table}`,
   `rag_audit_purged_total`, `rag_auth_failures_total{reason}`,
+  `rag_ingestion_queue_oldest_seconds`,
   `review_queue_pending_total{reason}`,
   `review_queue_confirmed_total{verdict}`,
   `review_queue_oldest_pending_seconds`
@@ -210,7 +211,12 @@ coloring for operators and admins.
 ### 3. Alert rules and scheduled checks
 
 - `monitoring/alert_rules.yml` defines Prometheus alert groups for
-  resilience, health, quality, latency, nightly eval drift, and stale docs.
+  resilience, health, ingestion, quality, latency, nightly eval drift, and
+  stale docs. `IngestionQueueStalled` warns when the oldest async ingestion
+  job remains older than 300 seconds for five minutes; with the default
+  900-second stale-job timeout this leaves an operator response window before
+  the reaper marks the job failed. Keep the rule threshold aligned if
+  `INGESTION_JOB_QUEUED_STALE_SEC` is lowered below its default.
 - `scripts/check_alerts.py` is a lightweight SQLite-based checker that can run
   every five minutes and push alerts through `ALERT_WEBHOOK_URL`.
 - `scripts/nightly_eval.py` records evaluation drift, and

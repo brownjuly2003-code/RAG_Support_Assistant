@@ -19,9 +19,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, or_, update
+from sqlalchemy import and_, func, or_, select, update
 
 from db.models import IngestionJob
+from monitoring import prometheus as prometheus_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -281,6 +282,30 @@ def _clear_lease_values(now: datetime, error: str) -> dict[str, Any]:
     }
 
 
+def _queued_async_oldest_seconds(session: Any, now: datetime) -> float:
+    """Return aggregate queue age without exposing tenant or document labels."""
+    queued_at = session.scalar(
+        select(
+            func.min(
+                func.coalesce(
+                    IngestionJob.source_ready_at,
+                    IngestionJob.created_at,
+                )
+            )
+        ).where(
+            IngestionJob.status == "queued",
+            IngestionJob.celery_task_id.isnot(None),
+        )
+    )
+    if queued_at is None:
+        return 0.0
+    if queued_at.tzinfo is None:
+        queued_at = queued_at.replace(tzinfo=timezone.utc)
+    else:
+        queued_at = queued_at.astimezone(timezone.utc)
+    return max(0.0, (now - queued_at).total_seconds())
+
+
 def reap_stale_jobs(*, now: datetime | None = None) -> dict[str, int]:
     """Reap stale async ingestion jobs. Returns aggregate counts only.
 
@@ -301,6 +326,10 @@ def reap_stale_jobs(*, now: datetime | None = None) -> dict[str, int]:
     }
 
     with _jobs_sync_session() as session:
+        prometheus_metrics.set_ingestion_queue_oldest(
+            _queued_async_oldest_seconds(session, now)
+        )
+
         # 1) Stale queued async jobs (never claimed). Inclusive at exact cutoff.
         res_q = session.execute(
             update(IngestionJob)

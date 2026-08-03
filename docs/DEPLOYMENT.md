@@ -139,9 +139,10 @@ Non-production data-disabled charts remain possible only with
 `worker.enabled=false`. Disabling the worker leaves the existing app
 Deployment contract intact.
 
-**Still open (not claimed by this topology slice):** stuck-queued reaper,
-retry/idempotency, queue-age metrics/alerts, atomic index publish (ING-02),
-per-tenant locking / TEN-03, and live Redis/Postgres/Celery drills.
+Later ingestion slices add a stuck-queued reaper, bounded publish
+retry/idempotency, and the `rag_ingestion_queue_oldest_seconds` alerting
+contract. **Still open:** atomic index publish (ING-02), per-tenant locking /
+TEN-03, and live Redis/Postgres/Celery drills.
 
 ### Reverse proxy and cookie authentication
 

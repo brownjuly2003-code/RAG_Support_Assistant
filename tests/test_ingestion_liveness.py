@@ -408,6 +408,7 @@ def test_liveness_resolves_sync_session_late(
     def _tracked_session():
         calls.append("session")
         session = MagicMock()
+        session.scalar.return_value = None
         result = MagicMock()
         result.rowcount = 0
         session.execute.return_value = result

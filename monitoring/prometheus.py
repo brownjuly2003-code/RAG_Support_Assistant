@@ -1,7 +1,7 @@
 """Prometheus metrics для RAG Support Assistant."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 __all__ = [
     "ACTIVE_SESSIONS",
@@ -24,6 +24,7 @@ __all__ = [
     "FEEDBACK_COUNT",
     "HTTP_REQUESTS",
     "HTTP_REQUEST_DURATION",
+    "INGESTION_QUEUE_OLDEST_SECONDS",
     "LLM_COST_USD_TOTAL",
     "LLM_PROVIDER_FALLBACK_TOTAL",
     "LLM_CACHE_HITS",
@@ -65,6 +66,7 @@ __all__ = [
     "record_body_size_rejection",
     "set_curated_dataset_last_build_timestamp",
     "set_curated_dataset_size",
+    "set_ingestion_queue_oldest",
     "record_db_pool_stats",
     "record_eval_drift",
     "record_circuit_breaker_change",
@@ -121,10 +123,10 @@ if TYPE_CHECKING:
     # inferring the type from whichever assignment it sees first. Grouped by the
     # prometheus metric kind; every call site uses a method present on both
     # arms (inc/observe/set), so the union needs no per-call narrowing.
-    _CounterT = Counter | _NoopMetric
-    _GaugeT = Gauge | _NoopMetric
-    _HistogramT = Histogram | _NoopMetric
-    _SummaryT = Summary | _NoopMetric
+    _CounterT: TypeAlias = Counter | _NoopMetric
+    _GaugeT: TypeAlias = Gauge | _NoopMetric
+    _HistogramT: TypeAlias = Histogram | _NoopMetric
+    _SummaryT: TypeAlias = Summary | _NoopMetric
 
     REQUEST_COUNT: _CounterT
     HTTP_REQUESTS: _CounterT
@@ -171,6 +173,7 @@ if TYPE_CHECKING:
     REVIEW_QUEUE_PENDING_TOTAL: _GaugeT
     REVIEW_QUEUE_CONFIRMED_TOTAL: _GaugeT
     REVIEW_QUEUE_OLDEST_PENDING_SECONDS: _GaugeT
+    INGESTION_QUEUE_OLDEST_SECONDS: _GaugeT
     STALE_IMPORTANT_DOCS: _GaugeT
     INFLIGHT_PIPELINES: _GaugeT
     EVAL_DRIFT: _GaugeT
@@ -181,13 +184,17 @@ if TYPE_CHECKING:
 
 try:
     from prometheus_client import (
-        CONTENT_TYPE_LATEST,
+        CONTENT_TYPE_LATEST as _PROMETHEUS_CONTENT_TYPE_LATEST,
+    )
+    from prometheus_client import (
         CollectorRegistry,
         Counter,
         Gauge,
         Histogram,
         Summary,
-        generate_latest,
+    )
+    from prometheus_client import (
+        generate_latest as _prometheus_generate_latest,
     )
 except ImportError:
     REQUEST_COUNT = _NoopMetric()
@@ -221,6 +228,7 @@ except ImportError:
     REVIEW_QUEUE_PENDING_TOTAL = _NoopMetric()
     REVIEW_QUEUE_CONFIRMED_TOTAL = _NoopMetric()
     REVIEW_QUEUE_OLDEST_PENDING_SECONDS = _NoopMetric()
+    INGESTION_QUEUE_OLDEST_SECONDS = _NoopMetric()
     REQUEST_TIMEOUTS = _NoopMetric()
     STALE_IMPORTANT_DOCS = _NoopMetric()
     INFLIGHT_PIPELINES = _NoopMetric()
@@ -240,6 +248,8 @@ except ImportError:
     ONLINE_EVALUATORS_DROPPED = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
+    CONTENT_TYPE_LATEST = _PROMETHEUS_CONTENT_TYPE_LATEST
+    generate_latest = _prometheus_generate_latest
     REGISTRY = CollectorRegistry()
 
     REQUEST_COUNT = Counter(
@@ -460,6 +470,12 @@ else:
         registry=REGISTRY,
     )
 
+    INGESTION_QUEUE_OLDEST_SECONDS = Gauge(
+        "rag_ingestion_queue_oldest_seconds",
+        "Age of the oldest queued asynchronous ingestion job",
+        registry=REGISTRY,
+    )
+
     REQUEST_TIMEOUTS = Counter(
         "rag_request_timeouts_total",
         "Requests exceeding REQUEST_TIMEOUT_SEC wall-time",
@@ -582,6 +598,7 @@ else:
     for _verdict in ("good", "bad"):
         REVIEW_QUEUE_CONFIRMED_TOTAL.labels(verdict=_verdict).set(0)
     REVIEW_QUEUE_OLDEST_PENDING_SECONDS.set(0)
+    INGESTION_QUEUE_OLDEST_SECONDS.set(0)
     CURATED_DATASET_LAST_BUILD_TIMESTAMP_SECONDS.set(0)
 
 
@@ -686,6 +703,10 @@ def set_review_queue_confirmed(verdict: str, count: int) -> None:
 
 def set_review_queue_oldest_pending(seconds: float) -> None:
     REVIEW_QUEUE_OLDEST_PENDING_SECONDS.set(max(0.0, float(seconds)))
+
+
+def set_ingestion_queue_oldest(seconds: float) -> None:
+    INGESTION_QUEUE_OLDEST_SECONDS.set(max(0.0, float(seconds)))
 
 
 def set_regression_last_pass_rate(baseline: str, candidate: str, pass_rate: float) -> None:
