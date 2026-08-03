@@ -620,10 +620,27 @@ def test_runtime_rollback_validates_previous_then_switches_cache_generation(
         persist_directory=chroma_directory,
         embeddings=_Embeddings(),
     )
+    from vectordb import index_operator
+
+    mutation_events: list[str] = []
+    real_rollback = index_operator.rollback_active_collection
+
+    def _spy_manifest_rollback(*args: Any, **kwargs: Any) -> Any:
+        mutation_events.append("mutate")
+        return real_rollback(*args, **kwargs)
+
+    # Operator owns the mutation; manager must route through the command.
+    monkeypatch.setattr(
+        index_operator,
+        "rollback_active_collection",
+        _spy_manifest_rollback,
+    )
 
     store, chunks = manager.rollback_vector_store(
         tenant_id="acme",
         embeddings=_Embeddings(),
+        expected_generation=2,
+        target_collection=first_name,
     )
 
     rolled_back = read_index_manifest("acme", chroma_directory=chroma_directory)
@@ -635,6 +652,16 @@ def test_runtime_rollback_validates_previous_then_switches_cache_generation(
     assert [chunk.page_content for chunk in chunks] == ["first"]
     assert f"dimension:{first_name}" in state.events
     assert f"known-query:{first_name}" in state.events
+    # Target open/validation must complete before the single manifest mutation.
+    assert state.events.index(f"dimension:{first_name}") < state.events.index(
+        f"known-query:{first_name}"
+    )
+    assert mutation_events == ["mutate"]
+    assert manager._index_cache_keys["acme"] == (
+        str(chroma_directory.resolve()),
+        first_name,
+        3,
+    )
 
     rolled_back_retriever = manager.get_retriever(
         tenant_id="acme",
@@ -645,6 +672,208 @@ def test_runtime_rollback_validates_previous_then_switches_cache_generation(
     assert rolled_back_retriever is not active_retriever
     assert state.opened_names == [second_name, first_name]
     assert state.deleted_names == []
+
+
+def test_runtime_rollback_exact_retry_preserves_manifest_bytes_and_cache(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from vectordb.index_manifest import index_manifest_path, read_index_manifest
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    first_name = "rag_docs-v-acme-1111111111111111"
+    second_name = "rag_docs-v-acme-2222222222222222"
+    state.documents[first_name] = [
+        manager.Document(page_content="first", metadata={"chunk_index": 0})
+    ]
+    state.documents[second_name] = [
+        manager.Document(page_content="second", metadata={"chunk_index": 0})
+    ]
+    _publish(monkeypatch, chroma_directory, first_name)
+    _publish(monkeypatch, chroma_directory, second_name)
+
+    first_store, first_chunks = manager.rollback_vector_store(
+        tenant_id="acme",
+        embeddings=_Embeddings(),
+        expected_generation=2,
+        target_collection=first_name,
+    )
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    after_apply_bytes = manifest_path.read_bytes()
+    after_apply = read_index_manifest("acme", chroma_directory=chroma_directory)
+    assert after_apply is not None
+    assert after_apply.generation == 3
+    assert after_apply.active_collection == first_name
+    assert after_apply.previous_collection == second_name
+    cache_after_apply = manager._index_cache_keys["acme"]
+
+    from vectordb import index_operator
+
+    mutation_calls: list[object] = []
+    real_rollback = index_operator.rollback_active_collection
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        mutation_calls.append((args, kwargs))
+        return real_rollback(*args, **kwargs)
+
+    monkeypatch.setattr(index_operator, "rollback_active_collection", _spy)
+
+    retry_store, retry_chunks = manager.rollback_vector_store(
+        tenant_id="acme",
+        embeddings=_Embeddings(),
+        expected_generation=2,
+        target_collection=first_name,
+    )
+
+    assert mutation_calls == []
+    assert manifest_path.read_bytes() == after_apply_bytes
+    retry_manifest = read_index_manifest("acme", chroma_directory=chroma_directory)
+    assert retry_manifest is not None
+    assert retry_manifest.generation == 3
+    assert retry_manifest.active_collection == first_name
+    assert retry_manifest.previous_collection == second_name
+    assert retry_store.collection_name == first_name
+    assert first_store.collection_name == first_name
+    assert [chunk.page_content for chunk in retry_chunks] == ["first"]
+    assert [chunk.page_content for chunk in first_chunks] == ["first"]
+    assert manager._index_cache_keys["acme"] == cache_after_apply
+    assert manager._index_cache_keys["acme"] == (
+        str(chroma_directory.resolve()),
+        first_name,
+        3,
+    )
+    assert state.deleted_names == []
+
+
+def test_runtime_rollback_omitted_preconditions_raise_typeerror_without_side_effects(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from vectordb.index_manifest import index_manifest_path
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    first_name = "rag_docs-v-acme-1111111111111111"
+    second_name = "rag_docs-v-acme-2222222222222222"
+    state.documents[first_name] = [
+        manager.Document(page_content="first", metadata={"chunk_index": 0})
+    ]
+    state.documents[second_name] = [
+        manager.Document(page_content="second", metadata={"chunk_index": 0})
+    ]
+    _publish(monkeypatch, chroma_directory, first_name)
+    _publish(monkeypatch, chroma_directory, second_name)
+    manager.get_retriever(
+        tenant_id="acme",
+        persist_directory=chroma_directory,
+        embeddings=_Embeddings(),
+    )
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    manifest_before = manifest_path.read_bytes()
+    cache_before = dict(manager._index_cache_keys)
+    store_before = dict(manager._store_cache)
+    chunks_before = {k: list(v) for k, v in manager._chunks_cache.items()}
+    opened_before = list(state.opened_names)
+    provider_calls: list[str] = []
+
+    def _track_embeddings(*args: Any, **kwargs: Any) -> Any:
+        provider_calls.append("embeddings")
+        return _Embeddings()
+
+    monkeypatch.setattr(manager, "get_embeddings", _track_embeddings)
+
+    with pytest.raises(TypeError):
+        manager.rollback_vector_store(  # type: ignore[call-arg]
+            tenant_id="acme",
+            embeddings=_Embeddings(),
+        )
+    with pytest.raises(TypeError):
+        manager.rollback_vector_store(  # type: ignore[call-arg]
+            tenant_id="acme",
+            embeddings=_Embeddings(),
+            expected_generation=2,
+        )
+    with pytest.raises(TypeError):
+        manager.rollback_vector_store(  # type: ignore[call-arg]
+            tenant_id="acme",
+            embeddings=_Embeddings(),
+            target_collection=first_name,
+        )
+
+    assert provider_calls == []
+    assert state.opened_names == opened_before
+    assert manifest_path.read_bytes() == manifest_before
+    assert manager._index_cache_keys == cache_before
+    assert manager._store_cache == store_before
+    assert {k: list(v) for k, v in manager._chunks_cache.items()} == chunks_before
+
+
+@pytest.mark.parametrize(
+    ("expected_generation", "target_collection", "error_name"),
+    [
+        (True, "rag_docs-v-acme-1111111111111111", "IndexRollbackValidationError"),
+        (2, "", "IndexRollbackValidationError"),
+        (1, "rag_docs-v-acme-1111111111111111", "IndexRollbackConflict"),
+        (3, "rag_docs-v-acme-1111111111111111", "IndexRollbackConflict"),
+        (2, "rag_docs-v-acme-0000000000000000", "IndexRollbackConflict"),
+    ],
+)
+def test_runtime_rollback_invalid_or_conflict_before_embeddings_and_chroma(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    expected_generation: Any,
+    target_collection: str,
+    error_name: str,
+) -> None:
+    from vectordb import index_operator
+    from vectordb.index_manifest import index_manifest_path
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    first_name = "rag_docs-v-acme-1111111111111111"
+    second_name = "rag_docs-v-acme-2222222222222222"
+    state.documents[first_name] = [
+        manager.Document(page_content="first", metadata={"chunk_index": 0})
+    ]
+    state.documents[second_name] = [
+        manager.Document(page_content="second", metadata={"chunk_index": 0})
+    ]
+    _publish(monkeypatch, chroma_directory, first_name)
+    _publish(monkeypatch, chroma_directory, second_name)
+    manager.get_retriever(
+        tenant_id="acme",
+        persist_directory=chroma_directory,
+        embeddings=_Embeddings(),
+    )
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    manifest_before = manifest_path.read_bytes()
+    cache_before = dict(manager._index_cache_keys)
+    opened_before = list(state.opened_names)
+    provider_calls: list[str] = []
+
+    def _track_embeddings(*args: Any, **kwargs: Any) -> Any:
+        provider_calls.append("embeddings")
+        return _Embeddings()
+
+    monkeypatch.setattr(manager, "get_embeddings", _track_embeddings)
+    error_type = getattr(index_operator, error_name)
+
+    with pytest.raises(error_type):
+        manager.rollback_vector_store(
+            tenant_id="acme",
+            embeddings=None,
+            expected_generation=expected_generation,
+            target_collection=target_collection,
+        )
+
+    assert provider_calls == []
+    assert state.opened_names == opened_before
+    assert manifest_path.read_bytes() == manifest_before
+    assert manager._index_cache_keys == cache_before
 
 
 @pytest.mark.parametrize(
@@ -688,6 +917,7 @@ def test_runtime_rollback_target_failure_preserves_manifest_and_active_cache(
     )
     manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
     manifest_before = manifest_path.read_bytes()
+    cache_before = dict(manager._index_cache_keys)
     state.fail_dimension = failure_mode == "dimension"
     state.fail_known_query = failure_mode == "known-query"
 
@@ -695,9 +925,12 @@ def test_runtime_rollback_target_failure_preserves_manifest_and_active_cache(
         manager.rollback_vector_store(
             tenant_id="acme",
             embeddings=_Embeddings(),
+            expected_generation=2,
+            target_collection=first_name,
         )
 
     assert manifest_path.read_bytes() == manifest_before
+    assert manager._index_cache_keys == cache_before
     assert (
         manager.get_retriever(
             tenant_id="acme",
@@ -706,6 +939,164 @@ def test_runtime_rollback_target_failure_preserves_manifest_and_active_cache(
         )
         is active_retriever
     )
+    assert state.deleted_names == []
+
+
+def test_runtime_rollback_retry_validation_failure_preserves_rolled_back_manifest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from vectordb.index_manifest import index_manifest_path, read_index_manifest
+    from vectordb.index_staging import IndexStagingValidationError
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    first_name = "rag_docs-v-acme-1111111111111111"
+    second_name = "rag_docs-v-acme-2222222222222222"
+    state.documents[first_name] = [
+        manager.Document(page_content="first", metadata={"chunk_index": 0})
+    ]
+    state.documents[second_name] = [
+        manager.Document(page_content="second", metadata={"chunk_index": 0})
+    ]
+    _publish(monkeypatch, chroma_directory, first_name)
+    _publish(monkeypatch, chroma_directory, second_name)
+
+    manager.rollback_vector_store(
+        tenant_id="acme",
+        embeddings=_Embeddings(),
+        expected_generation=2,
+        target_collection=first_name,
+    )
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    rolled_bytes = manifest_path.read_bytes()
+    rolled = read_index_manifest("acme", chroma_directory=chroma_directory)
+    assert rolled is not None
+    assert rolled.generation == 3
+    assert rolled.active_collection == first_name
+    assert rolled.previous_collection == second_name
+    cache_after_apply = dict(manager._index_cache_keys)
+
+    state.fail_dimension = True
+    with pytest.raises(IndexStagingValidationError, match="dimension"):
+        manager.rollback_vector_store(
+            tenant_id="acme",
+            embeddings=_Embeddings(),
+            expected_generation=2,
+            target_collection=first_name,
+        )
+
+    assert manifest_path.read_bytes() == rolled_bytes
+    still = read_index_manifest("acme", chroma_directory=chroma_directory)
+    assert still is not None
+    assert still.generation == 3
+    assert still.active_collection == first_name
+    assert still.previous_collection == second_name
+    assert manager._index_cache_keys == cache_after_apply
+    assert state.deleted_names == []
+
+
+def test_runtime_rollback_uses_operator_command_without_nested_tenant_lock(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import inspect
+    import re
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    first_name = "rag_docs-v-acme-1111111111111111"
+    second_name = "rag_docs-v-acme-2222222222222222"
+    state.documents[first_name] = [
+        manager.Document(page_content="first", metadata={"chunk_index": 0})
+    ]
+    state.documents[second_name] = [
+        manager.Document(page_content="second", metadata={"chunk_index": 0})
+    ]
+    _publish(monkeypatch, chroma_directory, first_name)
+    _publish(monkeypatch, chroma_directory, second_name)
+
+    manager_source = inspect.getsource(manager.rollback_vector_store)
+    assert "rollback_index_version" in manager_source
+    assert re.search(
+        r"(?<![a-zA-Z0-9_])rollback_active_collection(?![a-zA-Z0-9_])",
+        manager_source,
+    ) is None
+    assert re.search(
+        r"(?<![a-zA-Z0-9_])tenant_index_lock(?![a-zA-Z0-9_])",
+        manager_source,
+    ) is None
+
+    from vectordb import index_operator, tenant_lock
+
+    operator_source = Path(inspect.getfile(index_operator)).read_text(encoding="utf-8")
+    lowered = operator_source.lower()
+    for fragment in (
+        "chromadb",
+        "vectordb.manager",
+        "apirouter",
+        "fastapi",
+        "audit_log",
+        "execute_chroma_retention",
+        "delete_collection",
+    ):
+        pattern = rf"(?<![a-z0-9_]){re.escape(fragment)}(?![a-z0-9_])"
+        assert re.search(pattern, lowered) is None, fragment
+
+    lock_calls: list[str] = []
+    real_lock = tenant_lock.tenant_index_lock
+
+    @contextmanager
+    def _count_lock(tenant_id: str) -> Iterator[Any]:
+        lock_calls.append(tenant_id)
+        with real_lock(tenant_id) as token:
+            yield token
+
+    monkeypatch.setattr(index_operator, "tenant_index_lock", _count_lock)
+    monkeypatch.setattr(manager, "tenant_index_lock", _count_lock)
+
+    manager.rollback_vector_store(
+        tenant_id="acme",
+        embeddings=_Embeddings(),
+        expected_generation=2,
+        target_collection=first_name,
+    )
+
+    assert lock_calls == ["acme"]
+
+
+def test_runtime_rollback_qdrant_fail_closed_without_chroma(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from vectordb.index_staging import IndexStagingValidationError
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    settings = _settings(chroma_directory)
+    settings.vector_backend = "qdrant"
+    monkeypatch.setattr(manager, "get_settings", lambda: settings)
+    provider_calls: list[str] = []
+
+    def _track_embeddings(*args: Any, **kwargs: Any) -> Any:
+        provider_calls.append("embeddings")
+        return _Embeddings()
+
+    monkeypatch.setattr(manager, "get_embeddings", _track_embeddings)
+
+    with pytest.raises(IndexStagingValidationError, match="Qdrant"):
+        manager.rollback_vector_store(
+            tenant_id="acme",
+            embeddings=None,
+            expected_generation=1,
+            target_collection="any",
+        )
+
+    assert provider_calls == []
+    assert state.opened_names == []
     assert state.deleted_names == []
 
 

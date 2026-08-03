@@ -1,6 +1,7 @@
-"""Lock-consistent index retention previews and unwired rollback commands."""
+"""Lock-consistent index retention previews and rollback commands."""
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from vectordb.index_retention import (
     bounded_retention_candidates,
     read_retention_inventory,
 )
-from vectordb.tenant_lock import tenant_index_lock
+from vectordb.tenant_lock import TenantIndexLockToken, tenant_index_lock
 
 
 class IndexRollbackCommandError(RuntimeError):
@@ -105,12 +106,15 @@ def rollback_index_version(
     expected_generation: int,
     target_collection: str,
     chroma_directory: str | Path | None = None,
+    target_validator: Callable[[str, TenantIndexLockToken], None] | None = None,
 ) -> IndexRollbackResult:
     """Conditionally roll back the active index version under the tenant lock.
 
-    This is an unwired idempotent command contract: it serializes on the tenant
-    lock and requires an explicit expected generation plus target collection so
-    retries cannot flip active/previous back and forth.
+    Idempotent command contract: serializes on the tenant lock and requires an
+    explicit expected generation plus target collection so retries cannot flip
+    active/previous back and forth. Optional ``target_validator`` runs once
+    under the held lock after durable command-state classification and before
+    any first-apply mutation (or before returning an exact-retry no-op).
     """
     if (
         not isinstance(expected_generation, int)
@@ -141,6 +145,8 @@ def rollback_index_version(
             current.generation == expected_generation + 1
             and current.active_collection == target_collection
         ):
+            if target_validator is not None:
+                target_validator(target_collection, lock_token)
             return IndexRollbackResult(
                 tenant_id=normalized_tenant,
                 expected_generation=expected_generation,
@@ -161,6 +167,8 @@ def rollback_index_version(
                 raise IndexRollbackConflict(
                     "target_collection does not match manifest previous_collection"
                 )
+            if target_validator is not None:
+                target_validator(target_collection, lock_token)
             rolled = rollback_active_collection(
                 normalized_tenant,
                 lock_token=lock_token,

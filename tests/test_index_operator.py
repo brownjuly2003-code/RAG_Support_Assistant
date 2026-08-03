@@ -849,6 +849,7 @@ def test_operator_module_has_no_chroma_or_runtime_wiring() -> None:
         "execute_retention",
         "audit_log",
         "record_audit",
+        "execute_chroma_retention",
     )
     for fragment in forbidden_tokens:
         pattern = rf"(?<![a-z0-9_]){re.escape(fragment)}(?![a-z0-9_])"
@@ -865,3 +866,164 @@ def test_operator_module_has_no_chroma_or_runtime_wiring() -> None:
     assert "rollback_active_collection" in source
     assert "rollback_index_version" in source
     assert "IndexRollbackResult" in source
+    assert "target_validator" in source
+
+
+def test_rollback_target_validator_hook_ordering_and_skip_paths(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+
+    lock_held = False
+    yielded_token = object()
+    events: list[tuple[str, object, object] | str] = []
+    state = {
+        "generation": 2,
+        "active_collection": "active_v2",
+        "previous_collection": "prev_v1",
+    }
+
+    @contextmanager
+    def _fake_lock(tenant_id: str) -> Iterator[object]:
+        nonlocal lock_held
+        assert tenant_id == "acme"
+        lock_held = True
+        try:
+            yield yielded_token
+        finally:
+            lock_held = False
+
+    def _read(*_args: Any, **_kwargs: Any) -> Any:
+        events.append("classify")
+        assert lock_held is True
+        return type(
+            "M",
+            (),
+            {
+                "generation": state["generation"],
+                "active_collection": state["active_collection"],
+                "previous_collection": state["previous_collection"],
+            },
+        )()
+
+    def _rollback(
+        tenant_id: str,
+        *,
+        lock_token: object,
+        chroma_directory: Any = None,
+    ) -> Any:
+        events.append("mutate")
+        assert lock_held is True
+        assert lock_token is yielded_token
+        assert tenant_id == "acme"
+        state["generation"] = 3
+        state["active_collection"] = "prev_v1"
+        state["previous_collection"] = "active_v2"
+        return type(
+            "M",
+            (),
+            {
+                "generation": 3,
+                "active_collection": "prev_v1",
+                "previous_collection": "active_v2",
+            },
+        )()
+
+    def _validator(target: str, lock_token: object) -> None:
+        events.append(("hook", target, lock_token))
+        assert lock_held is True
+        assert lock_token is yielded_token
+
+    monkeypatch.setattr(operator, "tenant_index_lock", _fake_lock)
+    monkeypatch.setattr(operator, "read_index_manifest", _read)
+    monkeypatch.setattr(operator, "rollback_active_collection", _rollback)
+
+    first = operator.rollback_index_version(
+        "acme",
+        expected_generation=2,
+        target_collection="prev_v1",
+        target_validator=_validator,
+    )
+    assert first.applied is True
+    assert events == [
+        "classify",
+        ("hook", "prev_v1", yielded_token),
+        "mutate",
+    ]
+
+    events.clear()
+    retry = operator.rollback_index_version(
+        "acme",
+        expected_generation=2,
+        target_collection="prev_v1",
+        target_validator=_validator,
+    )
+    assert retry.applied is False
+    assert events == [
+        "classify",
+        ("hook", "prev_v1", yielded_token),
+    ]
+
+    events.clear()
+    with pytest.raises(operator.IndexRollbackConflict):
+        operator.rollback_index_version(
+            "acme",
+            expected_generation=9,
+            target_collection="prev_v1",
+            target_validator=_validator,
+        )
+    assert events == ["classify"]
+
+    events.clear()
+    with pytest.raises(operator.IndexRollbackValidationError):
+        operator.rollback_index_version(
+            "acme",
+            expected_generation=0,
+            target_collection="prev_v1",
+            target_validator=_validator,
+        )
+    assert events == []
+
+
+def test_rollback_target_validator_failure_preserves_manifest_bytes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operator = _operator_module()
+    from vectordb.index_manifest import index_manifest_path
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = _seed_four_versions(
+        tenant_id="acme",
+        chroma_directory=chroma_directory,
+        monkeypatch=monkeypatch,
+    )
+    _stub_tenant_lock(monkeypatch)
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    before_bytes = manifest_path.read_bytes()
+
+    mutation_calls: list[object] = []
+    real_rollback = operator.rollback_active_collection
+
+    def _spy(*args: Any, **kwargs: Any) -> Any:
+        mutation_calls.append((args, kwargs))
+        return real_rollback(*args, **kwargs)
+
+    def _fail_validator(target: str, lock_token: object) -> None:
+        assert target == versions[-2]
+        assert lock_token is not None
+        raise RuntimeError("target validation failed")
+
+    monkeypatch.setattr(operator, "rollback_active_collection", _spy)
+
+    with pytest.raises(RuntimeError, match="target validation failed"):
+        operator.rollback_index_version(
+            "acme",
+            expected_generation=4,
+            target_collection=versions[-2],
+            chroma_directory=chroma_directory,
+            target_validator=_fail_validator,
+        )
+
+    assert mutation_calls == []
+    assert manifest_path.read_bytes() == before_bytes

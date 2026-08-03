@@ -14,12 +14,11 @@ from utils.tenant_naming import physical_tenant_component
 from vectordb import _base_manager
 from vectordb.chroma_retention import execute_chroma_retention
 from vectordb.index_manifest import (
-    IndexManifestRollbackUnavailable,
     IndexVersionManifest,
     publish_active_collection,
     read_index_manifest,
-    rollback_active_collection,
 )
+from vectordb.index_operator import rollback_index_version
 from vectordb.index_retention import record_retention_collection
 from vectordb.index_staging import (
     IndexStagingValidationError,
@@ -28,7 +27,7 @@ from vectordb.index_staging import (
     validate_existing_collection,
     validate_staged_known_query,
 )
-from vectordb.tenant_lock import tenant_index_lock
+from vectordb.tenant_lock import TenantIndexLockToken, tenant_index_lock
 
 logger = logging.getLogger(__name__)
 
@@ -318,34 +317,40 @@ def build_vector_store(
 def rollback_vector_store(
     tenant_id: str = "default",
     embeddings: Any | None = None,
+    *,
+    expected_generation: int,
+    target_collection: str,
 ) -> tuple[Any, list[Document]]:
-    """Validate and activate the previous tenant Chroma collection."""
+    """Validate and activate an explicit previous Chroma collection.
+
+    Requires the idempotent command key ``(expected_generation, target_collection)``
+    and routes durable classification/mutation through
+    ``rollback_index_version``. Target open/restore/validation runs under the
+    operator-held tenant lock via ``target_validator`` so preconditions fail
+    closed before embeddings/Chroma work and before any manifest mutation.
+    """
     tenant = tenant_id or "default"
     settings = get_settings()
     if getattr(settings, "vector_backend", "chroma") == "qdrant":
         raise IndexStagingValidationError(
             "Rollback target collection is unavailable for the Qdrant backend"
         )
-    if embeddings is None:
-        embeddings = get_embeddings()
     chroma_directory = settings.vectordb_chroma_dir
+    validated: dict[str, Any] = {}
 
-    with tenant_index_lock(tenant) as lock_token:
-        current = read_index_manifest(
-            tenant,
-            chroma_directory=chroma_directory,
-        )
-        if current is None or current.previous_collection is None:
-            raise IndexManifestRollbackUnavailable(
-                "Index version manifest has no previous collection to restore"
-            )
-
+    def _validate_target(
+        collection_name: str,
+        lock_token: TenantIndexLockToken,
+    ) -> None:
+        nonlocal embeddings
+        if embeddings is None:
+            embeddings = get_embeddings()
         chroma_cls = _get_chroma()
         try:
             store = chroma_cls(
                 persist_directory=str(chroma_directory),
                 embedding_function=embeddings,
-                collection_name=current.previous_collection,
+                collection_name=collection_name,
                 create_collection_if_not_exists=False,
             )
         except Exception as exc:
@@ -359,27 +364,35 @@ def rollback_vector_store(
                 "Rollback target collection has no restorable chunks"
             )
         validate_existing_collection(
-            current.previous_collection,
+            collection_name,
             store,
             chunks,
             embeddings,
             tenant_id=tenant,
             lock_token=lock_token,
         )
-        manifest = rollback_active_collection(
-            tenant,
-            lock_token=lock_token,
-            chroma_directory=chroma_directory,
-        )
+        validated["store"] = store
+        validated["chunks"] = list(chunks)
 
-        with _cache_lock:
-            _chunks_cache[tenant] = list(chunks)
-            _store_cache[tenant] = store
-            _retriever_cache.pop(tenant, None)
-            _index_cache_keys[tenant] = _index_cache_key(
-                chroma_directory,
-                manifest,
-            )
+    result = rollback_index_version(
+        tenant,
+        expected_generation=expected_generation,
+        target_collection=target_collection,
+        chroma_directory=chroma_directory,
+        target_validator=_validate_target,
+    )
+
+    store = validated["store"]
+    chunks = validated["chunks"]
+    with _cache_lock:
+        _chunks_cache[tenant] = list(chunks)
+        _store_cache[tenant] = store
+        _retriever_cache.pop(tenant, None)
+        _index_cache_keys[tenant] = (
+            str(Path(chroma_directory).resolve()),
+            result.active_collection,
+            result.manifest_generation,
+        )
 
     return store, chunks
 
