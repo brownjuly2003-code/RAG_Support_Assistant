@@ -1,5 +1,57 @@
 # Agent State
 
+## 2026-08-03 Update-37 (plan 2.3b / tenant-scoped retention preview API @ `32748d9`) ✅ START HERE
+
+> **Next-session handoff:** refresh `git status` first. This Update-37 block
+> supersedes Update-36 as the current durable handoff. Protected dirty
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md), `plan_sol_23_07_26`, and
+> existing untracked artifacts were not touched. Older docs may still point to
+> plan 2.1/2.2 and must not cause completed work to be repeated.
+>
+> **Implementation commit:** `32748d9` (`feat(api): expose retention preview`).
+> Slice **2.3b** adds `GET /api/admin/index/retention-preview` in
+> `api/routers/admin_ops.py` plus endpoint contracts in
+> `tests/test_admin_index_operator.py`:
+> - requires the existing admin role
+> - derives tenant only from authenticated/context state and ignores an
+>   unknown foreign `tenant_id` query value
+> - defaults budget from settings with an optional read-only `max_versions`
+>   override
+> - invokes `preview_index_retention` through `asyncio.to_thread` with the
+>   configured Chroma directory
+> - success returns only the immutable preview snapshot fields; no Chroma
+>   client/list/open/delete, retention executor, publish, rollback, or
+>   mutation wiring was added
+> - typed failures map without leaking raw exception text: invalid budget
+>   400, corrupt trusted metadata 409, tenant-lock failure 503; unrelated
+>   exceptions are not rewritten
+> - every successful or mapped domain attempt records tenant-scoped
+>   `index_retention_preview` audit detail; auth/role failures occur before
+>   preview and audit
+>
+> **Verification:** Grok TDD evidence: initial red run `14 failed` because the
+> route was absent; focused gate `48 passed` with one known FastAPI TestClient
+> deprecation warning; scoped Ruff and diff checks clean. Actual local
+> delegate route/model was local Grok CLI / `grok-4.5-build`. Independent Codex
+> evidence: closure gate `103 passed` with the same known warning; scoped Ruff
+> clean; protected hashes unchanged; cached diff check clean. Direct Mypy found
+> one pre-existing `dict-item` issue at unchanged `admin_ops.py:215`, introduced
+> by commit `3c1e7b7d`; a narrowed Python 3.11 / mypy 1.19.1 / NumPy 2.4.4 check
+> disabling only that existing code passed. Do not report the entire file as
+> unconditionally Mypy-clean. No real Chroma/PostgreSQL/Redis, push, deploy, or
+> remote action occurred.
+>
+> **Current truth:** only retention preview domain/API slices **2.3a** and
+> **2.3b** are locally complete. The broader operator-surface plan item remains
+> in progress; retention execution/deletion and rollback action are unstarted.
+> Existing `rollback_vector_store` validates and swaps active/previous, but a
+> raw repeated call can swap back. The next safe named slice is **2.3c**: an
+> unwired, tenant-locked idempotent rollback command contract using an explicit
+> expected generation/target so retries cannot oscillate; do not start it in
+> this docs run. Immutable/versioned originals, broader fault injection, live
+> drills, release, and whole-project completion remain open.
+
 ## 2026-08-03 Update-36 (plan 2.3a / lock-consistent retention preview @ `5bbc329`) ✅ START HERE
 
 > **Next-session handoff:** refresh `git status` first. This Update-36 block
