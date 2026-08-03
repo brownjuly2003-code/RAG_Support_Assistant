@@ -1,6 +1,32 @@
 # Agent State
 
-## 2026-08-03 Update-29 (step 4.8d3a durable retention inventory @ `47902f5`) ✅ START HERE
+## 2026-08-03 Update-30 (step 4.8d3b bounded retention plan @ `9534f5b`) ✅ START HERE
+
+> **Implementation commit:** `9534f5b` (`feat(index): bound retention
+> candidates`). Plan sub-slice **4.8d3b is locally complete and verified**:
+> - `max_versions` is a strict integer budget of at least two; active and
+>   previous manifest pointers consume protected slots before any other version
+> - remaining slots keep the newest trusted inventory entries, while only the
+>   oldest excess entries are returned as ordered candidates
+> - non-tail active/previous, unrecorded/legacy/foreign collections, absent
+>   manifests, and invalid budgets cannot become deletion candidates
+> - the selector is read-only policy: it does not mutate metadata, call Chroma,
+>   delete a collection, or wire retention into runtime publication
+>
+> **Verification:** six new contracts failed while the bounded selector was
+> absent and seven prior tests passed; focused green is **13 tests**. The
+> retention/runtime/manifest/staging/chunk-restore/tenant-lock closure gate
+> passed **56 tests** with one expected warning. Scoped Ruff, locked Python
+> 3.11 / mypy 1.19.1 / NumPy 2.4.4, boundary checks, and staged diff checks are
+> clean. No live backend, push, deploy, or external service was touched.
+>
+> **Current truth:** plan step 4 and 4.8d remain in progress. Durable inventory
+> and bounded selection policy now exist, but deletion execution and runtime
+> wiring, broader fault injection, an operator surface, immutable/versioned
+> originals, and live drills remain open. No next slice was started; protected
+> untracked user artifacts remain untouched.
+
+## 2026-08-03 Update-29 (step 4.8d3a durable retention inventory @ `47902f5`) — SUPERSEDED by Update-30
 
 > **Implementation commit:** `47902f5` (`feat(index): add retention inventory
 > contract`). Plan sub-slice **4.8d3a is locally complete and verified**:
