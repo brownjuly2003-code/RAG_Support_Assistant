@@ -4,25 +4,25 @@
 **Принцип порядка:** сначала release-blockers и проверяемые контракты, затем RAG-качество, после этого декомпозиция.
 **Оценка (historical, 2026-07-23):** 6–9 инженерных недель для одного сильного разработчика; шаги 3–4 и 7–8 частично параллелятся только после закрытия шага 2.
 
-> ## 2026-08-03 execution status (step 4.8d3d Chroma retention adapter)
+> ## 2026-08-03 execution status (step 4.8d3e fail-closed retention budget)
 >
 > Plan is **ACTIVE**. Original step estimates below are **historical** and are
 > not rewritten. Closure candidate / empty-backlog narrative remains revoked;
 > this plan is the sole active remediation source (see `BACKLOG.md`).
 >
-> Implementation HEAD: `3f7f337`. Audit snapshot body: `383cfe9` (2026-07-23).
+> Implementation HEAD: `f899ba5`. Audit snapshot body: `383cfe9` (2026-07-23).
 > P0 local implementation is verified; OBS-01 is locally remediated; steps 4.1
-> durable job contract through 4.8c atomic runtime publish plus 4.8d1–d3d
-> atomic/validated rollback and trusted Chroma retention adapter are locally verified;
+> durable job contract through 4.8c atomic runtime publish plus 4.8d1–d3e
+> atomic/validated rollback and trusted configured Chroma retention are locally verified;
 > production release and full step DoD remain gated by explicit live/external
 > checks.
 >
-> | Step | Historical estimate | Status @ `3f7f337` | Notes |
+> | Step | Historical estimate | Status @ `f899ba5` | Notes |
 > |---|---|---|---|
 > | 1 Contract tests + release gate | 1–2 days | **locally complete** | All named step-1 contract-test slices demonstrated red then green (tenant/audit/Helm + OBS-01). Does **not** close production release |
 > | 2 Tenant Session/Message/Audit | 2–4 days | **local implementation verified; live PostgreSQL DoD open** | Commits `3c1e7b7`, `28580aa`; migration `018`; local tenant/audit/schema tests green. Live Postgres upgrade/downgrade + two-tenant restart drill not run |
 > | 3 Production storage + backup | 2–4 days | **chart/backup runtime locally verified; operational restore DoD open** | Commits `ed8520a`, `2767b9d`; Helm + backup runtime contracts green. Image/cluster/restore/RPO/RTO gates still open |
-> | 4 Durable ingestion + atomic index | 4–6 days | **in progress** (slices 4.1–4.8c + 4.8d1–d3d locally done) | `b7faa19` durable job; `4f93038` worker topology; `6dc6fe4` lease/heartbeat + stale reaper; `1cebd14` tenant-scoped upload idempotency + bounded broker-publish retry (migration `021`); `35e4bb9` queue-age metric/alert; `d13804b` TEN-03 collision-resistant physical naming; `705a3cc` PostgreSQL per-tenant rebuild lock; `c015ba8` / `ca15c1a` active-version manifest; `74d187c` validated staging; `8594675` atomic runtime publish/cache invalidation; `c160af8` atomic manifest rollback; `bb3f00b` validated manager rollback/cache transition; `47902f5` trusted durable retention inventory; `9534f5b` bounded retention plan; `196785d` unwired retention executor; `3f7f337` idempotent Chroma adapter. Retention budget/runtime wiring, broader fault injection, operator surface, immutable/versioned originals, and live drills remain open |
+> | 4 Durable ingestion + atomic index | 4–6 days | **in progress** (slices 4.1–4.8c + 4.8d1–d3e locally done) | `b7faa19` durable job; `4f93038` worker topology; `6dc6fe4` lease/heartbeat + stale reaper; `1cebd14` tenant-scoped upload idempotency + bounded broker-publish retry (migration `021`); `35e4bb9` queue-age metric/alert; `d13804b` TEN-03 collision-resistant physical naming; `705a3cc` PostgreSQL per-tenant rebuild lock; `c015ba8` / `ca15c1a` active-version manifest; `74d187c` validated staging; `8594675` atomic runtime publish/cache invalidation; `c160af8` atomic manifest rollback; `bb3f00b` validated manager rollback/cache transition; `47902f5` trusted durable retention inventory; `9534f5b` bounded retention plan; `196785d` unwired retention executor; `3f7f337` idempotent Chroma adapter; `f899ba5` fail-closed retention budget. Runtime retention wiring, broader fault injection, operator surface, immutable/versioned originals, and live drills remain open |
 > | 5 Timeout/capacity/trace identity | 4–6 days | **open / partially remediated** | Trace identity (OBS-01) done at `5a9f857`; timeout cancellation, bounded capacity, session concurrency/history ordering, sticky experiment propagation still require work |
 > | 6 Sync/SSE unify + durable escalation | 4–6 days | **open** | Dual streaming path + human-without-ticket remain |
 > | 7 Fail-closed RAG routing | 5–8 days | **open** | Depends on step 6 |
@@ -34,13 +34,13 @@
 > steps 2–3; step 1 local contracts are green, but production release is not
 > closed). Step 4 is in progress; steps 6–10 remain open.
 >
-> **Latest implementation slice:** plan step **4.8d3d** is locally complete at
-> `3f7f337`. A lazy direct `PersistentClient` adapter deletes only bounded
-> candidates without list/get/store-open calls; only Chroma `NotFoundError` is
-> idempotent success, while other failures remain fail-closed. Lock validation
-> precedes client creation. No runtime wiring or real collection deletion was
-> added. The closure gate passed 65 tests; scoped Ruff, locked Mypy, boundary
-> checks, and diff checks are clean.
+> **Latest implementation slice:** plan step **4.8d3e** is locally complete at
+> `f899ba5`. `VECTORDB_RETENTION_MAX_VERSIONS` lazily defaults to `2`; malformed
+> values and budgets below `2` fail closed before startup dependency probes.
+> Operator docs state that runtime retention is not wired. No runtime consumer
+> or real collection deletion was added. The closure gate passed 99 tests;
+> scoped Ruff, locked Mypy, Python 3.11 compatibility, boundary, and diff checks
+> are clean.
 
 ## 1. Зафиксировать failing contract tests и release gate
 
@@ -134,7 +134,7 @@
 **Reasoning:** `xhigh`
 **Зависимости:** шаг 3
 **Оценка:** 4–6 дней
-**Статус 2026-08-03 @ `3f7f337`:** **in progress** (slices 4.1–4.8c + 4.8d1–d3d locally done; step not complete)
+**Статус 2026-08-03 @ `f899ba5`:** **in progress** (slices 4.1–4.8c + 4.8d1–d3e locally done; step not complete)
 
 - ~~**Slice 4.1 (test-first):** one tenant-aware durable job contract with a real `job_id` and observable status/terminal error~~ — **done** at `b7faa19`:
   - ORM `IngestionJob` + migration `019` (`018` parent); status constraint queued/running/completed/failed; UUID public job id; tenant ownership; timestamps/result/error/secondary Celery id + indexes
@@ -174,18 +174,19 @@
 - **Slice 4.8d3b locally complete @ `9534f5b`:** a strict integer `max_versions >= 2` budget protects manifest active/previous before retaining the newest remaining trusted inventory entries; only oldest excess entries are returned. Non-tail protected versions and unrecorded collections cannot become candidates, and invalid budgets fail closed before reading state. Six expected failures / seven prior passes → 13 focused passes; adjacent closure gate 56 passed / 1 expected warning; scoped Ruff, locked strict Mypy, boundary checks, and diff checks are clean. No metadata mutation, Chroma I/O, deletion, or runtime wiring was added.
 - **Slice 4.8d3c locally complete @ `196785d`:** under the current matching tenant lock, an unwired executor invokes an injected idempotent delete only for bounded oldest-first candidates and atomically prunes inventory after each success. Delete failure stops later candidates and reports prior durable progress; metadata-update failure reports the already-deleted target while preserving prior bytes for safe retry. Four expected failures / 13 prior passes → 17 focused passes; adjacent closure gate 60 passed / 1 expected warning; scoped Ruff, locked strict Mypy, boundary checks, and diff checks are clean. No concrete Chroma adapter/runtime wiring or real collection deletion was included.
 - **Slice 4.8d3d locally complete @ `3f7f337`:** a lazy direct `PersistentClient` adapter is created only for a bounded candidate and calls only `delete_collection(name=...)`; no list/get/store-open path can auto-create a missing target. Chroma `NotFoundError` is idempotent success, while every other factory/delete error flows into the fail-closed executor. Five expected failures → 5 focused passes; after one scoped Ruff import-order correction, the adjacent closure gate passed 65 tests / 1 expected warning; scoped Ruff, locked strict Mypy, boundary checks, and diff checks are clean. No runtime wiring or real collection deletion was included.
+- **Slice 4.8d3e locally complete @ `f899ba5`:** lazy `VECTORDB_RETENTION_MAX_VERSIONS` defaults to the active + previous budget of `2`; malformed values fail during settings construction and strict integer budgets below `2` fail startup validation before dependency/network I/O. Operator docs explicitly state that execution remains unwired. Eight expected failures → 8 focused passes; after one scoped Ruff import-order correction and an isolated pytest temp-root correction, the adjacent closure gate passed 99 tests / 2 expected warnings. Locked strict Mypy, direct Python 3.11 compatibility, count/boundary searches, and staged diff checks are clean. The setting has no runtime consumer and no real collection was deleted.
 - Выбрать один job contract для всех tenant: worker Deployment + heartbeat либо отдельный job service. *(4.2 topology + 4.3 job-level lease/heartbeat + 4.7 distributed rebuild lock done)*
 - Возвращать `job_id`; реализовать status, retry, idempotency и queue-age metrics. *(`job_id` + status/terminal error + lease/heartbeat + bounded broker-publish retry/idempotency + queue-age metric/alert done; unsafe post-mutation task autoretry not enabled)*
 - ~~Добавить per-tenant distributed lock.~~ *(done in slice 4.7)*
 - ~~Строить versioned staging collection, проверять count/dimension/known queries и атомарно переключать active version.~~ *(done across slices 4.8b–4.8c; rollback remains separate)*
-- Сохранять предыдущую collection для rollback; original uploads сделать immutable/versioned. *(4.8d1–d3d add atomic swap, validated manager runtime rollback, trusted retention ordering/policy/executor, and an idempotent Chroma adapter; budget/runtime wiring, broader fault injection, operator surface, and immutable originals remain open)*
+- Сохранять предыдущую collection для rollback; original uploads сделать immutable/versioned. *(4.8d1–d3e add atomic swap, validated manager runtime rollback, trusted retention ordering/policy/executor, an idempotent Chroma adapter, and fail-closed budget configuration; runtime wiring, broader fault injection, operator surface, and immutable originals remain open)*
 - ~~Использовать collision-resistant physical tenant name.~~ *(TEN-03 done in slice 4.6)*
 
-**Still open after 4.8d3d:** retention budget configuration and runtime wiring, broader fault injection, an explicit operator surface, and immutable/versioned originals. Live Redis/Postgres/Celery worker-outage/recovery and advisory-lock contention drills plus real PostgreSQL upgrade/downgrade through migrations `019`/`020`/`021` remain external.
+**Still open after 4.8d3e:** runtime retention wiring, broader fault injection, an explicit operator surface, and immutable/versioned originals. Live Redis/Postgres/Celery worker-outage/recovery and advisory-lock contention drills plus real PostgreSQL upgrade/downgrade through migrations `019`/`020`/`021` remain external.
 
 **Проверка:** fault injection до/после embeddings и switch, два concurrent upload, worker outage/recovery, duplicate job.
 
-**DoD:** accepted job либо завершается, либо имеет наблюдаемый terminal error; неудачный rebuild не повреждает активный индекс. Slices 4.1–4.8c plus 4.8d1–d3d met the job_id/status/terminal-error, local worker-topology, durable liveness/recovery, bounded broker-publish retry/idempotency, queue-age alerting, collision-resistant tenant-naming, same-tenant mutation-serialization, local durable-pointer/staging/atomic-switch contracts, validated manager rollback, and trusted Chroma retention execution components; full step DoD (retention budget/runtime wiring, fault injection, operator wiring, immutable originals, and live drills) remains **not** met.
+**DoD:** accepted job либо завершается, либо имеет наблюдаемый terminal error; неудачный rebuild не повреждает активный индекс. Slices 4.1–4.8c plus 4.8d1–d3e met the job_id/status/terminal-error, local worker-topology, durable liveness/recovery, bounded broker-publish retry/idempotency, queue-age alerting, collision-resistant tenant-naming, same-tenant mutation-serialization, local durable-pointer/staging/atomic-switch contracts, validated manager rollback, and trusted configured Chroma retention components; full step DoD (retention runtime wiring, fault injection, operator wiring, immutable originals, and live drills) remains **not** met.
 
 ## 5. Исправить timeout, capacity, session concurrency и tracing identity
 

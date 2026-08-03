@@ -1,6 +1,36 @@
 # Agent State
 
-## 2026-08-03 Update-32 (step 4.8d3d Chroma retention adapter @ `3f7f337`) ✅ START HERE
+## 2026-08-03 Update-33 (step 4.8d3e fail-closed retention budget @ `f899ba5`) ✅ START HERE
+
+> **Implementation commit:** `f899ba5` (`feat(config): add index retention
+> budget`). Plan sub-slice **4.8d3e is locally complete and verified**:
+> - lazy `VECTORDB_RETENTION_MAX_VERSIONS` configuration defaults to the
+>   minimum safe active + previous budget of `2` and accepts explicit integers
+> - blank/malformed values fail at settings construction, while values below
+>   `2` fail startup validation before any dependency/network probe
+> - `.env.example` and operator configuration docs explicitly state the bound
+>   and that runtime retention execution is not wired yet
+> - the setting has no runtime consumer, so no Chroma client was created and no
+>   collection was opened, listed, or deleted
+>
+> **Verification:** eight contracts first failed while the setting and docs
+> were absent, then passed. After one scoped Ruff import-order correction, the
+> retention/settings/runtime/manifest/staging/chunk-restore/tenant-lock gate
+> passed **99 tests** with two expected warnings. Locked Python 3.11 / mypy
+> 1.19.1 / NumPy 2.4.4, a direct Python 3.11 settings contract, count/boundary
+> searches, and staged diff checks are clean. The aggregate test gate required
+> an isolated `--basetemp` because the host pytest temp root was inaccessible;
+> full `requirements-dev.lock` resolution on Windows remains unavailable due
+> to its unmarked Linux-only `nvidia-cufile` wheel.
+>
+> **Current truth:** plan step 4 and 4.8d remain in progress. Inventory,
+> bounded policy, executor, Chroma adapter, and fail-closed budget configuration
+> now exist locally, but runtime retention wiring, broader fault injection, an
+> operator surface, immutable/versioned originals, and live drills remain
+> open. No next slice was started; protected untracked user artifacts remain
+> untouched.
+
+## 2026-08-03 Update-32 (step 4.8d3d Chroma retention adapter @ `3f7f337`) — SUPERSEDED by Update-33
 
 > **Implementation commit:** `3f7f337` (`feat(index): add Chroma retention
 > adapter`). Plan sub-slice **4.8d3d is locally complete and verified**:
