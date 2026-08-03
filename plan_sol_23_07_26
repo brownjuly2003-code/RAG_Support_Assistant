@@ -4,24 +4,24 @@
 **Принцип порядка:** сначала release-blockers и проверяемые контракты, затем RAG-качество, после этого декомпозиция.
 **Оценка (historical, 2026-07-23):** 6–9 инженерных недель для одного сильного разработчика; шаги 3–4 и 7–8 частично параллелятся только после закрытия шага 2.
 
-> ## 2026-08-02 execution status (step 4.5 ingestion queue-age observability)
+> ## 2026-08-02 execution status (step 4.6 collision-resistant tenant naming)
 >
 > Plan is **ACTIVE**. Original step estimates below are **historical** and are
 > not rewritten. Closure candidate / empty-backlog narrative remains revoked;
 > this plan is the sole active remediation source (see `BACKLOG.md`).
 >
-> Implementation HEAD: `35e4bb9`. Audit snapshot body: `383cfe9` (2026-07-23).
+> Implementation HEAD: `d13804b`. Audit snapshot body: `383cfe9` (2026-07-23).
 > P0 local implementation is verified; OBS-01 is locally remediated; steps 4.1
-> durable job contract through 4.5 queue-age observability are locally verified;
+> durable job contract through 4.6 TEN-03 naming are locally verified;
 > production release and full step DoD remain gated by explicit live/external
 > checks.
 >
-> | Step | Historical estimate | Status @ `35e4bb9` | Notes |
+> | Step | Historical estimate | Status @ `d13804b` | Notes |
 > |---|---|---|---|
 > | 1 Contract tests + release gate | 1–2 days | **locally complete** | All named step-1 contract-test slices demonstrated red then green (tenant/audit/Helm + OBS-01). Does **not** close production release |
 > | 2 Tenant Session/Message/Audit | 2–4 days | **local implementation verified; live PostgreSQL DoD open** | Commits `3c1e7b7`, `28580aa`; migration `018`; local tenant/audit/schema tests green. Live Postgres upgrade/downgrade + two-tenant restart drill not run |
 > | 3 Production storage + backup | 2–4 days | **chart/backup runtime locally verified; operational restore DoD open** | Commits `ed8520a`, `2767b9d`; Helm + backup runtime contracts green. Image/cluster/restore/RPO/RTO gates still open |
-> | 4 Durable ingestion + atomic index | 4–6 days | **in progress** (slices 4.1–4.5 done) | `b7faa19` durable job; `4f93038` worker topology; `6dc6fe4` lease/heartbeat + stale reaper; `1cebd14` tenant-scoped upload idempotency + bounded broker-publish retry (migration `021`); `35e4bb9` queue-age metric/alert. Atomic index publish, TEN-03, live drills **not** claimed complete |
+> | 4 Durable ingestion + atomic index | 4–6 days | **in progress** (slices 4.1–4.6 done) | `b7faa19` durable job; `4f93038` worker topology; `6dc6fe4` lease/heartbeat + stale reaper; `1cebd14` tenant-scoped upload idempotency + bounded broker-publish retry (migration `021`); `35e4bb9` queue-age metric/alert; `d13804b` TEN-03 collision-resistant physical naming. Distributed locking, atomic index publish, and live drills **not** claimed complete |
 > | 5 Timeout/capacity/trace identity | 4–6 days | **open / partially remediated** | Trace identity (OBS-01) done at `5a9f857`; timeout cancellation, bounded capacity, session concurrency/history ordering, sticky experiment propagation still require work |
 > | 6 Sync/SSE unify + durable escalation | 4–6 days | **open** | Dual streaming path + human-without-ticket remain |
 > | 7 Fail-closed RAG routing | 5–8 days | **open** | Depends on step 6 |
@@ -33,10 +33,10 @@
 > steps 2–3; step 1 local contracts are green, but production release is not
 > closed). Step 4 is in progress; steps 6–10 remain open.
 >
-> **Latest implementation slice:** plan step **4.5** ingestion queue-age
-> observability is locally complete at `35e4bb9`. Atomic publish, TEN-03, and
-> live/external drills remain explicitly unclaimed. No next implementation
-> slice was selected in that turn.
+> **Latest implementation slice:** plan step **4.6 / TEN-03** collision-resistant
+> tenant physical naming is locally complete at `d13804b`. Distributed locking,
+> atomic publish, and live/external drills remain explicitly unclaimed. No next
+> implementation slice was selected in that turn.
 
 ## 1. Зафиксировать failing contract tests и release gate
 
@@ -130,7 +130,7 @@
 **Reasoning:** `xhigh`
 **Зависимости:** шаг 3
 **Оценка:** 4–6 дней
-**Статус 2026-08-02 @ `35e4bb9`:** **in progress** (slices 4.1–4.5 done; step not complete)
+**Статус 2026-08-02 @ `d13804b`:** **in progress** (slices 4.1–4.6 done; step not complete)
 
 - ~~**Slice 4.1 (test-first):** one tenant-aware durable job contract with a real `job_id` and observable status/terminal error~~ — **done** at `b7faa19`:
   - ORM `IngestionJob` + migration `019` (`018` parent); status constraint queued/running/completed/failed; UUID public job id; tenant ownership; timestamps/result/error/secondary Celery id + indexes
@@ -159,18 +159,19 @@
   - Test-first/adversarial evidence: import-order fixture leak found via order-dependent failures and fixed by late session resolution; runtime clamp/fallback tests red before correction; explicit blank env 25 expected failures → 25/25 green
 - **Slice 4.4 locally complete @ `1cebd14`:** tenant-scoped optional `Idempotency-Key` (stored as SHA-256 hash), payload fingerprint conflict detection, deterministic task identity reserved before publish, queued-only `source_ready_at`, bounded off-event-loop Celery broker-publish retry, replay identity on 503, and CORS/docs contract. Worker/task autoretry after load/index mutation remains intentionally disabled while ING-02 is open. Independent Codex gate: 73 focused tests; Ruff clean; locked core/API mypy clean; Alembic `021 (head)`; diff checks clean.
 - **Slice 4.5 locally complete @ `35e4bb9`:** label-free `rag_ingestion_queue_oldest_seconds` refreshed by every independent reaper sweep from `source_ready_at`/legacy `created_at`, reset to zero for an empty async queue, plus `IngestionQueueStalled` warning (`>300s` for `5m`) before the default 900-second terminal timeout. Test-first 3 red → 7 green; closure gate 87 passed; Ruff and locked strict Mypy clean; diff checks clean.
+- **Slice 4.6 / TEN-03 locally complete @ `d13804b`:** shared collision-resistant physical tenant mapping preserves lowercase-safe IDs and adds a deterministic 16-hex SHA-256 suffix for uppercase, Windows-reserved, lossy, or truncated IDs across Chroma document/fact-card collections and upload directories. Explicit reindex and fact-card cache paths share the mapping; ambiguous hashed `reindex --all` discovery fails closed. Test-first 3 failures / 6 passes → 18 passes; batched QA 3 failures / 9 passes → 21 passes; final adjacent gate 109 passed / 2 expected warnings; Ruff, locked strict Mypy, and diff checks clean.
 - Выбрать один job contract для всех tenant: worker Deployment + heartbeat либо отдельный job service. *(4.2 topology + 4.3 job-level lease/heartbeat done; broader multi-tenant lock still open if required later)*
 - Возвращать `job_id`; реализовать status, retry, idempotency и queue-age metrics. *(`job_id` + status/terminal error + lease/heartbeat + bounded broker-publish retry/idempotency + queue-age metric/alert done; unsafe post-mutation task autoretry not enabled)*
 - Добавить per-tenant distributed lock.
 - Строить versioned staging collection, проверять count/dimension/known queries и атомарно переключать active version.
 - Сохранять предыдущую collection для rollback; original uploads сделать immutable/versioned.
-- Использовать collision-resistant physical tenant name. *(TEN-03 still open)*
+- ~~Использовать collision-resistant physical tenant name.~~ *(TEN-03 done in slice 4.6)*
 
-**Still open after 4.5:** live Redis/Postgres/Celery worker-outage/recovery drill; real PostgreSQL upgrade/downgrade through migrations `019`/`020`/`021`; ING-02 atomic/versioned index publish + rollback; TEN-03.
+**Still open after 4.6:** live Redis/Postgres/Celery worker-outage/recovery drill; real PostgreSQL upgrade/downgrade through migrations `019`/`020`/`021`; per-tenant distributed locking; ING-02 atomic/versioned index publish + rollback.
 
 **Проверка:** fault injection до/после embeddings и switch, два concurrent upload, worker outage/recovery, duplicate job.
 
-**DoD:** accepted job либо завершается, либо имеет наблюдаемый terminal error; неудачный rebuild не повреждает активный индекс. Slices 4.1–4.5 met the job_id/status/terminal-error, local worker-topology, durable liveness/recovery, bounded broker-publish retry/idempotency, and queue-age alerting contracts; full step DoD (atomic publish, TEN-03, live drills) remains **not** met.
+**DoD:** accepted job либо завершается, либо имеет наблюдаемый terminal error; неудачный rebuild не повреждает активный индекс. Slices 4.1–4.6 met the job_id/status/terminal-error, local worker-topology, durable liveness/recovery, bounded broker-publish retry/idempotency, queue-age alerting, and collision-resistant tenant-naming contracts; full step DoD (distributed locking, atomic publish, live drills) remains **not** met.
 
 ## 5. Исправить timeout, capacity, session concurrency и tracing identity
 

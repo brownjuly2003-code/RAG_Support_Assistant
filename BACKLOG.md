@@ -1,6 +1,6 @@
 # Backlog
 
-## Active source (2026-08-02) — audit plan reopened; step 4.5 @ `35e4bb9`
+## Active source (2026-08-02) — audit plan reopened; step 4.6 @ `d13804b`
 
 **Sole active backlog:** [`plan_sol_23_07_26`](plan_sol_23_07_26)
 (status matrix in [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md)).
@@ -10,23 +10,23 @@ Plan remains **ACTIVE**; project/production release is **not** complete.
 P0 **implementation** is locally remediated; **OBS-01** is locally remediated
 at `5a9f857`. Plan step 1 is **locally complete**. Plan step 4 is **in
 progress**: slices **4.1** (`b7faa19`), **4.2** (`4f93038`), **4.3**
-(`6dc6fe4`), **4.4** (`1cebd14`), and **4.5** (`35e4bb9`) are locally
-verified (ING-01 further partially locally remediated).
+(`6dc6fe4`), **4.4** (`1cebd14`), **4.5** (`35e4bb9`), and **4.6**
+(`d13804b`) are locally verified (ING-01 further partially locally remediated;
+TEN-03 locally remediated).
 Full plan DoD / production release / project closure are **not** complete.
 Historical autopilot/safe tasks below remain evidence only — not the active
 queue.
 
 ### Latest atomic slice (local code)
 
-**Plan step 4.5 ingestion queue-age metric/alert is locally complete at
-`35e4bb9`.**
+**Plan step 4.6 collision-resistant tenant physical naming is locally complete
+at `d13804b`.**
 
-This slice added a global label-free
-`rag_ingestion_queue_oldest_seconds` gauge refreshed by the independent reaper
-and an `IngestionQueueStalled` warning with a pre-timeout response window.
-Worker/task autoretry after load/index mutation remains disabled while ING-02
-is open. Do **not** claim atomic index publish, TEN-03, or live/external drills
-complete.
+Safe lowercase tenant IDs retain their existing Chroma/upload names. Uppercase,
+Windows-reserved, lossy, or truncated IDs receive a deterministic 16-hex
+SHA-256 suffix across document/fact-card collections, uploads, reindexing, and
+fact-card cache paths. Do **not** claim per-tenant distributed locking, atomic
+index publish, or live/external drills complete.
 No next implementation slice was selected in this turn.
 
 ### Live / external P0 gates (not local-complete)
@@ -43,14 +43,14 @@ Track separately from the next code slice — do **not** list as done work:
   real PostgreSQL
   upgrade/downgrade through migrations `019`/`020`/`021`
 
-Step 4 remains **in progress** (4.1–4.5 done; atomic publish, TEN-03, and live
-step-4 DoD open). Step 5 remains **open / partially remediated** (trace
+Step 4 remains **in progress** (4.1–4.6 done; distributed locking, atomic
+publish, and live step-4 DoD open). Step 5 remains **open / partially
+remediated** (trace
 identity done; timeout cancellation, bounded capacity, session
 concurrency/history ordering, sticky experiment propagation still open).
-Steps 6–10 remain open. ING-02 atomic/versioned index publish + rollback and
-TEN-03 collision-resistant tenant physical naming remain open. Live
-GraceKelly/Mistral benchmarks remain explicit opt-in only and are **not** this
-slice.
+Steps 6–10 remain open. ING-02 atomic/versioned index publish + rollback remains
+open. Live GraceKelly/Mistral benchmarks remain explicit opt-in only and are
+**not** this slice.
 
 ## Project Closure note (2026-07-27) — historical
 

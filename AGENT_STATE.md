@@ -1,6 +1,34 @@
 # Agent State
 
-## 2026-08-02 Update-20 (step 4.5 ingestion queue-age alert @ `35e4bb9`) ✅ START HERE
+## 2026-08-02 Update-21 (step 4.6 collision-resistant tenant naming @ `d13804b`) ✅ START HERE
+
+> **Implementation commit:** `d13804b` (`fix(tenancy): prevent physical
+> namespace collisions`). Plan slice **4.6 / TEN-03 is locally complete and
+> verified**:
+> - one shared mapping preserves existing lowercase-safe tenant components and
+>   appends a deterministic 16-hex SHA-256 suffix for uppercase,
+>   Windows-reserved, lossy, or truncated IDs
+> - Chroma document/fact-card collections and upload directories now use that
+>   mapping; `reindex.py` and the fact-card cache follow the same contract
+> - explicit canonical-tenant reindexing resolves hashed directories, while
+>   `reindex.py --all` fails closed when the canonical ID is not reversible
+> - deployment/configuration docs include the legacy-directory migration rule
+>
+> **Verification:** the initial collision contract produced 3 expected
+> failures / 6 passes, then 18 passes. Batched QA produced 3 expected failures
+> / 9 passes for case-folding, Windows device names, and downstream tools, then
+> **21 passes**. The final adjacent gate passed **109 tests** with two expected
+> deprecation warnings. Scoped Ruff and locked Python 3.11 / mypy 1.19.1 /
+> NumPy 2.4.4 are clean; diff checks are clean.
+>
+> **Current truth:** plan step 4 remains in progress. TEN-03 is locally
+> remediated. Per-tenant distributed locking, ING-02 atomic/versioned index
+> publish + rollback, and live Redis/Postgres/Celery and migration drills remain
+> open. No next implementation slice was selected. No Grok/delegation, push,
+> deploy, or live service calls occurred; protected untracked user artifacts
+> remain unstaged and untouched.
+
+## 2026-08-02 Update-20 (step 4.5 ingestion queue-age alert @ `35e4bb9`) — SUPERSEDED by Update-21
 
 > **Implementation commit:** `35e4bb9` (`feat(ingestion): alert on stalled
 > queue`). Plan slice **4.5 is locally complete and verified**:
