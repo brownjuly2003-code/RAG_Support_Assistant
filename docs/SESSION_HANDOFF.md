@@ -1,130 +1,157 @@
 # Session handoff
 
-**Обновлено:** 2026-08-03
+**Обновлено:** 2026-08-03 (после plan 2.3b / `37987df`)
 
-**Назначение:** короткий источник истины для следующей Codex-сессии. История
-решений остаётся в [`AGENT_STATE.md`](../AGENT_STATE.md), активный порядок работ
-— в [`BACKLOG.md`](../BACKLOG.md) и [`plan_sol_23_07_26`](../plan_sol_23_07_26).
+**Назначение:** самодостаточный next-session handoff для coding agent после
+compacted context. История срезов — в [`AGENT_STATE.md`](../AGENT_STATE.md)
+(верхний блок Update-38, детали кода/верификации — Update-37). Активный plan
+source — untracked/protected
+[`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
 
-## Вход в следующую сессию
+## Назначение и приоритет источников
 
-1. Выполнить `git status --short --branch` и `git log -5 --oneline`.
-2. Прочитать верхний блок `AGENT_STATE.md`, этот handoff и верх `BACKLOG.md`.
-3. Считать `git status` авторитетнее сохранённых hash/count, если они разошлись.
-4. Не начинать больше одного атомарного среза за пользовательский turn.
+1. `git status --short --branch` и `git log -5 --oneline` — авторитетный
+   источник текущего filesystem/Git state.
+2. Далее: верхний блок `AGENT_STATE.md` и этот handoff.
+3. `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26` и их
+   dirty working-tree contents — protected user state; могут быть stale. Они
+   **не** переопределяют Update-37/Update-38 и **не** дают права повторять
+   уже завершённые срезы 2.1–2.3b.
+4. `rag-remediation-plan-2026-08-03.md` — активный plan source
+   (untracked/protected). Старый `plan_sol_23_07_26` — protected legacy.
+5. Один user turn = максимум один named atomic slice.
 
-Последняя завершённая реализация — `f899ba5` (`feat(config): add index
-retention budget`); status rollup — `8d93ded`. Текущий HEAD может быть новее
-только на docs-only handoff-коммит. Ветка содержит локальные непушенные коммиты;
-push/deploy не разрешены автоматически.
+Baseline pre-refresh HEAD: `37987df` (`docs: record retention preview API`).
+Ветка локально ahead of origin; push/deploy не разрешены автоматически.
 
-## Текущее состояние шага 4.8d
+## Карта реализации
 
-Локально реализованы и проверены:
+| Slice | Что | Implementation | Status docs |
+|-------|-----|----------------|-------------|
+| **2.1** | publication inventory wiring | `e8da185` | `3cc939b` |
+| **2.2** | post-publish bounded retention | `f0cb6ee` | `30a8404` |
+| **2.3a** | lock-consistent read-only retention preview primitive | `5bbc329` | `3976366` |
+| **2.3b** | tenant-scoped admin retention preview endpoint | `32748d9` | `37987df` |
 
-- atomic manifest publish и validated rollback;
-- trusted tenant-bound retention inventory;
-- строгий bounded policy `max_versions >= 2`;
-- fail-closed executor с последовательным prune inventory;
-- lazy Chroma adapter, где только `NotFoundError` считается idempotent success;
-- `VECTORDB_RETENTION_MAX_VERSIONS` с default `2` (active + previous).
+Срезы **2.1, 2.2, 2.3a, 2.3b** локально complete и verified. Полный plan step 2,
+operator surface, project и release — **не** complete.
 
-Настройка бюджета читает env лениво. Пустое, дробное или нечисловое значение
-останавливает создание `Settings`; целое значение `< 2` останавливает
-`Settings.validate()` до dependency/network probe.
+## Контракт API 2.3b
 
-## Что пока не реализовано
+- `GET /api/admin/index/retention-preview`
+- Только existing admin role.
+- Tenant берётся только из authenticated/context state; foreign `tenant_id`
+  query **не** может override.
+- Budget default: `vectordb_retention_max_versions`; optional `max_versions` —
+  preview-only override.
+- Вызов `preview_index_retention` через `asyncio.to_thread` + configured
+  Chroma directory.
+- Response: tenant, budget, generation, active/previous, ordered inventory,
+  deletion candidates.
+- Typed safe errors: invalid budget **400**, corrupt metadata **409**,
+  tenant lock **503**; unrelated exceptions **не** rewrite.
+- Успешные и mapped domain attempts → tenant-scoped audit detail
+  `index_retention_preview`; auth failures происходят раньше.
+- Endpoint **не** делает retention execution/deletion, rollback, publish,
+  Chroma client/list/open/delete wiring.
 
-- `vectordb/manager.py` не импортирует и не вызывает
-  `record_retention_collection` или `execute_chroma_retention`;
-- production publish flow не записывает новую versioned collection в retention
-  inventory;
-- runtime не запускает bounded deletion после publish;
-- нет operator endpoint/CLI для retention и rollback;
-- нет immutable/versioned original uploads и расширенного fault injection;
-- live PostgreSQL/Redis/Celery/Chroma drills не выполнялись.
+## Уже существующее durable lifecycle-поведение
 
-Следовательно, конфигурация retention сейчас валидируется, но не меняет runtime
-поведение. Ни один реальный Chroma client не создавался для retention; коллекции
-не перечислялись, не открывались и не удалялись.
+- Validated Chroma rebuild под tenant lock: record new version в trusted
+  inventory → publish manifest → configured bounded retention.
+- Active/previous и unrecorded collections защищены existing policy.
+- Partial retention delete/prune failures остаются observable/repeatable
+  (existing executor semantics).
+- Domain preview читает candidate policy, manifest и inventory под одним
+  tenant lock **без** mutation.
 
-## Проверка последнего implementation-среза
+**Не утверждать:** Qdrant operator support, live services, production
+readiness, immutable uploads, complete fault injection.
 
-- TDD: 8 ожидаемых failures до реализации, затем 8 focused passes.
-- Смежный gate: **99 passed**, две известные deprecation-warning (Starlette/httpx
-  и LangChain `Ollama`).
-- Scoped Ruff: clean.
-- Python 3.11 + mypy 1.19.1 + NumPy 2.4.4 для `config/settings.py`: clean.
-- Прямой Python 3.11 contract для default/override/malformed/range: passed.
-- Count/boundary search подтвердил: новый setting встречается только в config,
-  docs и tests, runtime consumer отсутствует.
-- `git diff --check` для implementation и status commits: clean.
+## Доказательства верификации (не перезапускать без new code/failure)
 
-Воспроизводимые локальные команды:
+### 2.3b (latest)
+
+- Grok TDD: **14** expected failures (route absent) → **48** focused passes;
+  scoped Ruff/diff clean; route/model `local_grok_cli` / `grok-4.5-build`.
+- Codex independent closure: **103** passed, 1 known FastAPI TestClient
+  deprecation warning; scoped Ruff clean; protected hashes + cached diff check
+  clean.
+- Direct Mypy на весь `admin_ops.py`: pre-existing `dict-item` на **unchanged**
+  line **215** (commit `3c1e7b7d`). Narrowed Python 3.11 + mypy 1.19.1 +
+  NumPy 2.4.4 с `--disable-error-code=dict-item` — passed. **Никогда** не
+  называть весь файл unconditionally Mypy-clean.
+- Real Chroma/PostgreSQL/Redis, push, deploy, remote actions — **не** было.
+- Этот docs-only refresh **не** перезапускал tests.
+
+### 2.3a (summary)
+
+- Grok: **46** focused passes; Codex: **79**-pass closure.
+
+### Reference commands (2.3b) — только при new code/failure
 
 ```powershell
-$handoffTests = @(
-    "tests/test_retention_settings.py"
-    "tests/test_index_retention.py"
-    "tests/test_chroma_retention.py"
-    "tests/test_index_version_manifest.py"
-    "tests/test_index_staging.py"
-    "tests/test_index_runtime_switch.py"
-    "tests/test_chunks_restore.py"
-    "tests/test_tenant_index_lock.py"
-    "tests/test_provider_settings.py"
-    "tests/test_magic_numbers_settings.py"
-    "tests/test_settings_production_secrets.py"
-)
-python -m pytest $handoffTests -q -p no:cacheprovider --basetemp=.tmp/pytest-4.8d3e
-python -m ruff check config/settings.py tests/test_retention_settings.py
-uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy config/settings.py --no-incremental --show-error-codes
+python -m pytest tests/test_admin_index_operator.py tests/test_admin_endpoints.py tests/test_admin_view.py tests/test_tenant_enforcement.py tests/test_audit_tenant.py tests/test_session_auth_cookie.py tests/test_root_routes.py tests/test_index_operator.py tests/test_index_retention.py tests/test_index_version_manifest.py tests/test_tenant_index_lock.py tests/test_retention_settings.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-3b-codex-20260803
+python -m ruff check api/routers/admin_ops.py tests/test_admin_index_operator.py
+uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy api/routers/admin_ops.py --no-incremental --show-error-codes --disable-error-code=dict-item
 ```
 
-Pytest на этом Windows-host нужно запускать с уникальным ignored basetemp,
-например `--basetemp=.tmp/pytest-<slice>`: глобальный
-`C:\Users\uedom\AppData\Local\Temp\pytest-of-uedom` недоступен. Не повторять
-сырой aggregate без этой коррекции.
+На этом Windows host обязателен unique ignored basetemp
+(`--basetemp=.tmp/pytest-<slice>`). Полный `requirements-dev.lock` resolution
+blocked unmarked Linux-only `nvidia-cufile` wheel; не retry install без
+отдельной portability-задачи.
 
-Полный `requirements-dev.lock` сейчас не разрешается через `uv` на Windows:
-unmarked `nvidia-cufile==1.15.1.6` имеет только Linux wheels. Это отдельная
-portability-задача; не маскировать её изменением retention-кода и не делать
-повторные raw install attempts без нового диагностического среза.
+## Что остаётся открытым / следующий safe slice
 
-## Рекомендуемый следующий локальный срез
+**Не начато:**
 
-**4.8d3f — publication inventory wiring only (не начат).**
+- retention execution/deletion operator action;
+- rollback operator action;
+- immutable/versioned originals, broader fault injection, live drills,
+  release gates, project completion.
 
-Цель: под существующим tenant lock добавить новую успешно validated versioned
-collection в trusted inventory как часть publish workflow. В этом срезе не
-запускать Chroma deletion и не добавлять operator API.
+Existing `rollback_vector_store` validates then swaps active/previous; raw
+repetition can swap back — **не** safe to expose directly.
 
-Перед реализацией зафиксировать тестами failure semantics вокруг двух durable
-операций — inventory record и manifest publish:
+### Следующий named slice: **2.3c only**
 
-- ошибка inventory write не должна менять active manifest;
-- ошибка manifest publish не должна оставлять живой unpublished candidate;
-- код не должен удалять collection, которая уже стала manifest-active;
-- stale inventory entry после cleanup, если выбран такой порядок операций,
-  должна быть явно доказана безопасной для будущего idempotent prune;
-- Qdrant и fact-card paths не должны затрагиваться;
-- runtime не должен list/get неизвестные Chroma collections.
+Unwired, tenant-locked **idempotent rollback command contract** с explicit
+expected generation/target, чтобы retries не осциллировали.
 
-Точки входа: `vectordb/manager.py`, `vectordb/index_retention.py`,
-`tests/test_index_runtime_switch.py`, `tests/test_index_retention.py`.
-После green focused gate остановиться; wiring самого
-`execute_chroma_retention` — отдельный последующий срез.
+В **2.3c не** добавлять: HTTP/API wiring, retention deletion, live service
+calls, deploy, push.
+
+**Точки входа для исследования** (только investigation; **не** authorization
+начать 2.3c в этом docs turn):
+
+- `vectordb/index_operator.py` — expected home for the unwired operator
+  command contract;
+- `vectordb/manager.py::rollback_vector_store` — existing validated runtime
+  rollback that can oscillate on raw retry;
+- `vectordb/index_manifest.py::rollback_active_collection` — atomic
+  active/previous swap under tenant lock;
+- `tests/test_index_operator.py` и `tests/test_index_runtime_switch.py` —
+  existing domain/runtime contracts.
 
 ## Защищённое локальное состояние
 
-На момент handoff существовали пользовательские untracked-артефакты. Не
-удалять и не stage их без отдельного запроса:
+Dirty tracked (не трогать без explicit request):
 
-- `.grok-prompts/`, `.pytest_tmp*/`;
-- `_NEXT_SESSION.md`, `FLANT_DOGFOOD_FINDINGS.md`;
-- `RAG Explainer.html`, `_ref_presentation3.html`, `plan_for_pres.md`;
-- `pres.html`, `presentation.html`, `rag_new_explanation.md`;
-- `docs/architecture-data-flow.html`, `scripts/check_architecture_diagram.py`.
+- `BACKLOG.md`
+- `README.md`
+- `audit_gpt_23_07_26.md`
+- `plan_sol_23_07_26`
 
-Не читать `.env` и не обращаться к live services без явного opt-in. Файла
-`.autopilot/BLOCKED.md` на момент handoff нет.
+Protected untracked categories (summarized; do not remove/stage without
+specific request):
+
+- `.grok-prompts/`, `.pytest_tmp*/`
+- presentation/explainer artifacts (`pres.html`, `presentation.html`,
+  `RAG Explainer.html`, `_ref_presentation3.html`, `plan_for_pres.md`,
+  `rag_new_explanation.md`)
+- `_NEXT_SESSION.md`, `FLANT_DOGFOOD_FINDINGS.md`
+- active untracked remediation plan `rag-remediation-plan-2026-08-03.md`
+- architecture HTML/check script (`docs/architecture-data-flow.html`,
+  `scripts/check_architecture_diagram.py`)
+
+Не читать `.env`. Не обращаться к live services без explicit opt-in.

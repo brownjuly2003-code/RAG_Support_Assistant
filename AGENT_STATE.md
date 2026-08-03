@@ -1,5 +1,30 @@
 # Agent State
 
+## 2026-08-03 Update-38 (durable handoff refresh after plan 2.3b) ✅ START HERE
+
+> **Docs-only:** пользователь явно запросил прозрачный next-session document.
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) обновлён со stale
+> `f899ba5` / 2.1-era content до завершённого **2.3b**, с сохранением двух
+> связанных working-tree corrections (active plan link →
+> `rag-remediation-plan-2026-08-03.md`; next-slice name `4.8d3f` → plan **2.1**,
+> теперь superseded как уже complete).
+>
+> **Code truth / verification без изменений относительно Update-37:**
+> implementation `32748d9`, status `37987df`, independent gate **103** passed,
+> Mypy caveat на unchanged `admin_ops.py:215`. В этом docs-only refresh code
+> и tests не менялись и не запускались.
+>
+> **Следующий slice:** только **2.3c** — unwired tenant-locked idempotent
+> rollback command contract с explicit expected generation/target (без HTTP,
+> без retention deletion, без live/deploy/push). Не начат. Точки входа для
+> исследования — в handoff (раздел «Что остаётся открытым»); они **не**
+> дают authorization начать 2.3c в этом docs turn.
+>
+> Остальной protected dirty/untracked state не тронут. Eventual docs refresh
+> commit — immediate descendant of `37987df`; next session берёт actual hash
+> из `git log`, не ожидает embedded self-hash. Полный API contract, evidence
+> и protected-state details: refreshed handoff + Update-37.
+
 ## 2026-08-03 Update-37 (plan 2.3b / tenant-scoped retention preview API @ `32748d9`) ✅ START HERE
 
 > **Next-session handoff:** refresh `git status` first. This Update-37 block
