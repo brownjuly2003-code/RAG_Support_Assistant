@@ -1,12 +1,113 @@
 # Agent State
 
-## 2026-08-03 Update-48 — record completed slice 2.4a @ `a1dcd5c` ✅ START HERE
+## 2026-08-03 Update-49 — record completed slice 2.4b @ `29be31a` ✅ START HERE
 
-> **Routing authority:** Update-48 is **docs-only** and supersedes Update-47
+> **Routing authority:** Update-49 is **docs-only** and supersedes Update-48
 > **only for start-point routing**. All older Update blocks below, including
 > headings that literally contain `✅ START HERE`, are **archival**. **Only the
 > first/topmost Update block in this file is authoritative.** Never select work
 > by grepping old `START HERE` markers.
+>
+> **No new implementation in this docs turn.** Code, tests, plans, backlog,
+> README, audit, settings, and API paths were **not** edited here. Project
+> tests were **not** rerun. Protected dirty `BACKLOG.md`, `README.md`,
+> `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and existing untracked
+> artifacts (including the active plan) were not touched.
+>
+> **Implementation commit:** `29be31a` (`feat(index): expose build publication
+> receipt`). Slice **2.4b is locally complete and verified** at documented
+> scopes. Previous docs commit: `781e1d0` (`docs: record immutable upload
+> originals`). Previous implementation: `a1dcd5c` (slice **2.4a**). The future
+> docs commit that records Update-49 **cannot** be known inside its own
+> content; next session must obtain it from `git log -5 --oneline`. Actual Git
+> wins over embedded hashes/counts.
+>
+> **Implementation paths changed in `29be31a` only:**
+> - `vectordb/manager.py`
+> - `tests/test_index_runtime_switch.py`
+>
+> **2.4b behavior (landed):**
+> - frozen `IndexPublicationReceipt` exposes normalized `tenant_id`, exact
+>   `active_collection`, `previous_collection`, and positive
+>   `manifest_generation`;
+> - frozen `BuildVectorStoreResult` exposes `store`, `chunks`, and optional
+>   `publication`;
+> - opt-in `build_vector_store_with_publication` runs the single shared build
+>   path and returns the exact Chroma receipt captured from the
+>   `IndexVersionManifest` returned by that invocation's
+>   `publish_active_collection`;
+> - existing `build_vector_store` still returns a real two-element
+>   `(store, chunks)` tuple to all ordinary callers;
+> - shared `_build_vector_store_result` avoids duplicate builds, second tenant
+>   locks, post-build/current-manifest rereads, callbacks, global/thread-local
+>   state, or store-private receipt attributes;
+> - receipt is returned only after the existing full build path succeeds,
+>   including automatic post-publish retention and cache updates;
+>   validation/inventory/publish/retention failures still propagate without a
+>   successful opt-in result;
+> - first/second Chroma builds report generation 1→2 and exact previous/active
+>   collections;
+> - Qdrant returns a typed successful result with `publication is None`; no
+>   version metadata is invented;
+> - existing automatic `execute_chroma_retention` routing, guarded
+>   retention/rollback/operator surfaces, manifest/inventory semantics, and
+>   caches remain preserved.
+>
+> **Boundary (unchanged / not in 2.4b):** manager-only and **unwired**. No
+> ingestion job/result/model/migration, worker, upload/API, loader/reindex,
+> settings, UI, plan, dependency, live-service, push, or deploy changes.
+> Durable job↔published index linkage is **not** complete.
+>
+> **Completed scope (local, verified at documented scopes):** slices **2.1
+> through 2.4b**. Full evidence ledger for 2.4b lives in
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md). Preserve **2.4a** as
+> complete; do **not** reopen 2.1–2.4a.
+>
+> **Not complete / not claimed:** full plan step 2; full immutable lifecycle;
+> durable job↔published index generation/collection binding (manager receipt
+> is unwired); GC/retention for job objects or legacy recovery objects;
+> orphan cleanup on failed transition; live concurrency/fault-injection; full
+> suite; live drills; project/release/production readiness; push/deploy.
+>
+> **Active writer / WIP:** none. No unfinished next-candidate WIP. No active
+> Grok/delegated writer at this handoff.
+>
+> **Next candidate only (not started):** **2.4c async-worker receipt wiring**.
+> Owner candidates (confirm read-only next session): `tasks/ingest_task.py`
+> and `tests/test_ingest_task.py`. Use the new opt-in manager entrypoint to
+> place exact publication fields in the existing durable `IngestionJob.result`
+> JSON through current lease/CAS completion. No DB migration/model field, sync
+> non-default upload path, API/UI, or later-manifest reread in 2.4c. Keep
+> Qdrant honest; do **not** claim full cross-path job linkage from worker-only
+> wiring. This is a **candidate contract to confirm**, not completed work.
+> Details: [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+>
+> **Protected dirty / untracked state:** see handoff capsule; do not
+> touch/stage/remove without explicit request. Do **not** edit the active
+> untracked plan or its checkboxes.
+>
+> **External gates (not authorized):** push, deploy, live services, destructive
+> Git, production-readiness claims. Live PostgreSQL/Redis/Celery/Chroma drills
+> require explicit opt-in and must **not** be the default next slice.
+>
+> **Standing execution preference:** **Grok** implements/content-writes;
+> orchestrator protects files, verifies independently, commits scoped results.
+> One user turn = **one** named atomic slice. Do **not** re-select 2.1–2.4b.
+>
+> **Git advisory only:** branch observed as
+> `master...origin/master [ahead 82]` immediately after implementation —
+> refresh next session.
+
+## 2026-08-03 Update-48 — record completed slice 2.4a @ `a1dcd5c` ✅ START HERE
+
+> **Historical handoff (superseded by Update-49 for start-point routing).**
+> Older `✅ START HERE` markers in this archive are **not** routing authority.
+> Refresh `git status` first. This Update-48 block previously superseded
+> Update-47 as the start point. That turn was **docs-only** and supersedes
+> Update-47 **only for start-point routing** at that time. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`,
+> remain **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
 >
 > **No new implementation in this docs turn.** Code, tests, plans, backlog,
 > README, audit, settings, and API paths were **not** edited here. Project
