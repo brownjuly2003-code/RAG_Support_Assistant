@@ -1,6 +1,39 @@
 # Agent State
 
-## 2026-08-02 Update-18 (cycle incident; step 4.4 paused) ✅ START HERE
+## 2026-08-02 Update-19 (step 4.4 bounded upload retry/idempotency @ `1cebd14`) ✅ START HERE
+
+> **User explicitly resumed after the Update-18 incident.** Work stayed within
+> one bounded local slice; no Grok/delegated runs, push, deploy, or live service
+> calls occurred.
+>
+> **Implementation commit:** `1cebd14` (`feat(ingestion): make upload retries
+> idempotent`). Plan slice **4.4 is locally complete and verified**:
+> - tenant-scoped optional `Idempotency-Key` stores only its SHA-256 hash and a
+>   normalized filename/content fingerprint behind migration `021`'s partial
+>   unique index
+> - same key + same payload replays the durable job identity; different payload
+>   fails with 409; no-key uploads retain distinct-job behavior
+> - deterministic Celery task identity is reserved before publish; bounded
+>   broker-publish retry runs off the FastAPI event loop; exhausted publish
+>   returns 503 with browser-readable `X-Ingestion-Job-Id`
+> - `source_ready_at` is a queued-only CAS boundary; worker/task autoretry after
+>   load/index mutation remains intentionally disabled while ING-02 is open
+> - request/response CORS and operator docs cover the new contract
+>
+> **Independent Codex verification:** 73 focused idempotency/job/upload tests
+> passed (2 expected deprecation warnings); scoped Ruff clean; locked Python
+> 3.11 / mypy 1.19.1 / NumPy 2.4.4 checks clean for changed core and API files;
+> `alembic heads` = `021 (head)`; staged and unstaged diff checks clean.
+> TestClient startup was isolated from unrelated real Alembic/reaper DB work,
+> reducing the formerly timing-out 73-test batch to about 41 seconds.
+>
+> **Current truth:** plan step 4 remains in progress. Queue-age metric/alert,
+> live Redis/Postgres/Celery outage/recovery and real migration drills, ING-02
+> atomic/versioned index publish + rollback, and TEN-03 remain open. No next
+> implementation slice was selected in this turn. Protected untracked user
+> artifacts remain unstaged and were not intentionally edited.
+
+## 2026-08-02 Update-18 (cycle incident; step 4.4 paused) — SUPERSEDED by Update-19
 
 > **Documentation-only incident record.** User hard-stopped the session because
 > it had become an open-ended cycle. No source/runtime/test/config changes in

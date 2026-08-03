@@ -1,6 +1,6 @@
 # Backlog
 
-## Active source (2026-08-02) — audit plan reopened; step 4.3 @ `6dc6fe4`
+## Active source (2026-08-02) — audit plan reopened; step 4.4 @ `1cebd14`
 
 **Sole active backlog:** [`plan_sol_23_07_26`](plan_sol_23_07_26)
 (status matrix in [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md)).
@@ -9,20 +9,24 @@ The 2026-07-27 «project closure / empty queue» narrative remains **revoked**.
 Plan remains **ACTIVE**; project/production release is **not** complete.
 P0 **implementation** is locally remediated; **OBS-01** is locally remediated
 at `5a9f857`. Plan step 1 is **locally complete**. Plan step 4 is **in
-progress**: slices **4.1** (`b7faa19`), **4.2** (`4f93038`), and **4.3**
-(`6dc6fe4`) are locally verified (ING-01 further partially locally remediated).
+progress**: slices **4.1** (`b7faa19`), **4.2** (`4f93038`), **4.3**
+(`6dc6fe4`), and **4.4** (`1cebd14`) are locally verified (ING-01 further
+partially locally remediated).
 Full plan DoD / production release / project closure are **not** complete.
 Historical autopilot/safe tasks below remain evidence only — not the active
 queue.
 
-### Next atomic slice (local code)
+### Latest atomic slice (local code)
 
-**Plan step 4.4 bounded retry/idempotency contract only.**
+**Plan step 4.4 bounded broker-publish retry/idempotency contract is locally
+complete at `1cebd14`.**
 
-Do **not** claim queue-age alerting, atomic index publish, TEN-03, or
-live/external drills complete in that slice. Slices 4.1–4.3 closed locally at
-`b7faa19`, `4f93038`, and `6dc6fe4` (OBS-01 at `5a9f857`; tenant/audit/Helm
-earlier: `3c1e7b7`, `28580aa`, `ed8520a`, `2767b9d`).
+This slice added tenant-scoped `Idempotency-Key`, payload conflict detection,
+reserved task identity, queued-only source readiness, bounded off-loop broker
+publish retry, and 503 replay identity. Worker/task autoretry after load/index
+mutation remains disabled while ING-02 is open. Do **not** claim queue-age
+alerting, atomic index publish, TEN-03, or live/external drills complete.
+No next implementation slice was selected in this turn.
 
 ### Live / external P0 gates (not local-complete)
 
@@ -34,12 +38,12 @@ Track separately from the next code slice — do **not** list as done work:
   cluster install; app pod recreation; clean-namespace restore to a
   **disposable** DB (never production DSN for `pg_restore --clean`); known-query
   smoke; measured RPO/RTO
-- **ING-01 remaining:** bounded retry/idempotency; queue-age metric/alert;
+- **ING-01 remaining:** queue-age metric/alert;
   live Redis/Postgres/Celery worker-outage/recovery drill; real PostgreSQL
-  upgrade/downgrade through migrations `019`/`020`
+  upgrade/downgrade through migrations `019`/`020`/`021`
 
-Step 4 remains **in progress** (4.1–4.3 done; retry/idempotency and later
-step-4 DoD open). Step 5 remains **open / partially remediated** (trace
+Step 4 remains **in progress** (4.1–4.4 done; queue-age, atomic publish,
+TEN-03, and live step-4 DoD open). Step 5 remains **open / partially remediated** (trace
 identity done; timeout cancellation, bounded capacity, session
 concurrency/history ordering, sticky experiment propagation still open).
 Steps 6–10 remain open. ING-02 atomic/versioned index publish + rollback and

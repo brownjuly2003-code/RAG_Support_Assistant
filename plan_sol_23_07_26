@@ -21,7 +21,7 @@
 > | 1 Contract tests + release gate | 1–2 days | **locally complete** | All named step-1 contract-test slices demonstrated red then green (tenant/audit/Helm + OBS-01). Does **not** close production release |
 > | 2 Tenant Session/Message/Audit | 2–4 days | **local implementation verified; live PostgreSQL DoD open** | Commits `3c1e7b7`, `28580aa`; migration `018`; local tenant/audit/schema tests green. Live Postgres upgrade/downgrade + two-tenant restart drill not run |
 > | 3 Production storage + backup | 2–4 days | **chart/backup runtime locally verified; operational restore DoD open** | Commits `ed8520a`, `2767b9d`; Helm + backup runtime contracts green. Image/cluster/restore/RPO/RTO gates still open |
-> | 4 Durable ingestion + atomic index | 4–6 days | **in progress** (slices 4.1–4.3 done) | `b7faa19` durable job; `4f93038` Compose one-worker + Helm Celery sidecar; `6dc6fe4` lease/heartbeat + stale reaper (migration `020`). **Next:** 4.4 bounded retry/idempotency. Atomic index publish, queue-age alerting, TEN-03, live drills **not** claimed complete |
+> | 4 Durable ingestion + atomic index | 4–6 days | **in progress** (slices 4.1–4.4 done) | `b7faa19` durable job; `4f93038` worker topology; `6dc6fe4` lease/heartbeat + stale reaper; `1cebd14` tenant-scoped upload idempotency + bounded broker-publish retry (migration `021`). Atomic index publish, queue-age alerting, TEN-03, live drills **not** claimed complete |
 > | 5 Timeout/capacity/trace identity | 4–6 days | **open / partially remediated** | Trace identity (OBS-01) done at `5a9f857`; timeout cancellation, bounded capacity, session concurrency/history ordering, sticky experiment propagation still require work |
 > | 6 Sync/SSE unify + durable escalation | 4–6 days | **open** | Dual streaming path + human-without-ticket remain |
 > | 7 Fail-closed RAG routing | 5–8 days | **open** | Depends on step 6 |
@@ -33,9 +33,10 @@
 > steps 2–3; step 1 local contracts are green, but production release is not
 > closed). Step 4 is in progress; steps 6–10 remain open.
 >
-> **Exact next implementation slice:** plan step **4.4** bounded
-> retry/idempotency contract. Keep queue-age alerting, atomic publish, TEN-03,
-> and live/external drills explicitly unclaimed.
+> **Latest implementation slice:** plan step **4.4** bounded broker-publish
+> retry/idempotency contract is locally complete at `1cebd14`. Queue-age
+> alerting, atomic publish, TEN-03, and live/external drills remain explicitly
+> unclaimed. No next implementation slice was selected in that turn.
 
 ## 1. Зафиксировать failing contract tests и release gate
 
@@ -156,19 +157,19 @@
   - Runtime liveness config fails closed, including blank explicit env and heartbeat ≥ lease
   - Local verification (independent Codex after final Grok changes): 55 liveness + 9 ingest-task + 12 upload/security + 26 settings + 27 durable job-contract + 24 docs = **153 passed**; expected deprecation warnings only; Ruff clean; mypy `--follow-imports=skip` clean; `alembic heads` = `020 (head)`; `git diff --check` clean; protected artifacts 9/9 unchanged
   - Test-first/adversarial evidence: import-order fixture leak found via order-dependent failures and fixed by late session resolution; runtime clamp/fallback tests red before correction; explicit blank env 25 expected failures → 25/25 green
-- **Next atomic slice 4.4:** bounded retry/idempotency contract. Do not claim queue-age alerting, atomic publish, TEN-03, or live/external drills complete in that slice.
+- **Slice 4.4 locally complete @ `1cebd14`:** tenant-scoped optional `Idempotency-Key` (stored as SHA-256 hash), payload fingerprint conflict detection, deterministic task identity reserved before publish, queued-only `source_ready_at`, bounded off-event-loop Celery broker-publish retry, replay identity on 503, and CORS/docs contract. Worker/task autoretry after load/index mutation remains intentionally disabled while ING-02 is open. Independent Codex gate: 73 focused tests; Ruff clean; locked core/API mypy clean; Alembic `021 (head)`; diff checks clean.
 - Выбрать один job contract для всех tenant: worker Deployment + heartbeat либо отдельный job service. *(4.2 topology + 4.3 job-level lease/heartbeat done; broader multi-tenant lock still open if required later)*
-- Возвращать `job_id`; реализовать status, retry, idempotency и queue-age metrics. *(`job_id` + status/terminal error + lease/heartbeat done; retry/idempotency/queue-age still open)*
+- Возвращать `job_id`; реализовать status, retry, idempotency и queue-age metrics. *(`job_id` + status/terminal error + lease/heartbeat + bounded broker-publish retry/idempotency done; queue-age still open; unsafe post-mutation task autoretry not enabled)*
 - Добавить per-tenant distributed lock.
 - Строить versioned staging collection, проверять count/dimension/known queries и атомарно переключать active version.
 - Сохранять предыдущую collection для rollback; original uploads сделать immutable/versioned.
 - Использовать collision-resistant physical tenant name. *(TEN-03 still open)*
 
-**Still open after 4.3:** bounded retry/idempotency; queue-age metric/alert; live Redis/Postgres/Celery worker-outage/recovery drill; real PostgreSQL upgrade/downgrade through migrations `019`/`020`; ING-02 atomic/versioned index publish + rollback; TEN-03.
+**Still open after 4.4:** queue-age metric/alert; live Redis/Postgres/Celery worker-outage/recovery drill; real PostgreSQL upgrade/downgrade through migrations `019`/`020`/`021`; ING-02 atomic/versioned index publish + rollback; TEN-03.
 
 **Проверка:** fault injection до/после embeddings и switch, два concurrent upload, worker outage/recovery, duplicate job.
 
-**DoD:** accepted job либо завершается, либо имеет наблюдаемый terminal error; неудачный rebuild не повреждает активный индекс. Slices 4.1–4.3 met the job_id/status/terminal-error, local worker-topology, and durable liveness/recovery contracts; full step DoD (retry/idempotency, queue-age alerting, atomic publish, TEN-03, live drills) remains **not** met.
+**DoD:** accepted job либо завершается, либо имеет наблюдаемый terminal error; неудачный rebuild не повреждает активный индекс. Slices 4.1–4.4 met the job_id/status/terminal-error, local worker-topology, durable liveness/recovery, and bounded broker-publish retry/idempotency contracts; full step DoD (queue-age alerting, atomic publish, TEN-03, live drills) remains **not** met.
 
 ## 5. Исправить timeout, capacity, session concurrency и tracing identity
 
