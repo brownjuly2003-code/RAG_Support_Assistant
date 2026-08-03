@@ -36,6 +36,13 @@ boundary, and diff checks are clean. Runtime retention wiring, broader fault
 injection, operator wiring, and immutable/versioned originals remain open; the
 setting has no runtime consumer and no real collection was deleted.
 
+**Next local-only candidate (not started): 4.8d3f publication inventory
+wiring.** Record a validated versioned collection in trusted inventory under
+the existing tenant lock, with explicit record-vs-publish failure semantics.
+Do not invoke retention deletion or add an operator surface in the same slice.
+See [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) for acceptance
+boundaries and Windows verification caveats.
+
 ### Live / external P0 gates (not local-complete)
 
 Track separately from the next code slice — do **not** list as done work:

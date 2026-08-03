@@ -2,6 +2,10 @@
 
 ## 2026-08-03 Update-33 (step 4.8d3e fail-closed retention budget @ `f899ba5`) ✅ START HERE
 
+> **Next-session handoff:** read [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md)
+> after refreshing `git status`; it records exact boundaries, verification
+> caveats, protected untracked artifacts, and the unstarted 4.8d3f candidate.
+>
 > **Implementation commit:** `f899ba5` (`feat(config): add index retention
 > budget`). Plan sub-slice **4.8d3e is locally complete and verified**:
 > - lazy `VECTORDB_RETENTION_MAX_VERSIONS` configuration defaults to the
