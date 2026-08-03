@@ -138,15 +138,21 @@ def test_ingest_document_indexes_loaded_docs(
             calls["load_path"] = path
             return docs
 
-    def fake_build_vector_store(loaded_docs, chunk_config, embeddings=None, tenant_id: str = "default", **kwargs):
+    def fake_build_vector_store_with_publication(
+        loaded_docs, chunk_config, embeddings=None, tenant_id: str = "default", **kwargs
+    ):
         calls["docs"] = loaded_docs
         calls["chunk_config"] = chunk_config
         calls["embeddings"] = embeddings
         calls["tenant_id"] = tenant_id
+        return SimpleNamespace(store=None, chunks=list(loaded_docs), publication=None)
 
     monkeypatch.setattr("ingestion.loader.DocumentLoader", FakeLoader)
     monkeypatch.setattr("vectordb.manager.get_embeddings", lambda: "embeddings")
-    monkeypatch.setattr("vectordb.manager.build_vector_store", fake_build_vector_store)
+    monkeypatch.setattr(
+        "vectordb.manager.build_vector_store_with_publication",
+        fake_build_vector_store_with_publication,
+    )
     monkeypatch.setattr(
         "config.settings.get_settings",
         lambda: SimpleNamespace(chunk_size=123, chunk_overlap=45),
@@ -156,6 +162,7 @@ def test_ingest_document_indexes_loaded_docs(
 
     assert result["status"] == "ok"
     assert result["docs_count"] == 1
+    assert result["index_publication"] is None
     assert calls["tenant_id"] == "acme"
     assert calls["docs"] == docs
     assert calls["chunk_config"] == {"chunk_size": 123, "chunk_overlap": 45}
@@ -167,6 +174,128 @@ def test_ingest_document_indexes_loaded_docs(
         assert row is not None
         assert row.status == "completed"
         assert row.finished_at is not None
+        assert row.result is not None
+        assert row.result["index_publication"] is None
+
+
+def test_worker_persists_index_publication_receipt_from_same_build(
+    tmp_path,
+    monkeypatch,
+    ingestion_jobs_db,
+) -> None:
+    """Chroma receipt from the exact build is durable in task return and job.result."""
+    job_id = uuid.uuid4()
+    upload = tmp_path / "pub.txt"
+    upload.write_text("hello", encoding="utf-8")
+    _seed_job(job_id, "pub-tenant", "pub.txt")
+    build_calls: list[object] = []
+
+    class FakeLoader:
+        def __init__(self, recursive: bool) -> None:
+            pass
+
+        def load_documents(self, path: str):
+            return [SimpleNamespace(page_content="hello")]
+
+    receipt = SimpleNamespace(
+        tenant_id="pub-tenant",
+        active_collection="rag_docs_pub-tenant_g2",
+        previous_collection="rag_docs_pub-tenant_g1",
+        manifest_generation=2,
+    )
+
+    def fake_build_with_publication(
+        loaded_docs, chunk_config, embeddings=None, tenant_id: str = "default", **kwargs
+    ):
+        build_calls.append((loaded_docs, tenant_id))
+        return SimpleNamespace(store="store", chunks=list(loaded_docs), publication=receipt)
+
+    monkeypatch.setattr("ingestion.loader.DocumentLoader", FakeLoader)
+    monkeypatch.setattr("vectordb.manager.get_embeddings", lambda: "embeddings")
+    monkeypatch.setattr(
+        "vectordb.manager.build_vector_store_with_publication",
+        fake_build_with_publication,
+    )
+    monkeypatch.setattr(
+        "config.settings.get_settings",
+        lambda: SimpleNamespace(chunk_size=50, chunk_overlap=5),
+    )
+
+    result = ingest_task.ingest_document.run(str(upload), str(job_id), "pub-tenant")
+
+    expected = {
+        "tenant_id": "pub-tenant",
+        "active_collection": "rag_docs_pub-tenant_g2",
+        "previous_collection": "rag_docs_pub-tenant_g1",
+        "manifest_generation": 2,
+    }
+    assert result["status"] == "ok"
+    assert result["index_publication"] == expected
+    assert set(result["index_publication"]) == {
+        "tenant_id",
+        "active_collection",
+        "previous_collection",
+        "manifest_generation",
+    }
+    assert len(build_calls) == 1
+
+    with jobs_mod.sync_session() as session:
+        row = session.get(IngestionJob, job_id)
+        assert row is not None
+        assert row.status == "completed"
+        assert row.result is not None
+        assert row.result["index_publication"] == expected
+        assert row.result["index_publication"] == result["index_publication"]
+
+
+def test_worker_persists_null_index_publication_when_receipt_is_none(
+    tmp_path,
+    monkeypatch,
+    ingestion_jobs_db,
+) -> None:
+    """Qdrant-style publication=None must be honest and durable (no invented fields)."""
+    job_id = uuid.uuid4()
+    upload = tmp_path / "qdrant.txt"
+    upload.write_text("hello", encoding="utf-8")
+    _seed_job(job_id, "q-tenant", "qdrant.txt")
+
+    class FakeLoader:
+        def __init__(self, recursive: bool) -> None:
+            pass
+
+        def load_documents(self, path: str):
+            return [SimpleNamespace(page_content="hello")]
+
+    def fake_build_with_publication(
+        loaded_docs, chunk_config, embeddings=None, tenant_id: str = "default", **kwargs
+    ):
+        return SimpleNamespace(store="store", chunks=list(loaded_docs), publication=None)
+
+    monkeypatch.setattr("ingestion.loader.DocumentLoader", FakeLoader)
+    monkeypatch.setattr("vectordb.manager.get_embeddings", lambda: "embeddings")
+    monkeypatch.setattr(
+        "vectordb.manager.build_vector_store_with_publication",
+        fake_build_with_publication,
+    )
+    monkeypatch.setattr(
+        "config.settings.get_settings",
+        lambda: SimpleNamespace(chunk_size=50, chunk_overlap=5),
+    )
+
+    result = ingest_task.ingest_document.run(str(upload), str(job_id), "q-tenant")
+
+    assert result["status"] == "ok"
+    assert "index_publication" in result
+    assert result["index_publication"] is None
+
+    with jobs_mod.sync_session() as session:
+        row = session.get(IngestionJob, job_id)
+        assert row is not None
+        assert row.status == "completed"
+        assert row.result is not None
+        assert "index_publication" in row.result
+        assert row.result["index_publication"] is None
+        assert row.result["index_publication"] is result["index_publication"]
 
 
 def test_ingest_document_raises_when_indexing_fails(
@@ -189,7 +318,7 @@ def test_ingest_document_raises_when_indexing_fails(
     monkeypatch.setattr("ingestion.loader.DocumentLoader", FakeLoader)
     monkeypatch.setattr("vectordb.manager.get_embeddings", lambda: "embeddings")
     monkeypatch.setattr(
-        "vectordb.manager.build_vector_store",
+        "vectordb.manager.build_vector_store_with_publication",
         lambda docs, chunk_config, embeddings=None, tenant_id="default", **kwargs: (
             _ for _ in ()
         ).throw(RuntimeError("index failed")),
@@ -237,7 +366,7 @@ def test_progress_update_failure_does_not_block_durable_completion(
 
     def fake_build(loaded_docs, chunk_config, embeddings=None, tenant_id: str = "default", **kwargs):
         order.append("build")
-        return None
+        return SimpleNamespace(store=None, chunks=list(loaded_docs), publication=None)
 
     real_claim = jobs_mod.sync_claim_running
 
@@ -250,7 +379,10 @@ def test_progress_update_failure_does_not_block_durable_completion(
     monkeypatch.setattr("ingestion.jobs.sync_claim_running", _claim_running)
     monkeypatch.setattr("ingestion.loader.DocumentLoader", FakeLoader)
     monkeypatch.setattr("vectordb.manager.get_embeddings", lambda: "embeddings")
-    monkeypatch.setattr("vectordb.manager.build_vector_store", fake_build)
+    monkeypatch.setattr(
+        "vectordb.manager.build_vector_store_with_publication",
+        fake_build,
+    )
     monkeypatch.setattr(
         "config.settings.get_settings",
         lambda: SimpleNamespace(chunk_size=10, chunk_overlap=1),
@@ -263,6 +395,7 @@ def test_progress_update_failure_does_not_block_durable_completion(
     )
 
     assert result["status"] == "ok"
+    assert result["index_publication"] is None
     assert "running" in order
     # Durable running must be recorded before the first progress update attempt.
     assert order.index("running") < order.index("progress:loading")
@@ -273,6 +406,8 @@ def test_progress_update_failure_does_not_block_durable_completion(
         assert row is not None
         assert row.status == "completed"
         assert row.finished_at is not None
+        assert row.result is not None
+        assert row.result["index_publication"] is None
 
 
 def test_progress_update_failure_still_records_durable_failed_on_loader_error(
@@ -299,7 +434,7 @@ def test_progress_update_failure_still_records_durable_failed_on_loader_error(
     monkeypatch.setattr(ingest_task.ingest_document, "update_state", _boom_update_state)
     monkeypatch.setattr("ingestion.loader.DocumentLoader", BrokenLoader)
     monkeypatch.setattr(
-        "vectordb.manager.build_vector_store",
+        "vectordb.manager.build_vector_store_with_publication",
         lambda *a, **k: build_calls.append(1),
     )
 
@@ -369,7 +504,7 @@ def test_worker_phase_messages_redact_secret_bearing_exceptions(
     monkeypatch.setattr("ingestion.loader.DocumentLoader", FakeLoader)
     monkeypatch.setattr("vectordb.manager.get_embeddings", lambda: "embeddings")
     monkeypatch.setattr(
-        "vectordb.manager.build_vector_store",
+        "vectordb.manager.build_vector_store_with_publication",
         lambda docs, chunk_config, embeddings=None, tenant_id="default", **kwargs: (
             _ for _ in ()
         ).throw(

@@ -794,7 +794,7 @@ def test_worker_refuses_duplicate_claim_before_load(
 
     monkeypatch.setattr("ingestion.loader.DocumentLoader", TrackingLoader)
     monkeypatch.setattr(
-        "vectordb.manager.build_vector_store",
+        "vectordb.manager.build_vector_store_with_publication",
         lambda *a, **k: build_calls.append(1),
     )
     monkeypatch.setattr(
@@ -853,8 +853,8 @@ def test_worker_lost_lease_cannot_overwrite_reaper_failure(
     monkeypatch.setattr("ingestion.loader.DocumentLoader", FakeLoader)
     monkeypatch.setattr("vectordb.manager.get_embeddings", lambda: "embeddings")
     monkeypatch.setattr(
-        "vectordb.manager.build_vector_store",
-        lambda *a, **k: None,
+        "vectordb.manager.build_vector_store_with_publication",
+        lambda *a, **k: SimpleNamespace(store=None, chunks=[], publication=None),
     )
     monkeypatch.setattr(
         "config.settings.get_settings",
@@ -1209,11 +1209,14 @@ def test_invalid_lease_config_blocks_celery_task_before_load(
 
     def _build(*_a, **_k):  # noqa: ANN001
         index_calls.append("build")
-        return None
+        return SimpleNamespace(store=None, chunks=[], publication=None)
 
     monkeypatch.setattr("ingestion.loader.DocumentLoader", TrackingLoader)
     monkeypatch.setattr("vectordb.manager.get_embeddings", lambda: "embeddings")
-    monkeypatch.setattr("vectordb.manager.build_vector_store", _build)
+    monkeypatch.setattr(
+        "vectordb.manager.build_vector_store_with_publication",
+        _build,
+    )
     monkeypatch.setattr(
         ingest_task.ingest_document,
         "update_state",

@@ -674,11 +674,18 @@ def test_worker_propagates_tenant_and_records_completed(
         calls["docs"] = loaded_docs
         calls["tenant_id"] = tenant_id
         calls["chunk_config"] = chunk_config
-        return MagicMock(), list(loaded_docs)
+        return SimpleNamespace(
+            store=MagicMock(),
+            chunks=list(loaded_docs),
+            publication=None,
+        )
 
     monkeypatch.setattr("ingestion.loader.DocumentLoader", FakeLoader)
     monkeypatch.setattr("vectordb.manager.get_embeddings", lambda: "embeddings")
-    monkeypatch.setattr("vectordb.manager.build_vector_store", fake_build)
+    monkeypatch.setattr(
+        "vectordb.manager.build_vector_store_with_publication",
+        fake_build,
+    )
     monkeypatch.setattr(
         "config.settings.get_settings",
         lambda: SimpleNamespace(chunk_size=100, chunk_overlap=10),
@@ -700,6 +707,7 @@ def test_worker_propagates_tenant_and_records_completed(
     assert result["status"] == "ok"
     assert calls["tenant_id"] == "worker-tenant"
     assert calls["docs"] == docs
+    assert result["index_publication"] is None
 
     with jobs_mod.sync_session() as session:
         row = session.get(IngestionJob, job_id)
@@ -707,6 +715,9 @@ def test_worker_propagates_tenant_and_records_completed(
         assert row.status == "completed"
         assert row.finished_at is not None
         assert row.started_at is not None
+        assert row.result is not None
+        assert row.result["index_publication"] is None
+        assert row.result["index_publication"] is result["index_publication"]
 
     assert ("PROCESSING", {"step": "loading"}) in states or any(
         s[0] == "PROCESSING" for s in states
@@ -747,7 +758,7 @@ def test_worker_records_failed_and_raises_on_loader_error(
     monkeypatch.setattr("ingestion.loader.DocumentLoader", BrokenLoader)
     build_calls: list[Any] = []
     monkeypatch.setattr(
-        "vectordb.manager.build_vector_store",
+        "vectordb.manager.build_vector_store_with_publication",
         lambda *a, **k: build_calls.append((a, k)),
     )
     monkeypatch.setattr(
@@ -801,9 +812,12 @@ def test_worker_unknown_or_mismatched_job_prevents_build(
 
     def _build(*args, **kwargs):
         build_calls.append((args, kwargs))
-        return MagicMock(), []
+        return SimpleNamespace(store=MagicMock(), chunks=[], publication=None)
 
-    monkeypatch.setattr("vectordb.manager.build_vector_store", _build)
+    monkeypatch.setattr(
+        "vectordb.manager.build_vector_store_with_publication",
+        _build,
+    )
     monkeypatch.setattr(
         "ingestion.loader.DocumentLoader",
         lambda recursive=False: SimpleNamespace(
@@ -1439,7 +1453,7 @@ def test_worker_load_and_index_boundary_logs_omit_secret_exception_message(
     monkeypatch.setattr("ingestion.loader.DocumentLoader", FakeLoader)
     monkeypatch.setattr("vectordb.manager.get_embeddings", lambda: "embeddings")
     monkeypatch.setattr(
-        "vectordb.manager.build_vector_store",
+        "vectordb.manager.build_vector_store_with_publication",
         lambda docs, chunk_config, embeddings=None, tenant_id="default", **kwargs: (
             _ for _ in ()
         ).throw(RuntimeError(_SECRET_BLOB)),

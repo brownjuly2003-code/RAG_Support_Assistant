@@ -179,7 +179,10 @@ def ingest_document(self: Task, file_path: str, job_id: str, tenant_id: str) -> 
 
         try:
             from config.settings import get_settings
-            from vectordb.manager import build_vector_store, get_embeddings
+            from vectordb.manager import (
+                build_vector_store_with_publication,
+                get_embeddings,
+            )
 
             settings = get_settings()
             chunk_config = {
@@ -187,7 +190,7 @@ def ingest_document(self: Task, file_path: str, job_id: str, tenant_id: str) -> 
                 "chunk_overlap": getattr(settings, "chunk_overlap", 200),
             }
             embeddings = get_embeddings()
-            build_vector_store(
+            build_result = build_vector_store_with_publication(
                 docs,
                 chunk_config,
                 embeddings=embeddings,
@@ -209,6 +212,17 @@ def ingest_document(self: Task, file_path: str, job_id: str, tenant_id: str) -> 
             )
             raise RuntimeError(_MSG_INDEXING_FAILED) from exc
 
+        publication = build_result.publication
+        if publication is not None:
+            index_publication: dict[str, Any] | None = {
+                "tenant_id": publication.tenant_id,
+                "active_collection": publication.active_collection,
+                "previous_collection": publication.previous_collection,
+                "manifest_generation": publication.manifest_generation,
+            }
+        else:
+            index_publication = None
+
         if heartbeat.ownership_lost:
             logger.warning(
                 "Ingestion lease lost job_id=%s phase=pre_complete",
@@ -223,6 +237,7 @@ def ingest_document(self: Task, file_path: str, job_id: str, tenant_id: str) -> 
             "message": f"Indexed {len(docs)} document(s) from {path.name}",
             "job_id": str(job_uuid),
             "tenant_id": tenant_id,
+            "index_publication": index_publication,
         }
         try:
             sync_mark_completed(job_uuid, tenant_id, lease_token, result)
