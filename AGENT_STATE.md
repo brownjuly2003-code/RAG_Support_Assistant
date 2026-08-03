@@ -1,5 +1,51 @@
 # Agent State
 
+## 2026-08-03 Update-35 (plan 2.2 / post-publish bounded retention @ `f0cb6ee`) ✅ START HERE
+
+> **Next-session handoff:** refresh `git status` first. This Update-35 block is
+> the current source for completed 2.1 and 2.2 lifecycle wiring.
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md), `BACKLOG.md`, and the
+> first-slice sentence in `rag-remediation-plan-2026-08-03.md` are protected
+> older working-tree state and still point to 2.1 — do not repeat 2.1 or 2.2;
+> the next plan-step-2 item is an explicit tenant-scoped operator surface for
+> validated rollback/retention with dry-run and audit trail, and it was not
+> started.
+>
+> **Implementation commit:** `f0cb6ee` (`feat(index): run retention after
+> publish`). Plan slice **2.2 is locally complete and verified**:
+> - in the Chroma document rebuild path, under the existing tenant lock, durable
+>   order is staging/known-query validation, inventory record, atomic manifest
+>   publish, then `execute_chroma_retention` with the configured
+>   `vectordb_retention_max_versions` budget
+> - retention runs outside the unpublished-candidate discard handler
+> - retention failure propagates without retry, rollback, or discard of the
+>   manifest-active candidate; active/previous pointers and inventory remain
+>   durable for observable/repeatable recovery
+> - validation, inventory-record, and publish failures do not run retention and
+>   preserve their prior cleanup behavior
+> - Qdrant/fact-card paths, adapter/executor/settings APIs, operator surface,
+>   and live services were not changed/touched
+>
+> **Verification:** test doubles now include the required budget and use nested
+> per-test Chroma directories, preventing adjacent manifest registries from
+> leaking across sibling pytest `tmp_path` cases. Test-first Grok evidence
+> before production wiring: two expected runtime failures, then 44 focused
+> passes; the later cross-test isolation ordered pair was reproduced red by
+> Codex and passed 2/2 after the Grok fix, whose focused suite passed 50 tests.
+> Final independent Codex gate passed **126 tests** with two known deprecation
+> warnings; scoped Ruff clean; Python 3.11 + mypy 1.19.1 + NumPy 2.4.4 clean;
+> read-only hashes, diff, and call-boundary checks clean. Local route was
+> `local_grok_cli` / `grok-4.5-build`; no real Chroma client, live
+> Chroma/PostgreSQL/Redis, push, or deploy occurred.
+>
+> **Current truth:** plan step 2 remains in progress: only 2.1 and 2.2 are
+> locally complete. The next plan-step-2 item is an explicit tenant-scoped
+> operator surface for validated rollback/retention with dry-run and audit
+> trail; it was not started. Immutable/versioned originals, broader fault
+> injection, and live drills remain open. Do not treat full plan step 2, old
+> step 4.8d, production release, live drills, or project completion as done.
+> Protected dirty/untracked user artifacts remain untouched.
+
 ## 2026-08-03 Update-34 (plan 2.1 / 4.8d3f publication inventory wiring @ `e8da185`) ✅ START HERE
 
 > **Next-session handoff:** refresh `git status` first. This Update-34 block is
