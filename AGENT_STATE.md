@@ -1,12 +1,102 @@
 # Agent State
 
-## 2026-08-03 Update-47 — transparent next-session handoff; no new implementation ✅ START HERE
+## 2026-08-03 Update-48 — record completed slice 2.4a @ `a1dcd5c` ✅ START HERE
 
-> **Routing authority:** Update-47 is **docs-only** and supersedes Update-46
+> **Routing authority:** Update-48 is **docs-only** and supersedes Update-47
 > **only for start-point routing**. All older Update blocks below, including
 > headings that literally contain `✅ START HERE`, are **archival**. **Only the
 > first/topmost Update block in this file is authoritative.** Never select work
 > by grepping old `START HERE` markers.
+>
+> **No new implementation in this docs turn.** Code, tests, plans, backlog,
+> README, audit, settings, and API paths were **not** edited here. Project
+> tests were **not** rerun. Protected dirty `BACKLOG.md`, `README.md`,
+> `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and existing untracked
+> artifacts (including the active plan) were not touched.
+>
+> **Implementation commit:** `a1dcd5c` (`feat(ingestion): preserve immutable
+> upload originals`). Slice **2.4a is locally complete and verified** at
+> documented scopes. Previous docs/handoff commit: `0fd3458`
+> (`docs: make next-session handoff transparent`). The future docs commit that
+> records Update-48 **cannot** be known inside its own content; next session
+> must obtain it from `git log -5 --oneline`. Actual Git wins over embedded
+> hashes/counts.
+>
+> **Implementation paths changed in `a1dcd5c` only:**
+> - `api/routers/upload.py`
+> - `tests/test_upload_idempotency.py`
+> - `tests/test_upload_security.py`
+>
+> **2.4a behavior (landed):**
+> - each created job writes
+>   `data/uploads[/<tenant>]/job-objects/<job_id>/<safe_name>` with
+>   exclusive/create-new semantics;
+> - project-relative immutable path persisted in existing
+>   `IngestionJob.source_path`;
+> - same-key replay writes neither immutable object nor flat current view;
+>   fingerprint conflict remains 409 before mutation;
+> - flat `upload_dir/<safe_name>` current corpus view remains for existing
+>   non-recursive loaders, reindex, sync indexing, categorization, and default
+>   Celery publication;
+> - flat refresh uses same-directory atomic replace only after the new
+>   immutable write succeeds;
+> - pre-2.4a flat-only prior bytes preserved first under content-addressed
+>   nested `job-objects/legacy-previous/<sha256>/<safe_name>`; preservation
+>   failure leaves flat bytes unchanged, terminal-fails the new job, and does
+>   not publish;
+> - nested job/recovery objects remain outside current `recursive=False`
+>   corpus scanning.
+>
+> **Boundary (unchanged / not in 2.4a):** no DB/model/migration, jobs helper,
+> worker, loader, reindex, index/retention, settings, UI, plan, dependency,
+> live-service, push, or deploy changes.
+>
+> **Completed scope (local, verified at documented scopes):** slices **2.1
+> through 2.4a**. Full evidence ledger for 2.4a lives in
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+>
+> **Not complete / not claimed:** full plan step 2; full immutable lifecycle;
+> durable job↔published index generation/collection binding; GC/retention for
+> job objects or legacy recovery objects; orphan cleanup on failed transition;
+> live concurrency/fault-injection; full suite; live drills; project/release/
+> production readiness; push/deploy.
+>
+> **Active writer / WIP:** none. No unfinished next-candidate WIP. No active
+> Grok/delegated writer at this handoff.
+>
+> **Next candidate only (not started):** bounded investigation/test-first
+> slice for the missing durable **job↔published index generation/collection**
+> linkage. Label it explicitly **not started**. Do **not** invent file/API
+> contracts here; ownership must be resolved **read-only** next session from
+> repository evidence (plan direction only). Details:
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+>
+> **Protected dirty / untracked state:** see handoff capsule; do not
+> touch/stage/remove without explicit request. Do **not** edit the active
+> untracked plan or its checkboxes.
+>
+> **External gates (not authorized):** push, deploy, live services, destructive
+> Git, production-readiness claims. Live PostgreSQL/Redis/Celery/Chroma drills
+> require explicit opt-in and must **not** be the default next slice.
+>
+> **Standing execution preference:** **Grok** implements/content-writes;
+> orchestrator protects files, verifies independently, commits scoped results.
+> One user turn = **one** named atomic slice. Do **not** re-select 2.1–2.4a.
+>
+> **Git advisory only:** branch observed as
+> `master...origin/master [ahead 80]` immediately after implementation —
+> refresh next session.
+
+## 2026-08-03 Update-47 — transparent next-session handoff; no new implementation ✅ START HERE
+
+> **Historical handoff (superseded by Update-48 for start-point routing).**
+> Older `✅ START HERE` markers in this archive are **not** routing authority.
+> Refresh `git status` first. This Update-47 block previously superseded
+> Update-46 as the start point. That turn was **docs-only** and supersedes
+> Update-46 **only for start-point routing** at that time. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`,
+> remain **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
 >
 > **No new implementation.** Code, tests, plans, backlog, README, audit,
 > settings, and API paths were **not** edited in this turn. Project tests were
