@@ -1,6 +1,33 @@
 # Agent State
 
-## 2026-08-03 Update-28 (step 4.8d2 validated runtime rollback @ `bb3f00b`) ✅ START HERE
+## 2026-08-03 Update-29 (step 4.8d3a durable retention inventory @ `47902f5`) ✅ START HERE
+
+> **Implementation commit:** `47902f5` (`feat(index): add retention inventory
+> contract`). Plan sub-slice **4.8d3a is locally complete and verified**:
+> - strict tenant-bound v1 JSON metadata records only this tenant's validated
+>   versioned collection names with a durable sequence and timezone timestamp
+> - every metadata update requires the current matching tenant-lock token and
+>   uses a flushed + fsynced same-directory temporary file with `os.replace`
+> - corrupt, partial, duplicate-key, and foreign-tenant state fails closed;
+>   replace failure preserves the previous inventory byte-for-byte
+> - trusted candidates are returned oldest-first only from recorded metadata;
+>   the current manifest's active/previous collections are always excluded,
+>   and a missing manifest yields no candidates
+>
+> **Verification:** eight contracts first failed while the retention module was
+> absent, then passed. The retention/runtime/manifest/staging/chunk-restore/
+> tenant-lock closure gate passed **51 tests** with one expected warning.
+> Scoped Ruff, locked Python 3.11 / mypy 1.19.1 / NumPy 2.4.4, and staged diff
+> checks are clean. No Chroma list/delete API, runtime wiring, live backend,
+> push, deploy, or external service was touched.
+>
+> **Current truth:** plan step 4 and 4.8d remain in progress. This slice is
+> ordering metadata only; bounded deletion policy/execution and runtime wiring,
+> broader fault injection, an operator surface, immutable/versioned originals,
+> and live drills remain open. No next slice was started; protected untracked
+> user artifacts remain untouched.
+
+## 2026-08-03 Update-28 (step 4.8d2 validated runtime rollback @ `bb3f00b`) — SUPERSEDED by Update-29
 
 > **Implementation commit:** `bb3f00b` (`feat(index): validate runtime
 > rollbacks`). Plan sub-slice **4.8d2 is locally complete and verified**:
