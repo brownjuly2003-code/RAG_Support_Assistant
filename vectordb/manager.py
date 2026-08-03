@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
@@ -48,6 +49,25 @@ _chunks_cache: dict[str, list[Document]] = {}
 _store_cache: dict[str, Any] = {}
 _index_cache_keys: dict[str, tuple[str, str, int]] = {}
 _cache_lock = Lock()
+
+
+@dataclass(frozen=True)
+class IndexPublicationReceipt:
+    """Exact Chroma publish receipt captured during one successful build."""
+
+    tenant_id: str
+    active_collection: str
+    previous_collection: str | None
+    manifest_generation: int
+
+
+@dataclass(frozen=True)
+class BuildVectorStoreResult:
+    """Opt-in build result with an optional race-free publication receipt."""
+
+    store: Any
+    chunks: list[Document]
+    publication: IndexPublicationReceipt | None
 
 
 def get_embeddings(model_name: str | None = None) -> Any:
@@ -184,13 +204,14 @@ def _ensure_document_metadata(docs: Sequence[Document]) -> None:
         metadata.setdefault("last_updated", now_iso)
 
 
-def build_vector_store(
+def _build_vector_store_result(
     docs: Sequence[Document],
     chunk_config: dict[str, int],
     embeddings: Any | None = None,
     use_semantic_chunking: bool = False,
     tenant_id: str = "default",
-) -> tuple[Any, list[Document]]:
+) -> BuildVectorStoreResult:
+    """Shared build/publish path used by ordinary and opt-in entrypoints."""
     if not docs:
         raise ValueError("Document list is empty.")
 
@@ -225,6 +246,7 @@ def build_vector_store(
         chunk.metadata = metadata
 
     index_cache_key: tuple[str, str, int] | None = None
+    published_manifest: IndexVersionManifest | None = None
     with tenant_index_lock(tenant) as lock_token:
         # Embedding is the dominant cost here and runs synchronously inside the
         # backend's from_documents() with no per-item callback. On CPU with a large
@@ -271,7 +293,7 @@ def build_vector_store(
                     lock_token=lock_token,
                     chroma_directory=persist_directory,
                 )
-                manifest = publish_active_collection(
+                published_manifest = publish_active_collection(
                     tenant,
                     candidate.collection_name,
                     lock_token=lock_token,
@@ -293,7 +315,7 @@ def build_vector_store(
                 chroma_directory=persist_directory,
             )
             store = candidate.store
-            index_cache_key = _index_cache_key(persist_directory, manifest)
+            index_cache_key = _index_cache_key(persist_directory, published_manifest)
 
         logger.info(
             "[index] collection '%s' built: %d chunks in %.0fs",
@@ -317,7 +339,61 @@ def build_vector_store(
             else:
                 _index_cache_keys[tenant] = index_cache_key
 
-    return store, chunks
+    publication: IndexPublicationReceipt | None = None
+    if published_manifest is not None:
+        # Receipt is derived from the exact manifest returned by this build's
+        # publish, and is only returned after retention/cache completion above.
+        publication = IndexPublicationReceipt(
+            tenant_id=tenant,
+            active_collection=published_manifest.active_collection,
+            previous_collection=published_manifest.previous_collection,
+            manifest_generation=published_manifest.generation,
+        )
+    return BuildVectorStoreResult(
+        store=store,
+        chunks=chunks,
+        publication=publication,
+    )
+
+
+def build_vector_store(
+    docs: Sequence[Document],
+    chunk_config: dict[str, int],
+    embeddings: Any | None = None,
+    use_semantic_chunking: bool = False,
+    tenant_id: str = "default",
+) -> tuple[Any, list[Document]]:
+    """Build the tenant vector store and return the ordinary ``(store, chunks)`` tuple."""
+    result = _build_vector_store_result(
+        docs,
+        chunk_config,
+        embeddings=embeddings,
+        use_semantic_chunking=use_semantic_chunking,
+        tenant_id=tenant_id,
+    )
+    return result.store, result.chunks
+
+
+def build_vector_store_with_publication(
+    docs: Sequence[Document],
+    chunk_config: dict[str, int],
+    embeddings: Any | None = None,
+    use_semantic_chunking: bool = False,
+    tenant_id: str = "default",
+) -> BuildVectorStoreResult:
+    """Build once and return store/chunks plus the exact Chroma publish receipt.
+
+    Performs the same single build/publish path as ``build_vector_store``. For
+    Chroma, ``publication`` is the race-free receipt of the publish performed in
+    this invocation. For Qdrant, ``publication`` is ``None``.
+    """
+    return _build_vector_store_result(
+        docs,
+        chunk_config,
+        embeddings=embeddings,
+        use_semantic_chunking=use_semantic_chunking,
+        tenant_id=tenant_id,
+    )
 
 
 def rollback_vector_store(

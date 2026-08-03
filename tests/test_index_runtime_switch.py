@@ -1550,7 +1550,7 @@ def test_rebuild_retention_still_routes_to_execute_chroma_retention_not_guarded(
         raising=False,
     )
 
-    build_source = inspect.getsource(manager.build_vector_store)
+    build_source = inspect.getsource(manager._build_vector_store_result)
     assert re.search(
         r"(?<![a-zA-Z0-9_])execute_chroma_retention(?![a-zA-Z0-9_])",
         build_source,
@@ -1563,6 +1563,8 @@ def test_rebuild_retention_still_routes_to_execute_chroma_retention_not_guarded(
         r"(?<![a-zA-Z0-9_])execute_vector_store_retention(?![a-zA-Z0-9_])",
         build_source,
     ) is None
+    ordinary_source = inspect.getsource(manager.build_vector_store)
+    assert "_build_vector_store_result" in ordinary_source
 
     manager.build_vector_store(
         docs,
@@ -1674,3 +1676,234 @@ def test_runtime_retention_signature_source_boundary_and_no_production_callers(
                     str(candidate.relative_to(root)).replace("\\", "/")
                 )
     assert production_hits == []
+
+
+def test_build_vector_store_contract_still_returns_two_element_tuple(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    docs = [
+        manager.Document(
+            page_content="contract content",
+            metadata={"source": "contract.md"},
+        )
+    ]
+
+    result = manager.build_vector_store(
+        docs,
+        {"chunk_size": 100, "chunk_overlap": 0},
+        embeddings=_Embeddings(),
+        tenant_id="acme",
+    )
+
+    assert type(result) is tuple
+    assert len(result) == 2
+    store, chunks = result
+    assert store is not None
+    assert isinstance(chunks, list)
+    assert chunks[0].page_content == "contract content"
+    assert getattr(result, "publication", "missing") == "missing"
+
+
+def test_build_publication_receipt_chroma_first_and_second_publish(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+
+    first = manager.build_vector_store_with_publication(
+        [
+            manager.Document(
+                page_content="first published content",
+                metadata={"source": "first.md"},
+            )
+        ],
+        {"chunk_size": 100, "chunk_overlap": 0},
+        embeddings=_Embeddings(),
+        tenant_id="acme",
+    )
+
+    assert first.store is not None
+    assert isinstance(first.chunks, list)
+    assert first.chunks[0].page_content == "first published content"
+    assert first.publication is not None
+    assert first.publication.tenant_id == "acme"
+    assert first.publication.active_collection == first.store.collection_name
+    assert first.publication.previous_collection is None
+    assert first.publication.manifest_generation == 1
+    assert type(first.publication.manifest_generation) is int
+    assert first.publication.manifest_generation > 0
+
+    second = manager.build_vector_store_with_publication(
+        [
+            manager.Document(
+                page_content="second published content",
+                metadata={"source": "second.md"},
+            )
+        ],
+        {"chunk_size": 100, "chunk_overlap": 0},
+        embeddings=_Embeddings(),
+        tenant_id="acme",
+    )
+
+    assert second.publication is not None
+    assert second.publication.tenant_id == "acme"
+    assert second.publication.active_collection == second.store.collection_name
+    assert second.publication.previous_collection == first.publication.active_collection
+    assert second.publication.manifest_generation == 2
+    assert second.publication.active_collection != first.publication.active_collection
+    assert second.chunks[0].page_content == "second published content"
+
+
+def test_build_publication_receipt_opt_in_does_not_reread_or_relock_or_use_guarded(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import inspect
+    import re
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    real_lock = manager.tenant_index_lock
+    lock_calls: list[str] = []
+    manifest_reads: list[str] = []
+    guarded_calls: list[str] = []
+
+    @contextmanager
+    def _spy_lock(tenant_id: str) -> Iterator[Any]:
+        lock_calls.append(tenant_id)
+        with real_lock(tenant_id) as lock_token:
+            yield lock_token
+
+    def _fail_manager_manifest_read(*args: Any, **kwargs: Any) -> Any:
+        manifest_reads.append("manager.read_index_manifest")
+        raise AssertionError(
+            "opt-in publication receipt must not reread the manifest via manager"
+        )
+
+    def _fail_guarded(*args: Any, **kwargs: Any) -> Any:
+        guarded_calls.append("called")
+        raise AssertionError("opt-in build must not call guarded retention")
+
+    monkeypatch.setattr(manager, "tenant_index_lock", _spy_lock)
+    monkeypatch.setattr(manager, "read_index_manifest", _fail_manager_manifest_read)
+    monkeypatch.setattr(
+        manager,
+        "execute_guarded_chroma_retention",
+        _fail_guarded,
+        raising=False,
+    )
+
+    opt_in_source = inspect.getsource(manager.build_vector_store_with_publication)
+    assert re.search(
+        r"(?<![a-zA-Z0-9_])read_index_manifest(?![a-zA-Z0-9_])",
+        opt_in_source,
+    ) is None
+    assert re.search(
+        r"(?<![a-zA-Z0-9_])execute_guarded_chroma_retention(?![a-zA-Z0-9_])",
+        opt_in_source,
+    ) is None
+    assert re.search(
+        r"(?<![a-zA-Z0-9_])execute_vector_store_retention(?![a-zA-Z0-9_])",
+        opt_in_source,
+    ) is None
+
+    result = manager.build_vector_store_with_publication(
+        [
+            manager.Document(
+                page_content="receipt content",
+                metadata={"source": "receipt.md"},
+            )
+        ],
+        {"chunk_size": 100, "chunk_overlap": 0},
+        embeddings=_Embeddings(),
+        tenant_id="acme",
+    )
+
+    assert result.publication is not None
+    assert result.publication.manifest_generation == 1
+    assert lock_calls == ["acme"]
+    assert manifest_reads == []
+    assert guarded_calls == []
+
+
+def test_build_publication_receipt_retention_failure_propagates_without_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+
+    def _fail_retention(*args: Any, **kwargs: Any) -> tuple[str, ...]:
+        raise RuntimeError("chroma retention failed")
+
+    monkeypatch.setattr(
+        manager,
+        "execute_chroma_retention",
+        _fail_retention,
+        raising=False,
+    )
+
+    with pytest.raises(RuntimeError, match="chroma retention failed"):
+        manager.build_vector_store_with_publication(
+            [
+                manager.Document(
+                    page_content="new active",
+                    metadata={"source": "new.md"},
+                )
+            ],
+            {"chunk_size": 100, "chunk_overlap": 0},
+            embeddings=_Embeddings(),
+            tenant_id="acme",
+        )
+
+
+def test_build_publication_receipt_qdrant_publication_is_none(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    settings = _settings(chroma_directory)
+    settings.vector_backend = "qdrant"
+    monkeypatch.setattr(manager, "get_settings", lambda: settings)
+
+    class _QdrantStore:
+        collection_name = "qdrant-not-versioned"
+
+    built_chunks_holder: list[Any] = []
+
+    def _build_qdrant(chunks: list[Any], embeddings: Any) -> _QdrantStore:
+        _ = embeddings
+        built_chunks_holder.append(list(chunks))
+        return _QdrantStore()
+
+    monkeypatch.setattr(manager._base_manager, "_build_qdrant", _build_qdrant)
+
+    result = manager.build_vector_store_with_publication(
+        [
+            manager.Document(
+                page_content="qdrant content",
+                metadata={"source": "qdrant.md"},
+            )
+        ],
+        {"chunk_size": 100, "chunk_overlap": 0},
+        embeddings=_Embeddings(),
+        tenant_id="acme",
+    )
+
+    assert isinstance(result, manager.BuildVectorStoreResult)
+    assert result.publication is None
+    assert result.store.collection_name == "qdrant-not-versioned"
+    assert result.chunks[0].page_content == "qdrant content"
+    assert not hasattr(result.publication, "manifest_generation")
+    assert state.built_names == []
+    assert built_chunks_holder and built_chunks_holder[0][0].page_content == "qdrant content"
