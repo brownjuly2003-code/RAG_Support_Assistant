@@ -1,57 +1,124 @@
 # Agent State
 
-## 2026-08-03 Update-44 (transparent next-session handoff; no new slice) ✅ START HERE
+## 2026-08-03 Update-45 (plan 2.3h / guarded runtime retention @ `bd01f23`) ✅ START HERE
 
-> **Docs-only clarity work — not implementation.** This Update-44 block
-> supersedes Update-43 as the start point for the next session. No code,
-> tests, plans, backlog, or other artifacts were changed in this turn. Grok
-> used docs read/edit only (no commands or tests). Codex ran read-only Git
-> status/log, scoped diff/diff-check, and SHA-256 protection checks; project
-> tests and runtime/code verification suites were not rerun. Protected dirty
-> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+> **Next-session handoff:** refresh `git status` first. This Update-45 block
+> supersedes Update-44 as the start point for the next session. This turn is
+> **docs/status only** for the already-landed 2.3h implementation; no code,
+> tests, plans, backlog, README, audit, settings, or API paths were edited
+> here. Protected dirty `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
 > `plan_sol_23_07_26`, and existing untracked artifacts were not touched.
 >
-> **Authoritative implementation state (unchanged):**
-> - Latest implementation remains `f966fac` (`feat(index): bridge guarded
->   Chroma retention`). Slice **2.3g is locally complete and verified**.
-> - Latest pre-refresh docs HEAD at handoff inspection: `1f40a57`
->   (`docs: record guarded Chroma retention bridge`). Do **not** embed or
->   guess a future docs commit hash; next session reads actual `git log`.
-> - Slices **2.1 through 2.3g** are locally complete and verified.
-> - Slice **2.3h is not started**.
-> - No active Grok / delegated writer exists at handoff time.
-> - No uncommitted task WIP exists in the intended 2.3h targets.
+> **Implementation commit:** `bd01f23` (`feat(index): expose guarded runtime
+> retention`). Slice **2.3h is locally complete and verified**.
+> - runtime-only `vectordb.manager.execute_vector_store_retention` requires
+>   keyword-only `expected_generation` and exact `expected_candidates` tuple
+> - falsey tenant normalizes to `default`
+> - reads `get_settings()` and uses configured `vectordb_chroma_dir` plus
+>   `vectordb_retention_max_versions`; callers cannot override deletion policy
+> - fails closed for Qdrant with `IndexStagingValidationError` before guarded
+>   adapter work
+> - delegates to `execute_guarded_chroma_retention` and returns its
+>   `IndexRetentionExecutionResult` unchanged
+> - does not load embeddings, touch runtime caches, open Chroma directly,
+>   acquire another lock, directly mutate manifest/inventory, or add
+>   API/audit/retry
+> - automatic post-publish `execute_chroma_retention` path remains preserved
+> - only `vectordb/manager.py` and `tests/test_index_runtime_switch.py` changed
+>   in the implementation commit
+>
+> **Boundary:** no HTTP/API/admin audit, settings/policy change, UI, live
+> Chroma/PostgreSQL/Redis, deploy, or push in 2.3h. Broader operator surface,
+> plan step 2, project, release, production readiness, live drills, and
+> retention API are **not** complete.
+>
+> **Verification — Grok:** route `local_grok_cli`; requested model `grok-4.5`,
+> actual model `grok-4.5-build`; tests-first red failed for the expected
+> missing `execute_vector_store_retention` entrypoint (the unrelated automatic
+> rebuild routing test passed in the red selection); focused green
+> `25 passed`; Ruff clean; Mypy clean. The 16-turn run ended `cancelled` only
+> at the final disallowed compound `python -c` protected-hash request — **not**
+> an unqualified clean completion, and no invented red failure count.
+>
+> **Verification — Codex independent:** scoped review found only the two
+> allowed implementation files changed; independent proportional pytest gate:
+> `12 passed, 24 deselected`, one known Starlette deprecation warning; scoped
+> Ruff clean; Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4: no issues in
+> `vectordb/manager.py`; scoped diff-check clean before commit; all six
+> protected file hashes matched (`vectordb/chroma_retention.py`,
+> `tests/test_chroma_retention.py`, `vectordb/index_operator.py`,
+> `vectordb/index_retention.py`, `config/settings.py`,
+> `api/routers/admin_ops.py`).
+>
+> **Current truth:** slices **2.1 through 2.3h** are locally complete and
+> verified. Broader operator surface, plan step 2, project, and release are
+> **not** complete because retention HTTP/API/admin audit and further wiring
+> remain absent. Next safe named slice is **2.3i only** (not started): add a
+> later named retention API/admin-audit surface that exposes the already-landed
+> runtime guarded retention action, following the existing admin operator
+> patterns from preview/rollback without inventing unsupported route details
+> before investigation. 2.3i must remain API/admin-audit scoped: no live
+> services, deploy, push, settings/policy rewrite, or production-readiness
+> claims. Treat 2.3i as the next investigation/implementation candidate, not
+> as completed work. Full contract, evidence, and protected-state details:
+> refreshed [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
 >
 > **Standing execution preference:** use **Grok** as implementation/content
 > worker; **Codex** orchestrates, protects files, verifies independently, and
 > commits scoped results. One next-session user turn may complete **only one
 > named atomic slice**. Push / deploy / live services are **not** authorized.
 >
-> **Next work:** named slice **2.3h only** (runtime-only manager retention
-> action candidate — **not** completed). Exact runbook, acceptance contract,
-> baseline/protected hashes, test-first evidence list, and stop conditions:
-> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) sections
-> «Быстрый старт следующей сессии», «Exact contract for next slice 2.3h»,
-> and «Definition of done / stop conditions».
->
 > **Git advisory only:** branch was observed as
-> `master...origin/master [ahead 73]` at this inspection. Ahead counts and
-> timestamps are advisory; next session must run fresh
-> `git status --short --branch` and `git log -5 --oneline`. Actual Git wins
-> over any embedded hashes/counts in docs.
+> `master...origin/master [ahead 75]` at this inspection; latest
+> implementation remains `bd01f23`; previous docs HEAD was `90fa056`
+> (`docs: clarify next-session retention handoff`). Do **not** embed or guess
+> a future docs commit hash. Ahead counts and timestamps are advisory; next
+> session must run fresh `git status --short --branch` and
+> `git log -5 --oneline`. Actual Git wins over any embedded hashes/counts in
+> docs.
 >
-> **Do not re-select 2.1–2.3g.** Do not mark 2.3h complete from this docs
-> turn. Full historical evidence for 2.3g remains in Update-43 below and in
-> `docs/SESSION_HANDOFF.md`.
+> **Do not re-select 2.1–2.3h.** Do not mark 2.3i complete from this docs
+> turn. Full historical evidence for 2.3h remains here and in
+> `docs/SESSION_HANDOFF.md`; 2.3g evidence remains in Update-43 below.
+
+## 2026-08-03 Update-44 (transparent next-session handoff; no new slice)
+
+> **Docs-only clarity work — not implementation.** This Update-44 block
+> supersedes Update-43 as the previous start-point routing (now superseded by
+> Update-45). No code, tests, plans, backlog, or other artifacts were changed
+> in that turn. Grok used docs read/edit only (no commands or tests). Codex
+> ran read-only Git status/log, scoped diff/diff-check, and SHA-256 protection
+> checks; project tests and runtime/code verification suites were not rerun.
+> Protected dirty `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+> `plan_sol_23_07_26`, and existing untracked artifacts were not touched.
+>
+> **Authoritative implementation state at Update-44 time (now superseded):**
+> - Latest implementation remained `f966fac` (`feat(index): bridge guarded
+>   Chroma retention`). Slice **2.3g was locally complete and verified**.
+> - Latest pre-refresh docs HEAD at that inspection: `1f40a57`
+>   (`docs: record guarded Chroma retention bridge`).
+> - Slices **2.1 through 2.3g** were locally complete and verified.
+> - Slice **2.3h was not started** at Update-44 time; it has since landed as
+>   `bd01f23` and is recorded in Update-45 above.
+>
+> **Historical next-work pointer from Update-44:** named slice **2.3h**
+> (runtime-only manager retention action). That pointer is **stale** — do
+> **not** re-select 2.3h. Current next work is **2.3i** per Update-45 and
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+>
+> **Git advisory only (historical):** branch was observed as
+> `master...origin/master [ahead 73]` at that inspection. Actual Git always
+> wins over embedded hashes/counts.
 
 ## 2026-08-03 Update-43 (plan 2.3g / guarded Chroma retention bridge @ `f966fac`)
 
 > **Next-session handoff:** refresh `git status` first. This Update-43 block
-> supersedes Update-42 as the previous durable handoff (now superseded by
-> Update-44 for start-point routing). Protected dirty
-> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and
-> existing untracked artifacts were not touched. Older docs may still point to
-> plan 2.3f / next-slice 2.3g and must not cause completed work to be repeated.
+> supersedes Update-42 as an earlier durable handoff (later superseded by
+> Update-44 for start-point routing, then Update-45 after 2.3h). Protected
+> dirty `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`,
+> and existing untracked artifacts were not touched. Older docs may still
+> point to plan 2.3f / next-slice 2.3g and must not cause completed work to be
+> repeated.
 >
 > **Implementation commit:** `f966fac` (`feat(index): bridge guarded Chroma
 > retention`). Slice **2.3g is locally complete and verified**.
