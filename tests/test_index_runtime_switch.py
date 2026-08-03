@@ -22,6 +22,7 @@ class _FakeChromaState:
         self.opened_names: list[str] = []
         self.deleted_names: list[str] = []
         self.events: list[str] = []
+        self.fail_dimension = False
         self.fail_known_query = False
 
 
@@ -42,6 +43,8 @@ def _fake_chroma(state: _FakeChromaState) -> type[Any]:
             assert len(query_embeddings[0]) == 3
             assert n_results == 1
             state.events.append(f"dimension:{self.name}")
+            if state.fail_dimension:
+                raise RuntimeError("dimension validation failed")
             return {"ids": [["known-chunk"]]}
 
         def get(self, *, include: list[str]) -> dict[str, list[Any]]:
@@ -59,8 +62,11 @@ def _fake_chroma(state: _FakeChromaState) -> type[Any]:
             persist_directory: str,
             embedding_function: Any,
             collection_name: str,
+            create_collection_if_not_exists: bool = True,
         ) -> None:
             _ = persist_directory, embedding_function
+            if not create_collection_if_not_exists and collection_name not in state.documents:
+                raise RuntimeError("collection does not exist")
             self.collection_name = collection_name
             self._collection = _Collection(collection_name)
             state.opened_names.append(collection_name)
@@ -326,6 +332,119 @@ def test_retriever_cache_invalidates_when_manifest_generation_changes(
     assert second.collection_name == second_name
     assert first is not second
     assert state.opened_names == [first_name, second_name]
+
+
+def test_runtime_rollback_validates_previous_then_switches_cache_generation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from vectordb.index_manifest import read_index_manifest
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    first_name = "rag_docs-v-acme-1111111111111111"
+    second_name = "rag_docs-v-acme-2222222222222222"
+    state.documents[first_name] = [
+        manager.Document(page_content="first", metadata={"chunk_index": 0})
+    ]
+    state.documents[second_name] = [
+        manager.Document(page_content="second", metadata={"chunk_index": 0})
+    ]
+    _publish(monkeypatch, chroma_directory, first_name)
+    _publish(monkeypatch, chroma_directory, second_name)
+    active_retriever = manager.get_retriever(
+        tenant_id="acme",
+        persist_directory=chroma_directory,
+        embeddings=_Embeddings(),
+    )
+
+    store, chunks = manager.rollback_vector_store(
+        tenant_id="acme",
+        embeddings=_Embeddings(),
+    )
+
+    rolled_back = read_index_manifest("acme", chroma_directory=chroma_directory)
+    assert rolled_back is not None
+    assert rolled_back.active_collection == first_name
+    assert rolled_back.previous_collection == second_name
+    assert rolled_back.generation == 3
+    assert store.collection_name == first_name
+    assert [chunk.page_content for chunk in chunks] == ["first"]
+    assert f"dimension:{first_name}" in state.events
+    assert f"known-query:{first_name}" in state.events
+
+    rolled_back_retriever = manager.get_retriever(
+        tenant_id="acme",
+        persist_directory=chroma_directory,
+        embeddings=_Embeddings(),
+    )
+    assert rolled_back_retriever.collection_name == first_name
+    assert rolled_back_retriever is not active_retriever
+    assert state.opened_names == [second_name, first_name]
+    assert state.deleted_names == []
+
+
+@pytest.mark.parametrize(
+    ("failure_mode", "message"),
+    [
+        ("missing", "unavailable"),
+        ("empty", "no restorable chunks"),
+        ("dimension", "dimension"),
+        ("known-query", "known-query"),
+    ],
+)
+def test_runtime_rollback_target_failure_preserves_manifest_and_active_cache(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_mode: str,
+    message: str,
+) -> None:
+    from vectordb.index_manifest import index_manifest_path
+    from vectordb.index_staging import IndexStagingValidationError
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    first_name = "rag_docs-v-acme-1111111111111111"
+    second_name = "rag_docs-v-acme-2222222222222222"
+    if failure_mode != "missing":
+        state.documents[first_name] = []
+    if failure_mode in {"dimension", "known-query"}:
+        state.documents[first_name] = [
+            manager.Document(page_content="first", metadata={"chunk_index": 0})
+        ]
+    state.documents[second_name] = [
+        manager.Document(page_content="second", metadata={"chunk_index": 0})
+    ]
+    _publish(monkeypatch, chroma_directory, first_name)
+    _publish(monkeypatch, chroma_directory, second_name)
+    active_retriever = manager.get_retriever(
+        tenant_id="acme",
+        persist_directory=chroma_directory,
+        embeddings=_Embeddings(),
+    )
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    manifest_before = manifest_path.read_bytes()
+    state.fail_dimension = failure_mode == "dimension"
+    state.fail_known_query = failure_mode == "known-query"
+
+    with pytest.raises(IndexStagingValidationError, match=message):
+        manager.rollback_vector_store(
+            tenant_id="acme",
+            embeddings=_Embeddings(),
+        )
+
+    assert manifest_path.read_bytes() == manifest_before
+    assert (
+        manager.get_retriever(
+            tenant_id="acme",
+            persist_directory=chroma_directory,
+            embeddings=_Embeddings(),
+        )
+        is active_retriever
+    )
+    assert state.deleted_names == []
 
 
 def test_corrupt_manifest_fails_closed_even_with_cached_retriever(

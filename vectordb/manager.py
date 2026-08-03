@@ -13,13 +13,17 @@ from config.settings import get_settings
 from utils.tenant_naming import physical_tenant_component
 from vectordb import _base_manager
 from vectordb.index_manifest import (
+    IndexManifestRollbackUnavailable,
     IndexVersionManifest,
     publish_active_collection,
     read_index_manifest,
+    rollback_active_collection,
 )
 from vectordb.index_staging import (
+    IndexStagingValidationError,
     build_staged_collection,
     discard_staged_collection,
+    validate_existing_collection,
     validate_staged_known_query,
 )
 from vectordb.tenant_lock import tenant_index_lock
@@ -291,6 +295,75 @@ def build_vector_store(
                 _index_cache_keys.pop(tenant, None)
             else:
                 _index_cache_keys[tenant] = index_cache_key
+
+    return store, chunks
+
+
+def rollback_vector_store(
+    tenant_id: str = "default",
+    embeddings: Any | None = None,
+) -> tuple[Any, list[Document]]:
+    """Validate and activate the previous tenant Chroma collection."""
+    tenant = tenant_id or "default"
+    settings = get_settings()
+    if getattr(settings, "vector_backend", "chroma") == "qdrant":
+        raise IndexStagingValidationError(
+            "Rollback target collection is unavailable for the Qdrant backend"
+        )
+    if embeddings is None:
+        embeddings = get_embeddings()
+    chroma_directory = settings.vectordb_chroma_dir
+
+    with tenant_index_lock(tenant) as lock_token:
+        current = read_index_manifest(
+            tenant,
+            chroma_directory=chroma_directory,
+        )
+        if current is None or current.previous_collection is None:
+            raise IndexManifestRollbackUnavailable(
+                "Index version manifest has no previous collection to restore"
+            )
+
+        chroma_cls = _get_chroma()
+        try:
+            store = chroma_cls(
+                persist_directory=str(chroma_directory),
+                embedding_function=embeddings,
+                collection_name=current.previous_collection,
+                create_collection_if_not_exists=False,
+            )
+        except Exception as exc:
+            raise IndexStagingValidationError(
+                "Rollback target collection is unavailable"
+            ) from exc
+
+        chunks = _restore_chunks_from_store(store, tenant)
+        if not chunks:
+            raise IndexStagingValidationError(
+                "Rollback target collection has no restorable chunks"
+            )
+        validate_existing_collection(
+            current.previous_collection,
+            store,
+            chunks,
+            embeddings,
+            tenant_id=tenant,
+            lock_token=lock_token,
+        )
+        manifest = rollback_active_collection(
+            tenant,
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+
+        with _cache_lock:
+            _chunks_cache[tenant] = list(chunks)
+            _store_cache[tenant] = store
+            _retriever_cache.pop(tenant, None)
+            _index_cache_keys[tenant] = _index_cache_key(
+                chroma_directory,
+                manifest,
+            )
 
     return store, chunks
 

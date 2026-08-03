@@ -210,6 +210,42 @@ def validate_staged_known_query(
         )
 
 
+def validate_existing_collection(
+    collection_name: str,
+    store: Any,
+    chunks: Sequence[Any],
+    embeddings: Any,
+    *,
+    tenant_id: str,
+    lock_token: TenantIndexLockToken | None,
+) -> StagedIndexCandidate:
+    """Validate a persisted collection before making it active."""
+    require_tenant_index_lock(lock_token, tenant_id)
+    documents = list(chunks)
+    if not documents:
+        raise IndexStagingValidationError(
+            "Existing collection has no restorable chunks"
+        )
+    chunk_count, embedding_dimension = _validate_candidate(
+        store,
+        embeddings,
+        expected_count=len(documents),
+    )
+    candidate = StagedIndexCandidate(
+        collection_name=collection_name,
+        chunk_count=chunk_count,
+        embedding_dimension=embedding_dimension,
+        store=store,
+    )
+    validate_staged_known_query(
+        candidate,
+        documents,
+        tenant_id=tenant_id,
+        lock_token=lock_token,
+    )
+    return candidate
+
+
 def discard_staged_collection(
     candidate: StagedIndexCandidate,
     *,
