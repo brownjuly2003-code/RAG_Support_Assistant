@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
+import os
 import re as _re
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -24,12 +27,117 @@ logger = logging.getLogger(__name__)
 # Optional HTTP Idempotency-Key (never reuse X-Request-Id).
 _IDEMPOTENCY_KEY_RE = _re.compile(r"^[A-Za-z0-9._:~-]{16,128}$")
 
+# Fixed internal directory under the tenant upload root for job-scoped originals.
+# Kept nested so recursive=False loaders continue to see only the flat corpus view.
+_JOB_OBJECTS_DIRNAME = "job-objects"
+# Nested recovery tree for pre-2.4a flat-only originals (content-addressed).
+_LEGACY_PREVIOUS_DIRNAME = "legacy-previous"
+
 
 def _tenant_upload_directory(upload_root: Path, tenant_id: str) -> Path:
     tenant = tenant_id or "default"
     if tenant == "default":
         return upload_root
     return upload_root / physical_tenant_component(tenant, max_length=63)
+
+
+def _job_immutable_path(upload_dir: Path, job_id: uuid.UUID, safe_name: str) -> Path:
+    """Derive a job-scoped path that must remain under the tenant upload root."""
+    candidate = upload_dir / _JOB_OBJECTS_DIRNAME / str(job_id) / safe_name
+    try:
+        resolved = candidate.resolve(strict=False)
+        resolved.relative_to(upload_dir.resolve(strict=False))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid filename") from exc
+    return candidate
+
+
+def _legacy_previous_path(upload_dir: Path, prior_bytes: bytes, safe_name: str) -> Path:
+    """Content-addressed recovery path for a prior flat original under tenant root."""
+    digest = hashlib.sha256(prior_bytes).hexdigest()
+    candidate = (
+        upload_dir
+        / _JOB_OBJECTS_DIRNAME
+        / _LEGACY_PREVIOUS_DIRNAME
+        / digest
+        / safe_name
+    )
+    try:
+        resolved = candidate.resolve(strict=False)
+        resolved.relative_to(upload_dir.resolve(strict=False))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid filename") from exc
+    return candidate
+
+
+def _write_bytes_exclusive(path: Path, data: bytes) -> None:
+    """Create a new file once; never overwrite an existing job object."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_BINARY"):
+        flags |= os.O_BINARY
+    fd = os.open(path, flags, 0o644)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+    except BaseException:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
+def _preserve_prior_flat_bytes(
+    current_path: Path,
+    upload_dir: Path,
+    safe_name: str,
+) -> None:
+    """If a flat current file exists, keep its bytes in an immutable recovery object.
+
+    Used for the pre-2.4a transition: a legacy flat-only original must remain
+    recoverable before the flat current view is replaced. Content-addressed
+    exclusive create never overwrites a different payload at the same path.
+    """
+    if not current_path.is_file():
+        return
+    prior_bytes = current_path.read_bytes()
+    recovery_path = _legacy_previous_path(upload_dir, prior_bytes, safe_name)
+    try:
+        _write_bytes_exclusive(recovery_path, prior_bytes)
+    except FileExistsError:
+        # Same content digest path already present — require identical bytes.
+        if recovery_path.read_bytes() != prior_bytes:
+            raise OSError(
+                "legacy previous recovery object exists with different bytes"
+            ) from None
+        return
+
+
+def _atomic_replace_bytes(path: Path, data: bytes) -> None:
+    """Replace the flat current corpus file without exposing a partial write."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    file_descriptor, temporary_name = tempfile.mkstemp(
+        dir=str(path.parent),
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+    )
+    temporary_path = Path(temporary_name)
+    try:
+        with os.fdopen(file_descriptor, "wb") as temporary_file:
+            temporary_file.write(data)
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+        os.replace(temporary_path, path)
+    except BaseException:
+        try:
+            os.close(file_descriptor)
+        except OSError:
+            pass
+        temporary_path.unlink(missing_ok=True)
+        raise
 
 
 class UploadResponse(BaseModel):
@@ -323,8 +431,8 @@ async def upload_document(
     upload_dir = _tenant_upload_directory(upload_root, tenant)
     upload_dir.mkdir(parents=True, exist_ok=True)
 
-    # Keep tenant corpus directory + canonical safe_name (no per-job subdirs).
-    file_path = upload_dir / safe_name
+    # Flat tenant corpus view used by recursive=False loaders / reindex / publish.
+    current_path = upload_dir / safe_name
     settings = _app.get_settings()
     upload_limit = getattr(settings, "max_upload_bytes", 50 * 1024 * 1024)
 
@@ -358,12 +466,14 @@ async def upload_document(
         reserved_celery_task_id,
     )
 
-    source_path = project_relative_source_path(Path(_app.PROJECT_ROOT), file_path)
     fingerprint = compute_payload_fingerprint(safe_name, content_bytes)
     key_hash = hash_idempotency_key(raw_idem_key) if raw_idem_key is not None else None
 
     # 2) Allocate durable identity; reserve Celery id for default async path.
+    # Candidate job UUID also keys the immutable original object path.
     job_id = uuid.uuid4()
+    immutable_path = _job_immutable_path(upload_dir, job_id, safe_name)
+    source_path = project_relative_source_path(Path(_app.PROJECT_ROOT), immutable_path)
     celery_task_id = reserved_celery_task_id(job_id) if tenant == "default" else None
 
     outcome = await _create_or_reuse_job_or_fail(
@@ -380,7 +490,8 @@ async def upload_document(
     job_id_str = str(job_id)
     replayed = not outcome.created
 
-    # Replay path: never write file; may republish only when source-ready+queued.
+    # Replay path: never write immutable object or flat current view;
+    # may republish only when source-ready+queued (flat path for loaders).
     if replayed:
         await _app.log_audit(
             actor=_user.get("sub", "anonymous"),
@@ -401,7 +512,7 @@ async def upload_document(
                 # never block the FastAPI event loop (health/ask stay live).
                 await asyncio.to_thread(
                     _publish_async_ingest,
-                    file_path=file_path,
+                    file_path=current_path,
                     job_id=job_id,
                     tenant_id=tenant,
                     settings=settings,
@@ -417,11 +528,21 @@ async def upload_document(
             assigned_categories=[],
         )
 
-    # 3) Only the creator writes the canonical corpus file.
+    # 3) Creator writes job-scoped immutable original once, preserves any
+    # pre-existing flat legacy bytes under a nested recovery object, then
+    # refreshes the flat current corpus view only after both succeed.
     try:
-        await asyncio.to_thread(file_path.write_bytes, content_bytes)
+        await asyncio.to_thread(_write_bytes_exclusive, immutable_path, content_bytes)
+        await asyncio.to_thread(
+            _preserve_prior_flat_bytes,
+            current_path,
+            upload_dir,
+            safe_name,
+        )
+        await asyncio.to_thread(_atomic_replace_bytes, current_path, content_bytes)
     except Exception as exc:
-        # Durable terminal fail; do not publish.
+        # Durable terminal fail; do not publish. Flat view is refreshed only
+        # after immutable + prior-preserve success, so a failed step leaves it.
         try:
             await _mark_failed(job_id, tenant, "Failed to save file")
         except HTTPException:
@@ -463,13 +584,14 @@ async def upload_document(
             )
 
     # Default tenant: async Celery publish with reserved task id (no sync fallback).
+    # Worker still receives the flat current-view path (parent = tenant corpus dir).
     if tenant == "default":
         try:
             # Offload sync Celery client I/O so bounded broker retries
             # never block the FastAPI event loop (health/ask stay live).
             await asyncio.to_thread(
                 _publish_async_ingest,
-                file_path=file_path,
+                file_path=current_path,
                 job_id=job_id,
                 tenant_id=tenant,
                 settings=settings,

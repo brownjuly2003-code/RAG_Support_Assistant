@@ -95,10 +95,17 @@ def test_upload_sanitizes_path_traversal_and_stays_in_upload_dir(
     body = resp.json()
     assert body["filename"] == expected_name
     assert "job_id" in body
-    uuid.UUID(body["job_id"])
+    job_id = body["job_id"]
+    uuid.UUID(job_id)
     assert body["tenant_id"] == "default"
+    # Flat current corpus view remains the sanitized basename under uploads/.
     assert (tmp_path / "data" / "uploads" / expected_name).read_bytes() == b"test"
     assert not (tmp_path / "escape.txt").exists()
+    # Job-scoped immutable original stays under the tenant upload root.
+    imm = tmp_path / "data" / "uploads" / "job-objects" / job_id / expected_name
+    assert imm.is_file()
+    assert imm.read_bytes() == b"test"
+    assert imm.resolve().is_relative_to((tmp_path / "data" / "uploads").resolve())
 
 
 def test_upload_rejects_dotfile_names(client_with_key: TestClient) -> None:
@@ -242,13 +249,15 @@ def test_file_save_failure_response_is_generic(
     Job row is reserved before write; write failure terminal-fails it and
     returns a generic 500 without publishing.
     """
+    import api.routers.upload as upload_mod
+
     secret_path = r"D:\host\secret\uploads\leak.txt"
 
-    def _boom_write_bytes(self, data: bytes) -> None:
+    def _boom_write_bytes(path: Path, data: bytes) -> None:
         raise OSError(f"[Errno 13] Permission denied: '{secret_path}'")
 
     _stub_async_publish(monkeypatch)
-    monkeypatch.setattr(Path, "write_bytes", _boom_write_bytes)
+    monkeypatch.setattr(upload_mod, "_write_bytes_exclusive", _boom_write_bytes)
 
     resp = client_with_key.post(
         "/api/upload",

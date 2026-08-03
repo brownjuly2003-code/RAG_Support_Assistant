@@ -904,13 +904,15 @@ def test_write_failure_marks_job_failed_and_never_publishes(
     ingestion_jobs_db,
     tmp_path: Path,
 ) -> None:
+    import api.routers.upload as upload_mod
+
     _silence_audit(monkeypatch)
     captured = _patch_apply_async(monkeypatch)
 
-    def _boom_write(self: Path, data: bytes) -> int:  # type: ignore[override]
+    def _boom_write(path: Path, data: bytes) -> None:
         raise OSError("disk full")
 
-    monkeypatch.setattr(Path, "write_bytes", _boom_write, raising=False)
+    monkeypatch.setattr(upload_mod, "_write_bytes_exclusive", _boom_write)
 
     resp = client_with_key.post(
         "/api/upload",
@@ -921,6 +923,8 @@ def test_write_failure_marks_job_failed_and_never_publishes(
     detail = str(resp.json().get("detail", ""))
     assert "disk full" not in detail.lower()
     assert captured.get("calls", 0) == 0
+    # Failed immutable create must not refresh the flat current corpus view.
+    assert not (tmp_path / "data" / "uploads" / "wf.txt").exists()
 
     # Created row must be terminal failed.
     async def _all() -> list[IngestionJob]:
@@ -1017,13 +1021,14 @@ def test_terminal_win_before_source_ready_fails_closed_no_publish(
     tmp_path: Path,
 ) -> None:
     """If reaper/terminal wins while write is in flight, fail closed — no publish."""
+    import api.routers.upload as upload_mod
+
     _silence_audit(monkeypatch)
     captured = _patch_apply_async(monkeypatch)
+    original_exclusive = upload_mod._write_bytes_exclusive
 
-    def _write_then_reap(self: Path, data: bytes) -> int:
-        self.parent.mkdir(parents=True, exist_ok=True)
-        with open(self, "wb") as fh:
-            fh.write(data)
+    def _write_then_reap(path: Path, data: bytes) -> None:
+        original_exclusive(path, data)
 
         async def _terminal() -> None:
             from ingestion.jobs import mark_job_failed
@@ -1036,9 +1041,8 @@ def test_terminal_win_before_source_ready_fails_closed_no_publish(
                     await mark_job_failed(row.id, row.tenant_id, "stale reaped")
 
         asyncio.run(_terminal())
-        return len(data)
 
-    monkeypatch.setattr(Path, "write_bytes", _write_then_reap, raising=False)
+    monkeypatch.setattr(upload_mod, "_write_bytes_exclusive", _write_then_reap)
 
     resp = client_with_key.post(
         "/api/upload",
@@ -1262,3 +1266,365 @@ def test_create_ingestion_job_compatibility_preserved(
     assert job.status == "queued"
     assert job.celery_task_id is None
     assert job.idempotency_key_hash is None
+
+
+# ---------------------------------------------------------------------------
+# 2.4a: job-scoped immutable originals + flat current corpus view
+# ---------------------------------------------------------------------------
+
+
+def _immutable_object_path(tmp_path: Path, job_id: str, safe_name: str) -> Path:
+    """Expected on-disk layout under the tenant upload root (default tenant)."""
+    return tmp_path / "data" / "uploads" / "job-objects" / job_id / safe_name
+
+
+def test_sequential_same_filename_keeps_distinct_immutable_objects(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    ingestion_jobs_db,
+    tmp_path: Path,
+) -> None:
+    """Two no-key uploads with the same safe_name must not share mutable bytes."""
+    _silence_audit(monkeypatch)
+    captured = _patch_apply_async(monkeypatch)
+
+    first_bytes = b"original-payload-v1"
+    second_bytes = b"replacement-payload-v2"
+    r1 = client_with_key.post(
+        "/api/upload",
+        files={"file": ("shared.txt", io.BytesIO(first_bytes), "text/plain")},
+        headers=_api_key(),
+    )
+    r2 = client_with_key.post(
+        "/api/upload",
+        files={"file": ("shared.txt", io.BytesIO(second_bytes), "text/plain")},
+        headers=_api_key(),
+    )
+    assert r1.status_code == 200
+    assert r2.status_code == 200
+    job_id_1 = r1.json()["job_id"]
+    job_id_2 = r2.json()["job_id"]
+    assert job_id_1 != job_id_2
+    assert captured.get("calls", 0) == 2
+
+    job1 = asyncio.run(_fetch_job(ingestion_jobs_db["async_session"], job_id_1))
+    job2 = asyncio.run(_fetch_job(ingestion_jobs_db["async_session"], job_id_2))
+    assert job1 is not None and job2 is not None
+    assert job1.source_path != job2.source_path
+    assert job_id_1 in job1.source_path
+    assert job_id_2 in job2.source_path
+    assert job1.source_path.endswith("shared.txt")
+    assert job2.source_path.endswith("shared.txt")
+    assert not Path(job1.source_path).is_absolute()
+    assert not Path(job2.source_path).is_absolute()
+    # Flat current corpus view stays the canonical safe_name (not job-scoped).
+    assert job1.source_path != "data/uploads/shared.txt"
+    assert job2.source_path != "data/uploads/shared.txt"
+
+    imm1 = _immutable_object_path(tmp_path, job_id_1, "shared.txt")
+    imm2 = _immutable_object_path(tmp_path, job_id_2, "shared.txt")
+    assert imm1.is_file()
+    assert imm2.is_file()
+    assert imm1.read_bytes() == first_bytes
+    assert imm2.read_bytes() == second_bytes
+    # First immutable object must remain byte-for-byte unchanged after second upload.
+    assert imm1.read_bytes() == first_bytes
+
+    current = tmp_path / "data" / "uploads" / "shared.txt"
+    assert current.is_file()
+    assert current.read_bytes() == second_bytes
+
+    # Publish still targets the flat current view for recursive=False loaders.
+    published_path = Path(captured["args"][0])
+    assert published_path.name == "shared.txt"
+    assert published_path.parent == (tmp_path / "data" / "uploads")
+
+
+def test_idempotent_replay_preserves_immutable_source_and_skips_rewrites(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    ingestion_jobs_db,
+    tmp_path: Path,
+) -> None:
+    """Same-key/same-payload replay must not rewrite immutable object or flat view."""
+    _silence_audit(monkeypatch)
+    captured = _patch_apply_async(monkeypatch)
+
+    content = b"immutable-replay-payload"
+    headers = _api_key(**{"Idempotency-Key": "imm-replay-key-001"})
+    r1 = client_with_key.post(
+        "/api/upload",
+        files={"file": ("imm.txt", io.BytesIO(content), "text/plain")},
+        headers=headers,
+    )
+    assert r1.status_code == 200
+    job_id = r1.json()["job_id"]
+    assert r1.json().get("idempotency_replayed") is False
+
+    job = asyncio.run(_fetch_job(ingestion_jobs_db["async_session"], job_id))
+    assert job is not None
+    source_path = job.source_path
+    assert job_id in source_path
+    assert source_path.endswith("imm.txt")
+    assert source_path != "data/uploads/imm.txt"
+
+    imm = _immutable_object_path(tmp_path, job_id, "imm.txt")
+    current = tmp_path / "data" / "uploads" / "imm.txt"
+    assert imm.read_bytes() == content
+    assert current.read_bytes() == content
+    imm_mtime = imm.stat().st_mtime_ns
+    current_mtime = current.stat().st_mtime_ns
+
+    # Terminal completed: replay must not re-publish or rewrite files.
+    async def _complete() -> None:
+        from ingestion.jobs import mark_job_completed
+
+        await mark_job_completed(uuid.UUID(job_id), "default", {"status": "ok"})
+
+    asyncio.run(_complete())
+
+    r2 = client_with_key.post(
+        "/api/upload",
+        files={"file": ("imm.txt", io.BytesIO(content), "text/plain")},
+        headers=headers,
+    )
+    assert r2.status_code == 200
+    body2 = r2.json()
+    assert body2["job_id"] == job_id
+    assert body2.get("idempotency_replayed") is True
+    assert body2["status"] == "ok"
+    assert captured.get("calls", 0) == 1
+
+    job_after = asyncio.run(_fetch_job(ingestion_jobs_db["async_session"], job_id))
+    assert job_after is not None
+    assert job_after.source_path == source_path
+    assert imm.read_bytes() == content
+    assert current.read_bytes() == content
+    assert imm.stat().st_mtime_ns == imm_mtime
+    assert current.stat().st_mtime_ns == current_mtime
+    assert asyncio.run(_count_jobs(ingestion_jobs_db["async_session"])) == 1
+
+
+def test_same_key_conflict_before_any_file_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    ingestion_jobs_db,
+    tmp_path: Path,
+) -> None:
+    """Fingerprint conflict must 409 without rewriting immutable or flat files."""
+    _silence_audit(monkeypatch)
+    _patch_apply_async(monkeypatch)
+
+    original = b"conflict-original-bytes"
+    headers = _api_key(**{"Idempotency-Key": "imm-conflict-key01"})
+    r1 = client_with_key.post(
+        "/api/upload",
+        files={"file": ("cf.txt", io.BytesIO(original), "text/plain")},
+        headers=headers,
+    )
+    assert r1.status_code == 200
+    job_id = r1.json()["job_id"]
+    imm = _immutable_object_path(tmp_path, job_id, "cf.txt")
+    current = tmp_path / "data" / "uploads" / "cf.txt"
+    imm_mtime = imm.stat().st_mtime_ns
+    current_mtime = current.stat().st_mtime_ns
+
+    r2 = client_with_key.post(
+        "/api/upload",
+        files={"file": ("cf.txt", io.BytesIO(b"different-conflict-bytes"), "text/plain")},
+        headers=headers,
+    )
+    assert r2.status_code == 409
+    detail = str(r2.json().get("detail", ""))
+    assert "conflict" in detail.lower() or "idempotency" in detail.lower()
+
+    job = asyncio.run(_fetch_job(ingestion_jobs_db["async_session"], job_id))
+    assert job is not None
+    assert imm.read_bytes() == original
+    assert current.read_bytes() == original
+    assert imm.stat().st_mtime_ns == imm_mtime
+    assert current.stat().st_mtime_ns == current_mtime
+    assert asyncio.run(_count_jobs(ingestion_jobs_db["async_session"])) == 1
+
+
+def test_immutable_write_failure_marks_failed_without_flat_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    ingestion_jobs_db,
+    tmp_path: Path,
+) -> None:
+    """Failed immutable create must not refresh flat current view or publish."""
+    import api.routers.upload as upload_mod
+
+    _silence_audit(monkeypatch)
+    captured = _patch_apply_async(monkeypatch)
+
+    def _boom_exclusive(path: Path, data: bytes) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr(upload_mod, "_write_bytes_exclusive", _boom_exclusive)
+
+    resp = client_with_key.post(
+        "/api/upload",
+        files={"file": ("imm-fail.txt", io.BytesIO(b"will-fail"), "text/plain")},
+        headers=_api_key(**{"Idempotency-Key": "imm-write-fail-key1"}),
+    )
+    assert resp.status_code == 500
+    detail = str(resp.json().get("detail", ""))
+    assert "disk full" not in detail.lower()
+    assert captured.get("calls", 0) == 0
+
+    # Flat current corpus view must remain absent / unrefreshed.
+    assert not (tmp_path / "data" / "uploads" / "imm-fail.txt").exists()
+
+    async def _all() -> list[IngestionJob]:
+        async with ingestion_jobs_db["async_session"]() as session:
+            result = await session.execute(select(IngestionJob))
+            return list(result.scalars().all())
+
+    rows = asyncio.run(_all())
+    assert len(rows) == 1
+    assert rows[0].status == "failed"
+    assert rows[0].finished_at is not None
+    assert rows[0].source_ready_at is None
+    # Job points at the intended immutable path, but the object was not written.
+    assert str(rows[0].id) in rows[0].source_path
+    assert not _immutable_object_path(tmp_path, str(rows[0].id), "imm-fail.txt").exists()
+
+
+# ---------------------------------------------------------------------------
+# 2.4a QA: legacy flat previous-original preservation on first post-2.4a upload
+# ---------------------------------------------------------------------------
+
+
+def _legacy_previous_recovery_path(
+    tmp_path: Path, prior_bytes: bytes, safe_name: str
+) -> Path:
+    """Content-addressed recovery object nested under tenant job-objects."""
+    digest = hashlib.sha256(prior_bytes).hexdigest()
+    return (
+        tmp_path
+        / "data"
+        / "uploads"
+        / "job-objects"
+        / "legacy-previous"
+        / digest
+        / safe_name
+    )
+
+
+def test_legacy_flat_prior_bytes_preserved_on_first_post_24a_upload(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    ingestion_jobs_db,
+    tmp_path: Path,
+) -> None:
+    """Pre-2.4a flat corpus must remain recoverable after first post-2.4a replace."""
+    _silence_audit(monkeypatch)
+    captured = _patch_apply_async(monkeypatch)
+
+    safe_name = "legacy.txt"
+    legacy_bytes = b"pre-24a-legacy-original-bytes"
+    new_bytes = b"post-24a-replacement-payload"
+    upload_dir = tmp_path / "data" / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    current = upload_dir / safe_name
+    # Seed a legacy flat-only original (no job-objects copy exists).
+    current.write_bytes(legacy_bytes)
+    assert current.is_file()
+    assert not (upload_dir / "job-objects").exists()
+
+    resp = client_with_key.post(
+        "/api/upload",
+        files={"file": (safe_name, io.BytesIO(new_bytes), "text/plain")},
+        headers=_api_key(),
+    )
+    assert resp.status_code == 200
+    job_id = resp.json()["job_id"]
+    assert captured.get("calls", 0) == 1
+
+    job = asyncio.run(_fetch_job(ingestion_jobs_db["async_session"], job_id))
+    assert job is not None
+    # New job owns the new immutable original, not the flat path.
+    assert str(job_id) in job.source_path
+    assert job.source_path.endswith(safe_name)
+    assert job.source_path != f"data/uploads/{safe_name}"
+
+    imm = _immutable_object_path(tmp_path, job_id, safe_name)
+    assert imm.is_file()
+    assert imm.read_bytes() == new_bytes
+    assert current.is_file()
+    assert current.read_bytes() == new_bytes
+
+    recovery = _legacy_previous_recovery_path(tmp_path, legacy_bytes, safe_name)
+    assert recovery.is_file()
+    assert recovery.read_bytes() == legacy_bytes
+    # Tenant-contained: recovery must stay under the tenant upload root.
+    tenant_root = upload_dir.resolve()
+    assert recovery.resolve().is_relative_to(tenant_root)
+    # Nested under job-objects so recursive=False corpus loaders never scan it.
+    assert "job-objects" in recovery.parts
+    assert recovery.parent != upload_dir
+    flat_only = [p for p in upload_dir.iterdir() if p.is_file()]
+    assert flat_only == [current]
+    assert recovery not in flat_only
+
+    # Default worker still receives the flat current-view path.
+    published_path = Path(captured["args"][0])
+    assert published_path == current
+    assert published_path.read_bytes() == new_bytes
+
+
+def test_legacy_preserve_failure_leaves_flat_unchanged_and_fails_job(
+    monkeypatch: pytest.MonkeyPatch,
+    client_with_key: TestClient,
+    ingestion_jobs_db,
+    tmp_path: Path,
+) -> None:
+    """If prior-legacy preservation fails, do not replace flat or publish."""
+    import api.routers.upload as upload_mod
+
+    _silence_audit(monkeypatch)
+    captured = _patch_apply_async(monkeypatch)
+
+    safe_name = "legacy-fail.txt"
+    legacy_bytes = b"must-remain-flat-if-preserve-fails"
+    new_bytes = b"must-not-publish-or-replace"
+    upload_dir = tmp_path / "data" / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    current = upload_dir / safe_name
+    current.write_bytes(legacy_bytes)
+    legacy_mtime = current.stat().st_mtime_ns
+
+    def _boom_preserve(*args: Any, **kwargs: Any) -> None:
+        raise OSError("preserve disk full")
+
+    monkeypatch.setattr(upload_mod, "_preserve_prior_flat_bytes", _boom_preserve)
+
+    resp = client_with_key.post(
+        "/api/upload",
+        files={"file": (safe_name, io.BytesIO(new_bytes), "text/plain")},
+        headers=_api_key(**{"Idempotency-Key": "legacy-preserve-fail01"}),
+    )
+    assert resp.status_code == 500
+    detail = str(resp.json().get("detail", ""))
+    assert "preserve disk full" not in detail.lower()
+    assert captured.get("calls", 0) == 0
+
+    # Flat current view must remain the legacy original.
+    assert current.is_file()
+    assert current.read_bytes() == legacy_bytes
+    assert current.stat().st_mtime_ns == legacy_mtime
+    # No recovery object and no flat replace of new bytes.
+    assert not _legacy_previous_recovery_path(tmp_path, legacy_bytes, safe_name).exists()
+
+    async def _all() -> list[IngestionJob]:
+        async with ingestion_jobs_db["async_session"]() as session:
+            result = await session.execute(select(IngestionJob))
+            return list(result.scalars().all())
+
+    rows = asyncio.run(_all())
+    assert len(rows) == 1
+    assert rows[0].status == "failed"
+    assert rows[0].finished_at is not None
+    assert rows[0].source_ready_at is None
