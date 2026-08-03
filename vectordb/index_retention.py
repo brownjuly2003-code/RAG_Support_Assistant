@@ -369,3 +369,45 @@ def trusted_retention_candidates(
         for entry in inventory.collections
         if entry.collection_name not in protected
     )
+
+
+def bounded_retention_candidates(
+    tenant_id: str,
+    *,
+    max_versions: int,
+    chroma_directory: str | Path | None = None,
+) -> tuple[str, ...]:
+    """Return oldest-first trusted candidates outside a safe version budget."""
+    if (
+        isinstance(max_versions, bool)
+        or not isinstance(max_versions, int)
+        or max_versions < 2
+    ):
+        raise IndexRetentionValidationError(
+            "Index retention max_versions must be an integer >= 2"
+        )
+
+    inventory = read_retention_inventory(
+        tenant_id,
+        chroma_directory=chroma_directory,
+    )
+    if inventory is None:
+        return ()
+    manifest = read_index_manifest(
+        tenant_id,
+        chroma_directory=chroma_directory,
+    )
+    if manifest is None:
+        return ()
+
+    protected = {manifest.active_collection}
+    if manifest.previous_collection is not None:
+        protected.add(manifest.previous_collection)
+    unprotected = tuple(
+        entry.collection_name
+        for entry in inventory.collections
+        if entry.collection_name not in protected
+    )
+    keep_slots = max(max_versions - len(protected), 0)
+    candidate_count = max(len(unprotected) - keep_slots, 0)
+    return unprotected[:candidate_count]

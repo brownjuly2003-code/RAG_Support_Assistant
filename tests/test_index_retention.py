@@ -141,6 +141,109 @@ def test_legacy_foreign_malformed_and_unrecorded_collections_are_never_candidate
     assert candidates == (recorded,)
     assert unrecorded not in candidates
     assert active not in candidates
+    assert retention.bounded_retention_candidates(
+        "acme",
+        max_versions=2,
+        chroma_directory=chroma_directory,
+    ) == (recorded,)
+
+
+def test_bounded_retention_keeps_the_newest_versions_inside_the_budget(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    retention = _retention_module()
+    from vectordb.index_manifest import publish_active_collection
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = tuple(_versioned_name("acme", ordinal) for ordinal in range(1, 6))
+
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        for collection_name in versions:
+            retention.record_retention_collection(
+                "acme",
+                collection_name,
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+            publish_active_collection(
+                "acme",
+                collection_name,
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+
+    assert retention.bounded_retention_candidates(
+        "acme",
+        max_versions=5,
+        chroma_directory=chroma_directory,
+    ) == ()
+    assert retention.bounded_retention_candidates(
+        "acme",
+        max_versions=3,
+        chroma_directory=chroma_directory,
+    ) == versions[:2]
+    assert retention.bounded_retention_candidates(
+        "acme",
+        max_versions=2,
+        chroma_directory=chroma_directory,
+    ) == versions[:3]
+
+
+def test_bounded_retention_protects_non_tail_active_and_previous_versions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    retention = _retention_module()
+    from vectordb.index_manifest import publish_active_collection
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = tuple(_versioned_name("acme", ordinal) for ordinal in range(1, 6))
+
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        for collection_name in versions:
+            retention.record_retention_collection(
+                "acme",
+                collection_name,
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+        publish_active_collection(
+            "acme",
+            versions[-1],
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+        publish_active_collection(
+            "acme",
+            versions[0],
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+
+    assert retention.bounded_retention_candidates(
+        "acme",
+        max_versions=2,
+        chroma_directory=chroma_directory,
+    ) == versions[1:4]
+
+
+@pytest.mark.parametrize("max_versions", [True, 1, 2.0])
+def test_bounded_retention_rejects_an_invalid_version_budget(
+    max_versions: Any,
+    tmp_path: Path,
+) -> None:
+    retention = _retention_module()
+
+    with pytest.raises(
+        retention.IndexRetentionValidationError,
+        match="max_versions",
+    ):
+        retention.bounded_retention_candidates(
+            "acme",
+            max_versions=max_versions,
+            chroma_directory=tmp_path / "vectordb" / "chroma",
+        )
 
 
 def test_inventory_without_a_version_manifest_has_no_retention_candidates(
