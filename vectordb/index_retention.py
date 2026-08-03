@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -42,6 +43,36 @@ class IndexRetentionCorrupt(IndexRetentionError):
 
 class IndexRetentionValidationError(IndexRetentionError):
     """Raised when proposed retention metadata violates its contract."""
+
+
+class IndexRetentionDeletionError(IndexRetentionError):
+    """Raised when an eligible collection cannot be deleted."""
+
+    def __init__(
+        self,
+        *,
+        failed_collection: str,
+        deleted_collections: tuple[str, ...],
+    ) -> None:
+        self.failed_collection = failed_collection
+        self.deleted_collections = deleted_collections
+        super().__init__("Index retention collection deletion failed")
+
+
+class IndexRetentionMetadataUpdateError(IndexRetentionError):
+    """Raised when inventory pruning fails after a collection was deleted."""
+
+    def __init__(
+        self,
+        *,
+        deleted_collection: str,
+        deleted_collections: tuple[str, ...],
+    ) -> None:
+        self.deleted_collection = deleted_collection
+        self.deleted_collections = deleted_collections
+        super().__init__(
+            "Index retention metadata update failed after collection deletion"
+        )
 
 
 @dataclass(frozen=True)
@@ -411,3 +442,91 @@ def bounded_retention_candidates(
     keep_slots = max(max_versions - len(protected), 0)
     candidate_count = max(len(unprotected) - keep_slots, 0)
     return unprotected[:candidate_count]
+
+
+def _without_collection(
+    inventory: IndexRetentionInventory,
+    collection_name: str,
+) -> IndexRetentionInventory:
+    remaining = tuple(
+        entry
+        for entry in inventory.collections
+        if entry.collection_name != collection_name
+    )
+    if len(remaining) == len(inventory.collections):
+        raise IndexRetentionCorrupt(
+            "Index retention deletion candidate is missing from inventory"
+        )
+    reindexed = tuple(
+        RetentionCollectionMetadata(
+            collection_name=entry.collection_name,
+            sequence=sequence,
+            recorded_at=entry.recorded_at,
+        )
+        for sequence, entry in enumerate(remaining, start=1)
+    )
+    return IndexRetentionInventory(
+        schema_version=inventory.schema_version,
+        tenant_key=inventory.tenant_key,
+        collections=reindexed,
+        updated_at=(
+            reindexed[-1].recorded_at if reindexed else inventory.updated_at
+        ),
+    )
+
+
+def execute_bounded_retention(
+    tenant_id: str,
+    *,
+    max_versions: int,
+    lock_token: TenantIndexLockToken | None,
+    delete_collection_if_exists: Callable[[str], None],
+    chroma_directory: str | Path | None = None,
+) -> tuple[str, ...]:
+    """Delete and prune bounded candidates under the current tenant lock.
+
+    ``delete_collection_if_exists`` must be idempotent because a successful
+    deletion can be repeated if its following atomic metadata update fails.
+    """
+    require_tenant_index_lock(lock_token, tenant_id)
+    candidates = bounded_retention_candidates(
+        tenant_id,
+        max_versions=max_versions,
+        chroma_directory=chroma_directory,
+    )
+    if not candidates:
+        return ()
+    inventory = read_retention_inventory(
+        tenant_id,
+        chroma_directory=chroma_directory,
+    )
+    if inventory is None:
+        raise IndexRetentionCorrupt(
+            "Index retention inventory disappeared before deletion"
+        )
+
+    deleted: list[str] = []
+    for collection_name in candidates:
+        try:
+            delete_collection_if_exists(collection_name)
+        except Exception as exc:
+            raise IndexRetentionDeletionError(
+                failed_collection=collection_name,
+                deleted_collections=tuple(deleted),
+            ) from exc
+
+        try:
+            updated_inventory = _without_collection(inventory, collection_name)
+            _write_inventory(
+                tenant_id,
+                updated_inventory,
+                chroma_directory=chroma_directory,
+            )
+        except Exception as exc:
+            raise IndexRetentionMetadataUpdateError(
+                deleted_collection=collection_name,
+                deleted_collections=(*deleted, collection_name),
+            ) from exc
+        inventory = updated_inventory
+        deleted.append(collection_name)
+    return tuple(deleted)

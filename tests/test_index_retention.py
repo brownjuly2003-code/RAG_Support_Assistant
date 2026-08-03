@@ -246,6 +246,209 @@ def test_bounded_retention_rejects_an_invalid_version_budget(
         )
 
 
+def test_retention_executor_deletes_oldest_candidates_and_prunes_inventory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    retention = _retention_module()
+    from vectordb.index_manifest import publish_active_collection
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = tuple(_versioned_name("acme", ordinal) for ordinal in range(1, 6))
+    delete_calls: list[str] = []
+
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        for collection_name in versions:
+            retention.record_retention_collection(
+                "acme",
+                collection_name,
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+            publish_active_collection(
+                "acme",
+                collection_name,
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+        deleted = retention.execute_bounded_retention(
+            "acme",
+            max_versions=3,
+            lock_token=lock_token,
+            delete_collection_if_exists=delete_calls.append,
+            chroma_directory=chroma_directory,
+        )
+
+    assert deleted == versions[:2]
+    assert delete_calls == list(versions[:2])
+    inventory = retention.read_retention_inventory(
+        "acme",
+        chroma_directory=chroma_directory,
+    )
+    assert inventory is not None
+    assert [entry.collection_name for entry in inventory.collections] == list(
+        versions[2:]
+    )
+    assert [entry.sequence for entry in inventory.collections] == [1, 2, 3]
+    assert retention.bounded_retention_candidates(
+        "acme",
+        max_versions=3,
+        chroma_directory=chroma_directory,
+    ) == ()
+
+
+def test_retention_executor_requires_a_current_matching_lock_before_deletion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    retention = _retention_module()
+    from vectordb import tenant_lock
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    delete_calls: list[str] = []
+    with pytest.raises(tenant_lock.TenantIndexLockUnavailable, match="held"):
+        retention.execute_bounded_retention(
+            "acme",
+            max_versions=2,
+            lock_token=None,
+            delete_collection_if_exists=delete_calls.append,
+            chroma_directory=chroma_directory,
+        )
+
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        with pytest.raises(tenant_lock.TenantIndexLockUnavailable, match="tenant"):
+            retention.execute_bounded_retention(
+                "beta",
+                max_versions=2,
+                lock_token=lock_token,
+                delete_collection_if_exists=delete_calls.append,
+                chroma_directory=chroma_directory,
+            )
+
+    with pytest.raises(tenant_lock.TenantIndexLockUnavailable, match="held"):
+        retention.execute_bounded_retention(
+            "acme",
+            max_versions=2,
+            lock_token=lock_token,
+            delete_collection_if_exists=delete_calls.append,
+            chroma_directory=chroma_directory,
+        )
+    assert delete_calls == []
+
+
+def test_retention_executor_stops_after_delete_failure_and_keeps_remaining_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    retention = _retention_module()
+    from vectordb.index_manifest import publish_active_collection
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = tuple(_versioned_name("acme", ordinal) for ordinal in range(1, 6))
+    delete_calls: list[str] = []
+
+    def _delete_collection_if_exists(collection_name: str) -> None:
+        delete_calls.append(collection_name)
+        if collection_name == versions[1]:
+            raise RuntimeError("delete failed")
+
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        for collection_name in versions:
+            retention.record_retention_collection(
+                "acme",
+                collection_name,
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+            publish_active_collection(
+                "acme",
+                collection_name,
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+        with pytest.raises(
+            retention.IndexRetentionDeletionError,
+            match="deletion failed",
+        ) as error:
+            retention.execute_bounded_retention(
+                "acme",
+                max_versions=2,
+                lock_token=lock_token,
+                delete_collection_if_exists=_delete_collection_if_exists,
+                chroma_directory=chroma_directory,
+            )
+
+    assert delete_calls == list(versions[:2])
+    assert error.value.failed_collection == versions[1]
+    assert error.value.deleted_collections == (versions[0],)
+    inventory = retention.read_retention_inventory(
+        "acme",
+        chroma_directory=chroma_directory,
+    )
+    assert inventory is not None
+    assert [entry.collection_name for entry in inventory.collections] == list(
+        versions[1:]
+    )
+    assert [entry.sequence for entry in inventory.collections] == [1, 2, 3, 4]
+
+
+def test_retention_executor_preserves_inventory_when_write_fails_after_delete(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    retention = _retention_module()
+    from vectordb.index_manifest import publish_active_collection
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    versions = tuple(_versioned_name("acme", ordinal) for ordinal in range(1, 5))
+    path = retention.index_retention_path(
+        "acme",
+        chroma_directory=chroma_directory,
+    )
+    delete_calls: list[str] = []
+
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        for collection_name in versions:
+            retention.record_retention_collection(
+                "acme",
+                collection_name,
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+            publish_active_collection(
+                "acme",
+                collection_name,
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+    before = path.read_bytes()
+
+    def _fail_replace(source: str | Path, destination: str | Path) -> None:
+        _ = source, destination
+        raise OSError("retention prune replace failed")
+
+    monkeypatch.setattr(retention.os, "replace", _fail_replace)
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        with pytest.raises(
+            retention.IndexRetentionMetadataUpdateError,
+            match="metadata update failed",
+        ) as error:
+            retention.execute_bounded_retention(
+                "acme",
+                max_versions=2,
+                lock_token=lock_token,
+                delete_collection_if_exists=delete_calls.append,
+                chroma_directory=chroma_directory,
+            )
+
+    assert delete_calls == [versions[0]]
+    assert error.value.deleted_collection == versions[0]
+    assert error.value.deleted_collections == (versions[0],)
+    assert isinstance(error.value.__cause__, OSError)
+    assert path.read_bytes() == before
+    assert list(path.parent.iterdir()) == [path]
+
+
 def test_inventory_without_a_version_manifest_has_no_retention_candidates(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
