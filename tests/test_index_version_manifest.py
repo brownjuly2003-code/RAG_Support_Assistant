@@ -159,6 +159,161 @@ def test_atomic_publish_preserves_previous_collection_and_increments_generation(
     }
 
 
+def test_atomic_rollback_swaps_active_and_previous_and_increments_generation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest = _manifest_module()
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        manifest.publish_active_collection(
+            "acme",
+            "rag_docs_acme_v1",
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+        manifest.publish_active_collection(
+            "acme",
+            "rag_docs_acme_v2",
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+        rolled_back = manifest.rollback_active_collection(
+            "acme",
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+
+    assert rolled_back.active_collection == "rag_docs_acme_v1"
+    assert rolled_back.previous_collection == "rag_docs_acme_v2"
+    assert rolled_back.generation == 3
+
+    path = manifest.index_manifest_path("acme", chroma_directory=chroma_directory)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload == {
+        "schema_version": 1,
+        "active_collection": "rag_docs_acme_v1",
+        "previous_collection": "rag_docs_acme_v2",
+        "generation": 3,
+        "updated_at": rolled_back.updated_at,
+    }
+
+
+def test_rollback_without_previous_fails_closed_and_preserves_manifest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest = _manifest_module()
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    path = manifest.index_manifest_path("acme", chroma_directory=chroma_directory)
+
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        with pytest.raises(manifest.IndexManifestRollbackUnavailable, match="previous"):
+            manifest.rollback_active_collection(
+                "acme",
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+        assert not path.exists()
+
+        manifest.publish_active_collection(
+            "acme",
+            "rag_docs_acme_v1",
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+        before = path.read_bytes()
+        with pytest.raises(manifest.IndexManifestRollbackUnavailable, match="previous"):
+            manifest.rollback_active_collection(
+                "acme",
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+
+    assert path.read_bytes() == before
+
+
+def test_rollback_requires_a_current_matching_tenant_lock(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest = _manifest_module()
+    from vectordb import tenant_lock
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        manifest.publish_active_collection(
+            "acme",
+            "rag_docs_acme_v1",
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+        manifest.publish_active_collection(
+            "acme",
+            "rag_docs_acme_v2",
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+        with pytest.raises(tenant_lock.TenantIndexLockUnavailable, match="held"):
+            manifest.rollback_active_collection(
+                "acme",
+                lock_token=None,
+                chroma_directory=chroma_directory,
+            )
+        with pytest.raises(tenant_lock.TenantIndexLockUnavailable, match="tenant"):
+            manifest.rollback_active_collection(
+                "beta",
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+
+    with pytest.raises(tenant_lock.TenantIndexLockUnavailable, match="held"):
+        manifest.rollback_active_collection(
+            "acme",
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+
+
+def test_rollback_replace_failure_preserves_manifest_byte_for_byte(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest = _manifest_module()
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    path = manifest.index_manifest_path("acme", chroma_directory=chroma_directory)
+
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        manifest.publish_active_collection(
+            "acme",
+            "rag_docs_acme_v1",
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+        manifest.publish_active_collection(
+            "acme",
+            "rag_docs_acme_v2",
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+        before = path.read_bytes()
+
+        def _fail_replace(source: str | Path, destination: str | Path) -> None:
+            _ = source, destination
+            raise OSError("rollback replace failed")
+
+        monkeypatch.setattr(manifest.os, "replace", _fail_replace)
+        with pytest.raises(OSError, match="rollback replace failed"):
+            manifest.rollback_active_collection(
+                "acme",
+                lock_token=lock_token,
+                chroma_directory=chroma_directory,
+            )
+
+    assert path.read_bytes() == before
+
+
 def test_replace_failure_leaves_existing_manifest_byte_for_byte_unchanged(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

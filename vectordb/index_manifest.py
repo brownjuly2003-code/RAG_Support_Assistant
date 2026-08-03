@@ -41,6 +41,10 @@ class IndexManifestValidationError(IndexManifestError):
     """Raised when a proposed manifest value violates the v1 contract."""
 
 
+class IndexManifestRollbackUnavailable(IndexManifestError):
+    """Raised when a manifest has no previous collection to restore."""
+
+
 @dataclass(frozen=True)
 class IndexVersionManifest:
     schema_version: int
@@ -235,3 +239,24 @@ def publish_active_collection(
         temporary_path.unlink(missing_ok=True)
         raise
     return manifest
+
+
+def rollback_active_collection(
+    tenant_id: str,
+    *,
+    lock_token: TenantIndexLockToken | None,
+    chroma_directory: str | Path | None = None,
+) -> IndexVersionManifest:
+    """Atomically swap active and previous collections under the tenant lock."""
+    require_tenant_index_lock(lock_token, tenant_id)
+    current = read_index_manifest(tenant_id, chroma_directory=chroma_directory)
+    if current is None or current.previous_collection is None:
+        raise IndexManifestRollbackUnavailable(
+            "Index version manifest has no previous collection to restore"
+        )
+    return publish_active_collection(
+        tenant_id,
+        current.previous_collection,
+        lock_token=lock_token,
+        chroma_directory=chroma_directory,
+    )
