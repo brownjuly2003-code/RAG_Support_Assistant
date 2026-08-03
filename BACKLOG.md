@@ -1,6 +1,6 @@
 # Backlog
 
-## Active source (2026-08-03) — audit plan reopened; step 4.7 @ `705a3cc`
+## Active source (2026-08-03) — audit plan reopened; step 4.8a @ `ca15c1a`
 
 **Sole active backlog:** [`plan_sol_23_07_26`](plan_sol_23_07_26)
 (status matrix in [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md)).
@@ -11,23 +11,24 @@ P0 **implementation** is locally remediated; **OBS-01** is locally remediated
 at `5a9f857`. Plan step 1 is **locally complete**. Plan step 4 is **in
 progress**: slices **4.1** (`b7faa19`), **4.2** (`4f93038`), **4.3**
 (`6dc6fe4`), **4.4** (`1cebd14`), **4.5** (`35e4bb9`), **4.6**
-(`d13804b`), and **4.7** (`705a3cc`) are locally verified (ING-01 further
-partially locally remediated; TEN-03 locally remediated; ING-02 race protection
-partially locally remediated).
+(`d13804b`), **4.7** (`705a3cc`), and **4.8a** (`c015ba8`, `ca15c1a`) are
+locally verified (ING-01 further partially locally remediated; TEN-03 locally
+remediated; ING-02 lock + manifest contract partially locally remediated).
 Full plan DoD / production release / project closure are **not** complete.
 Historical autopilot/safe tasks below remain evidence only — not the active
 queue.
 
 ### Latest atomic slice (local code)
 
-**Plan step 4.7 per-tenant distributed index locking is locally complete at
-`705a3cc`.**
+**Plan step 4.8a active-version manifest contract is locally complete at
+`ca15c1a`.**
 
-Document and fact-card rebuilds now share a canonical-tenant PostgreSQL session
-advisory lock across API, Celery, and CLI processes. Contention and coordination
-failure are bounded and fail closed. Do **not** claim versioned staging, atomic
-active-version switch/rollback, or live/external drills complete.
-No next implementation slice was selected in this turn.
+The new per-tenant v1 registry resolves absent manifests to legacy collection
+names, rejects corrupt manifests, atomically publishes active/previous pointers
+with monotonic generation, and requires a live token from the existing tenant
+advisory lock. It is not wired into rebuild or retrieval yet. Do **not** claim
+versioned staging, runtime switch/cache invalidation, rollback, or live/external
+drills complete. No next implementation slice was started in this turn.
 
 ### Live / external P0 gates (not local-complete)
 
@@ -43,12 +44,13 @@ Track separately from the next code slice — do **not** list as done work:
   real PostgreSQL
   upgrade/downgrade through migrations `019`/`020`/`021`
 
-Step 4 remains **in progress** (4.1–4.7 done; atomic publish/rollback and live
-step-4 DoD open). Step 5 remains **open / partially remediated** (trace identity
-done; timeout cancellation, bounded capacity, session
-concurrency/history ordering, sticky experiment propagation still open).
+Step 4 remains **in progress** (4.1–4.8a done; staging, runtime switch,
+rollback, and live step-4 DoD open). Step 5 remains **open / partially
+remediated** (trace identity done; timeout cancellation, bounded capacity,
+session concurrency/history ordering, sticky experiment propagation still open).
 Steps 6–10 remain open. ING-02 is **partially locally remediated** by the
-same-tenant mutation lock; atomic/versioned publish + rollback remains open.
+same-tenant mutation lock and unwired manifest contract; atomic/versioned
+runtime publish + rollback remains open.
 Live GraceKelly/Mistral benchmarks remain explicit opt-in only and are **not**
 this slice.
 

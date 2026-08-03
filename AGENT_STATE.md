@@ -1,6 +1,41 @@
 # Agent State
 
-## 2026-08-03 Update-22 (step 4.7 per-tenant distributed index lock @ `705a3cc`) ✅ START HERE
+## 2026-08-03 Update-23 (step 4.8a active-version manifest @ `ca15c1a`) ✅ START HERE
+
+> **Implementation commits:** `c015ba8` (`feat(index): add active-version
+> manifest registry`) + `ca15c1a` (`fix(index): enforce integer manifest
+> schema`). Plan slice **4.8a is locally complete and verified**:
+> - each tenant manifest uses a collision-resistant physical filename under the
+>   strict-schema v1 `index-manifests` registry beside the configured Chroma
+>   directory; it stores only active/previous collection, generation, schema
+>   version, and timestamp
+> - absence resolves to the existing legacy collection name, while malformed,
+>   partial, or schema-invalid content fails closed instead of selecting a
+>   candidate
+> - publication writes a same-directory temporary file, flushes and `fsync`s it,
+>   then uses `os.replace`; the prior active collection becomes `previous` and
+>   generation increments without exposing a partially written pointer
+> - the writer accepts only a current tenant-matched token from the existing
+>   PostgreSQL advisory-lock context; the token is revoked on context exit, so
+>   no second independent lock was introduced
+>
+> **Verification:** test-first contract was **7 expected failures**, then 7
+> passes. The single QA follow-up demonstrated one expected failure for a float
+> `schema_version` before enforcing its integer type. The final
+> manifest/naming/lock gate passed **27 tests** with two expected deprecation
+> warnings. Scoped Ruff, locked Python 3.11 / mypy 1.19.1 / NumPy 2.4.4, and
+> diff checks are clean.
+>
+> **Current truth:** plan step 4 remains in progress. Slice 4.8a defines the
+> durable pointer contract only; it is intentionally not wired into
+> `build_vector_store()`, retrieval, or real Chroma. Rebuild still uses
+> delete-then-build. Versioned staging/validation (4.8b), atomic runtime switch
+> and cache invalidation (4.8c), rollback/retention/fault injection (4.8d), and
+> live drills remain open. No next slice was started. No Grok/delegation, push,
+> deploy, or live service calls occurred; protected untracked user artifacts
+> remain unstaged and untouched.
+
+## 2026-08-03 Update-22 (step 4.7 per-tenant distributed index lock @ `705a3cc`) — SUPERSEDED by Update-23
 
 > **Implementation commit:** `705a3cc` (`fix(ingestion): serialize tenant index
 > rebuilds`). Plan slice **4.7 is locally complete and verified**:
