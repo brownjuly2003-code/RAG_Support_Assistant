@@ -1,5 +1,59 @@
 # Agent State
 
+## 2026-08-03 Update-39 (plan 2.3c / idempotent rollback command @ `dda4bb2`) ✅ START HERE
+
+> **Next-session handoff:** refresh `git status` first. This Update-39 block
+> supersedes Update-38 as the current durable handoff. Protected dirty
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and
+> existing untracked artifacts were not touched. Older docs may still point to
+> plan 2.3b / next-slice 2.3c and must not cause completed work to be repeated.
+>
+> **Implementation commit:** `dda4bb2` (`feat(index): add idempotent rollback
+> command`). Slice **2.3c is locally complete and verified**. Public domain
+> contract in `vectordb/index_operator.py`:
+> - `rollback_index_version(tenant_id, expected_generation, target_collection,
+>   chroma_directory)`
+> - frozen `IndexRollbackResult` plus typed `IndexRollbackValidationError` and
+>   `IndexRollbackConflict`
+> - first application requires current generation and previous target to match,
+>   holds one tenant lock, and calls the existing atomic manifest rollback with
+>   the same lock token
+> - exact retry is a byte-preserving no-op only for generation
+>   `expected + 1` and active target match, preventing active/previous
+>   oscillation
+> - stale/future/mismatched commands fail closed; invalid inputs are typed;
+>   absent/no-previous and corrupt-manifest behavior stays on existing typed
+>   manifest errors
+>
+> **Boundary:** unwired manifest command only. No manager/runtime target
+> opening/validation, embeddings, cache mutation, HTTP/API, audit, retention
+> deletion, live services, deploy, push, or production readiness.
+>
+> **Verification — Grok:** route `local_grok_cli`; CLI-selected model
+> `grok-4.5`, result-reported actual model `grok-4.5-build`; initial red
+> `18 failed, 9 passed`; focused final `60 passed` after one allowed narrowed
+> correction to a false-positive source-boundary assertion; Ruff and scoped
+> diff check clean.
+>
+> **Verification — Codex independent:** `27 passed` with the already known
+> FastAPI/Starlette TestClient deprecation warning; scoped Ruff clean;
+> Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4 clean; protected hashes and diff
+> check clean. No real Chroma/PostgreSQL/Redis, full suite, push, deploy, or
+> production readiness claimed.
+>
+> **Current truth:** slices **2.1, 2.2, 2.3a, 2.3b, 2.3c** are locally complete
+> and verified. Broader operator surface, plan step 2, project, and release are
+> **not** complete. Next safe named slice is **2.3d only** (not started): wire
+> the already validated Chroma rollback path in `vectordb/manager.py` to
+> require/pass explicit expected generation and target through the new
+> idempotent command while preserving validation-before-mutation and
+> cache-generation behavior. Keep HTTP/API/audit and retention deletion out of
+> 2.3d. Treat 2.3d as the next investigation/implementation candidate, not as
+> completed work. Full contract, evidence, and protected-state details:
+> refreshed [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md). Eventual docs
+> refresh commit will be a descendant of `dda4bb2`; next session takes the
+> actual hash from `git log`, not an embedded self-hash.
+
 ## 2026-08-03 Update-38 (durable handoff refresh after plan 2.3b) ✅ START HERE
 
 > **Docs-only:** пользователь явно запросил прозрачный next-session document.

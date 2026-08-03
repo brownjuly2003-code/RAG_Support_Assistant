@@ -1,10 +1,10 @@
 # Session handoff
 
-**Обновлено:** 2026-08-03 (после plan 2.3b / `37987df`)
+**Обновлено:** 2026-08-03 (после plan 2.3c / `dda4bb2`)
 
 **Назначение:** самодостаточный next-session handoff для coding agent после
 compacted context. История срезов — в [`AGENT_STATE.md`](../AGENT_STATE.md)
-(верхний блок Update-38, детали кода/верификации — Update-37). Активный plan
+(верхний блок Update-39; детали 2.3b/2.3a — Update-37/Update-36). Активный plan
 source — untracked/protected
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
 
@@ -15,14 +15,16 @@ source — untracked/protected
 2. Далее: верхний блок `AGENT_STATE.md` и этот handoff.
 3. `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26` и их
    dirty working-tree contents — protected user state; могут быть stale. Они
-   **не** переопределяют Update-37/Update-38 и **не** дают права повторять
-   уже завершённые срезы 2.1–2.3b.
+   **не** переопределяют Update-39 и **не** дают права повторять уже
+   завершённые срезы 2.1–2.3c.
 4. `rag-remediation-plan-2026-08-03.md` — активный plan source
    (untracked/protected). Старый `plan_sol_23_07_26` — protected legacy.
 5. Один user turn = максимум один named atomic slice.
 
-Baseline pre-refresh HEAD: `37987df` (`docs: record retention preview API`).
-Ветка локально ahead of origin; push/deploy не разрешены автоматически.
+Baseline pre-refresh HEAD: `dda4bb2` (`feat(index): add idempotent rollback
+command`). Eventual docs commit будет descendant of `dda4bb2` — next session
+берёт actual hash из `git log`, не ожидает embedded self-hash. Ветка локально
+ahead of origin; push/deploy не разрешены автоматически.
 
 ## Карта реализации
 
@@ -32,28 +34,35 @@ Baseline pre-refresh HEAD: `37987df` (`docs: record retention preview API`).
 | **2.2** | post-publish bounded retention | `f0cb6ee` | `30a8404` |
 | **2.3a** | lock-consistent read-only retention preview primitive | `5bbc329` | `3976366` |
 | **2.3b** | tenant-scoped admin retention preview endpoint | `32748d9` | `37987df` |
+| **2.3c** | unwired idempotent rollback command contract | `dda4bb2` | (docs refresh after this handoff) |
 
-Срезы **2.1, 2.2, 2.3a, 2.3b** локально complete и verified. Полный plan step 2,
-operator surface, project и release — **не** complete.
+Срезы **2.1, 2.2, 2.3a, 2.3b, 2.3c** локально complete и verified. Полный plan
+step 2, operator surface, project и release — **не** complete.
 
-## Контракт API 2.3b
+## Контракт 2.3c (idempotent rollback command)
 
-- `GET /api/admin/index/retention-preview`
-- Только existing admin role.
-- Tenant берётся только из authenticated/context state; foreign `tenant_id`
-  query **не** может override.
-- Budget default: `vectordb_retention_max_versions`; optional `max_versions` —
-  preview-only override.
-- Вызов `preview_index_retention` через `asyncio.to_thread` + configured
-  Chroma directory.
-- Response: tenant, budget, generation, active/previous, ordered inventory,
-  deletion candidates.
-- Typed safe errors: invalid budget **400**, corrupt metadata **409**,
-  tenant lock **503**; unrelated exceptions **не** rewrite.
-- Успешные и mapped domain attempts → tenant-scoped audit detail
-  `index_retention_preview`; auth failures происходят раньше.
-- Endpoint **не** делает retention execution/deletion, rollback, publish,
-  Chroma client/list/open/delete wiring.
+Public domain surface в `vectordb/index_operator.py`:
+
+- `rollback_index_version(tenant_id, expected_generation, target_collection,
+  chroma_directory)`
+- frozen `IndexRollbackResult`
+- typed `IndexRollbackValidationError` и `IndexRollbackConflict`
+
+**Apply / retry / conflict:**
+
+- first application: current generation and previous target must match;
+  holds one tenant lock; calls existing atomic manifest rollback with the
+  same lock token;
+- exact retry: byte-preserving no-op **only** for generation
+  `expected + 1` and active target match — prevents active/previous
+  oscillation;
+- stale / future / mismatched commands fail closed;
+- invalid inputs → typed validation errors;
+- absent / no-previous / corrupt-manifest → existing typed manifest errors.
+
+**Boundary (unwired):** manifest command only. **Нет** manager/runtime target
+opening/validation, embeddings, cache mutation, HTTP/API, audit, retention
+deletion, live services, deploy, push, or production readiness.
 
 ## Уже существующее durable lifecycle-поведение
 
@@ -62,15 +71,33 @@ operator surface, project и release — **не** complete.
 - Active/previous и unrecorded collections защищены existing policy.
 - Partial retention delete/prune failures остаются observable/repeatable
   (existing executor semantics).
-- Domain preview читает candidate policy, manifest и inventory под одним
-  tenant lock **без** mutation.
+- Domain preview (`preview_index_retention`) читает candidate policy, manifest
+  и inventory под одним tenant lock **без** mutation.
+- Admin retention preview API (2.3b): `GET /api/admin/index/retention-preview`
+  — read-only, tenant from auth context only, no deletion/rollback/publish.
+- Idempotent rollback command (2.3c): unwired domain contract only; manager
+  still has legacy `rollback_vector_store` that can oscillate on raw retry
+  until 2.3d wires the new command.
 
 **Не утверждать:** Qdrant operator support, live services, production
 readiness, immutable uploads, complete fault injection.
 
 ## Доказательства верификации (не перезапускать без new code/failure)
 
-### 2.3b (latest)
+### 2.3c (latest)
+
+- Grok: route `local_grok_cli`; CLI-selected model `grok-4.5`, result-reported
+  actual model `grok-4.5-build`; initial red `18 failed, 9 passed`; focused
+  final `60 passed` after one allowed narrowed correction to a false-positive
+  source-boundary assertion; Ruff and scoped diff check clean.
+- Codex independent: `27 passed` with the already known FastAPI/Starlette
+  TestClient deprecation warning; scoped Ruff clean; Python 3.11 /
+  Mypy 1.19.1 / NumPy 2.4.4 clean; protected hashes and diff check clean.
+- Real Chroma/PostgreSQL/Redis, full suite, push, deploy, production
+  readiness — **не** было и **не** утверждается.
+- Этот docs-only refresh **не** перезапускал tests.
+
+### 2.3b (summary)
 
 - Grok TDD: **14** expected failures (route absent) → **48** focused passes;
   scoped Ruff/diff clean; route/model `local_grok_cli` / `grok-4.5-build`.
@@ -81,19 +108,17 @@ readiness, immutable uploads, complete fault injection.
   line **215** (commit `3c1e7b7d`). Narrowed Python 3.11 + mypy 1.19.1 +
   NumPy 2.4.4 с `--disable-error-code=dict-item` — passed. **Никогда** не
   называть весь файл unconditionally Mypy-clean.
-- Real Chroma/PostgreSQL/Redis, push, deploy, remote actions — **не** было.
-- Этот docs-only refresh **не** перезапускал tests.
 
 ### 2.3a (summary)
 
 - Grok: **46** focused passes; Codex: **79**-pass closure.
 
-### Reference commands (2.3b) — только при new code/failure
+### Reference commands (2.3c) — только при new code/failure
 
 ```powershell
-python -m pytest tests/test_admin_index_operator.py tests/test_admin_endpoints.py tests/test_admin_view.py tests/test_tenant_enforcement.py tests/test_audit_tenant.py tests/test_session_auth_cookie.py tests/test_root_routes.py tests/test_index_operator.py tests/test_index_retention.py tests/test_index_version_manifest.py tests/test_tenant_index_lock.py tests/test_retention_settings.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-3b-codex-20260803
-python -m ruff check api/routers/admin_ops.py tests/test_admin_index_operator.py
-uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy api/routers/admin_ops.py --no-incremental --show-error-codes --disable-error-code=dict-item
+python -m pytest tests/test_index_operator.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-3c-codex-20260803
+python -m ruff check vectordb/index_operator.py tests/test_index_operator.py
+uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy vectordb/index_operator.py --no-incremental --show-error-codes
 ```
 
 На этом Windows host обязателен unique ignored basetemp
@@ -103,35 +128,32 @@ blocked unmarked Linux-only `nvidia-cufile` wheel; не retry install без
 
 ## Что остаётся открытым / следующий safe slice
 
-**Не начато:**
+**Не начато (вне 2.3d):**
 
 - retention execution/deletion operator action;
-- rollback operator action;
+- HTTP/API/audit wiring for rollback;
 - immutable/versioned originals, broader fault injection, live drills,
   release gates, project completion.
 
-Existing `rollback_vector_store` validates then swaps active/previous; raw
-repetition can swap back — **не** safe to expose directly.
+### Следующий named slice: **2.3d only** (не начат)
 
-### Следующий named slice: **2.3c only**
+Wire the already validated Chroma rollback path in `vectordb/manager.py` to
+require/pass explicit expected generation and target through the new
+idempotent `rollback_index_version` command, preserving
+validation-before-mutation and cache-generation behavior.
 
-Unwired, tenant-locked **idempotent rollback command contract** с explicit
-expected generation/target, чтобы retries не осциллировали.
-
-В **2.3c не** добавлять: HTTP/API wiring, retention deletion, live service
+В **2.3d не** добавлять: HTTP/API, audit, retention deletion, live service
 calls, deploy, push.
 
 **Точки входа для исследования** (только investigation; **не** authorization
-начать 2.3c в этом docs turn):
+расширять scope beyond named slice 2.3d):
 
-- `vectordb/index_operator.py` — expected home for the unwired operator
-  command contract;
 - `vectordb/manager.py::rollback_vector_store` — existing validated runtime
-  rollback that can oscillate on raw retry;
-- `vectordb/index_manifest.py::rollback_active_collection` — atomic
-  active/previous swap under tenant lock;
-- `tests/test_index_operator.py` и `tests/test_index_runtime_switch.py` —
-  existing domain/runtime contracts.
+  rollback that can still oscillate on raw retry until wired;
+- `vectordb/index_operator.py::rollback_index_version` — already validated
+  idempotent command to call under tenant lock;
+- `tests/test_index_runtime_switch.py` и related manager/runtime tests —
+  investigation entry points only.
 
 ## Защищённое локальное состояние
 
