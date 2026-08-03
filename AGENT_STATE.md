@@ -1,6 +1,33 @@
 # Agent State
 
-## 2026-08-03 Update-31 (step 4.8d3c unwired retention executor @ `196785d`) ✅ START HERE
+## 2026-08-03 Update-32 (step 4.8d3d Chroma retention adapter @ `3f7f337`) ✅ START HERE
+
+> **Implementation commit:** `3f7f337` (`feat(index): add Chroma retention
+> adapter`). Plan sub-slice **4.8d3d is locally complete and verified**:
+> - a lazy adapter creates one direct `chromadb.PersistentClient` only when a
+>   bounded candidate exists, then calls `delete_collection(name=...)`
+> - it never lists or opens collections, so an absent target cannot be created;
+>   only `chromadb.errors.NotFoundError` is treated as idempotent success
+> - all other client/delete failures flow into the 4.8d3c fail-closed executor,
+>   while missing targets are durably pruned from trusted inventory
+> - lock validation occurs before client creation; the adapter remains unwired
+>   from publish/rebuild/runtime and no real Chroma collection was deleted
+>
+> **Verification:** five adapter contracts first failed while the module was
+> absent, then passed. After one scoped Ruff import-order correction, the
+> retention/adapter/runtime/manifest/staging/chunk-restore/tenant-lock closure
+> gate passed **65 tests** with one expected warning. Scoped Ruff, locked Python
+> 3.11 / mypy 1.19.1 / NumPy 2.4.4, boundary checks, and staged diff checks are
+> clean.
+>
+> **Current truth:** plan step 4 and 4.8d remain in progress. Inventory,
+> bounded policy, executor, and concrete Chroma adapter now exist locally, but
+> retention budget configuration/runtime wiring, broader fault injection, an
+> operator surface, immutable/versioned originals, and live drills remain
+> open. No next slice was started; protected untracked user artifacts remain
+> untouched.
+
+## 2026-08-03 Update-31 (step 4.8d3c unwired retention executor @ `196785d`) — SUPERSEDED by Update-32
 
 > **Implementation commit:** `196785d` (`feat(index): execute bounded
 > retention`). Plan sub-slice **4.8d3c is locally complete and verified**:
