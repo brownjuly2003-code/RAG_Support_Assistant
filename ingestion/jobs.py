@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from sqlalchemy import create_engine, select, update
+from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -44,7 +45,7 @@ _SECRET_ASSIGN_RE = re.compile(
     r"ACCESS[_-]?KEY|PRIVATE[_-]?KEY|DATABASE_URL|DSN))\s*[=:]\s*([^\s,;]+)"
 )
 
-_sync_engine = None
+_sync_engine: Engine | None = None
 _sync_session_factory: sessionmaker[Session] | None = None
 
 
@@ -90,6 +91,14 @@ def _get_sync_session_factory() -> sessionmaker[Session]:
     _sync_engine = create_engine(_database_url_for_sync(), pool_pre_ping=True)
     _sync_session_factory = sessionmaker(_sync_engine, expire_on_commit=False)
     return _sync_session_factory
+
+
+def get_sync_engine() -> Engine:
+    """Return the worker's shared synchronous engine for scoped infrastructure work."""
+    _get_sync_session_factory()
+    if _sync_engine is None:
+        raise RuntimeError("Synchronous database engine is unavailable")
+    return _sync_engine
 
 
 @contextmanager

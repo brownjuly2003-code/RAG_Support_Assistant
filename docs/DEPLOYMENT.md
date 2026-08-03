@@ -141,8 +141,18 @@ Deployment contract intact.
 
 Later ingestion slices add a stuck-queued reaper, bounded publish
 retry/idempotency, and the `rag_ingestion_queue_oldest_seconds` alerting
-contract. **Still open:** atomic index publish (ING-02), per-tenant distributed
-locking, and live Redis/Postgres/Celery drills.
+contract. **Still open:** atomic index publish (ING-02) and live
+Redis/Postgres/Celery drills.
+
+Every document or fact-card rebuild acquires a PostgreSQL session advisory lock
+with `pg_try_advisory_lock`, keyed from the canonical tenant ID. API, Celery,
+and CLI processes therefore serialize mutations for the same tenant while
+different tenants remain independent. `INGESTION_TENANT_LOCK_WAIT_SEC` bounds
+the wait; timeout, database failure, or lost ownership fails the rebuild
+closed. The connection stays in autocommit mode and its session lock is also
+released automatically if the process or connection dies. This prevents
+concurrent delete/build races but does not make the existing delete-then-build
+publish atomic; ING-02 remains open.
 
 Tenant physical names preserve existing lowercase-safe identifiers such as
 `default`, UUIDs, and `acme-corp`. Uppercase, Windows-reserved, lossy, or long

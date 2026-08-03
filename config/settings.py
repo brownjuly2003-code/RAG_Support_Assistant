@@ -465,6 +465,13 @@ class Settings:
             os.getenv("INGESTION_PUBLISH_RETRY_DELAY_SEC", "0.2")
         )
     )
+    # Maximum wait for the PostgreSQL tenant advisory lock that serializes
+    # destructive index rebuilds across API, Celery, and CLI processes.
+    ingestion_tenant_lock_wait_sec: float = field(
+        default_factory=lambda: float(
+            os.getenv("INGESTION_TENANT_LOCK_WAIT_SEC", "30")
+        )
+    )
     agentic_mode: bool = field(
         default_factory=lambda: os.getenv(
             "RAG_AGENTIC_MODE", "false"
@@ -1016,6 +1023,16 @@ class Settings:
             raise RuntimeError(
                 "\nERROR: INGESTION_PUBLISH_RETRY_DELAY_SEC must be a finite float >= 0.\n"
                 f"       Got {self.ingestion_publish_retry_delay_sec}."
+            )
+        if (
+            self.ingestion_tenant_lock_wait_sec < 0
+            or self.ingestion_tenant_lock_wait_sec
+            != self.ingestion_tenant_lock_wait_sec
+            or self.ingestion_tenant_lock_wait_sec == float("inf")
+        ):
+            raise RuntimeError(
+                "\nERROR: INGESTION_TENANT_LOCK_WAIT_SEC must be a finite float >= 0.\n"
+                f"       Got {self.ingestion_tenant_lock_wait_sec}."
             )
 
         if self.rag_env == "production" and ("*" in self.cors_origins or self.cors_origins == []):
