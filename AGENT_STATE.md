@@ -1,13 +1,73 @@
 # Agent State
 
+## 2026-08-03 Update-47 — transparent next-session handoff; no new implementation ✅ START HERE
+
+> **Routing authority:** Update-47 is **docs-only** and supersedes Update-46
+> **only for start-point routing**. All older Update blocks below, including
+> headings that literally contain `✅ START HERE`, are **archival**. **Only the
+> first/topmost Update block in this file is authoritative.** Never select work
+> by grepping old `START HERE` markers.
+>
+> **No new implementation.** Code, tests, plans, backlog, README, audit,
+> settings, and API paths were **not** edited in this turn. Project tests were
+> **not** rerun. Protected dirty `BACKLOG.md`, `README.md`,
+> `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and existing untracked artifacts
+> were not touched.
+>
+> **Committed baseline vs implementation (self-hash limitation):**
+> - Latest implementation remains `ac4b317` (`feat(api): expose guarded index
+>   retention`) — slice **2.3i** local complete/verified at already-documented
+>   scopes.
+> - Committed docs baseline inspected before Update-47: `deb542f`
+>   (`docs: record guarded index retention API`).
+> - The future docs commit that records Update-47 **cannot** be known inside its
+>   own content. Next session must obtain the actual docs commit from
+>   `git log -5 --oneline`. Actual Git wins over any embedded hashes/counts.
+>
+> **Completed scope (local, verified at documented scopes):** slices **2.1
+> through 2.3i**. Local operator surface for retention preview + guarded
+> execution and validated rollback is present after 2.3i. Full evidence ledger
+> for 2.3i (including cancelled first Grok run) lives in
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+>
+> **Not complete / not claimed:** full plan step 2; full suite; live drills;
+> immutable/versioned original upload lifecycle; release/production readiness;
+> push/deploy.
+>
+> **Active writer / WIP:** none. No unfinished 2.4a WIP in intended next
+> targets. No active Grok/delegated writer at this handoff.
+>
+> **Next candidate only:** **2.4a** (not started; do **not** mark complete from
+> this docs turn). Smallest test-first local contract toward
+> immutable/versioned original uploads tied to job/index version without losing
+> the previous working version. Evidence-based ownership, candidate paths,
+> red/green commands, non-goals, and stop/re-scope conditions:
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) §2.4a ownership.
+>
+> **Protected dirty / untracked state:** see handoff capsule; do not
+> touch/stage/remove without explicit request.
+>
+> **External gates (not authorized):** push, deploy, live services, destructive
+> Git, production-readiness claims. Live PostgreSQL/Redis/Celery/Chroma drills
+> require explicit opt-in and must **not** be the default next slice.
+>
+> **Standing execution preference:** **Grok** implements/content-writes;
+> orchestrator protects files, verifies independently, commits scoped results.
+> One user turn = **one** named atomic slice. Do **not** re-select 2.1–2.3i.
+>
+> **Git advisory only:** branch observed as
+> `master...origin/master [ahead 78]` at this inspection — refresh next session.
+
 ## 2026-08-03 Update-46 (plan 2.3i / guarded index retention API @ `ac4b317`) ✅ START HERE
 
-> **Next-session handoff:** refresh `git status` first. This Update-46 block
-> supersedes Update-45 as the start point for the next session. This turn is
-> **docs/status only** for the already-landed 2.3i implementation; no code,
-> tests, plans, backlog, README, audit, settings, or API paths were edited
-> here. Protected dirty `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
-> `plan_sol_23_07_26`, and existing untracked artifacts were not touched.
+> **Historical handoff (superseded by Update-47 for start-point routing).**
+> Older `✅ START HERE` markers in this archive are **not** routing authority.
+> Refresh `git status` first. This Update-46 block previously superseded
+> Update-45 as the start point. That turn was **docs/status only** for the
+> already-landed 2.3i implementation; no code, tests, plans, backlog, README,
+> audit, settings, or API paths were edited there. Protected dirty
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and
+> existing untracked artifacts were not touched.
 >
 > **Implementation commit:** `ac4b317` (`feat(api): expose guarded index
 > retention`). Slice **2.3i is locally complete and verified**.
@@ -63,36 +123,20 @@
 > `config/settings.py`, `api/app.py`, `auth/dependencies.py`, and
 > `tests/test_index_runtime_switch.py`.
 >
-> **Current truth:** slices **2.1 through 2.3i** are locally complete and
-> verified. Broader plan step 2, project, and release are **not** complete
-> because immutable/versioned original upload lifecycle, fault injection, live
-> drills, and further work remain open. Next safe named slice is **2.4a only**
-> (not started): the smallest test-first local contract toward
-> immutable/versioned original uploads tied to job/index version without losing
-> the previous working version. Treat 2.4a as investigation/implementation
-> candidate only; inspect existing ownership before naming exact files/APIs and
-> do not invent completed work. Do **not** select live
-> PostgreSQL/Redis/Celery/Chroma drills (explicit opt-in required). Full
-> contract, evidence, and protected-state details: refreshed
+> **Historical next-work pointer from Update-46:** named slice **2.4a** (not
+> started). That next-work direction remains current under Update-47, but
+> **routing authority is Update-47** and
 > [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
 >
-> **Standing execution preference:** use **Grok** as implementation/content
-> worker; **Codex** orchestrates, protects files, verifies independently, and
-> commits scoped results. One next-session user turn may complete **only one
-> named atomic slice**. Push / deploy / live services are **not** authorized.
+> **Git advisory only (historical):** branch was observed as
+> `master...origin/master [ahead 77]` at that inspection; latest
+> implementation remained `ac4b317`; previous docs HEAD was `e348929`
+> (`docs: record guarded runtime retention`). Actual Git always wins over
+> embedded hashes/counts.
 >
-> **Git advisory only:** branch was observed as
-> `master...origin/master [ahead 77]` at this inspection; latest
-> implementation remains `ac4b317`; previous docs HEAD was `e348929`
-> (`docs: record guarded runtime retention`). Do **not** embed or guess a
-> future docs commit hash. Ahead counts and timestamps are advisory; next
-> session must run fresh `git status --short --branch` and
-> `git log -5 --oneline`. Actual Git wins over any embedded hashes/counts in
-> docs.
->
-> **Do not re-select 2.1–2.3i.** Do not mark 2.4a complete from this docs
-> turn. Full historical evidence for 2.3i remains here and in
-> `docs/SESSION_HANDOFF.md`; 2.3h evidence remains in Update-45 below.
+> **Do not re-select 2.1–2.3i.** Full historical evidence for 2.3i remains
+> here and in `docs/SESSION_HANDOFF.md`; 2.3h evidence remains in Update-45
+> below.
 
 ## 2026-08-03 Update-45 (plan 2.3h / guarded runtime retention @ `bd01f23`)
 

@@ -1,37 +1,81 @@
 # Session handoff
 
-**Обновлено:** 2026-08-03 (Update-46 plan 2.3i complete @ `ac4b317`;
-previous docs HEAD `e348929`; next named slice **2.4a** not started)
+**Обновлено:** 2026-08-03 (Update-47 transparent next-session handoff;
+docs-only; latest implementation `ac4b317`; committed docs baseline inspected
+`deb542f`; next named slice **2.4a** not started)
 
 **Назначение:** самодостаточный next-session handoff для coding agent после
 compacted context. История срезов — в [`AGENT_STATE.md`](../AGENT_STATE.md)
-(верхний блок **Update-46**; evidence 2.3i — Update-46; 2.3h — Update-45;
-2.3g — Update-43; детали 2.3f/2.3e/2.3d/2.3c/2.3b/2.3a — Update-42/Update-41/
-Update-40/Update-39/Update-37/Update-36).
+(**только верхний блок Update-47** — routing authority; older blocks including
+literal `✅ START HERE` headings are archival). Evidence 2.3i — ниже и
+Update-46; 2.3h — Update-45; 2.3g — Update-43; детали 2.3f/2.3e/2.3d/2.3c/
+2.3b/2.3a — Update-42/Update-41/Update-40/Update-39/Update-37/Update-36.
 Активный plan source — untracked/protected
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
 
+## Нулевая неоднозначность: состояние на входе
+
+Сканируй эту капсулу **первой**. Детали и ledger — в секциях ниже; не
+дублируй длинную историю в новых edits.
+
+| Факт | Значение |
+|------|----------|
+| Latest implementation | `ac4b317` (`feat(api): expose guarded index retention`) — 2.3i |
+| Committed docs baseline inspected | `deb542f` (`docs: record guarded index retention API`) |
+| Future Update-47 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
+| Branch advisory | `master...origin/master [ahead 78]` — **refresh mandatory** |
+| Active writer | **none** |
+| Unfinished WIP in next targets | **none known** |
+| Locally complete (documented scopes) | **2.1–2.3i** |
+| Not complete / not claimed | full plan step 2; full suite; live drills; immutable upload lifecycle; release/production readiness |
+| Next allowed candidate | **2.4a only** (not started; not complete) |
+| Gates | no push / deploy / live services / destructive Git / production claims |
+
+**Known verification caveats (2.3i):** first Grok run
+`rag-step2-3i-20260803-a1` cancelled before edits (denied multi-line Pydantic
+`python -c` probe; target hashes unchanged); cause-specific retry
+`rag-step2-3i-20260803-a2` completed; direct full-file Mypy still has known
+unchanged `dict-item`; one Starlette deprecation warning; **no** full/live
+suite in 2.3i or this docs-only Update-47.
+
+**Protected state (do not touch/stage/remove without explicit request):**
+
+- Dirty tracked: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+  `plan_sol_23_07_26`
+- Untracked (incl.): `.grok-prompts/`, `.pytest_tmp*/`, presentation/explainer
+  artifacts, `_NEXT_SESSION.md`, `FLANT_DOGFOOD_FINDINGS.md`, active plan
+  `rag-remediation-plan-2026-08-03.md`, `docs/architecture-data-flow.html`,
+  `scripts/check_architecture_diagram.py`
+
+**Routing rule:** only the **first/topmost** Update block in
+[`AGENT_STATE.md`](../AGENT_STATE.md) is authoritative. Never select work by
+grepping historical `START HERE` markers.
+
 ## Быстрый старт следующей сессии
 
-Точный checklist. **Нет** active writer и **нет** unfinished 2.4a WIP на
-момент этого handoff.
+Executable checklist **in order**. **Нет** active writer и **нет** unfinished
+2.4a WIP на момент этого handoff.
 
-1. Cycle-guard preflight on the latest user message.
+1. **Cycle-guard preflight** on the latest user message.
 2. `cd D:\RAG_Support_Assistant`; run fresh `git status --short --branch` and
-   `git log -5 --oneline`; **actual Git wins** over embedded hashes/counts.
-3. Read Update-46 in `AGENT_STATE.md` and this handoff; do **not** reselect
-   2.1–2.3i.
-4. Investigate intended **2.4a** ownership before naming exact files/APIs
-   (immutable/versioned original uploads tied to job/index version without
-   losing the previous working version); preserve all listed dirty/untracked
-   user state. Do **not** reopen completed retention operator surfaces
+   `git log -5 --oneline` as **separate** commands; **actual Git wins** over
+   embedded hashes/counts (including the future Update-47 docs commit SHA).
+3. Read **only** top **Update-47** in `AGENT_STATE.md` + this
+   **Нулевая неоднозначность** capsule first; treat older Update blocks as
+   archive. Do **not** reselect 2.1–2.3i.
+4. Verify intended **2.4a** candidate targets are clean; re-check protected
+   hashes/state still match (see §2.4a ownership baselines + protected dirty
+   list). Do **not** reopen completed retention operator surfaces
    (`api/routers/admin_ops.py` retention/rollback, `vectordb/manager.py`
    retention runtime) unless investigation proves a required conflict — then
-   stop and re-scope.
-5. Use **Grok** via the local verified route for the implementation; announce
-   counters `slice 1/1`, `delegated run N/3`, `QA follow-up N/1`.
-6. Execute **only 2.4a**, tests-first, independent verification, explicit-path
-   staging, local commit, optional scoped handoff refresh, then yield.
+   **stop and re-scope**.
+5. Use **Grok** via the local verified route; announce counters
+   `slice 1/1`, `delegated run N/3`, `QA follow-up N/1`. Execute **at most
+   2.4a**.
+6. **Tests-first**, independent proportional gate, explicit-path staging,
+   local commit only (no push). Optional scoped handoff refresh after the
+   slice.
+7. **Stop/yield** after one named slice.
 
 Push / deploy / live services — **not authorized**. One user turn = one named
 atomic slice. Live PostgreSQL/Redis/Celery/Chroma drills require explicit
@@ -41,22 +85,22 @@ opt-in and must **not** be selected as the default next slice.
 
 1. `git status --short --branch` и `git log -5 --oneline` — авторитетный
    источник текущего filesystem/Git state.
-2. Далее: верхний блок `AGENT_STATE.md` (**Update-46**) и этот handoff.
+2. Далее: верхний блок `AGENT_STATE.md` (**Update-47**) и эта капсула.
 3. `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26` и их
    dirty working-tree contents — protected user state; могут быть stale. Они
-   **не** переопределяют Update-46 и **не** дают права повторять уже
+   **не** переопределяют Update-47 и **не** дают права повторять уже
    завершённые срезы 2.1–2.3i.
 4. `rag-remediation-plan-2026-08-03.md` — активный plan source
    (untracked/protected). Старый `plan_sol_23_07_26` — protected legacy.
 5. Один user turn = максимум один named atomic slice.
 
 **Authoritative implementation state:** latest implementation is `ac4b317`
-(`feat(api): expose guarded index retention`). Previous docs HEAD at this
-handoff inspection: `e348929` (`docs: record guarded runtime retention`). Do
-**not** embed a guessed future docs commit hash; next session reads actual
-`git log`. Branch was observed as `master...origin/master [ahead 77]` at
-inspection — ahead counts/timestamps are **advisory only**; refresh Git next
-session. Push/deploy not authorized.
+(`feat(api): expose guarded index retention`). Committed docs baseline
+inspected before Update-47: `deb542f` (`docs: record guarded index retention
+API`). Do **not** embed a guessed future docs commit hash; next session reads
+actual `git log`. Branch was observed as `master...origin/master [ahead 78]`
+at inspection — ahead counts/timestamps are **advisory only**. Push/deploy not
+authorized.
 
 ## Карта реализации
 
@@ -72,7 +116,7 @@ session. Push/deploy not authorized.
 | **2.3f** | unwired guarded retention execution command | `f5f3f6e` | (docs after 2.3f) |
 | **2.3g** | guarded Chroma retention adapter bridge | `f966fac` | `1f40a57` |
 | **2.3h** | runtime manager retention action (guarded) | `bd01f23` | `e348929` / Update-45 |
-| **2.3i** | retention API / admin audit | `ac4b317` | this handoff / Update-46 |
+| **2.3i** | retention API / admin audit | `ac4b317` | Update-46 + this handoff |
 | **2.4a** | immutable/versioned original uploads (candidate) | — | **not started** |
 
 Срезы **2.1, 2.2, 2.3a, 2.3b, 2.3c, 2.3d, 2.3e, 2.3f, 2.3g, 2.3h, 2.3i**
@@ -361,88 +405,203 @@ never claim unconditional full-file Mypy cleanliness without evidence.
 
 **Не начато (вне 2.4a):**
 
-- immutable/versioned original uploads tied to job/index version without
-  losing the previous working version (**2.4a**, next candidate, not
-  authorized until the next explicit one-slice turn);
 - broader fault injection, live PostgreSQL/Redis/Celery/Chroma drills
   (explicit opt-in only — do **not** select as default next slice),
   release gates, project completion.
 
+**Next candidate (not started):** immutable/versioned original uploads tied
+to job/index version without losing the previous working version — **2.4a**.
+
 **Superseded / do not re-select:** 2.1–2.3i are complete. Historical
-next-work text that still names **2.3i** as the next candidate is stale.
+next-work text that still names **2.3i** (or earlier) as the next candidate
+is stale. Historical headings containing `✅ START HERE` are archival.
 
 ### Следующий named slice: **2.4a only** (не начат)
 
 Smallest test-first local contract toward immutable/versioned original
 uploads tied to job/index version without losing the previous working
 version. **Not** completed work. **Do not re-select 2.3i.** No active writer
-and no unfinished 2.4a WIP at this handoff.
+and no unfinished 2.4a WIP at this handoff. Ownership evidence below was
+gathered **read-only** in Update-47; **no 2.4a implementation** occurred.
 
-## Exact contract for next slice 2.4a
+## Exact contract for next slice 2.4a (evidence-based ownership)
 
-**Status:** investigation/implementation candidate only — do **not** mark
-complete from docs. Exact files, APIs, storage layout, and acceptance tests
-must be confirmed against existing upload/job/index ownership during
-investigation; do **not** invent completed work or invent unsupported route
-details before investigation.
+**Status:** not started. Implementation candidate with **read-only ownership
+resolved below**. Do **not** mark complete or started from docs.
 
-**Derived safe direction (from active remediation plan + repository
-handoff):**
+### Plan source (direction only)
 
-- make original uploads immutable/versioned and bind their lifecycle to
-  job/index version;
-- preserve the previous working version rather than overwriting or losing it;
-- keep the slice local, tests-first, and as small as possible;
-- do **not** select live PostgreSQL/Redis/Celery/Chroma drills without
-  explicit opt-in;
-- do **not** reopen completed retention operator surfaces unless investigation
-  proves a required conflict — then stop and re-scope.
+Active untracked plan
+[`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)
+§2 (unchecked item): make original uploads immutable/versioned and bind their
+lifecycle to job/index version without losing the previous working version.
+Plan does **not** name files/APIs; ownership comes from repository evidence.
 
-**Initial likely edit scope:** unknown until ownership investigation. Do
-**not** hard-code file paths here; inspect existing upload/job/index modules
-before coding.
+### Current owners (fact / evidence)
 
-**Likely protected unless proven conflict:**
+| Surface | Module / symbols | Focused tests |
+|---------|------------------|---------------|
+| HTTP upload write path | `api/routers/upload.py` — `_tenant_upload_directory`, `upload_document`, `file_path = upload_dir / safe_name`, `file_path.write_bytes` | `tests/test_upload_security.py`, `tests/test_upload_idempotency.py`, `tests/test_ingestion_job_contract.py` |
+| Durable job identity | `ingestion/jobs.py` — `create_or_reuse_ingestion_job`, `project_relative_source_path`, `compute_payload_fingerprint` | `tests/test_ingestion_job_contract.py`, `tests/test_upload_idempotency.py` |
+| Job ORM | `db/models.py` — `IngestionJob` (`filename`, `source_path`, status, idempotency hash/fingerprint, `source_ready_at`; **no** index-version / collection fields) | same job-contract tests |
+| Async worker | `tasks/ingest_task.py` — `ingest_document(file_path, job_id, tenant_id)`; loads **parent directory** via `DocumentLoader.load_documents(str(path.parent))`; completion `result` has docs_count only (**no** index generation/collection) | `tests/test_ingest_task.py` |
+| Corpus load / reindex | `ingestion/loader.py`; `scripts/reindex.py` — flat tenant upload dir, `recursive=False` | `tests/test_loader.py`, reindex-adjacent gates |
 
-- completed retention operator surface (`api/routers/admin_ops.py` retention/
-  rollback paths, `vectordb/manager.py` retention runtime, chroma/index
-  retention domain/adapters)
-- unrelated admin routes/helpers outside the chosen 2.4a surface
-- settings/policy rewrites not required by the smallest local contract
+### Durable / versioned today vs overwrite gaps (fact)
 
-If investigation proves a required conflict on a protected path, **stop and
-re-scope** rather than silently expanding. Next session must re-check hashes
-against the working tree; do not trust stale baseline tables from earlier
-slices as permanent truth.
+**Already durable / versioned at other layers (not 2.4a deliverable):**
 
-### Required 2.4a test-first evidence (directional)
+- Durable `IngestionJob` rows with tenant-scoped optional Idempotency-Key
+  replay, payload fingerprint conflict (409), reserved Celery task id,
+  source-ready gate, lease/liveness.
+- Index lifecycle 2.1–2.3i: versioned collections, inventory, manifest,
+  retention preview + guarded execution, validated rollback.
 
-Add focused acceptance tests around the chosen local contract after
-investigation finalizes ownership:
+**Upload originals still overwrite / lack job↔index-version link (gap):**
 
-1. versioned/immutable original retention semantics without losing the
-   previous working version;
-2. linkage to job/index version boundaries already present in the repo;
-3. failure/idempotency behavior appropriate to the chosen ownership surface;
-4. no accidental re-open of completed retention API/runtime contracts;
-5. no live-service drills, deploy, push, or production-readiness claims.
+- Explicit comment and path in `upload.py`: *“Keep tenant corpus directory +
+  canonical safe_name (no per-job subdirs).”* Path is
+  `data/uploads[/<physical_tenant>]/<safe_name>`.
+- Creator path calls `file_path.write_bytes(content_bytes)` onto that
+  canonical name — same `safe_name` **overwrites** the previous bytes.
+- `IngestionJob.source_path` stores project-relative path to that same
+  canonical location; multiple jobs for the same filename can point at one
+  mutable file.
+- Worker/reindex load the **flat tenant directory**, not a per-job immutable
+  object tree.
+- Job `result` / model columns do **not** record published index generation
+  or collection name — **no durable job↔index-version link** for originals.
 
-**Recommended focused verification after new code** (unique basetemp
-required; exact paths finalized during investigation):
+**Inference (not claimed implemented):** smallest safe 2.4a should stop
+overwriting the prior working original while keeping rebuild/reindex able to
+see a stable “current” corpus view; full object-store + cleanup policy is
+larger than one slice.
+
+### Smallest safe test-first 2.4a contract (candidate)
+
+Advance **immutable/versioned originals** without losing the previous working
+version:
+
+1. **Store each new successful upload under a job-scoped immutable path**
+   (e.g. under tenant upload root, keyed by `job_id` + safe filename), write
+   once, never rewrite prior job objects.
+2. **Persist that immutable path on `IngestionJob.source_path`** (already the
+   durable pointer field) so job identity and bytes stay linked.
+3. **Preserve previous working version:** either keep the prior canonical
+   corpus file until a new version is source-ready, or maintain an explicit
+   current pointer/copy that is updated only after the new object is durable
+   — never delete/overwrite the only remaining prior bytes in the same step
+   as writing the new version without a remaining recoverable prior object.
+4. **Do not claim full index-version binding in 2.4a unless the chosen edit
+   surface already has a single local hook** (today job completion does not
+   write generation/collection). Prefer proving immutable original + job
+   path linkage first; defer broader inventory/manifest coupling if it forces
+   multi-subsystem expansion.
+5. **Keep idempotent replay behavior:** replay must not rewrite a different
+   payload onto an existing immutable object; existing fingerprint conflict
+   rules remain.
+
+### Initial candidate edit/test paths (evidence-proven)
+
+**Primary edit candidates (only if 2.4a proceeds):**
+
+- `api/routers/upload.py` — path construction + write semantics
+- `ingestion/jobs.py` — only if helper(s) for versioned relative paths need a
+  shared pure function (keep DB transitions out of scope unless required)
+- `tasks/ingest_task.py` — only if worker must open the job’s immutable file
+  (or its parent) instead of assuming flat `safe_name` under tenant dir
+- `db/models.py` / Alembic — **only if** a new column is proven necessary;
+  prefer reusing `source_path` first
+
+**Primary test candidates:**
+
+- `tests/test_upload_idempotency.py` / `tests/test_ingestion_job_contract.py`
+  — new acceptance for non-overwrite + job `source_path` immutability
+- `tests/test_upload_security.py` — path safety still holds
+- `tests/test_ingest_task.py` — worker still resolves the job file
+
+**Likely follow-on touch (stop/re-scope if required mid-slice):**
+`scripts/reindex.py` and any loader assumption that the tenant corpus is only
+flat non-recursive files. If reindex must understand versioned originals in
+the same slice and scope explodes, **stop and re-scope** rather than silent
+expansion.
+
+**Out of initial 2.4a edit set unless conflict proven:** completed retention
+operator surface (`api/routers/admin_ops.py`, `vectordb/manager.py` retention
+runtime, chroma/index retention domain/adapters), settings/policy rewrites,
+UI, live services.
+
+### Baseline SHA-256 (Update-47 inspection; re-check before edit)
+
+| Path | SHA-256 |
+|------|---------|
+| `api/routers/upload.py` | `60AE2DCBE9E492AD4EEF30A71AE08E67DC937DC80410B2D01167B4AD148DA19A` |
+| `ingestion/jobs.py` | `FFBE1CC08CE6129184DC4156F802B3B634974C1CE0C445201791BA0C47147254` |
+| `tasks/ingest_task.py` | `8F1195CC5781E61EC2CB5D3F6B8857C11C1579C774806B2EFCBD79B483EC277C` |
+| `db/models.py` | `6C68A83C43336A31D73624006345849BE8E9EBC0F67FD39D19A254223B218AE0` |
+| `ingestion/loader.py` | `1E13472F003E327AA418679007FDC810B0A2023844238C5B852F30415A00CDA9` |
+| `tests/test_ingestion_job_contract.py` | `87FE0464AAFAEB773DBE03614541C1500540AAB3C4FFDEDB58A563666E6144FE` |
+| `tests/test_upload_idempotency.py` | `E7595A6B2111B17773F96B8E4B9C2617D4F514FF0FAC59953387C7EC401E98BB` |
+| `tests/test_upload_security.py` | `7EFC31CF2D4B9AFF878D4EC80A1627AE8F998AB632D694C40E2BAED851666E19` |
+| `tests/test_ingest_task.py` | `23A58809D91383073CFAFC7DEC98B8AEAB4DEAD375FDC450D3B3C0B124A883CA` |
+| `scripts/reindex.py` | `88758766FB18A0628D3153ABC8C79837AD8444B6AB9D56DB10AECBC1C574D209` |
+| Protected 2.3i API | `api/routers/admin_ops.py` = `95370181C6649E0A55C8C786E78226610CC91BFD2F28FD5B3ED66EC32F4BA016` |
+| Protected 2.3i tests | `tests/test_admin_index_operator.py` = `3059CE75397E0DB2E69937AF68C92234DFFB2FAB1B46EBB5F28D7D595AAEED45` |
+| Protected 2.3h runtime | `vectordb/manager.py` = `C5542E861E86FD9B50081668EDF2ECDC02D0CFF240F724B99F3FE958F2B79EC7` |
+| Protected 2.3h tests | `tests/test_index_runtime_switch.py` = `D14383CEE143768A5A4F8A039F573267E26FCE7794AA78351C775975C01FB8E0` |
+| Active plan (untracked) | `rag-remediation-plan-2026-08-03.md` = `CF0C6FD19DB1EFAF4735A976DA369A0CDFE67C83139072BE4A078A0715615973` |
+
+### Precise red/green verification (unique basetemp)
+
+After 2.4a code exists (not run in Update-47):
 
 ```powershell
-python -m pytest <focused-2.4a-tests> -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-4a-<unique>
-python -m ruff check <focused-2.4a-paths>
-uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy <focused-2.4a-paths> --no-incremental --show-error-codes
-git diff --check -- <focused-2.4a-paths>
+python -m pytest tests/test_upload_idempotency.py tests/test_ingestion_job_contract.py tests/test_upload_security.py tests/test_ingest_task.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-4a-<unique>
+python -m ruff check api/routers/upload.py ingestion/jobs.py tasks/ingest_task.py tests/test_upload_idempotency.py tests/test_ingestion_job_contract.py tests/test_upload_security.py tests/test_ingest_task.py
+uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy api/routers/upload.py ingestion/jobs.py tasks/ingest_task.py --no-incremental --show-error-codes
+git diff --check -- api/routers/upload.py ingestion/jobs.py tasks/ingest_task.py tests/test_upload_idempotency.py tests/test_ingestion_job_contract.py tests/test_upload_security.py tests/test_ingest_task.py
 ```
 
-This docs-only turn did **not** run project tests.
+Narrow the pytest selection further if the slice touches fewer files. On this
+Windows host, unique ignored basetemp is mandatory. Do **not** run full suite
+or live services as the default gate.
+
+### Explicit non-goals (2.4a)
+
+- Re-opening retention preview/execution/rollback operator surfaces
+- Settings/policy rewrite, UI, Helm/PVC/object-storage migration
+- Full fault-injection matrix; concurrent multi-tenant load drills
+- Live PostgreSQL/Redis/Celery/Chroma; push; deploy; production readiness
+- Claiming full plan step 2 or full immutable lifecycle “done” after one slice
+
+### Unknowns (honest)
+
+- Exact on-disk layout name (`jobs/<job_id>/…` vs content-addressed blob dir)
+  is a design choice inside the contract above — pick the smallest that keeps
+  prior bytes recoverable and tests clear.
+- Whether reindex must change in the **same** slice depends on whether the
+  chosen layout breaks flat `load_documents(tenant_dir)`; confirm with a red
+  test before expanding.
+- Whether a DB migration is required is **unknown until** path-only reuse of
+  `source_path` is proven insufficient.
+- Binding job rows to published index generation/collection is **not yet
+  present**; treating it as mandatory in 2.4a may force stop/re-scope.
+
+### Stop / re-scope conditions
+
+- Protected retention hashes change without an explicit conflict plan
+- Target files become unexpectedly dirty / foreign WIP appears
+- Scope requires multi-subsystem expansion (manifest + retention + upload +
+  reindex + migration) in one turn
+- Second independent verification fails after one allowed narrow correction
+- Any push/deploy/live/destructive Git pressure without user authorization
+
+This docs-only turn did **not** run project tests and did **not** start 2.4a.
 
 ## Definition of done / stop conditions
 
-- **2.4a is done only after** ownership investigation, Grok tests-first
-  evidence, one independent proportional gate, protected hashes, scoped
+- **2.4a is done only after** Grok tests-first evidence for the contract
+  above, one independent proportional gate, protected hashes, scoped
   diff-check, and local explicit-path commit.
 - **Do not re-select 2.3i**; retention API/admin audit is already complete at
   `ac4b317`. **Do not re-select 2.1–2.3h.**
