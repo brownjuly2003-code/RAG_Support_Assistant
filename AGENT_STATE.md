@@ -1,6 +1,33 @@
 # Agent State
 
-## 2026-08-02 Update-19 (step 4.4 bounded upload retry/idempotency @ `1cebd14`) ✅ START HERE
+## 2026-08-02 Update-20 (step 4.5 ingestion queue-age alert @ `35e4bb9`) ✅ START HERE
+
+> **Implementation commit:** `35e4bb9` (`feat(ingestion): alert on stalled
+> queue`). Plan slice **4.5 is locally complete and verified**:
+> - every FastAPI ingestion reaper sweep publishes the global, label-free
+>   `rag_ingestion_queue_oldest_seconds` gauge for queued async jobs
+> - age starts at `source_ready_at`, with `created_at` fallback for pre-`021`
+>   rows; sync/running/terminal jobs are excluded and an empty queue resets to 0
+> - `IngestionQueueStalled` warns after age exceeds 300 seconds for five
+>   minutes, leaving a response window before the default 900-second reaper
+>   timeout; operator/deployment docs describe the contract
+> - optional Prometheus imports now retain strict type coverage through explicit
+>   aliases; no runtime dependency or schema change was added
+>
+> **Verification:** test-first contract was 3 expected failures before
+> implementation and 7 passes after. Closure gate found one stale Session test
+> double, then passed **87 tests** with one expected deprecation warning. Scoped
+> Ruff is clean; locked Python 3.11 / mypy 1.19.1 / NumPy 2.4.4 reports no
+> issues in the two changed runtime modules; diff checks are clean.
+>
+> **Current truth:** plan step 4 remains in progress. ING-01 queue-age
+> observability is now locally implemented; live Redis/Postgres/Celery
+> outage/recovery and real migration drills remain open. ING-02 atomic/versioned
+> index publish + rollback and TEN-03 remain open. No next implementation slice
+> was selected. No Grok/delegation, push, deploy, or live service calls occurred;
+> protected untracked user artifacts remain unstaged and untouched.
+
+## 2026-08-02 Update-19 (step 4.4 bounded upload retry/idempotency @ `1cebd14`) — SUPERSEDED by Update-20
 
 > **User explicitly resumed after the Update-18 incident.** Work stayed within
 > one bounded local slice; no Grok/delegated runs, push, deploy, or live service
