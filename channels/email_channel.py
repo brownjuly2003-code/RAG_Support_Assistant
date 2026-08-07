@@ -112,28 +112,21 @@ def extract_plain_body(message: Message) -> str:
 
 
 def resolve_tenant_by_email(email_address: str, mapping: str | None = None) -> str:
+    """Map inbound email address → tenant (shared domain rules with OIDC).
+
+    Uses the same exact-domain + ``*:tenant`` wildcard semantics as
+    ``auth.oidc.match_tenant_from_email_domains``. Unmapped addresses fall back
+    to tenant ``default`` (email ingress must not hard-fail delivery).
+    """
+    from auth.oidc import match_tenant_from_email_domains
+
     _, address = parseaddr(email_address)
-    domain = address.rsplit("@", 1)[-1].strip().lower() if "@" in address else ""
+    address = (address or "").strip().lower()
     raw_mapping = mapping if mapping is not None else get_settings().tenant_email_domains
-    fallback_tenant = "default"
-
-    for item in raw_mapping.split(","):
-        raw_item = item.strip()
-        if not raw_item:
-            continue
-
-        mapped_domain, separator, tenant_id = raw_item.partition(":")
-        normalized_domain = mapped_domain.strip().lower()
-        normalized_tenant = tenant_id.strip()
-        if not separator or not normalized_tenant:
-            continue
-        if normalized_domain == "*":
-            fallback_tenant = normalized_tenant
-            continue
-        if normalized_domain == domain:
-            return normalized_tenant
-
-    return fallback_tenant
+    if not address or "@" not in address:
+        return "default"
+    matched = match_tenant_from_email_domains(address, raw_mapping or "")
+    return matched if matched is not None else "default"
 
 
 def resolve_tenant_from_recipient(recipient: str, mapping: str | None = None) -> str:
