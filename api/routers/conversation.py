@@ -25,6 +25,9 @@ from utils.background_tasks import spawn_tracked
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+# Plan §4.4: terminal routes that must carry a durable ticket (or explicit failure).
+_TERMINAL_ESCALATE_ROUTES = frozenset({"human", "error", "error_escalation"})
+
 
 def _release_pipeline_capacity(semaphore: Any) -> None:
     """Drop inflight gauge + release the pipeline semaphore (best-effort)."""
@@ -548,6 +551,53 @@ async def ask(
                             if isinstance(item, dict)
                         ]
 
+                    # Pass through graph-owned escalation identity when present
+                    # (handle_error / agentic create_ticket); otherwise §4.4
+                    # auto-escalates terminal human/error on the normal path.
+                    ticket_id = result.get("ticket_id")
+                    delivery_state = result.get("delivery_state")
+                    if ticket_id is not None:
+                        ticket_id = str(ticket_id) or None
+                    if delivery_state is not None:
+                        delivery_state = str(delivery_state) or None
+
+                    route_norm = str(route or "auto").strip().lower() or "auto"
+                    if (
+                        route_norm in _TERMINAL_ESCALATE_ROUTES
+                        and not ticket_id
+                    ):
+                        from services.escalation import create_escalation
+
+                        try:
+                            esc = await create_escalation(
+                                tenant_id=tenant or "default",
+                                session_id=session_id,
+                                question=question,
+                                source="human_route",
+                                ai_draft=answer or None,
+                                reason=f"route={route_norm}",
+                                trace_id=str(
+                                    result.get("trace_id") or request_id or ""
+                                ),
+                                project_root=Path(
+                                    getattr(_app, "PROJECT_ROOT", Path("."))
+                                ),
+                            )
+                            ticket_id = esc.ticket_id
+                            delivery_state = esc.delivery_state
+                            # Keep the pipeline answer (AI draft). Never inject a
+                            # false "передан оператору" claim when durable failed.
+                            # Operator-facing copy lives on the ticket / ai_draft.
+                        except Exception as esc_exc:
+                            logger.error(
+                                "Auto-escalation on route=%s failed: %s",
+                                route_norm,
+                                esc_exc,
+                                exc_info=True,
+                            )
+                            ticket_id = None
+                            delivery_state = "failed"
+
                     response = AskResponse(
                         answer=answer,
                         quality_score=quality,
@@ -559,6 +609,8 @@ async def ask(
                         suggested_questions=result.get("suggested_questions") or [],
                         requires_confirmation=bool(result.get("requires_confirmation")),
                         action_summary=str(result.get("action_summary") or ""),
+                        ticket_id=ticket_id,
+                        delivery_state=delivery_state,
                     )
                     if (
                         cache_enabled
