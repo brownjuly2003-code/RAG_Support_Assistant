@@ -1,10 +1,12 @@
-"""2.6a — inventory/publish fail-closed fault injection at durable commit boundaries.
+"""2.6a/2.6b — index lifecycle fail-closed fault injection.
 
 Proves named lifecycle fault points:
 1. Inventory-write failure does not change the active manifest and discards the
    unpublished candidate (publish never commits).
 2. Manifest-publish failure does not leave a dangerous live candidate; active
    collection and durable manifest stay on the previous version.
+3. Known-query validation failure (2.6b) does not record inventory or publish,
+   and discards the unpublished candidate with the active manifest unchanged.
 """
 from __future__ import annotations
 
@@ -208,13 +210,14 @@ def _clear_lifecycle_faults() -> Iterator[None]:
         clear_faults()
 
 
-def test_known_fault_points_are_inventory_and_manifest_only() -> None:
+def test_known_fault_points_include_inventory_manifest_and_known_query() -> None:
     from vectordb import index_lifecycle_faults as faults
 
     assert faults.known_fault_points() == frozenset(
         {
             faults.INVENTORY_WRITE,
             faults.MANIFEST_PUBLISH,
+            faults.KNOWN_QUERY,
         }
     )
     with pytest.raises(ValueError, match="Unknown index lifecycle fault point"):
@@ -389,6 +392,99 @@ def test_manifest_publish_fault_discards_candidate_without_live_switch(
     assert leftover == []
 
 
+def test_known_query_fault_keeps_active_manifest_and_discards_candidate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """2.6b: known-query fault before inventory must not publish or leave live candidate."""
+    from vectordb.index_lifecycle_faults import (
+        KNOWN_QUERY,
+        IndexLifecycleFaultError,
+        fault_armed,
+        is_armed,
+    )
+    from vectordb.index_manifest import index_manifest_path, read_index_manifest
+    from vectordb.index_retention import read_retention_inventory
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    active_name = "rag_docs-v-acme-1111111111111111"
+    state.documents[active_name] = [
+        manager.Document(page_content="still active", metadata={"chunk_index": 0})
+    ]
+    _publish(monkeypatch, chroma_directory, active_name)
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    manifest_before = manifest_path.read_bytes()
+    retention_calls: list[str] = []
+    inventory_calls: list[str] = []
+    publish_calls: list[str] = []
+
+    real_record = manager.record_retention_collection
+    real_publish = manager.publish_active_collection
+
+    def _spy_record(*args: Any, **kwargs: Any) -> Any:
+        inventory_calls.append(str(args[1]))
+        return real_record(*args, **kwargs)
+
+    def _spy_publish(*args: Any, **kwargs: Any) -> Any:
+        publish_calls.append(str(args[1]))
+        return real_publish(*args, **kwargs)
+
+    def _spy_retention(*args: Any, **kwargs: Any) -> tuple[str, ...]:
+        retention_calls.append("called")
+        return ()
+
+    monkeypatch.setattr(manager, "record_retention_collection", _spy_record)
+    monkeypatch.setattr(manager, "publish_active_collection", _spy_publish)
+    monkeypatch.setattr(
+        manager,
+        "execute_chroma_retention",
+        _spy_retention,
+        raising=False,
+    )
+
+    with fault_armed(
+        KNOWN_QUERY,
+        IndexLifecycleFaultError("known-query validation injected failure"),
+    ):
+        assert is_armed(KNOWN_QUERY)
+        with pytest.raises(
+            IndexLifecycleFaultError,
+            match="known-query validation injected failure",
+        ):
+            manager.build_vector_store(
+                [
+                    manager.Document(
+                        page_content="candidate body",
+                        metadata={"source": "new.md"},
+                    )
+                ],
+                {"chunk_size": 100, "chunk_overlap": 0},
+                embeddings=_Embeddings(),
+                tenant_id="acme",
+            )
+
+    assert not is_armed(KNOWN_QUERY)
+    candidate_name = state.built_names[-1]
+    assert candidate_name != active_name
+    # Candidate was built (staging succeeded) but never advanced past validation.
+    assert any(event.startswith("build:") for event in state.events)
+    assert inventory_calls == []
+    assert publish_calls == []
+    assert retention_calls == []
+    assert state.deleted_names == [candidate_name]
+    assert active_name in state.documents
+    assert candidate_name not in state.documents
+    assert manifest_path.read_bytes() == manifest_before
+    active = read_index_manifest("acme", chroma_directory=chroma_directory)
+    assert active is not None
+    assert active.active_collection == active_name
+    assert (
+        read_retention_inventory("acme", chroma_directory=chroma_directory) is None
+    )
+
+
 def test_unarmed_build_still_publishes_and_records_inventory(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -416,6 +512,7 @@ def test_unarmed_build_still_publishes_and_records_inventory(
 
     assert not is_armed("inventory_write")
     assert not is_armed("manifest_publish")
+    assert not is_armed("known_query")
 
     store, chunks = manager.build_vector_store(
         [

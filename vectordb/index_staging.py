@@ -10,6 +10,7 @@ from typing import Any
 
 from config.settings import get_settings
 from utils.tenant_naming import physical_tenant_component
+from vectordb.index_lifecycle_faults import KNOWN_QUERY, maybe_inject
 from vectordb.tenant_lock import TenantIndexLockToken, require_tenant_index_lock
 
 _COLLECTION_NAME_MAX_LENGTH = 63
@@ -168,6 +169,9 @@ def validate_staged_known_query(
 ) -> None:
     """Require one deterministic query to return content from the candidate."""
     require_tenant_index_lock(lock_token, tenant_id)
+    # Inject after the lock gate and before known-query smoke so a failed
+    # validation cannot record inventory or publish a live candidate.
+    maybe_inject(KNOWN_QUERY)
     documents = list(chunks)
     ordered_contents = [
         str(getattr(document, "page_content", ""))

@@ -6,8 +6,9 @@ Default behavior is a pure no-op. Faults are armed only in-process by tests
 production paths stay inert unless a caller deliberately arms a point.
 
 2.6a covers the inventory-write and manifest-publish commit boundaries.
-Later slices may reserve additional point names (embeddings, validation,
-cleanup) without changing this module's fail-closed defaults.
+2.6b adds the staged known-query validation boundary (before inventory).
+Later slices may reserve additional point names (embeddings, cleanup)
+without changing this module's fail-closed defaults.
 """
 from __future__ import annotations
 
@@ -21,11 +22,14 @@ FaultAction = Callable[[], None]
 INVENTORY_WRITE: Final[str] = "inventory_write"
 # Durable commit boundary for active-version manifest publish/switch.
 MANIFEST_PUBLISH: Final[str] = "manifest_publish"
+# Staged known-query validation boundary (before inventory/publish).
+KNOWN_QUERY: Final[str] = "known_query"
 
 _KNOWN_POINTS: Final[frozenset[str]] = frozenset(
     {
         INVENTORY_WRITE,
         MANIFEST_PUBLISH,
+        KNOWN_QUERY,
     }
 )
 
@@ -122,6 +126,7 @@ def _normalize_action(
 
 __all__ = [
     "INVENTORY_WRITE",
+    "KNOWN_QUERY",
     "MANIFEST_PUBLISH",
     "IndexLifecycleFaultError",
     "arm_fault",
