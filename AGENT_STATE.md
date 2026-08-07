@@ -1,71 +1,66 @@
 # Agent State
 
-## 2026-08-07 Update-56 — record completed slice 2.4g @ `1ccb39b` ✅ START HERE
+## 2026-08-07 Update-57 — record completed slice 2.4h @ `9761caf` ✅ START HERE
 
-> **Routing authority:** Update-56 supersedes Update-55 **only for
+> **Routing authority:** Update-57 supersedes Update-56 **only for
 > start-point routing**. All older Update blocks below, including headings
 > that literally contain `✅ START HERE`, are **archival**. **Only the
 > first/topmost Update block in this file is authoritative.** Never select
 > work by grepping old `START HERE` markers.
 >
-> **Implementation commit:** `1ccb39b` (`feat(ingestion): fail-closed
-> job-object retention policy`). Slice **2.4g is locally complete and
-> verified** at the bounded fail-closed policy-assessment scope (ownership
-> investigation landed as code; **no** deletion). Previous docs commit:
-> `a78df07` (Update-55). Previous implementation: `68cf045` (slice **2.4f**).
-> The future docs commit that records Update-56 **cannot** be known inside
-> its own content; next session must obtain it from `git log -5 --oneline`.
+> **Implementation commit:** `9761caf` (`feat(ingestion): guard job-object
+> retention command`). Slice **2.4h is locally complete and verified** at
+> the bounded guarded no-op command scope (**no** filesystem mutation).
+> Previous docs commit: `b76c090` (Update-56). Previous implementation:
+> `1ccb39b` (slice **2.4g**). The future docs commit that records Update-57
+> **cannot** be known inside its own content; next session must obtain it
+> from `git log -5 --oneline`.
 >
-> **Implementation paths changed in `1ccb39b` only:**
-> - `ingestion/job_object_retention.py` (new)
-> - `tests/test_job_object_retention.py` (new)
-> - diff stat: 2 files changed, 316 insertions
+> **Implementation paths changed in `9761caf` only:**
+> - `ingestion/job_object_retention.py` — `execute_job_object_retention` +
+>   `JobObjectRetentionExecutionResult` +
+>   `JobObjectRetentionExecutionConflict`
+> - `tests/test_job_object_retention.py`
+> - diff stat: 2 files changed, 247 insertions, 15 deletions
 >
-> **2.4g ownership findings (encoded):**
-> - create path owner: `api/routers/upload.py` (2.4a) — not GC;
-> - durable ref: `IngestionJob.source_path`;
-> - classify/preview: `ingestion.job_object_inventory` (2.4e/2.4f);
-> - index retention (`vectordb/*`) is a **separate** Chroma subsystem and
->   must not delete `job-objects/**` / `legacy-previous/**`;
-> - no pre-existing job-object GC/executor module found.
+> **2.4h behavior (landed):**
+> - keyword-only `execute_job_object_retention(tenant_id=…, entries=…,
+>   expected_candidates=…)`;
+> - `expected_candidates` must be a tuple of unique non-empty strings
+>   (empty tuple allowed); invalid shapes fail closed;
+> - recomputes policy candidates via `assess_job_object_retention_policy`;
+> - conflict when expected ≠ current candidates (non-empty expected fails
+>   under current empty-only policy);
+> - on match returns `status=complete`, `deleted=()`, never mutates FS;
+> - falsey tenant normalizes to `default`.
 >
-> **2.4g behavior (landed):**
-> - pure `assess_job_object_retention_policy(entries)` maps every known
->   inventory classification to `never_auto_delete` with distinct reasons;
-> - `auto_delete_candidates` is always empty under current policy;
-> - unknown classifications fail closed;
-> - no age/budget fields; no filesystem read/write/mutation;
-> - compose path preview→policy remains fail-closed with zero candidates.
->
-> **Verification (this turn):** tests-first red 7 failed
-> (`ModuleNotFoundError`); green focused **25 passed** (retention +
-> inventory); adjacent gate **105 passed** (retention + inventory +
-> upload_idempotency + upload_security + job_contract); scoped Ruff clean;
+> **Verification (this turn):** focused green **32 passed** (retention +
+> inventory); adjacent gate **112 passed**; scoped Ruff clean;
 > `git diff --check` clean; mypy Python 3.12 Success (1 file). Full suite /
 > live services **not** run.
 >
-> **Boundary (completion truth):** slices **2.1 through 2.4g** remain
+> **Boundary (completion truth):** slices **2.1 through 2.4h** remain
 > locally complete **only at documented scopes**. Full plan step 2 and full
-> immutable lifecycle remain **incomplete**: **no** GC/delete executor,
-> **no** filesystem mutation, **no** age/budget delete thresholds, **no**
-> orphan cleanup mutations, **no** admin/CLI operator surface, **no** DB
-> model/migration field, **no** full/live verification, **no** push/deploy
-> or production-readiness claim.
+> immutable lifecycle remain **incomplete**: **no** real filesystem
+> deletion path, **no** age/budget thresholds, **no** orphan cleanup
+> mutations, **no** admin/CLI operator surface, **no** DB model/migration
+> field, **no** full/live verification, **no** push/deploy or
+> production-readiness claim.
 >
 > **Active writer / WIP:** none after this handoff.
 >
-> **Next candidate only (not started):** **2.4h guarded job-object retention
-> command** — require exact expected candidate tuple; under current policy
-> only the empty tuple is valid and execution is a no-op (still **no**
-> filesystem mutation / age-budget invention). Do **not** invent auto-delete
-> classes, edit the plan, or mark 2.4h started/complete from docs alone.
-> Do **not** re-select 2.1–2.4g. Details:
+> **Next candidate only (not started):** **2.4i operator CLI for
+> job-object inventory + policy + guarded command** — load tenant refs,
+> preview/classify, assess policy, optionally execute empty-candidate no-op
+> (still **no** FS mutation under current policy). Do **not** invent
+> auto-delete classes, edit the plan, or mark 2.4i started/complete from
+> docs alone. Do **not** re-select 2.1–2.4h. Details:
 > [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
 >
 > **Protected dirty / untracked state:** see handoff capsule; do not
 > touch/stage/remove without explicit request. Do **not** edit the active
 > untracked plan or its checkboxes. Untracked `_NEXT_SESSION.md` is
-> **archival** if stale — use Update-56 + SESSION_HANDOFF only.
+> **archival** if stale — use Update-57 + SESSION_HANDOFF only.
 >
 > **External gates (not authorized):** push, deploy, live services,
 > destructive Git, production-readiness claims. Live
@@ -75,10 +70,18 @@
 > **Standing execution preference:** **Grok** implements/content-writes;
 > orchestrator protects files, verifies independently, commits scoped
 > results. One user turn = **one** named atomic slice. Explicit-path local
-> commit only. Do **not** re-select 2.1–2.4g.
+> commit only. Do **not** re-select 2.1–2.4h.
 >
 > **Git advisory only:** branch observed as
-> `master...origin/master [ahead 94]` after impl — refresh next session.
+> `master...origin/master [ahead 96]` after impl — refresh next session.
+
+## 2026-08-07 Update-56 — record completed slice 2.4g @ `1ccb39b` ✅ START HERE
+
+> **Historical handoff (superseded by Update-57 for start-point routing).**
+> Older `✅ START HERE` markers in this archive are **not** routing authority.
+> Refresh `git status` first. This Update-56 block previously recorded
+> completed **2.4g** @ `1ccb39b`. Later closed by Update-57 / `9761caf` at
+> guarded no-op command scope. Next-work pointer naming **2.4h** is **stale**.
 
 ## 2026-08-07 Update-55 — record completed slice 2.4f @ `68cf045` ✅ START HERE
 
