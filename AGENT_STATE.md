@@ -1,8 +1,85 @@
 # Agent State
 
+## 2026-08-07 Update-85 — record completed slice 4.3 @ `ad5e435` ✅ START HERE
+
+> **Routing authority:** Update-85 supersedes Update-84 **for start-point
+> routing**. Older `✅ START HERE` blocks are **archival**. Only topmost Update
+> is authoritative.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `ad5e435`
+>   (`feat(escalation): idempotent durable ticket service with delivery state`)
+>   — slice **4.3**
+> - Previous: `f1c846e` — **4.2**; `eaf41f3` — **4.1**
+> - Previous docs: Update-84 `b4fdeea`
+> - Migration **023** (escalation idempotency columns) — apply on real PG only with opt-in
+>
+> **Branch advisory:** was `ahead 149` before docs — refresh.
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** + **3.1a–3.1i** | local documented scopes |
+> | **4.1–4.2** | stream terminal + graph-only parity path |
+> | **4.3** | idempotent durable escalation service + delivery_state |
+> | Full plan §2 / §3 / §4 | **NOT** complete (true outbox worker, auto human-route escalate residual) |
+> | Project / release / production | **NOT** claimed |
+>
+> ---
+>
+> ### Plan §4 map (honest)
+>
+> | Bullet | Local | Residual |
+> |--------|-------|----------|
+> | LangGraph sole path / SSE | partial 4.1–4.2 | true node events; legacy stream when parity off |
+> | one terminal + history | 4.1–4.2 | — parity path |
+> | idempotent ticket+inbox outbox | **4.3** service + migration 023 | background outbox worker / retry queue; auto-escalate every human route |
+> | ticket_id + delivery state; no false operator claim | **4.3** | wire more surfaces; live PG migrate opt-in |
+>
+> ---
+>
+> ### 4.3 contract (COMPLETE @ `ad5e435`)
+>
+> - `services/escalation.py`: `create_escalation` / `create_escalation_sync`
+> - idempotency_key → no duplicate open ticket on retry
+> - durable insert first; inbox delivery second with `delivery_state`
+> - user message never claims operator without durable ticket
+> - Wired: `/api/escalate`, `/api/ask` pipeline exception, `handle_error`,
+>   `create_ticket`; AskResponse gains `ticket_id` / `delivery_state`
+> - Migration **023** (not applied here)
+>
+> **Verification:** 21 passed (escalation service + pipeline exception + graph
+> error + agent tools); Ruff clean. Full suite / live PG **not** run.
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **4.4** — auto-escalate terminal `human`/`error` routes through the
+> same service (not only exception/manual paths) **or** outbox retry worker.
+> Read residual; pick one atomic boundary. Alternate: plan **§5** grounding.
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–3.1i, **4.1–4.3**.
+>
+> ---
+>
+> ### Protected / gates
+>
+> Dirty BACKLOG/README/audit/plan_sol — do not touch. No push/deploy/live
+> multi-service without opt-in. Migration 023 apply requires explicit opt-in.
+>
+> **Git advisory:** refresh status/log — actual Git wins.
+
 ## 2026-08-07 Update-84 — record completed slice 4.2 @ `f1c846e` ✅ START HERE
 
-> **Routing authority:** Update-84 supersedes Update-83 **for start-point
+> **Historical handoff (superseded by Update-85 for start-point routing).**
+> Recorded **4.2** @ `f1c846e`. **4.3** complete under Update-85.
+>
+> **Original routing note (archival):** Update-84 supersedes Update-83 **for start-point
 > routing**. Older blocks with `✅ START HERE` are **archival**. Only the
 > first/topmost Update is authoritative.
 >
