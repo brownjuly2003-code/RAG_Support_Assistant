@@ -237,7 +237,9 @@ def _invoke_llm(
 
     Falls back to bare ``invoke(prompt)`` when the backend rejects kwargs
     (legacy fakes / LocalOllama without generation options).
+    ``LLMBudgetExceeded`` / deadline errors propagate fail-closed.
     """
+    from llm.request_budget import LLMBudgetExceeded
     from llm.role_params import generation_kwargs_for_role
 
     params = generation_kwargs_for_role(role)
@@ -247,7 +249,34 @@ def _invoke_llm(
     try:
         return str(invoke(prompt, **params))
     except TypeError:
-        return str(invoke(prompt))
+        # Distinguish "kwargs not accepted" from other TypeErrors inside invoke.
+        try:
+            return str(invoke(prompt))
+        except LLMBudgetExceeded:
+            raise
+    except LLMBudgetExceeded:
+        raise
+
+
+def _budget_exhausted_state(
+    question: str,
+    trace_id: Optional[str],
+    tenant_id: str,
+    *,
+    reason: str = "exhausted",
+) -> GraphState:
+    """Degraded terminal when per-request LLM budget is hit — never route=auto."""
+    state = create_initial_state(question, trace_id=trace_id, tenant_id=tenant_id)
+    state["answer"] = (
+        "Извините, лимит обработки запроса исчерпан. "
+        "Пожалуйста, упростите вопрос или обратитесь к специалисту поддержки."
+    )
+    state["route"] = "human"
+    state["quality_score"] = 0
+    state["error"] = True
+    state["error_message"] = f"LLM request budget exceeded ({reason})"
+    state["error_node"] = "llm_budget"
+    return state
 
 
 _USE_DEFAULT_BREAKER = object()
@@ -2839,6 +2868,11 @@ class ConversationSession:
         entry points refuse new work after the wall elapses (plan §3.1b).
         """
         from config.settings import get_settings
+        from llm.request_budget import (
+            LLMBudgetExceeded,
+            bind_llm_request_budget_from_settings,
+            clear_llm_request_budget,
+        )
         from utils.request_deadline import (
             RequestDeadlineExceeded,
             bind_request_deadline,
@@ -2859,6 +2893,7 @@ class ConversationSession:
                 # Bind on the worker thread (ContextVar does not cross executors).
                 if wall_sec > 0:
                     bind_request_deadline(wall_sec, source="ask")
+                bind_llm_request_budget_from_settings(settings, source="ask")
                 try:
                     try:
                         if getattr(settings, "agentic_mode", False):
@@ -2892,8 +2927,21 @@ class ConversationSession:
                         return self._timed_out_state(
                             question, wall_sec, trace_id, tenant_id
                         )
+                    except LLMBudgetExceeded as exc:
+                        logger.warning(
+                            "ConversationSession.ask hit LLM budget reason=%s",
+                            getattr(exc, "reason", "exhausted"),
+                            extra={"trace_id": trace_id},
+                        )
+                        return _budget_exhausted_state(
+                            question,
+                            trace_id,
+                            tenant_id,
+                            reason=str(getattr(exc, "reason", "exhausted") or "exhausted"),
+                        )
                 finally:
                     clear_request_deadline()
+                    clear_llm_request_budget()
 
             if budget_sec > 0:
                 result = self._run_within_budget(

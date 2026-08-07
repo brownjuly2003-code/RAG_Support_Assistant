@@ -393,6 +393,26 @@ class Settings:
     llm_role_params_json: str = field(
         default_factory=lambda: os.getenv("RAG_LLM_ROLE_PARAMS", "") or ""
     )
+    # Plan §3.1e: per-request LLM call/token budget (0 = that limit disabled).
+    # Safe production defaults bound multi-node Self-RAG + agentic tool loops.
+    llm_max_calls_per_request: int = field(
+        default_factory=lambda: int(os.getenv("RAG_LLM_MAX_CALLS_PER_REQUEST", "24") or 0)
+    )
+    llm_max_input_tokens_per_request: int = field(
+        default_factory=lambda: int(
+            os.getenv("RAG_LLM_MAX_INPUT_TOKENS_PER_REQUEST", "48000") or 0
+        )
+    )
+    llm_max_output_tokens_per_request: int = field(
+        default_factory=lambda: int(
+            os.getenv("RAG_LLM_MAX_OUTPUT_TOKENS_PER_REQUEST", "8000") or 0
+        )
+    )
+    llm_max_total_tokens_per_request: int = field(
+        default_factory=lambda: int(
+            os.getenv("RAG_LLM_MAX_TOTAL_TOKENS_PER_REQUEST", "50000") or 0
+        )
+    )
     # 800/200 are MEASURED for this corpus, not arbitrary (Phase-0 co-occur gate,
     # docs/operations/2026-06-05-chunk-size-phase0-justification.md): cap=800 keeps
     # 98/100 curated kw-bundles within a single chunk; cap=1200/1600 recover exactly

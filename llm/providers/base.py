@@ -304,6 +304,24 @@ class ProviderBackedLLM:
     def model_name(self) -> str:
         return self._provider.model_name
 
+    def _budget_precheck(self, messages: list[Message], *, phase: str) -> None:
+        from llm.request_budget import check_llm_request_budget
+
+        try:
+            est = estimate_tokens(flatten_messages(messages))
+        except Exception:
+            est = 0
+        check_llm_request_budget(estimated_input_tokens=est, phase=phase)
+
+    def _budget_charge(self, response: LLMResponse, *, phase: str) -> None:
+        from llm.request_budget import charge_llm_request_budget
+
+        charge_llm_request_budget(
+            input_tokens=int(getattr(response, "input_tokens", 0) or 0),
+            output_tokens=int(getattr(response, "output_tokens", 0) or 0),
+            phase=phase,
+        )
+
     def generate(
         self,
         messages: list[Message],
@@ -311,17 +329,21 @@ class ProviderBackedLLM:
         **kwargs: Any,
     ) -> LLMResponse:
         # Cooperative deadline (plan §3.1b): refuse new provider work after wall.
-        # Do not failover after deadline — fail closed on this request.
+        # Per-request LLM budget (plan §3.1e): refuse when call/token caps hit.
+        # Do not failover after deadline/budget — fail closed on this request.
         from utils.request_deadline import check_request_deadline
 
         check_request_deadline("provider.generate")
+        self._budget_precheck(messages, phase="provider.generate")
         if (
             self._fallback_provider is not None
             and self._fallback_cache_is_active is not None
             and self._fallback_cache_is_active()
         ):
             check_request_deadline("provider.generate.fallback_cache")
+            self._budget_precheck(messages, phase="provider.generate.fallback_cache")
             response = self._fallback_provider.generate(messages, tools=tools, **kwargs)
+            self._budget_charge(response, phase="provider.generate.fallback_cache")
             self.last_response = response
             return response
 
@@ -331,6 +353,7 @@ class ProviderBackedLLM:
             if self._fallback_provider is None:
                 raise
             check_request_deadline("provider.generate.fallback")
+            self._budget_precheck(messages, phase="provider.generate.fallback")
             if self._fallback_cache_activate is not None and self._fallback_cache_ttl_sec > 0:
                 self._fallback_cache_activate(self._fallback_cache_ttl_sec)
             if self._on_fallback is not None:
@@ -340,6 +363,7 @@ class ProviderBackedLLM:
                     getattr(exc, "reason", "unavailable") or "unavailable",
                 )
             response = self._fallback_provider.generate(messages, tools=tools, **kwargs)
+        self._budget_charge(response, phase="provider.generate")
         self.last_response = response
         return response
 
@@ -352,14 +376,22 @@ class ProviderBackedLLM:
         from utils.request_deadline import check_request_deadline
 
         check_request_deadline(f"provider.{method_name}")
+        messages = args[0] if args else kwargs.get("messages") or []
+        if isinstance(messages, list):
+            self._budget_precheck(messages, phase=f"provider.{method_name}")
         if (
             self._fallback_provider is not None
             and self._fallback_cache_is_active is not None
             and self._fallback_cache_is_active()
         ):
             check_request_deadline(f"provider.{method_name}.fallback_cache")
+            if isinstance(messages, list):
+                self._budget_precheck(
+                    messages, phase=f"provider.{method_name}.fallback_cache"
+                )
             method = getattr(self, f"_call_{method_name}")
             response = method(self._fallback_provider, *args, **kwargs)
+            self._budget_charge(response, phase=f"provider.{method_name}.fallback_cache")
             self.last_response = response
             return response
 
@@ -370,6 +402,8 @@ class ProviderBackedLLM:
             if self._fallback_provider is None:
                 raise
             check_request_deadline(f"provider.{method_name}.fallback")
+            if isinstance(messages, list):
+                self._budget_precheck(messages, phase=f"provider.{method_name}.fallback")
             if self._fallback_cache_activate is not None and self._fallback_cache_ttl_sec > 0:
                 self._fallback_cache_activate(self._fallback_cache_ttl_sec)
             if self._on_fallback is not None:
@@ -379,6 +413,7 @@ class ProviderBackedLLM:
                     getattr(exc, "reason", "unavailable") or "unavailable",
                 )
             response = getattr(self, f"_call_{method_name}")(self._fallback_provider, *args, **kwargs)
+        self._budget_charge(response, phase=f"provider.{method_name}")
         self.last_response = response
         return response
 
@@ -446,15 +481,27 @@ class ProviderBackedLLM:
         messages: list[Message],
         **kwargs: Any,
     ) -> AsyncIterator[str]:
+        from llm.request_budget import charge_llm_request_budget
         from utils.request_deadline import check_request_deadline
 
         check_request_deadline("provider.generate_stream")
+        self._budget_precheck(messages, phase="provider.generate_stream")
         provider = self._provider
         method = getattr(provider, "generate_stream", None)
         if not _provider_implements_method(provider, "generate_stream") or not callable(method):
             raise ProviderCapabilityError(
                 f"Provider '{provider.provider_id}' does not support streaming"
             )
+        # Charge one call at stream start; token totals refined when available.
+        try:
+            est_in = estimate_tokens(flatten_messages(messages))
+        except Exception:
+            est_in = 0
+        charge_llm_request_budget(
+            input_tokens=est_in,
+            output_tokens=0,
+            phase="provider.generate_stream",
+        )
         async for chunk in method(messages, **kwargs):
             check_request_deadline("provider.generate_stream.chunk")
             yield chunk
@@ -469,7 +516,13 @@ class ProviderBackedLLM:
         check_request_deadline("provider.generate_batch")
         method = getattr(self._provider, "generate_batch", None)
         if _provider_implements_method(self._provider, "generate_batch") and callable(method):
+            # Pre-check each batch item under the shared request budget.
+            for messages in batches:
+                if isinstance(messages, list):
+                    self._budget_precheck(messages, phase="provider.generate_batch")
             responses = method(batches, **kwargs)
+            for response in responses:
+                self._budget_charge(response, phase="provider.generate_batch")
         else:
             responses = [self.generate(messages, **kwargs) for messages in batches]
         if responses:
