@@ -1,34 +1,26 @@
 # Agent State
 
-## 2026-08-07 Update-92 — docs-only transparency after 5.3 / Update-91 ✅ START HERE
+## 2026-08-07 Update-93 — completed slice 6.1 unmeasured agentic gate @ `b3494a0` ✅ START HERE
 
-> **Routing authority:** Update-92 is **docs-only / transparency-only** and
-> supersedes Update-91 **only for start-point routing**. All older Update
-> blocks below, including headings that literally contain `✅ START HERE`,
-> are **archival**. **Only the first/topmost Update block in this file is
-> authoritative.** Never select work by grepping old `START HERE` markers.
->
-> **No new implementation in this docs turn.** Code, tests, plan checkboxes,
-> backlog, README, audit, settings, and API paths were **not** edited here.
-> Project tests were **not** re-run. Protected dirty files and untracked
-> plan/temps were not staged beyond handoff/pointer refresh.
+> **Routing authority:** Update-93 supersedes Update-92 **for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
 >
 > **Known lineage (actual Git wins over any embedded hash):**
-> - Latest implementation: `1cdecb2`
->   (`feat(grade): fail-closed grader path without silent context restore`)
->   — slice **5.3**
-> - Latest impl docs before this turn: `d6ce977`
->   (`docs: record 5.3 grader fail-closed and next section 6`) — Update-91
-> - §5 chain: `7c53bdb` 5.1 → `50bb220` 5.2 → `1cdecb2` **5.3**
-> - §4 chain ends: `6453530` **4.5** (after 4.1–4.4)
-> - §3 chain ends: `fe2f0aa` **3.1i**
-> - §2 fault-injection last: `f347feb` (**2.6g**)
-> - Migrations on disk (not applied): **019–023**
-> - This Update-92 docs commit SHA is **unknown inside its own content**;
->   next session: `git log -5 --oneline`
+> - Latest implementation: `b3494a0`
+>   (`feat(agentic): fail-closed unmeasured quality gate (6.1)`)
+>   - slice **6.1**
+> - Previous: `1cdecb2` — **5.3**; docs chain Update-91/92 after 5.3
+> - 5 chain: `7c53bdb` 5.1  `50bb220` 5.2  `1cdecb2` **5.3**
+> - 4 chain ends: `6453530` **4.5**
+> - 3 chain ends: `fe2f0aa` **3.1i**
+> - 2 fault-injection last: `f347feb` (**2.6g**)
+> - Migrations on disk (not applied): **019-023**
 >
-> **Branch advisory (refresh mandatory):** last observed
-> `master...origin/master [ahead 161]` before this docs commit.
+> **Branch advisory (refresh mandatory):** was `master...origin/master
+> [ahead 163]` after 6.1 impl.
 >
 > **Active writer / WIP:** **none**.
 >
@@ -38,68 +30,67 @@
 >
 > | Band | Status |
 > |------|--------|
-> | **2.1–2.6g** | local residual closed at documented scopes |
-> | **3.1a–3.1i** | local at documented scopes |
-> | **4.1–4.5** | stream parity path + durable escalation + auto human-route + outbox retry **local** |
-> | **5.1–5.3** | grounding + citation-bound claims + grader fail-closed **local** |
-> | Full plan §2 / §3 / §4 / §5 | **NOT** complete (live DoD / metrics / graph tokens open) |
-> | Plan §6+ | **not started** |
+> | **2.1-2.6g** | local residual closed at documented scopes |
+> | **3.1a-3.1i** | local at documented scopes |
+> | **4.1-4.5** | stream parity + durable escalation **local** |
+> | **5.1-5.3** | grounding + citation-bound + grader fail-closed **local** |
+> | **6.1** | agentic unmeasured fail-closed **local** @ `b3494a0` |
+> | Full plan 2–6 | **NOT** complete (live DoD / judge / PII / metrics open) |
 > | Project / release / production | **NOT** claimed |
 >
 > **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
 > Checkboxes stay open until full DoD — **do not** edit them casually from docs.
 >
 > **Transparency maps:**
-> - [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) — full next-session capsule
-> - [`docs/PLAN_CLOSURE_STATUS.md`](docs/PLAN_CLOSURE_STATUS.md) — residual matrix
+> - [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md)
+> - [`docs/PLAN_CLOSURE_STATUS.md`](docs/PLAN_CLOSURE_STATUS.md)
 > - [`_NEXT_SESSION.md`](_NEXT_SESSION.md) — pointer only (not SoT)
 >
 > ---
 >
-> ### Plan §5 map (honest)
+> ### Plan 6.1 contract (local)
 >
-> | Slice | SHA | Local contract |
-> |-------|-----|----------------|
-> | 5.1 | `7c53bdb` | grounding_status; no fake factuality 100; auto gate |
-> | 5.2 | `50bb220` | claims bound to answer `[N]` cited docs |
-> | **5.3** | `1cdecb2` | grader fail-closed; no top-1 force; no empty→raw restore |
-> | Live metrics DoD | — | **OPEN** (opt-in / later) |
+> - Helper `_agentic_unmeasured_gate()` in `agent/graph.py`
+> - All agentic terminals: `quality_source="unmeasured"`, `quality_score=0`,
+>   `relevance_score=0.0`, `grounding_status="not_verified"`, **never**
+>   `route=auto` without measured evaluate/grounding
+> - Removed hardcoded 80/85/90 + `quality_source="fixed"` from agentic flow
+> - Ticket confirm/cancel and keyword order path: `route=agentic` (not auto)
+> - `quality_source` Literal adds `"unmeasured"` (`agent/state.py`)
 >
 > ---
 >
-> ### Known verification (last impl 5.3; not re-run this docs turn)
+> ### Known verification (6.1)
 >
-> - **5.3:** 65 passed focused (doc_grade + grade_docs + provider graph +
->   model routing + grounding/citation + graph error + tools + human-route);
->   Ruff clean.
+> - Focused: **45 passed** (`test_agent_tools` + graph helpers + human-route +
+>   grounding fail-closed + citation-bound); Ruff clean on touched paths
 > - Full suite / live multi-service / migrate / push / deploy **not** run /
->   **not** claimed.
+>   **not** claimed
 >
 > ---
 >
 > ### Open boundaries (honest)
 >
-> - **← next 6.1:** remove agentic `quality_source="fixed"` / constants 80–90
->   in `agent/graph.py` agentic flow (tests-first; no unmeasured auto)
-> - independent judge / PII-injection pre-response (§6 remainder)
-> - §5 live precision/recall/faithfulness gate
+> - **← next 6.2:** pre-response PII / prompt-injection checks (plan §6)
+> - independent judge / calibration (6 remainder)
+> - agentic path through full measured evaluate when context exists (later)
+> - 5 live precision/recall/faithfulness gate
 > - true LangGraph token/node SSE; parity default still off
 > - outbox retry schedule wiring (4.6 optional)
 > - multi-replica durable session version
-> - live multi-service + migrations **019–023** (**opt-in**)
-> - plan §7–§10; full suite / release / production
+> - live multi-service + migrations **019-023** (**opt-in**)
+> - plan 7-10; full suite / release / production
 >
 > ---
 >
-> ### Next candidate only (not started) — default
+> ### Next candidate only (not started) - default
 >
-> named **6.1 — remove agentic fixed quality scores** (tests-first):
-> - find agentic returns with `quality_source="fixed"` and scores 80/85/90;
-> - fail-closed: cannot reach `route=auto` on unmeasured fixed scores;
-> - prefer real evaluate/grounding path or human/`not_verified`;
+> named **6.2 - pre-response PII / document prompt-injection checks**:
+> - run before terminal answer delivery;
+> - policy: redact / refuse / human — not post-response monitoring alone;
 > - still **no** live multi-service / push / deploy / migrate without opt-in.
 >
-> **Do not re-select:** 2.1–2.6g, **3.1a–3.1i**, **4.1–4.5**, **5.1–5.3**.
+> **Do not re-select:** 2.1-2.6g, **3.1a-3.1i**, **4.1-4.5**, **5.1-5.3**, **6.1**.
 >
 > ---
 >
@@ -109,16 +100,15 @@
 > - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
 >   `plan_sol_23_07_26`
 > - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
->   `_NEXT_SESSION.md` (**pointer only — not routing authority**),
->   `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
->   casually), architecture HTML, etc.
+>   `_NEXT_SESSION.md` (pointer only), `rag-remediation-plan-2026-08-03.md`
+>   (active plan — no casual checkbox edits), architecture HTML, etc.
 >
 > ---
 >
 > ### External gates (not authorized without opt-in)
 >
 > push, deploy, live PostgreSQL/Redis/Celery/Chroma drills, `alembic upgrade`
-> (incl. **019–023**), destructive Git, production-readiness claims.
+> (incl. **019-023**), destructive Git, production-readiness claims.
 >
 > **Standing preference:** one user turn = one named atomic slice; local commit
 > only; quality > speed; Grok implements.
@@ -127,9 +117,16 @@
 > `git log -8 --oneline` at session start — **actual Git wins**.
 
 
+## 2026-08-07 Update-92 — docs-only transparency after 5.3 / Update-91 ✅ START HERE
+
+> **Historical handoff (superseded by Update-93 for start-point routing).**
+> Docs-only transparency after **5.3** @ `1cdecb2`. Next was 6.1 — now done
+> @ `b3494a0`.
+
+
 ## 2026-08-07 Update-91 — record completed slice 5.3 @ `1cdecb2` ✅ START HERE
 
-> **Historical handoff (superseded by Update-92 for start-point routing).**
+> **Historical handoff (superseded by Update-93 for start-point routing).**
 > Recorded **5.3** @ `1cdecb2`; docs `d6ce977`. Transparency under Update-92.
 >
 > **Original routing note (archival):** Update-91 supersedes Update-90 **for start-point

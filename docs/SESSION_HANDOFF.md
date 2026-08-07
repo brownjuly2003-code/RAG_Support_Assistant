@@ -1,7 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 — **Update-92** (docs-only transparency after
-**5.3** @ `1cdecb2` + docs `d6ce977`).  
+**Обновлено:** 2026-08-07 — **Update-93** after **6.1** @ `b3494a0`.  
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории AGENT_STATE.
 
@@ -12,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -8 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-92**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-93**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **направление DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-92; dirty
+**Не использовать:** старые `✅ START HERE` ниже Update-93; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` как единственный SoT
 (это pointer only).
 
@@ -28,24 +27,19 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **implementation** | `1cdecb2` — **5.3** grader fail-closed |
-| Latest **docs before this Update** | `d6ce977` — Update-91 |
-| This Update-92 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | was `master...origin/master [ahead 161]` — **refresh mandatory** |
+| Latest **implementation** | `b3494a0` — **6.1** agentic unmeasured fail-closed |
+| Previous quality path | `1cdecb2` — **5.3** grader fail-closed |
+| Branch advisory | was `master...origin/master [ahead 163]` — **refresh mandatory** |
 | Active writer / WIP | **none** |
-| Locally complete (documented scopes only) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** |
+| Locally complete (documented scopes only) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1** |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered (quality path) | **6.1** remove agentic fixed quality scores |
+| Next ordered (quality path) | **6.2** pre-response PII / prompt-injection |
 | Gates | **no** push / deploy / live multi-service / migrate 019–023 without **explicit opt-in** |
 
-**This Update-92 is docs-only:** no code/test/plan-checkbox change; project
-tests **not** re-run here. Implementation state unchanged after `1cdecb2`.
-
-**Last known verification (5.3; not re-run this docs turn):** focused **65
-passed** (doc_grade + grade_docs + provider graph + model routing + grounding/
-citation + graph error + tools + human-route); Ruff clean. Full suite / live
-drills **not** run.
+**Last known verification (6.1):** focused **45 passed** (`test_agent_tools` +
+graph helpers + human-route + grounding fail-closed + citation-bound); Ruff
+clean on touched paths. Full suite / live drills **not** run.
 
 ---
 
@@ -56,8 +50,8 @@ drills **not** run.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -8 --oneline          # actual Git wins
-5. Read ONLY top Update-92 in AGENT_STATE.md + this file §1–§6
-6. Default work: 6.1 (below). Announce: slice 1/1
+5. Read ONLY top Update-93 in AGENT_STATE.md + this file §1–§6
+6. Default work: 6.2 (below). Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
 ```
@@ -76,8 +70,8 @@ claims, bulk plan checkbox edits.
 | **2** index lifecycle | **2.1–2.6g** local residual closed | live PG/Redis/Celery/Chroma drills |
 | **3** execution / session / budget | **3.1a–3.1i** local | multi-replica durable session version |
 | **4** pipeline + escalation | **4.1–4.5** local | true graph tokens; parity default off; Celery/cron for outbox retry |
-| **5** grounding fail-closed | **5.1–5.3** local | live metrics DoD (precision/recall/faithfulness ×3); relevance≠quality residual |
-| **6** judge / safety / agentic | **not started** | fixed agentic scores; independent judge; PII/injection pre-response |
+| **5** grounding fail-closed | **5.1–5.3** local | live metrics DoD; relevance≠quality residual |
+| **6** judge / safety / agentic | **6.1** local | **6.2** PII/injection; independent judge; measured agentic evaluate |
 | **7** eval gate | partial historical | honest skip policy; dataset expansion |
 | **8–9** widget / cache / SLO | partial historical | as plan |
 | **10** final verification | not started | after 1–9 + opt-in evidence |
@@ -114,7 +108,7 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | 4.4 | `0371971` | auto-escalate terminal human/error on normal ask |
 | 4.5 | `6453530` | outbox retry API (`retry_failed_deliveries`) |
 
-### §5 grounding (quality path — latest)
+### §5 grounding
 
 | Slice | SHA | Surface |
 |-------|-----|---------|
@@ -122,9 +116,28 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | **5.2** | `50bb220` | claims bound to answer `[N]` cited docs only |
 | **5.3** | `1cdecb2` | grader fail-closed; no top-1 force; no empty→raw restore |
 
+### §6 judge / safety / agentic
+
+| Slice | SHA | Surface |
+|-------|-----|---------|
+| **6.1** | **`b3494a0`** | agentic unmeasured gate; no fixed 80/85/90; never auto unmeasured |
+
 ---
 
 ## 5. Contracts (latest complete slices)
+
+### 6.1 @ `b3494a0`
+
+- Helper: `agent/graph.py::_agentic_unmeasured_gate()`
+- All agentic terminals set:
+  - `quality_source="unmeasured"`
+  - `quality_score=0`, `relevance_score=0.0`
+  - `grounding_status="not_verified"`, `factuality_score=0`
+  - `route="agentic"` (**never** `auto` without measured evaluate/grounding)
+- Removed hardcoded 80/85/90 and `quality_source="fixed"` from agentic flow
+- Ticket confirm/cancel and keyword order path no longer claim `route=auto`
+- `GraphState.quality_source` allows `"unmeasured"`
+- Static AST/string guard in `tests/test_agent_tools.py`
 
 ### 5.3 @ `1cdecb2`
 
@@ -132,27 +145,12 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 - Grader LLM error → **reject** document (not accept)
 - No forced top-1 re-injection after rejection
 - Outcomes: `ok` | `empty_retrieval` | `all_rejected` | `grader_error` | `partial_grader_error`
-- `all_rejected` / `grader_error` / `empty_retrieval` → `knowledge_gap` + `not_verified`
-- `resolve_generation_context_docs`: after `doc_grade_reason` set, empty
-  `graded_docs` does **not** fall back to `context_docs`
-- Simple complexity skips verify → `not_verified` → **human** (not auto);
-  Self-RAG retry still allowed for grade failures (not for simple skip)
+- Empty graded after grade ≠ silent restore of raw context
 
-### 5.2 @ `50bb220`
+### 5.2 / 5.1
 
-- `apply_citation_bound_claims` — evidence only in **cited** `[N]` docs
-- Missing/invalid citations → `not_verified`; auto needs `citation_bound`
-
-### 5.1 @ `7c53bdb`
-
-- `agent/grounding.py` — `verified` | `unsupported` | `not_verified`
+- Citation-bound claims; `verified` | `unsupported` | `not_verified`
 - Never factuality 100 on skip/disabled/no-context/short/truncation
-- `NONE` → vacuous verified + score 0
-
-### 4.5 / 4.4 (escalation residual note)
-
-- Outbox retry is **callable API only** (no Celery beat / admin HTTP yet)
-- Auto human-route on `/api/ask` success path wired in 4.4
 
 ---
 
@@ -162,13 +160,10 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 |------|--------|------|
 | `agent/grounding.py` | 5.1–5.2 | grounding status + citation bind + auto gate |
 | `agent/doc_grade.py` | **5.3** | grade outcomes + generation doc selection |
-| `agent/graph.py` | 3.1*, 4.3, 5.1–5.3 | nodes: grade, generate, verify, route, handle_error |
-| `agent/state.py` | 3.1i, 4.3, 5.1, 5.3 | GraphState fields |
+| `agent/graph.py` | 3.1*, 4.3, 5.1–5.3, **6.1** | nodes + agentic unmeasured gate |
+| `agent/state.py` | 3.1i, 4.3, 5.1, 5.3, **6.1** | GraphState fields |
 | `services/escalation.py` | 4.3–4.5 | durable ticket + outbox retry |
-| `api/routers/conversation.py` | 3.1a/f, 4.1–4.4 | ask/stream + escalate |
-| `utils/request_executor.py` | 3.1a | bounded pool |
-| `utils/request_deadline.py` | 3.1b | ContextVar deadline |
-| `llm/request_budget.py` | 3.1e–f | call/token budget |
+| `api/routers/conversation.py` | 3.1a/f, 4.1–4.4, 6.1 note | ask/stream + escalate |
 | job-object / index stack | 2.1–2.6g | **do not re-select** |
 
 ---
@@ -185,53 +180,54 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 8. Claims need cited `[N]` docs for auto  
 9. Empty graded after grade ≠ silent restore of raw context  
 10. Simple path without verify ≠ auto  
+11. **Agentic unmeasured path ≠ `route=auto` and ≠ fake quality 80/85/90**  
 
 ---
 
 ## 8. Verification recipes (last known green; re-run when coding)
 
+### §6.1 band
+
+```powershell
+python -m pytest tests/test_agent_tools.py tests/test_graph_helpers.py tests/test_human_route_escalation.py tests/test_grounding_fail_closed.py tests/test_citation_bound_grounding.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step6-1-<unique>
+python -m ruff check agent/graph.py agent/state.py api/routers/conversation.py tests/test_agent_tools.py
+```
+
 ### §5 band (5.1–5.3)
 
 ```powershell
 python -m pytest tests/test_doc_grade_fail_closed.py tests/test_grade_docs.py tests/test_provider_graph_integration.py tests/test_model_routing.py tests/test_grounding_fail_closed.py tests/test_fact_verification.py tests/test_citation_bound_grounding.py tests/test_graph_error_handling.py tests/test_agent_tools.py tests/test_human_route_escalation.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step5-band-<unique>
-python -m ruff check agent/doc_grade.py agent/grounding.py agent/graph.py agent/state.py
-```
-
-### Escalation band (4.3–4.5)
-
-```powershell
-python -m pytest tests/test_escalation_service.py tests/test_escalation_outbox_retry.py tests/test_human_route_escalation.py tests/test_pipeline_exception_escalation.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step4-esc-<unique>
 ```
 
 Full suite / live / migrate — **not** the default gate for a single slice.
 
 ---
 
-## 9. Next named candidate: 6.1 (not started)
+## 9. Next named candidate: 6.2 (not started)
 
-**Name:** **6.1 — remove agentic fixed quality scores**  
-**Why next:** plan §6; agentic paths still set `quality_source="fixed"` and
-constants ~80/85/90 → can imply measured quality without a real gate.
+**Name:** **6.2 — pre-response PII / document prompt-injection checks**  
+**Why next:** plan §6; runtime protection before terminal answer, not only
+post-response monitoring.
 
 ### Intent
 
-1. Find all agentic branches that set fixed `quality_score` / `quality_source="fixed"`  
-   (primarily `agent/graph.py` agentic flow).  
-2. Tests-first: agentic terminal answers must not claim auto on fake scores.  
-3. Prefer: run through same grounding/quality gate as normal path, **or**
-   force `route=human` / `not_verified` until real evaluation runs.  
-4. Do **not** invent calibration artifacts or live judges in the same slice.
+1. Run PII + document prompt-injection checks **before** delivering terminal
+   answer (normal + agentic paths as applicable).  
+2. Policy explicitly chooses redact / refuse / human.  
+3. Tests-first fail-closed: injected or PII-leaking answer cannot silently
+   ship as clean `auto`.  
+4. Do **not** invent full independent judge or live calibration in the same
+   slice.
 
-### Out of 6.1 without opt-in
+### Out of 6.2 without opt-in
 
 - independent production judge policy (later 6.x)  
-- full PII/injection surface (can be 6.2)  
 - live benchmarks  
-- re-select 2.x / 3.1* / 4.1–4.5 / 5.1–5.3  
+- re-select 2.x / 3.1* / 4.1–4.5 / 5.1–5.3 / **6.1**  
 
 ### Alternates (only if user prioritizes)
 
-- **6.2** pre-response PII / prompt-injection checks  
+- independent judge policy  
 - **4.6** Celery/cron wiring for `retry_failed_deliveries`  
 - stream graph-only default (`STREAMING_RAG_PARITY`)  
 - live §1 / migrate 019–023 (**explicit opt-in only**)  
@@ -252,8 +248,8 @@ constants ~80/85/90 → can imply measured quality without a real gate.
 ## 11. Do not
 
 - Grep old `✅ START HERE` for work selection  
-- Re-select **2.1–2.6g**, **3.1a–3.1i**, **4.1–4.5**, **5.1–5.3**  
-- Claim full plan §2/§3/§4/§5 or production readiness  
+- Re-select **2.1–2.6g**, **3.1a–3.1i**, **4.1–4.5**, **5.1–5.3**, **6.1**  
+- Claim full plan §2/§3/§4/§5/§6 or production readiness  
 - Edit plan checkboxes casually  
 - Push / deploy / live multi-service / migrate without explicit opt-in  
 - Start a second named slice in the same user turn  
