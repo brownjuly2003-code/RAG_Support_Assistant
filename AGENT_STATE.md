@@ -1,8 +1,95 @@
 # Agent State
 
+## 2026-08-07 Update-102 — completed slice 8.4 production secrets fail-closed @ `68a30b2` ✅ START HERE
+
+> **Routing authority:** Update-102 supersedes Update-101 **only for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `68a30b2`
+>   (`feat(security): reject production placeholders and dev-admin bypass (8.4)`)
+>   - slice **8.4**
+> - Previous: `13a9a5b` — **8.3**; docs Update-101 `19f44a5`
+> - 8 chain: `0bee13e` 8.1 · `756562e` 8.2 · `13a9a5b` 8.3 · **`68a30b2` 8.4**
+> - Migrations on disk (not applied): **019–023**
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **8.1–8.4** | local at documented scopes |
+> | Full plan §1–§10 | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
+>
+> ---
+>
+> ### 8.4 contract (local)
+>
+> - `is_known_insecure_secret` / `production_secret_rejection_reason` helpers
+> - Production rejects empty + known placeholders for DB_ENCRYPTION_KEY,
+>   JWT_SECRET, SESSION_SECRET_KEY (incl. `.env.example` sample)
+> - JWT/session min length **32**; encryption min length **16**
+> - `ALLOW_DEV_ADMIN_LOGIN` **forbidden** in production (even with hash set)
+> - `ADMIN_PASSWORD_HASH` still required; no bypass path
+>
+> ---
+>
+> ### Known verification (8.4 this turn)
+>
+> - `tests/test_settings_production_secrets.py` + cors hardening: **17 passed**
+> - Ruff clean
+> - Full suite / live / push / deploy **not** claimed
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next §8 residual:** Playwright widget E2E (cross-origin bootstrap)
+> - 7 residual: merge-base; dataset; live provider gate
+> - 6 residual: calibration; measured agentic
+> - 5 residual: live metrics ×3
+> - DEP-01 docs-site dependency audit residual
+> - live multi-service + migrate **019–023** (**opt-in**)
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **8.5 — Playwright widget E2E** (cross-origin bootstrap for 8.1),
+> **or** §7 merge-base baseline / other residual — one atomic only.
+>
+> **Do not re-select:** through **8.4**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked:** plan file, `_NEXT_SESSION.md` (pointer), pytest temps, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live drills, `alembic upgrade`, destructive Git, production claims.
+>
+> **Standing preference:** one named atomic slice per turn; local commit only.
+
+
 ## 2026-08-07 Update-101 — completed slice 8.3 OIDC identity binding @ `13a9a5b` ✅ START HERE
 
-> **Routing authority:** Update-101 supersedes Update-100 **only for start-point
+> **Historical handoff (superseded by Update-102 for start-point routing).**
+> Recorded **8.3** @ `13a9a5b`. Next was 8.4 — now done @ `68a30b2`.
+>
+> **Original routing note (archival):** Update-101 supersedes Update-100 **only for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old
