@@ -1391,9 +1391,14 @@ def make_generate_node(
 
             new_state: GraphState = {**state, "answer": answer, "citations": citations}
             if complexity == "simple":
+                # Plan §5.1: simple path skips verify_facts — not a free 100.
+                from agent.grounding import status_for_skip
+
+                g_status, g_score, g_skipped = status_for_skip(reason="simple_complexity")
                 new_state["claims"] = []
-                new_state["fact_verification_skipped"] = True
-                new_state["factuality_score"] = 100
+                new_state["fact_verification_skipped"] = g_skipped
+                new_state["factuality_score"] = g_score
+                new_state["grounding_status"] = g_status
             if usage_recorded:
                 new_state = _apply_llm_usage(new_state, usage)
             log_step(trace_id, "generate", new_state)
@@ -1415,15 +1420,25 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
             return state
         trace_id = state.get("trace_id", "unknown")
         try:
+            from agent.grounding import (
+                status_for_claims,
+                status_for_empty_claim_parse,
+                status_for_no_claims_none,
+                status_for_short_answer,
+                status_for_skip,
+                status_for_truncated_coverage,
+            )
             from config.settings import get_settings
 
             settings = get_settings()
             if not getattr(settings, "fact_verification_enabled", True):
+                g_status, g_score, g_skipped = status_for_skip(reason="disabled")
                 new_state: GraphState = {
                     **state,
                     "claims": [],
-                    "fact_verification_skipped": True,
-                    "factuality_score": 100,
+                    "fact_verification_skipped": g_skipped,
+                    "factuality_score": g_score,
+                    "grounding_status": g_status,
                 }
                 log_step(trace_id, "verify_facts", new_state)
                 return new_state
@@ -1444,21 +1459,25 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
             )
 
             if not answer or not context_text:
+                g_status, g_score, g_skipped = status_for_skip(reason="no_answer_or_context")
                 new_state = {
                     **state,
                     "claims": [],
-                    "fact_verification_skipped": True,
-                    "factuality_score": 100,
+                    "fact_verification_skipped": g_skipped,
+                    "factuality_score": g_score,
+                    "grounding_status": g_status,
                 }
                 log_step(trace_id, "verify_facts", new_state)
                 return new_state
 
             if len(re.findall(r"\w+", answer)) < 3:
+                g_status, g_score, g_skipped = status_for_short_answer()
                 new_state = {
                     **state,
                     "claims": [],
-                    "fact_verification_skipped": False,
-                    "factuality_score": 100,
+                    "fact_verification_skipped": g_skipped,
+                    "factuality_score": g_score,
+                    "grounding_status": g_status,
                 }
                 log_step(trace_id, "verify_facts", new_state)
                 return new_state
@@ -1481,22 +1500,39 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                 tool_calls=state.get("tool_calls") or None,
             )
             if raw_claims.upper().startswith("NONE"):
+                g_status, g_score, g_skipped = status_for_no_claims_none()
                 new_state = {
                     **state,
                     "claims": [],
-                    "fact_verification_skipped": False,
-                    "factuality_score": 100,
+                    "fact_verification_skipped": g_skipped,
+                    "factuality_score": g_score,
+                    "grounding_status": g_status,
                 }
                 new_state = _apply_llm_usage(new_state, usage)
                 log_step(trace_id, "verify_facts", new_state)
                 return new_state
 
-            claim_lines = [
+            all_claim_lines = [
                 line.lstrip("- ").strip()
                 for line in raw_claims.splitlines()
                 if line.strip().startswith("-")
             ]
-            claim_lines = claim_lines[:10]
+            max_claims = 10
+            claim_lines = all_claim_lines[:max_claims]
+            if not claim_lines:
+                g_status, g_score, g_skipped = status_for_empty_claim_parse()
+                new_state = {
+                    **state,
+                    "claims": [],
+                    "fact_verification_skipped": g_skipped,
+                    "factuality_score": g_score,
+                    "grounding_status": g_status,
+                }
+                if usage_recorded:
+                    new_state = _apply_llm_usage(new_state, usage)
+                log_step(trace_id, "verify_facts", new_state)
+                return new_state
+
             consensus_enabled = bool(
                 getattr(settings, "fact_verify_consensus_enabled", False)
             )
@@ -1569,18 +1605,25 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                     {"text": claim, "supported": supported, "evidence": evidence}
                 )
 
-            if claims_result:
-                factuality = int(
-                    100 * sum(1 for claim in claims_result if claim["supported"]) / len(claims_result)
-                )
-            else:
-                factuality = 100
+            g_status, factuality, g_skipped = status_for_claims(claims_result)
+            # Claim budget truncation: unverified remainder → whole answer not_verified.
+            truncated = status_for_truncated_coverage(
+                extracted_claim_count=len(all_claim_lines),
+                verified_claim_count=len(claims_result),
+                max_claims=max_claims,
+            )
+            if truncated is not None:
+                g_status = truncated
+                # Keep measured fraction for observability, but status blocks auto.
+                if not claims_result:
+                    factuality = 0
 
             new_state = {
                 **state,
                 "claims": claims_result,
-                "fact_verification_skipped": False,
+                "fact_verification_skipped": g_skipped,
                 "factuality_score": factuality,
+                "grounding_status": g_status,
             }
             if usage_recorded:
                 new_state = _apply_llm_usage(new_state, usage)
@@ -1764,12 +1807,13 @@ def make_route_or_retry_node(
     min_quality: int = 80,
     min_relevance: float = 0.8,
 ) -> Callable[[GraphState], GraphState]:
-    """Узел route_or_retry: решает — финал или повторная попытка.
+    """Узел route_or_retry: финал / retry / human (plan §5.1 fail-closed).
 
     Логика:
-    - quality >= min_quality → route="auto" → END
-    - quality < min_quality и iteration < max_iterations → route="retry"
-    - quality < min_quality и итерации кончились → route="human" → END
+    - auto только при quality+relevance **и** grounding_allows_auto
+      (context, knowledge_gap=false, grounding_status=verified, factuality);
+    - иначе retry при оставшихся итерациях, иначе human;
+    - scores None → human (не auto).
     """
 
     def node(state: GraphState) -> GraphState:
@@ -1777,17 +1821,44 @@ def make_route_or_retry_node(
             return state
         trace_id = state.get("trace_id", "unknown-trace-id")
         try:
+            from agent.grounding import (
+                DEFAULT_MIN_FACTUALITY_FOR_AUTO,
+                grounding_allows_auto,
+            )
+            from config.settings import get_settings
+
             q = state.get("quality_score")
             r = state.get("relevance_score")
             iteration = state.get("iteration", 0)
             max_iter = state.get("max_iterations", 2)
 
+            try:
+                min_fact = int(
+                    getattr(
+                        get_settings(),
+                        "min_factuality_for_auto",
+                        DEFAULT_MIN_FACTUALITY_FOR_AUTO,
+                    )
+                    or DEFAULT_MIN_FACTUALITY_FOR_AUTO
+                )
+            except Exception:
+                min_fact = DEFAULT_MIN_FACTUALITY_FOR_AUTO
+
+            scores_ok = (
+                q is not None
+                and r is not None
+                and q >= min_quality
+                and r >= min_relevance
+            )
+            grounded = grounding_allows_auto(state, min_factuality=min_fact)
+
             route: Literal["auto", "human", "retry"]
             if q is None or r is None:
                 route = "human"
-            elif q >= min_quality and r >= min_relevance:
+            elif scores_ok and grounded:
                 route = "auto"
             elif iteration < max_iter:
+                # Retry for weak scores or incomplete grounding/retrieval.
                 route = "retry"
             else:
                 route = "human"

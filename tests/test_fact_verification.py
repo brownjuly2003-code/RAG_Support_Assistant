@@ -46,7 +46,7 @@ def test_mixed_claims_give_partial_score() -> None:
     assert out["factuality_score"] == 50
 
 
-def test_no_claims_answer_scores_100() -> None:
+def test_no_claims_answer_vacuous_verified_not_100() -> None:
     from agent.graph import make_verify_facts_node
     from agent.state import create_initial_state
 
@@ -59,7 +59,9 @@ def test_no_claims_answer_scores_100() -> None:
 
     out = node(state)
 
-    assert out["factuality_score"] == 100
+    # Plan §5.1: NONE is not a free factuality 100.
+    assert out["factuality_score"] == 0
+    assert out["grounding_status"] == "verified"
     assert out["claims"] == []
 
 
@@ -80,7 +82,8 @@ def test_disabled_via_settings_skips_verification(monkeypatch) -> None:
     out = node(state)
 
     assert out["fact_verification_skipped"] is True
-    assert out["factuality_score"] == 100
+    assert out["factuality_score"] == 0
+    assert out["grounding_status"] == "not_verified"
     llm.invoke.assert_not_called()
 
     settings_module._settings = None

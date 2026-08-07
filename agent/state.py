@@ -88,6 +88,8 @@ class GraphState(TypedDict, total=False):
     quality_source: Optional[Literal["llm", "fixed", "heuristic"]]
     claims: list[dict]
     factuality_score: int
+    # Plan §5.1: verified | unsupported | not_verified (never fake-perfect on skip).
+    grounding_status: Literal["verified", "unsupported", "not_verified"]
     fact_verification_skipped: bool
     complexity: Literal["simple", "complex", "global", "unknown"]
     retrieval_strategy: Literal["vector", "hybrid", "graph", "factcard"]
@@ -168,8 +170,10 @@ def create_initial_state(
         quality_score=None,
         claims=[],
         factuality_score=0,
+        grounding_status="not_verified",
         fact_verification_skipped=False,
         complexity="unknown",
+        knowledge_gap=False,
         retrieval_strategy="hybrid",
         route=None,
         trace_id=trace_id,
