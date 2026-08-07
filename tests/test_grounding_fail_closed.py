@@ -39,6 +39,14 @@ def test_status_for_claims_partial_and_full() -> None:
     assert st == "verified"
     assert score == 100
 
+    # §5.2: without citation_bound, effective support is zero when required.
+    st, score, _ = g.status_for_claims(
+        [{"supported": True, "citation_bound": False}],
+        require_citation_bound=True,
+    )
+    assert st == "unsupported"
+    assert score == 0
+
 
 def test_grounding_allows_auto_requires_verified_and_context() -> None:
     base = {
@@ -47,7 +55,7 @@ def test_grounding_allows_auto_requires_verified_and_context() -> None:
         "graded_docs": [{"page_content": "x"}],
         "grounding_status": "verified",
         "factuality_score": 100,
-        "claims": [{"supported": True}],
+        "claims": [{"supported": True, "citation_bound": True}],
     }
     assert g.grounding_allows_auto(base) is True
 
@@ -62,6 +70,12 @@ def test_grounding_allows_auto_requires_verified_and_context() -> None:
 
     low = {**base, "factuality_score": 50}
     assert g.grounding_allows_auto(low) is False
+
+    unbound = {
+        **base,
+        "claims": [{"supported": True, "citation_bound": False}],
+    }
+    assert g.grounding_allows_auto(unbound) is False
 
 
 def test_verify_disabled_is_not_verified_not_100(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -121,7 +135,7 @@ def test_verify_all_supported_verified() -> None:
     ]
     node = make_verify_facts_node(llm)
     state = create_initial_state(question="?", trace_id="t")
-    state["answer"] = "Python was released in 1991 and is open source."
+    state["answer"] = "Python was released in 1991 [1] and is open source [1]."
     state["graded_docs"] = [{"page_content": "Python 1.0 released 1991. Open source."}]
 
     out = node(state)
@@ -155,7 +169,7 @@ def test_route_allows_auto_when_grounding_ok() -> None:
     state["graded_docs"] = [{"page_content": "x"}]
     state["grounding_status"] = "verified"
     state["factuality_score"] = 100
-    state["claims"] = [{"text": "c", "supported": True}]
+    state["claims"] = [{"text": "c", "supported": True, "citation_bound": True}]
 
     out = node(state)
     assert out["route"] == "auto"
@@ -170,7 +184,7 @@ def test_route_blocks_auto_on_knowledge_gap_even_if_scores_high() -> None:
     state["graded_docs"] = [{"page_content": "x"}]
     state["grounding_status"] = "verified"
     state["factuality_score"] = 100
-    state["claims"] = [{"supported": True}]
+    state["claims"] = [{"supported": True, "citation_bound": True}]
     state["iteration"] = 2
     state["max_iterations"] = 2
 

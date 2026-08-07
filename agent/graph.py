@@ -1421,6 +1421,7 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
         trace_id = state.get("trace_id", "unknown")
         try:
             from agent.grounding import (
+                apply_citation_bound_claims,
                 status_for_claims,
                 status_for_empty_claim_parse,
                 status_for_no_claims_none,
@@ -1605,7 +1606,24 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                     {"text": claim, "supported": supported, "evidence": evidence}
                 )
 
-            g_status, factuality, g_skipped = status_for_claims(claims_result)
+            # Plan §5.2: bind claims to answer [N] citations (cited docs only).
+            claims_result, citation_override = apply_citation_bound_claims(
+                answer=str(answer or ""),
+                claims=claims_result,
+                docs=docs,
+            )
+            g_status, factuality, g_skipped = status_for_claims(
+                claims_result,
+                require_citation_bound=True,
+            )
+            if citation_override is not None:
+                # Missing/invalid citations: never treat as verified auto path.
+                g_status = citation_override
+                if citation_override == "not_verified" and factuality > 0:
+                    # Keep partial observability score only when some binds existed;
+                    # pure missing citations → zero effective factuality for auto.
+                    if not any(bool(c.get("citation_bound")) for c in claims_result):
+                        factuality = 0
             # Claim budget truncation: unverified remainder → whole answer not_verified.
             truncated = status_for_truncated_coverage(
                 extracted_claim_count=len(all_claim_lines),

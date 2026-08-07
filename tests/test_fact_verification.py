@@ -17,13 +17,16 @@ def test_all_supported_claims_give_score_100() -> None:
     ]
     node = make_verify_facts_node(llm)
     state = create_initial_state(question="?", trace_id="t")
-    state["answer"] = "Python was released in 1991 and is open source."
+    # §5.2: substantial claims require answer citations [N].
+    state["answer"] = "Python was released in 1991 [1] and is open source [1]."
     state["graded_docs"] = [{"page_content": "Python 1.0 released 1991. Open source."}]
 
     out = node(state)
 
     assert out["factuality_score"] == 100
+    assert out["grounding_status"] == "verified"
     assert all(claim["supported"] for claim in out["claims"])
+    assert all(claim.get("citation_bound") for claim in out["claims"])
 
 
 def test_mixed_claims_give_partial_score() -> None:
@@ -38,12 +41,14 @@ def test_mixed_claims_give_partial_score() -> None:
     ]
     node = make_verify_facts_node(llm)
     state = create_initial_state(question="?", trace_id="t")
-    state["answer"] = "Python was created by Guido in 1987."
+    state["answer"] = "Python was created by Guido in 1987 [1]."
     state["graded_docs"] = [{"page_content": "Python was created by Guido van Rossum."}]
 
     out = node(state)
 
+    # One claim citation-bound+supported, one unsupported → 50 and not verified auto.
     assert out["factuality_score"] == 50
+    assert out["grounding_status"] == "unsupported"
 
 
 def test_no_claims_answer_vacuous_verified_not_100() -> None:
@@ -133,12 +138,13 @@ def test_verify_facts_records_trace_calls(monkeypatch) -> None:
     ]
     node = make_verify_facts_node(llm)
     state = create_initial_state(question="?", trace_id="trace-facts")
-    state["answer"] = "Возврат доступен 14 дней, чек не требуется."
+    state["answer"] = "Возврат доступен 14 дней [1], чек не требуется [1]."
     state["graded_docs"] = [{"page_content": "Возврат доступен 14 дней при наличии чека."}]
 
     out = node(state)
 
     assert out["factuality_score"] == 50
+    assert out["grounding_status"] == "unsupported"
     assert [item["node_name"] for item in captured] == [
         "verify_facts.extract_claims",
         "verify_facts.verify_claim",
