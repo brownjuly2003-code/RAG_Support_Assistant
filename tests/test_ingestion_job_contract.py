@@ -44,6 +44,7 @@ def _assert_no_secret_leak(text: str) -> None:
     for marker in _SECRET_MARKERS:
         assert marker not in text, f"secret/path leaked in logs/response: {marker!r}"
 
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MIGRATION_PATH = PROJECT_ROOT / "alembic" / "versions" / "019_ingestion_jobs.py"
 
@@ -106,9 +107,7 @@ def test_ingestion_job_orm_metadata_contract() -> None:
     assert cols.status.nullable is False
     status_default = cols.status.default.arg if cols.status.default is not None else None
     server_status = (
-        str(cols.status.server_default.arg)
-        if cols.status.server_default is not None
-        else None
+        str(cols.status.server_default.arg) if cols.status.server_default is not None else None
     )
     assert status_default == "queued" or (server_status is not None and "queued" in server_status)
 
@@ -119,9 +118,7 @@ def test_ingestion_job_orm_metadata_contract() -> None:
     assert cols.started_at.nullable is True
     assert cols.finished_at.nullable is True
 
-    check_constraints = [
-        c for c in table.constraints if isinstance(c, CheckConstraint)
-    ]
+    check_constraints = [c for c in table.constraints if isinstance(c, CheckConstraint)]
     assert check_constraints, "status must be constrained via CheckConstraint"
     check_sql = " ".join(str(c.sqltext) for c in check_constraints).lower()
     for status in ("queued", "running", "completed", "failed"):
@@ -129,10 +126,7 @@ def test_ingestion_job_orm_metadata_contract() -> None:
     for banned in ("pending", "success", "error", "partial"):
         assert banned not in check_sql
 
-    index_cols = {
-        tuple(idx.columns.keys()): idx.name
-        for idx in table.indexes
-    }
+    index_cols = {tuple(idx.columns.keys()): idx.name for idx in table.indexes}
     assert any(set(cols) >= {"tenant_id", "created_at"} for cols in index_cols), (
         f"missing tenant+created_at index, got {index_cols}"
     )
@@ -160,7 +154,11 @@ def test_migration_019_revision_chain_and_schema() -> None:
     assert "tenant_id" in upgrade_src
     assert "source_path" in upgrade_src
     assert "celery_task_id" in upgrade_src
-    assert "CheckConstraint" in upgrade_src or "checkconstraint" in upgrade_src.lower() or "ck_ingestion" in upgrade_src
+    assert (
+        "CheckConstraint" in upgrade_src
+        or "checkconstraint" in upgrade_src.lower()
+        or "ck_ingestion" in upgrade_src
+    )
 
     # Dependency-safe downgrade: drop indexes then table (or drop table only).
     assert "ingestion_jobs" in downgrade_src
@@ -340,9 +338,7 @@ def test_rebuild_vector_store_from_docs_returns_exact_publication(
     def fake_get_retriever(vs, chunks=None, tenant_id: str = "default"):
         return f"retriever:{tenant_id}"
 
-    monkeypatch.setattr(
-        api_app, "_build_vector_store_with_publication", fake_with_publication
-    )
+    monkeypatch.setattr(api_app, "_build_vector_store_with_publication", fake_with_publication)
     monkeypatch.setattr(api_app, "_build_vector_store", fake_ordinary)
     monkeypatch.setattr(api_app, "_get_retriever", fake_get_retriever)
     monkeypatch.setattr(
@@ -447,6 +443,10 @@ def test_non_default_upload_reuses_job_and_completes_durably(
         "previous_collection",
         "manifest_generation",
     }
+    # 2.5b: durable first-class lifecycle bind columns mirror the receipt.
+    assert job.index_active_collection == "rag_docs_acme-corp_g2"
+    assert job.index_previous_collection == "rag_docs_acme-corp_g1"
+    assert job.index_manifest_generation == 2
 
 
 def test_non_default_upload_persists_null_publication(
@@ -495,6 +495,10 @@ def test_non_default_upload_persists_null_publication(
     assert isinstance(job.result, dict)
     assert "index_publication" in job.result
     assert job.result["index_publication"] is None
+    # Explicit null publication clears/leaves bind columns unbound.
+    assert job.index_active_collection is None
+    assert job.index_previous_collection is None
+    assert job.index_manifest_generation is None
 
 
 @pytest.mark.parametrize(
@@ -818,7 +822,9 @@ def test_worker_propagates_tenant_and_records_completed(
         def load_documents(self, path: str):
             return docs
 
-    def fake_build(loaded_docs, chunk_config, embeddings=None, tenant_id: str = "default", **kwargs):
+    def fake_build(
+        loaded_docs, chunk_config, embeddings=None, tenant_id: str = "default", **kwargs
+    ):
         calls["docs"] = loaded_docs
         calls["tenant_id"] = tenant_id
         calls["chunk_config"] = chunk_config
@@ -1620,3 +1626,114 @@ def test_worker_load_and_index_boundary_logs_omit_secret_exception_message(
             )
 
     _assert_no_secret_leak(caplog.text)
+
+
+def test_index_publication_bind_values_from_receipt() -> None:
+    from ingestion import jobs as jobs_mod
+
+    bind = jobs_mod.index_publication_bind_values(
+        {
+            "status": "ok",
+            "index_publication": {
+                "tenant_id": "t1",
+                "active_collection": "t1__v2",
+                "previous_collection": "t1__v1",
+                "manifest_generation": 2,
+            },
+        }
+    )
+    assert bind == {
+        "index_active_collection": "t1__v2",
+        "index_previous_collection": "t1__v1",
+        "index_manifest_generation": 2,
+    }
+    assert jobs_mod.index_publication_bind_values({"index_publication": None}) == {
+        "index_active_collection": None,
+        "index_previous_collection": None,
+        "index_manifest_generation": None,
+    }
+    assert jobs_mod.index_publication_bind_values(None)["index_active_collection"] is None
+    assert jobs_mod.index_publication_bind_values({})["index_active_collection"] is None
+
+
+def test_job_public_dict_includes_index_publication_bind(
+    ingestion_jobs_db,
+) -> None:
+    from db.models import IngestionJob
+    from ingestion import jobs as jobs_mod
+
+    job_id = uuid.uuid4()
+    with jobs_mod.sync_session() as session:
+        session.add(
+            IngestionJob(
+                id=job_id,
+                tenant_id="bind-tenant",
+                filename="a.md",
+                source_path="data/uploads/a.md",
+                status="completed",
+                result={
+                    "index_publication": {
+                        "active_collection": "c2",
+                        "manifest_generation": 3,
+                    }
+                },
+                index_active_collection="c2",
+                index_previous_collection="c1",
+                index_manifest_generation=3,
+            )
+        )
+        session.commit()
+        job = session.get(IngestionJob, job_id)
+
+    public = jobs_mod.job_public_dict(job)
+    assert public["index_publication_bind"] == {
+        "tenant_id": "bind-tenant",
+        "active_collection": "c2",
+        "previous_collection": "c1",
+        "manifest_generation": 3,
+    }
+
+
+def test_sync_mark_completed_writes_index_bind_columns(
+    ingestion_jobs_db,
+) -> None:
+    from db.models import IngestionJob
+    from ingestion import jobs as jobs_mod
+
+    job_id = uuid.uuid4()
+    token = "lease-token-bind"
+    with jobs_mod.sync_session() as session:
+        session.add(
+            IngestionJob(
+                id=job_id,
+                tenant_id="sync-bind",
+                filename="b.md",
+                source_path="data/uploads/b.md",
+                status="running",
+                lease_token=token,
+            )
+        )
+        session.commit()
+
+    jobs_mod.sync_mark_completed(
+        job_id,
+        "sync-bind",
+        token,
+        {
+            "status": "ok",
+            "index_publication": {
+                "tenant_id": "sync-bind",
+                "active_collection": "sync__v9",
+                "previous_collection": "sync__v8",
+                "manifest_generation": 9,
+            },
+        },
+    )
+
+    with jobs_mod.sync_session() as session:
+        job = session.get(IngestionJob, job_id)
+        assert job is not None
+        assert job.status == "completed"
+        assert job.index_active_collection == "sync__v9"
+        assert job.index_previous_collection == "sync__v8"
+        assert job.index_manifest_generation == 9

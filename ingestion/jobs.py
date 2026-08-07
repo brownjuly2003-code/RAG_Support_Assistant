@@ -140,9 +140,67 @@ def _serialize_ts(value: datetime | None) -> str | None:
     return value.isoformat()
 
 
+def index_publication_bind_values(
+    result: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Derive durable index lifecycle bind columns from a completion result.
+
+    When ``result`` carries a non-null ``index_publication`` dict (2.4c/2.4d
+    shape), copy active/previous/generation onto first-class columns so the
+    job row can be queried without parsing JSON. Null or missing publication
+    clears the bind columns (no invented collection names). Does not touch
+    filesystem state or deletion policy.
+    """
+    empty = {
+        "index_active_collection": None,
+        "index_previous_collection": None,
+        "index_manifest_generation": None,
+    }
+    if not isinstance(result, dict):
+        return empty
+    pub = result.get("index_publication")
+    if pub is None:
+        return empty
+    if not isinstance(pub, dict):
+        return empty
+
+    active = pub.get("active_collection")
+    previous = pub.get("previous_collection")
+    generation = pub.get("manifest_generation")
+
+    active_s = str(active).strip() if active is not None else ""
+    previous_s = str(previous).strip() if previous is not None else ""
+    gen_i: int | None
+    try:
+        gen_i = int(generation) if generation is not None else None
+    except (TypeError, ValueError):
+        gen_i = None
+
+    return {
+        "index_active_collection": active_s or None,
+        "index_previous_collection": previous_s or None,
+        "index_manifest_generation": gen_i,
+    }
+
+
+def job_index_bind_public(job: IngestionJob) -> dict[str, Any] | None:
+    """Public lifecycle bind snapshot, or None when no collection is bound."""
+    active = getattr(job, "index_active_collection", None)
+    previous = getattr(job, "index_previous_collection", None)
+    generation = getattr(job, "index_manifest_generation", None)
+    if active is None and previous is None and generation is None:
+        return None
+    return {
+        "tenant_id": job.tenant_id,
+        "active_collection": active,
+        "previous_collection": previous,
+        "manifest_generation": generation,
+    }
+
+
 def job_public_dict(job: IngestionJob) -> dict[str, Any]:
     # lease_token is intentionally omitted — never public.
-    return {
+    payload: dict[str, Any] = {
         "job_id": str(job.id),
         "task_id": job.celery_task_id,
         "tenant_id": job.tenant_id,
@@ -157,7 +215,9 @@ def job_public_dict(job: IngestionJob) -> dict[str, Any]:
         "meta": {
             "filename": job.filename,
         },
+        "index_publication_bind": job_index_bind_public(job),
     }
+    return payload
 
 
 class IdempotencyConflictError(ValueError):
@@ -392,6 +452,10 @@ async def mark_job_completed(
         job.result = result
         job.error = None
         job.finished_at = _utc_now()
+        bind = index_publication_bind_values(result)
+        job.index_active_collection = bind["index_active_collection"]
+        job.index_previous_collection = bind["index_previous_collection"]
+        job.index_manifest_generation = bind["index_manifest_generation"]
         await session.commit()
         await session.refresh(job)
         return job
@@ -563,6 +627,7 @@ def sync_mark_completed(
 ) -> None:
     """CAS completed transition; requires exact running lease ownership."""
     now = _utc_now()
+    bind = index_publication_bind_values(result)
     with sync_session() as session:
         res = session.execute(
             update(IngestionJob)
@@ -580,6 +645,9 @@ def sync_mark_completed(
                 lease_token=None,
                 # Preserve last successful heartbeat for observability.
                 lease_expires_at=None,
+                index_active_collection=bind["index_active_collection"],
+                index_previous_collection=bind["index_previous_collection"],
+                index_manifest_generation=bind["index_manifest_generation"],
             )
         )
         if int(getattr(res, "rowcount", 0) or 0) != 1:

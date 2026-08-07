@@ -1,4 +1,5 @@
 """SQLAlchemy ORM models for RAG Support Assistant."""
+
 from __future__ import annotations
 
 import uuid
@@ -31,9 +32,7 @@ class Base(DeclarativeBase):
 
 class Session(Base):
     __tablename__ = "sessions"
-    __table_args__ = (
-        UniqueConstraint("id", "tenant_id", name="uq_sessions_id_tenant_id"),
-    )
+    __table_args__ = (UniqueConstraint("id", "tenant_id", name="uq_sessions_id_tenant_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -297,9 +296,7 @@ class KbDraft(Base):
 
 class DocumentStats(Base):
     __tablename__ = "document_stats"
-    __table_args__ = (
-        UniqueConstraint("doc_id", "tenant_id", name="uq_document_stats_doc_tenant"),
-    )
+    __table_args__ = (UniqueConstraint("doc_id", "tenant_id", name="uq_document_stats_doc_tenant"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     doc_id: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -339,6 +336,12 @@ class IngestionJob(Base):
             postgresql_where=text("idempotency_key_hash IS NOT NULL"),
             sqlite_where=text("idempotency_key_hash IS NOT NULL"),
         ),
+        # Lifecycle bind lookup: which jobs published into a collection.
+        Index(
+            "ix_ingestion_jobs_tenant_id_index_active_collection",
+            "tenant_id",
+            "index_active_collection",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -368,6 +371,21 @@ class IngestionJob(Base):
     payload_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     source_ready_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
+        nullable=True,
+    )
+    # Durable index lifecycle bind (plan 2.5b). Mirrors result.index_publication
+    # active/previous/generation when a versioned publish succeeds; null when
+    # no publication was recorded. Never deletes job-objects or index data.
+    index_active_collection: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+    index_previous_collection: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+    index_manifest_generation: Mapped[int | None] = mapped_column(
+        Integer,
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
