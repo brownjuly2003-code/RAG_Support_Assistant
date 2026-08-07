@@ -1,26 +1,22 @@
 # Agent State
 
-## 2026-08-07 Update-93 — completed slice 6.1 unmeasured agentic gate @ `b3494a0` ✅ START HERE
+## 2026-08-07 Update-94 — completed slice 6.2 pre-response safety @ `d0317e9` ✅ START HERE
 
-> **Routing authority:** Update-93 supersedes Update-92 **for start-point
+> **Routing authority:** Update-94 supersedes Update-93 **for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old
 > `START HERE` markers.
 >
 > **Known lineage (actual Git wins over any embedded hash):**
-> - Latest implementation: `b3494a0`
->   (`feat(agentic): fail-closed unmeasured quality gate (6.1)`)
->   - slice **6.1**
-> - Previous: `1cdecb2` — **5.3**; docs chain Update-91/92 after 5.3
-> - 5 chain: `7c53bdb` 5.1  `50bb220` 5.2  `1cdecb2` **5.3**
-> - 4 chain ends: `6453530` **4.5**
-> - 3 chain ends: `fe2f0aa` **3.1i**
-> - 2 fault-injection last: `f347feb` (**2.6g**)
+> - Latest implementation: `d0317e9`
+>   (`feat(safety): pre-response PII and prompt-injection gate (6.2)`)
+>   - slice **6.2**
+> - Previous: `b3494a0` — **6.1**; `1cdecb2` — **5.3**
 > - Migrations on disk (not applied): **019-023**
 >
 > **Branch advisory (refresh mandatory):** was `master...origin/master
-> [ahead 163]` after 6.1 impl.
+> [ahead 165]` after 6.2 impl.
 >
 > **Active writer / WIP:** **none**.
 >
@@ -30,91 +26,89 @@
 >
 > | Band | Status |
 > |------|--------|
-> | **2.1-2.6g** | local residual closed at documented scopes |
-> | **3.1a-3.1i** | local at documented scopes |
-> | **4.1-4.5** | stream parity + durable escalation **local** |
-> | **5.1-5.3** | grounding + citation-bound + grader fail-closed **local** |
-> | **6.1** | agentic unmeasured fail-closed **local** @ `b3494a0` |
-> | Full plan 2–6 | **NOT** complete (live DoD / judge / PII / metrics open) |
+> | **2.1-2.6g** … **5.1-5.3** | local at documented scopes |
+> | **6.1** | unmeasured agentic fail-closed **local** @ `b3494a0` |
+> | **6.2** | pre-response PII + injection gate **local** @ `d0317e9` |
+> | Full plan §6 | **NOT** complete (independent judge / calibration open) |
 > | Project / release / production | **NOT** claimed |
 >
 > **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
-> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+> Checkboxes stay open until full DoD.
 >
 > **Transparency maps:**
 > - [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md)
 > - [`docs/PLAN_CLOSURE_STATUS.md`](docs/PLAN_CLOSURE_STATUS.md)
-> - [`_NEXT_SESSION.md`](_NEXT_SESSION.md) — pointer only (not SoT)
+> - [`_NEXT_SESSION.md`](_NEXT_SESSION.md) — pointer only
 >
 > ---
 >
-> ### Plan 6.1 contract (local)
+> ### Plan 6.2 contract (local)
 >
-> - Helper `_agentic_unmeasured_gate()` in `agent/graph.py`
-> - All agentic terminals: `quality_source="unmeasured"`, `quality_score=0`,
->   `relevance_score=0.0`, `grounding_status="not_verified"`, **never**
->   `route=auto` without measured evaluate/grounding
-> - Removed hardcoded 80/85/90 + `quality_source="fixed"` from agentic flow
-> - Ticket confirm/cancel and keyword order path: `route=agentic` (not auto)
-> - `quality_source` Literal adds `"unmeasured"` (`agent/state.py`)
+> - Module: `agent/response_safety.py`
+> - Policy: `allow` | `redact` (PII via `utils.pii`) | `refuse` + `route=human`
+>   (document/answer prompt-injection markers)
+> - Graph node `response_safety` after `route_or_retry` before suggest/log
+> - Agentic terminals via `_finalize_agentic_terminal`
+> - Confirmation UX: PII redact only (no injection refuse on confirm prompts)
+> - State: `safety_action`, `safety_reasons`
 >
 > ---
 >
-> ### Known verification (6.1)
+> ### Known verification (6.2)
 >
-> - Focused: **45 passed** (`test_agent_tools` + graph helpers + human-route +
->   grounding fail-closed + citation-bound); Ruff clean on touched paths
-> - Full suite / live multi-service / migrate / push / deploy **not** run /
->   **not** claimed
+> - Focused: **50+15 passed** (response_safety + agent_tools + pii + graph error +
+>   grounding + human-route + citation + provider graph + evaluate wiring);
+>   Ruff clean on touched paths
+> - Full suite / live / migrate / push / deploy **not** run / **not** claimed
 >
 > ---
 >
 > ### Open boundaries (honest)
 >
-> - **← next 6.2:** pre-response PII / prompt-injection checks (plan §6)
-> - independent judge / calibration (6 remainder)
-> - agentic path through full measured evaluate when context exists (later)
-> - 5 live precision/recall/faithfulness gate
-> - true LangGraph token/node SSE; parity default still off
-> - outbox retry schedule wiring (4.6 optional)
-> - multi-replica durable session version
+> - **← next 6.3:** independent judge policy (or evaluator schema / monitoring
+>   labeling per plan §6 remainder)
+> - calibration artifact / human-labelled thresholds
+> - agentic full evaluate when KB context exists
+> - 5 live metrics DoD; graph SSE tokens; outbox schedule; multi-replica
 > - live multi-service + migrations **019-023** (**opt-in**)
-> - plan 7-10; full suite / release / production
+> - plan 7-10
 >
 > ---
 >
 > ### Next candidate only (not started) - default
 >
-> named **6.2 - pre-response PII / document prompt-injection checks**:
-> - run before terminal answer delivery;
-> - policy: redact / refuse / human — not post-response monitoring alone;
+> named **6.3 - independent judge policy fail-closed**:
+> - production policy: judge independent of generator/fact-checker;
+> - judge unavailable → `not_verified` / human, not heuristic auto;
 > - still **no** live multi-service / push / deploy / migrate without opt-in.
 >
-> **Do not re-select:** 2.1-2.6g, **3.1a-3.1i**, **4.1-4.5**, **5.1-5.3**, **6.1**.
+> **Do not re-select:** 2.1-2.6g, 3.1a-3.1i, 4.1-4.5, 5.1-5.3, **6.1**, **6.2**.
 >
 > ---
 >
 > ### Protected dirty / untracked
 >
-> Do not touch/stage/remove without explicit request:
 > - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
 >   `plan_sol_23_07_26`
-> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
->   `_NEXT_SESSION.md` (pointer only), `rag-remediation-plan-2026-08-03.md`
->   (active plan — no casual checkbox edits), architecture HTML, etc.
+> - **Untracked:** plan file, pointer, pytest temps, presentations, etc.
 >
 > ---
 >
 > ### External gates (not authorized without opt-in)
 >
-> push, deploy, live PostgreSQL/Redis/Celery/Chroma drills, `alembic upgrade`
-> (incl. **019-023**), destructive Git, production-readiness claims.
+> push, deploy, live drills, `alembic upgrade` 019-023, destructive Git,
+> production-readiness claims.
 >
-> **Standing preference:** one user turn = one named atomic slice; local commit
-> only; quality > speed; Grok implements.
+> **Standing preference:** one named atomic slice per user turn; local commit
+> only; quality > speed.
 >
-> **Git advisory:** refresh `git status --short --branch` and
-> `git log -8 --oneline` at session start — **actual Git wins**.
+> **Git advisory:** refresh `git status` + `git log -8` — **actual Git wins**.
+
+
+## 2026-08-07 Update-93 — completed slice 6.1 unmeasured agentic gate @ `b3494a0` ✅ START HERE
+
+> **Historical handoff (superseded by Update-94 for start-point routing).**
+> Recorded **6.1** @ `b3494a0`. Next was 6.2 — now done @ `d0317e9`.
 
 
 ## 2026-08-07 Update-92 — docs-only transparency after 5.3 / Update-91 ✅ START HERE

@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-07 (Update-93 after 6.1)  
+**Date:** 2026-08-07 (Update-94 after 6.2)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-93**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-94**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -23,7 +23,7 @@
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.5 local** | **OPEN** true graph tokens; parity default off; schedule wiring | partial |
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
-| **6** judge / safety / agentic parity | **6.1 local** | OPEN (judge/PII/injection) | **yes** |
+| **6** judge / safety / agentic parity | **6.1–6.2 local** | OPEN (independent judge/calibration) | **yes** |
 | **7** eval gate fail-closed | partial historical | OPEN | **yes** |
 | **8** widget / edge security | partial historical | OPEN | yes |
 | **9** cache / architecture / SLO | partial historical | OPEN | soft |
@@ -45,12 +45,13 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 2 | §5.2 citation-bound claims | **done** `50bb220` |
 | 3 | §5.3 grader fail-closed | **done** `1cdecb2` |
 | 4 | §6.1 remove agentic fixed quality scores | **done** `b3494a0` |
-| 5 | **§6.2 pre-response PII / prompt-injection** | **← next** |
-| 6 | §6.x independent judge + calibration | not started |
-| 7 | §7 regression gate honest skip policy | not started |
-| 8 | §4 residual (graph-only default / true SSE tokens) | residual |
-| 9 | §2/§3 residual if product needs | residual |
-| 10 | §1 + §10 | **opt-in live only** |
+| 5 | §6.2 pre-response PII / prompt-injection | **done** `d0317e9` |
+| 6 | **§6.3 independent judge policy** | **← next** |
+| 7 | §6.x calibration + measured agentic evaluate | not started |
+| 8 | §7 regression gate honest skip policy | not started |
+| 9 | §4 residual (graph-only default / true SSE tokens) | residual |
+| 10 | §2/§3 residual if product needs | residual |
+| 11 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -137,12 +138,13 @@ Last §2 fault-injection impl: `f347feb` (**2.6g**). **Do not re-select 2.x.**
 | Slice | Status | SHA | Contract |
 |-------|--------|-----|----------|
 | **6.1** | **done local** | `b3494a0` | unmeasured agentic gate; no fixed 80/85/90; never auto without measure |
-| **6.2** | **← next** | — | pre-response PII + document prompt-injection |
-| 6.x | not started | — | independent judge; calibration; measured evaluate when context exists |
+| **6.2** | **done local** | `d0317e9` | pre-response PII redact + injection refuse→human; graph + agentic |
+| **6.3** | **← next** | — | independent judge policy fail-closed |
+| 6.x | not started | — | calibration; measured agentic evaluate when context exists |
 
-**6.1 local residual (honest):** agentic answers are deliverable as
-`route=agentic` with `quality_source=unmeasured` — not yet run through full
-evaluate/grounding when KB context is available (later parity).
+**6.1 residual:** agentic not yet full evaluate/grounding when KB context exists.  
+**6.2 residual:** pattern-based injection (not ML); online evaluators still
+monitoring-only (by design); no production secret inventory expansion.
 
 ---
 
