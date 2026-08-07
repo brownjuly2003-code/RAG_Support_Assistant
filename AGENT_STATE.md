@@ -1,63 +1,72 @@
 # Agent State
 
-## 2026-08-07 Update-58 — record completed slice 2.4i @ `f0f79b9` ✅ START HERE
+## 2026-08-07 Update-59 — record completed slice 2.4j @ `ea3f59e` ✅ START HERE
 
-> **Routing authority:** Update-58 supersedes Update-57 **only for
+> **Routing authority:** Update-59 supersedes Update-58 **only for
 > start-point routing**. All older Update blocks below, including headings
 > that literally contain `✅ START HERE`, are **archival**. **Only the
 > first/topmost Update block in this file is authoritative.** Never select
 > work by grepping old `START HERE` markers.
 >
-> **Implementation commit:** `f0f79b9` (`feat(scripts): operator CLI for
-> job-object inventory preview`). Slice **2.4i is locally complete and
-> verified** at the bounded operator-CLI scope (**no** filesystem mutation
-> under current empty-candidate policy). Previous docs commit: `c3b94c3`
-> (Update-57). Previous implementation: `9761caf` (slice **2.4h**). The
-> future docs commit that records Update-58 **cannot** be known inside its
-> own content; next session must obtain it from `git log -5 --oneline`.
+> **Implementation commit:** `ea3f59e` (`feat(ingestion): annotate
+> failed-transition job-object ownership`). Slice **2.4j is locally
+> complete and verified** at the bounded ownership-annotation scope (**no**
+> deletion). Previous docs commit: `887fbb3` (Update-58). Previous
+> implementation: `f0f79b9` (slice **2.4i**). The future docs commit that
+> records Update-59 **cannot** be known inside its own content; next session
+> must obtain it from `git log -5 --oneline`.
 >
-> **Implementation paths changed in `f0f79b9` only:**
-> - `scripts/preview_job_object_inventory.py` (new)
-> - `tests/test_preview_job_object_inventory_cli.py` (new)
-> - diff stat: 2 files changed, 485 insertions
+> **Implementation paths changed in `ea3f59e` only:**
+> - `ingestion/job_object_orphans.py` (new)
+> - `tests/test_job_object_orphans.py` (new)
+> - diff stat: 2 files changed, 372 insertions
 >
-> **2.4i behavior (landed):**
-> - operator CLI `scripts/preview_job_object_inventory.py` for one tenant;
-> - `run_operator_preview` composes known refs → inventory preview →
->   fail-closed policy assessment → optional guarded no-op execute;
-> - CLI flags: `--tenant`, `--project-root`, `--upload-root`, `--execute`,
->   `--json`; DB load via `sync_list_known_job_object_refs` (injectable in
->   tests); non-default tenant uses physical upload component;
-> - under current policy `--execute` always yields `deleted=()` with no FS
->   mutation; **no** age/budget invention, **no** admin API, **no** reopen
->   of 2.4e–2.4h domain semantics.
+> **2.4j ownership findings (encoded):**
+> - upload create order: job row → exclusive immutable write →
+>   legacy-previous preserve → flat refresh (flat only after both writes);
+> - after successful immutable write, indexing/publish failure leaves the
+>   object on disk with failed job status; classifier still
+>   ``protected`` — **intentional retention**, not a GC candidate;
+> - partial create failures terminal-fail without publishing; referenced
+>   objects remain protected;
+> - ``unrecorded`` / ``untrusted`` / legacy recovery stay never
+>   auto-deletable (aligns with 2.4g).
 >
-> **Verification (this turn):** focused green **39 passed** (CLI +
-> retention + inventory); adjacent gate **119 passed**; scoped Ruff clean;
-> `git diff --check` clean; mypy Python 3.12 Success (1 file). Full suite /
-> live services **not** run.
+> **2.4j behavior (landed):**
+> - pure `annotate_job_object_transition_context(entries, job_statuses=…)`;
+> - protected+failed → `retained_after_failed_transition`;
+> - protected+completed → `retained_durable_original`;
+> - protected+queued/running → `retained_in_flight`;
+> - protected without status → `retained_unknown_job_status`;
+> - unrecorded / untrusted / legacy_previous → distinct ownership labels;
+> - **every** annotation has `auto_delete_eligible=False`;
+> - unknown classification fails closed; **no** FS mutation / age-budget.
 >
-> **Boundary (completion truth):** slices **2.1 through 2.4i** remain
+> **Verification (this turn):** focused green **47 passed** (orphans +
+> CLI + retention + inventory); adjacent gate **127 passed**; scoped Ruff
+> clean; `git diff --check` clean; mypy Python 3.12 Success (1 file). Full
+> suite / live services **not** run.
+>
+> **Boundary (completion truth):** slices **2.1 through 2.4j** remain
 > locally complete **only at documented scopes**. Full plan step 2 and full
 > immutable lifecycle remain **incomplete**: **no** real filesystem
-> deletion path, **no** age/budget thresholds, **no** orphan cleanup
-> mutations, **no** admin HTTP operator surface, **no** DB model/migration
-> field, **no** full/live verification, **no** push/deploy or
-> production-readiness claim.
+> deletion path, **no** age/budget thresholds, **no** orphan **cleanup
+> mutations**, **no** status-load wiring into CLI yet, **no** admin HTTP
+> surface, **no** DB model/migration field, **no** full/live verification,
+> **no** push/deploy or production-readiness claim.
 >
 > **Active writer / WIP:** none after this handoff.
 >
-> **Next candidate only (not started):** **2.4j failed-transition job-object
-> orphan ownership investigation** — read-only first (what remains after
-> failed upload/transition; still **no** deletion mutations without a later
-> test-first contract). Do **not** invent auto-delete classes, edit the
-> plan, or mark 2.4j started/complete from docs alone. Do **not** re-select
-> 2.1–2.4i. Details: [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+> **Next candidate only (not started):** **2.4k load tenant job statuses +
+> wire transition annotations into operator CLI** — still **no** deletion.
+> Do **not** invent auto-delete classes, edit the plan, or mark 2.4k
+> started/complete from docs alone. Do **not** re-select 2.1–2.4j. Details:
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
 >
 > **Protected dirty / untracked state:** see handoff capsule; do not
 > touch/stage/remove without explicit request. Do **not** edit the active
 > untracked plan or its checkboxes. Untracked `_NEXT_SESSION.md` is
-> **archival** if stale — use Update-58 + SESSION_HANDOFF only.
+> **archival** if stale — use Update-59 + SESSION_HANDOFF only.
 >
 > **External gates (not authorized):** push, deploy, live services,
 > destructive Git, production-readiness claims. Live
@@ -67,10 +76,18 @@
 > **Standing execution preference:** **Grok** implements/content-writes;
 > orchestrator protects files, verifies independently, commits scoped
 > results. One user turn = **one** named atomic slice. Explicit-path local
-> commit only. Do **not** re-select 2.1–2.4i.
+> commit only. Do **not** re-select 2.1–2.4j.
 >
 > **Git advisory only:** branch observed as
-> `master...origin/master [ahead 98]` after impl — refresh next session.
+> `master...origin/master [ahead 100]` after impl — refresh next session.
+
+## 2026-08-07 Update-58 — record completed slice 2.4i @ `f0f79b9` ✅ START HERE
+
+> **Historical handoff (superseded by Update-59 for start-point routing).**
+> Older `✅ START HERE` markers in this archive are **not** routing authority.
+> Refresh `git status` first. This Update-58 block previously recorded
+> completed **2.4i** @ `f0f79b9`. Later closed by Update-59 / `ea3f59e` at
+> ownership-annotation scope. Next-work pointer naming **2.4j** is **stale**.
 
 ## 2026-08-07 Update-57 — record completed slice 2.4h @ `9761caf` ✅ START HERE
 
