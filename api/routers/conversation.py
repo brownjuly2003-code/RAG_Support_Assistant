@@ -53,6 +53,52 @@ def _hold_capacity_until_future_done(
     )
 
 
+def _resolve_stream_terminal(
+    *,
+    stream_answer: str,
+    graph_result: dict[str, Any] | None,
+    graph_appended_history: bool,
+) -> tuple[str, bool, str]:
+    """Pick the single terminal answer and history policy for /api/ask/stream (plan §4.1).
+
+    When graph parity returns a non-empty answer, that answer is authoritative for
+    the SSE result, DB persist, and history — not a second stream-side mutation.
+    Tokens already sent for UX may differ; the final ``result`` event is graph-owned.
+
+    Returns:
+        (terminal_answer, skip_stream_history_append, answer_source)
+        answer_source is ``"graph"`` or ``"stream"``.
+    """
+    if isinstance(graph_result, dict) and graph_result:
+        graph_answer = str(graph_result.get("answer") or "").strip()
+        if graph_answer:
+            # Graph owns terminal semantics; never double-append stream text.
+            return graph_answer, True, "graph"
+        # Graph ran but empty answer (timeout/conflict shell): keep stream text,
+        # still skip stream history if graph already mutated the session.
+        return stream_answer, bool(graph_appended_history), "stream"
+    return stream_answer, bool(graph_appended_history), "stream"
+
+
+def _append_stream_history(
+    session: Any,
+    *,
+    question: str,
+    answer: str,
+) -> None:
+    """Exactly one user+assistant pair on the in-memory session history."""
+    if hasattr(session, "_history"):
+        session._history.append({"role": "user", "content": question})
+        session._history.append({"role": "assistant", "content": answer})
+        max_history = getattr(session, "_max_history", 20)
+        if len(session._history) > max_history * 2:
+            session._history = session._history[-(max_history * 2) :]
+    elif isinstance(session, dict):
+        session.setdefault("history", [])
+        session["history"].append({"role": "user", "content": question})
+        session["history"].append({"role": "assistant", "content": answer})
+
+
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     session_id: Optional[str] = Field(default=None, max_length=100)
@@ -701,13 +747,12 @@ async def ask_stream(
             docs: list[Any] = []
             plain_docs: list[dict[str, Any]] = []
             chat_history: list[dict[str, str]] = []
-            # H1 parity: while we stream tokens for UX, run the full Self-RAG
-            # graph in parallel so the final SSE event ships graph-level
-            # route/quality/citations/trace_id rather than the stream-side
-            # heuristic. The streamed answer text stays as the user saw it
-            # — only the metadata is corrected. Opt-in via
-            # STREAMING_RAG_PARITY=true; off by default so operators don't
-            # silently pay for a second graph pass.
+            # H1 / plan §4.1: optional parallel Self-RAG graph for terminal
+            # semantics (route/quality/citations/trace + answer). Stream tokens
+            # remain UX-only; when graph returns a non-empty answer it owns the
+            # final SSE result, DB persist, and the single history mutation.
+            # Opt-in via STREAMING_RAG_PARITY=true (off by default — second pass
+            # cost). Full removal of dual generation is a later §4 slice.
             graph_parity_enabled = bool(
                 getattr(settings_pre, "streaming_rag_parity", False)
             )
@@ -1000,8 +1045,8 @@ async def ask_stream(
                     logger.warning("Streaming RAG parity task failed: %s", graph_exc)
                     graph_result = None
                 # session.ask appends turns to session._history itself (see
-                # ConversationSession._append_history). If parity ran, skip
-                # the streaming-side append below to avoid duplicates.
+                # ConversationSession._append_history). Detect growth so we do
+                # not double-append after a successful graph mutation (plan §4.1).
                 if (
                     history_pre_len is not None
                     and hasattr(session, "_history")
@@ -1009,16 +1054,18 @@ async def ask_stream(
                 ):
                     graph_appended_history = True
 
-            if not graph_appended_history:
-                if hasattr(session, "_history"):
-                    session._history.append({"role": "user", "content": question})
-                    session._history.append({"role": "assistant", "content": full_answer})
-                    max_history = getattr(session, "_max_history", 20)
-                    if len(session._history) > max_history * 2:
-                        session._history = session._history[-(max_history * 2):]
-                elif isinstance(session, dict):
-                    session["history"].append({"role": "user", "content": question})
-                    session["history"].append({"role": "assistant", "content": full_answer})
+            terminal_answer, skip_stream_history, answer_source = _resolve_stream_terminal(
+                stream_answer=full_answer,
+                graph_result=graph_result if isinstance(graph_result, dict) else None,
+                graph_appended_history=graph_appended_history,
+            )
+
+            if not skip_stream_history:
+                _append_stream_history(
+                    session,
+                    question=question,
+                    answer=terminal_answer,
+                )
 
             if isinstance(graph_result, dict) and graph_result:
                 if graph_result.get("quality_score") is not None:
@@ -1061,7 +1108,7 @@ async def ask_stream(
                 session_id=session_id,
                 tenant_id=tenant,
                 question=question,
-                answer=full_answer,
+                answer=terminal_answer,
                 path="stream",
             )
             try:
@@ -1070,7 +1117,8 @@ async def ask_stream(
                 pass
             yield "data: " + _json.dumps({
                 "type": "result",
-                "answer": full_answer,
+                "answer": terminal_answer,
+                "answer_source": answer_source,
                 "quality_score": quality,
                 "quality_source": quality_source,
                 "route": route,

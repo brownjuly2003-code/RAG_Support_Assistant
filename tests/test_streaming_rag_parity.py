@@ -75,8 +75,8 @@ def test_stream_final_event_uses_graph_quality_and_route(
             self._llm = _StreamingLLM()
             self.history: list[dict] = []
 
-        def ask(self, question, trace_id=None, tenant_id="default"):
-            _ = question, trace_id, tenant_id
+        def ask(self, question, **kwargs):  # noqa: ANN003
+            _ = question, kwargs
             return {
                 "answer": "ground truth answer",
                 "quality_score": 35,
@@ -104,7 +104,9 @@ def test_stream_final_event_uses_graph_quality_and_route(
     assert final["route"] == "human", "graph route must override heuristic"
     assert final["trace_id"] == "trace-from-graph-1"
     assert final["suggested_questions"] == ["graph-suggested-q?"]
-    assert final["answer"] == "Стрим ответ", "answer remains streamed text for UX"
+    # Plan §4.1: graph owns the terminal answer when parity succeeds (not dual text).
+    assert final["answer"] == "ground truth answer"
+    assert final.get("answer_source") == "graph"
 
 
 def test_stream_uses_graph_citations_when_available(
@@ -118,8 +120,8 @@ def test_stream_uses_graph_citations_when_available(
             self._llm = _StreamingLLM()
             self.history: list[dict] = []
 
-        def ask(self, question, trace_id=None, tenant_id="default"):
-            _ = question, trace_id, tenant_id
+        def ask(self, question, **kwargs):  # noqa: ANN003
+            _ = question, kwargs
             return {
                 "answer": "graph answer",
                 "quality_score": 90,
@@ -172,7 +174,8 @@ def test_stream_falls_back_when_graph_disabled(
             self._llm = _StreamingLLM(tokens=("длинный ", "ответ ", "со многими ", "токенами"))
             self.history: list[dict] = []
 
-        def ask(self, question, trace_id=None, tenant_id="default"):
+        def ask(self, question, **kwargs):  # noqa: ANN003
+            _ = question, kwargs
             ask_called["value"] = True
             return {
                 "answer": "graph answer",
@@ -196,6 +199,82 @@ def test_stream_falls_back_when_graph_disabled(
     assert ask_called["value"] is False, "ask() must NOT run when parity disabled"
     assert final["trace_id"] == "", "trace_id stays empty without graph parity"
     assert final["quality_score"] == 70, "stream heuristic computes quality from len+sources"
+    assert final["answer"] == "длинный ответ со многими токенами"
+    assert final.get("answer_source") == "stream"
+
+
+def test_stream_parity_single_history_mutation_uses_graph_answer(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Graph append owns history; stream must not add a second turn with stream text."""
+
+    class _Session:
+        def __init__(self) -> None:
+            self._retriever = _retriever_with_doc()
+            self._llm = _StreamingLLM(tokens=("stream-", "tokens"))
+            self._history: list[dict[str, str]] = []
+            self._max_history = 10
+
+        def ask(self, question, **kwargs):  # noqa: ANN003
+            _ = kwargs
+            # Mirror ConversationSession: one user+assistant pair with graph text.
+            self._history.append({"role": "user", "content": question})
+            self._history.append({"role": "assistant", "content": "graph-terminal"})
+            return {
+                "answer": "graph-terminal",
+                "quality_score": 88,
+                "route": "auto",
+                "trace_id": "trace-hist-1",
+                "citations": [],
+                "suggested_questions": [],
+            }
+
+    session = _Session()
+    _install_session(monkeypatch, session)
+    _enable_parity()
+
+    response = client.post(
+        "/api/ask/stream",
+        json={"question": "history-check"},
+        headers={"Accept": "text/event-stream"},
+    )
+    assert response.status_code == 200
+    events = _parse_events(response.text)
+    final = next(event for event in events if event.get("type") == "result")
+
+    assert final["answer"] == "graph-terminal"
+    assert final.get("answer_source") == "graph"
+    # Exactly one turn pair — no stream-side second append.
+    assert len(session._history) == 2
+    assert session._history[0] == {"role": "user", "content": "history-check"}
+    assert session._history[1] == {"role": "assistant", "content": "graph-terminal"}
+
+
+def test_resolve_stream_terminal_helper() -> None:
+    from api.routers import conversation as conv
+
+    term, skip, src = conv._resolve_stream_terminal(
+        stream_answer="streamed",
+        graph_result={"answer": "graph-ans", "route": "auto"},
+        graph_appended_history=False,
+    )
+    assert (term, skip, src) == ("graph-ans", True, "graph")
+
+    term, skip, src = conv._resolve_stream_terminal(
+        stream_answer="streamed",
+        graph_result=None,
+        graph_appended_history=False,
+    )
+    assert (term, skip, src) == ("streamed", False, "stream")
+
+    term, skip, src = conv._resolve_stream_terminal(
+        stream_answer="streamed",
+        graph_result={"answer": "", "route": "timeout"},
+        graph_appended_history=True,
+    )
+    assert term == "streamed"
+    assert skip is True
+    assert src == "stream"
 
 
 def test_stream_does_not_double_append_history_when_graph_runs(
