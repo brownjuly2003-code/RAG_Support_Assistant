@@ -1,10 +1,9 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 (Update-75 records completed **3.1c** @ `d9ba87e`;
-previous **3.1b** @ `76179d5`; next **3.1d** max_tokens/temperature per LLM role)
+**Обновлено:** 2026-08-07 (Update-76 records completed **3.1d** @ `48c2381`;
+next **3.1e** per-request LLM call/token budget)
 
-Routing: **только** верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md)
-(**Update-75**). Plan: untracked `rag-remediation-plan-2026-08-03.md`.
+Routing: top [`AGENT_STATE.md`](../AGENT_STATE.md) **Update-76** only.
 
 ---
 
@@ -12,63 +11,46 @@ Routing: **только** верхний блок [`AGENT_STATE.md`](../AGENT_ST
 
 | Факт | Значение |
 |------|----------|
-| Latest implementation | `d9ba87e` — **3.1c** per-session serialize |
-| Previous | `76179d5` — **3.1b** |
-| Locally complete | **2.1–2.6g** + **3.1a–3.1c** |
-| Full plan §2 / §3 / prod | **NOT** complete / **NOT** claimed |
-| Next ordered | **3.1d** max_tokens / temperature per LLM role |
+| Latest implementation | `48c2381` — **3.1d** per-role max_tokens/temperature |
+| Locally complete | **2.1–2.6g** + **3.1a–3.1d** |
+| Full plan §2 / §3 / prod | **NOT** complete |
+| Next ordered | **3.1e** per-request LLM call/token budget |
 | Gates | no push / deploy / live without opt-in |
-
-**Verification (3.1c):** 26 passed focused/adjacent; Ruff clean.
 
 ### Plan §3 map
 
 | Bullet | Local | Residual |
 |--------|-------|----------|
-| shared pool + capacity hold | **3.1a** | stream capacity-hold |
-| cooperative deadline | **3.1b** (provider) | retriever/reranker/tools |
+| shared pool + capacity | **3.1a** | stream capacity-hold |
+| cooperative deadline | **3.1b** | retriever/reranker/tools |
 | per-session serialize | **3.1c** | durable optimistic version |
-| max_tokens/temperature per role | not started | **← next 3.1d** |
-| per-request LLM token budget | not started | |
+| max_tokens/temperature per role | **3.1d** | — |
+| per-request LLM token budget | not started | **← next 3.1e** |
 
-### Module owners (3.1c)
+### 3.1d contract
 
-| Path | Role |
-|------|------|
-| `agent/graph.py` `ConversationSession` | turn lock, epoch, pending/history guards |
-
-### Protected
-
-Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
-
----
-
-## Контракт 3.1c — COMPLETE
-
-At `d9ba87e`:
-
-- Exclusive session turn (`_busy` + `Condition`)
-- Epoch invalidation on wall-budget timeout; stale writes discarded
-- History snapshot for pipeline; timeout answer force-appended
-- Residual: direct `session._history` writes in some API error/cache paths
+- `llm/role_params.py` + `RAG_LLM_ROLE_PARAMS`
+- Defaults: grade/evaluate/classify `temperature=0`; generate `0.2` / `1024`
+- `graph._invoke_llm(role=…)` on all main node invokes; agentic tools kwargs
+- Ollama: `temperature` + `num_predict`; Mistral: existing kwargs path
 
 ```powershell
-python -m pytest tests/test_session_serialize.py tests/test_ask_wall_budget.py tests/test_request_deadline.py tests/test_agent_tools.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step3-1c-<unique>
+python -m pytest tests/test_llm_role_params.py tests/test_session_serialize.py tests/test_request_deadline.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step3-1d-<unique>
 ```
 
 ---
 
-## Следующий: 3.1d max_tokens / temperature per LLM role
+## Next: 3.1e per-request LLM call/token budget
 
-**Intent:** configurable `max_tokens` and `temperature` by LLM role
-(generate / grade / transform / agentic / …) with safe production defaults;
-wire through provider generate kwargs; tests prove defaults + overrides.
+**Intent:** shared per-request budget for LLM calls and input/output tokens
+across retries, grading, fact claims, agentic tools, streaming; exhaustion
+must not finish as route=`auto`.
 
-**Out of 3.1d:** full per-request token budget (later §3 bullet), live services.
+**Out of 3.1e:** live multi-service, push/deploy, inventing auto-delete.
 
 ---
 
 ## Do not
 
-- Re-select **2.1–2.6g**, **3.1a–3.1c**
+- Re-select **2.1–2.6g**, **3.1a–3.1d**
 - Push / deploy / live without opt-in

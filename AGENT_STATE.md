@@ -1,12 +1,69 @@
 # Agent State
 
+## 2026-08-07 Update-76 — record completed slice 3.1d @ `48c2381` ✅ START HERE
+
+> **Routing authority:** Update-76 records completed **3.1d** and supersedes
+> Update-75 for start-point routing. All older Update blocks below, including
+> headings that literally contain `✅ START HERE`, are **archival**. **Only
+> the first/topmost Update block in this file is authoritative.**
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `48c2381`
+>   (`feat(llm): configurable temperature and max_tokens per LLM role`)
+>   — slice **3.1d** (+ style follow-up may exist on tip)
+> - Previous: `d9ba87e` (**3.1c**), `76179d5` (**3.1b**), `a21f364` (**3.1a**)
+> - Previous docs: Update-75 `c5f989f`
+> - This Update-76 docs commit SHA is **unknown in-file**; refresh `git log`
+>
+> **Completion truth:**
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | local fault-injection residual |
+> | **3.1a–3.1d** | executor, deadline, session serialize, role params |
+> | Full plan §2 / §3 | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan §3 map (honest):**
+> | Bullet | Local | Residual |
+> |--------|-------|----------|
+> | shared pool + capacity hold | **3.1a** | stream capacity-hold |
+> | cooperative deadline | **3.1b** (provider) | retriever/reranker/tools |
+> | per-session serialize | **3.1c** | durable optimistic version |
+> | max_tokens/temperature per role | **3.1d** | — |
+> | per-request LLM call/token budget | not started | **← next 3.1e** |
+>
+> **3.1d contract (landed):**
+> - `llm/role_params.py` — safe defaults + `RAG_LLM_ROLE_PARAMS` JSON merge
+> - Roles: generate/grade/transform/evaluate/verify/classify/suggest/rewrite/agentic
+> - `graph._invoke_llm` + agentic `generate_with_tools` pass kwargs
+> - `ProviderBackedLLM.invoke(**kwargs)`; Ollama honors temperature/num_predict;
+>   Mistral already had temperature/max_tokens
+> - Settings: `llm_role_params_json`
+>
+> **Verification:** focused **35 passed** (role_params + session/deadline/tools);
+> Ruff clean. Full suite **not** run.
+>
+> **Next candidate only (not started):**
+> named **3.1e — per-request LLM call/token budget** shared across retries,
+> grading, fact claims, agentic tools, streaming; exhaustion must not end as
+> `auto`. Still no live services / push.
+>
+> **Do not re-select:** 2.1–2.6g, **3.1a–3.1d**.
+>
+> **Protected dirty / untracked:** do not touch without request.
+>
+> **External gates:** push, deploy, live, destructive Git, prod claims.
+>
+> **Standing preference:** one turn = one named slice; local commit only.
+>
+> **Git advisory:** refresh `git status` / `git log -5` next session.
+
 ## 2026-08-07 Update-75 — record completed slice 3.1c @ `d9ba87e` ✅ START HERE
 
-> **Routing authority:** Update-75 records completed **3.1c** and supersedes
-> Update-74 for start-point routing. All older Update blocks below, including
-> headings that literally contain `✅ START HERE`, are **archival**. **Only
-> the first/topmost Update block in this file is authoritative.** Never
-> select work by grepping old `START HERE` markers.
+> **Historical handoff (superseded by Update-76 for start-point routing).**
+> Recorded **3.1c** @ `d9ba87e`. Next-work naming **3.1d** is **stale**.
+>
+> **Original routing note (archival):** Update-75 recorded completed **3.1c**.
 >
 > **Known lineage (actual Git wins over any embedded hash):**
 > - Latest implementation: `d9ba87e`
