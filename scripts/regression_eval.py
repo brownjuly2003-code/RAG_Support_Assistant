@@ -169,6 +169,75 @@ def decide_regression_gate(
     }
 
 
+MOCK_EVIDENCE_MODES = frozenset(
+    {
+        "mock-provider-benchmark",
+        "mock-experiment-regression",
+    }
+)
+
+
+def apply_evidence_policy(
+    report: dict[str, Any],
+    *,
+    release_gate: bool = False,
+) -> dict[str, Any]:
+    """Plan §7.2: mock expected-copy must never claim release PASS.
+
+    - ``metrics_passed`` — quantitative gate only (may be green under mock).
+    - ``evidence_valid`` — real pipeline/provider evidence (false for mock modes).
+    - ``release_passed`` / ``gate.passed`` — only true when metrics **and** evidence.
+    - Verdict ``PASS`` is reserved for release-eligible green; mock green is
+      ``SMOKE_PASS`` (smoke only).
+    - Exit code: smoke path uses metrics; ``release_gate=True`` uses release.
+    """
+    gate = report.setdefault("gate", {})
+    mode = str(report.get("mode") or "")
+    evidence_valid = bool(report.get("evidence_valid", mode not in MOCK_EVIDENCE_MODES))
+    if mode in MOCK_EVIDENCE_MODES:
+        evidence_valid = False
+    report["evidence_valid"] = evidence_valid
+
+    # Metrics result was stored as gate.passed before evidence policy runs.
+    metrics_passed = bool(gate.get("metrics_passed", gate.get("passed", False)))
+    reasons = list(gate.get("reasons") or [])
+    release_passed = bool(metrics_passed and evidence_valid)
+
+    gate["metrics_passed"] = metrics_passed
+    gate["evidence_valid"] = evidence_valid
+    gate["release_passed"] = release_passed
+    gate["release_eligible"] = release_passed
+    gate["release_gate"] = bool(release_gate)
+    gate["graceful_skip_pass_forbidden"] = True
+
+    if not evidence_valid:
+        note = (
+            "mock expected-copy / mock provider scores are not release evidence"
+        )
+        gate["evidence_note"] = note
+        if note not in reasons:
+            reasons.append(note)
+        if metrics_passed:
+            gate["verdict"] = "SMOKE_PASS"
+        else:
+            # Keep fail-closed metrics reasons; never label as release PASS.
+            gate["verdict"] = "SMOKE_FAIL"
+        gate["passed"] = False
+        gate["reasons"] = reasons
+        if release_gate:
+            report["exit_code"] = 1
+        else:
+            report["exit_code"] = 0 if metrics_passed else 1
+    else:
+        gate["evidence_note"] = ""
+        gate["verdict"] = "PASS" if release_passed else "FAIL"
+        gate["passed"] = release_passed
+        gate["reasons"] = reasons
+        report["exit_code"] = 0 if release_passed else 1
+
+    return report
+
+
 def _resolve_provider_target(target: str, provider_registry_path: Path | None) -> dict[str, Any] | None:
     from config.provider_schema import load_provider_registry
 
@@ -591,6 +660,7 @@ def run_regression_cases(
         },
         "gate": {
             "passed": gate_passed,
+            "metrics_passed": gate_passed,
             "verdict": gate["verdict"],
             "max_regressions": max_regressions,
             "min_pass_rate": min_pass_rate,
@@ -624,7 +694,10 @@ def _render_summary_table(report: dict[str, Any]) -> str:
             f"| Candidate total cost | ${aggregate['candidate_total_cost_usd']:.6f} |",
             f"| Baseline refusal rate | {aggregate['baseline_refusal_rate']:.2%} |",
             f"| Candidate refusal rate | {aggregate['candidate_refusal_rate']:.2%} |",
-            f"| Gate | {gate.get('verdict') or ('PASS' if gate['passed'] else 'FAIL')} |",
+            f"| Gate verdict | {gate.get('verdict') or ('PASS' if gate.get('passed') else 'FAIL')} |",
+            f"| Metrics passed | {gate.get('metrics_passed', gate.get('passed'))} |",
+            f"| Evidence valid | {gate.get('evidence_valid', True)} |",
+            f"| Release passed | {gate.get('release_passed', gate.get('passed'))} |",
         ]
     )
 
@@ -1100,6 +1173,7 @@ def run_regression(
     seed: int = 42,
     allow_paid_apis: bool | None = None,
     mock_experiment_runtime: bool = False,
+    release_gate: bool = False,
     max_regressions: int | None = None,
     min_pass_rate: float | None = None,
     project_root: Path = PROJECT_ROOT,
@@ -1185,19 +1259,11 @@ def run_regression(
         report["mode"] = "mock-experiment-regression"
     else:
         report["mode"] = "experiment-regression"
-    # Plan §7.1 honesty: mock expected-copy is not release evidence.
-    mock_modes = {"mock-provider-benchmark", "mock-experiment-regression"}
-    report["evidence_valid"] = report["mode"] not in mock_modes
-    if not report["evidence_valid"]:
-        report.setdefault("gate", {})
-        report["gate"]["evidence_valid"] = False
-        report["gate"]["evidence_note"] = (
-            "mock expected-copy / mock provider scores are not release evidence"
-        )
-    else:
-        report.setdefault("gate", {})
-        report["gate"]["evidence_valid"] = True
-    return report
+    # Plan §7.1–7.2: mock is never release evidence; finalize verdict/exit.
+    report["evidence_valid"] = report["mode"] not in MOCK_EVIDENCE_MODES
+    report.setdefault("gate", {})
+    report["gate"]["metrics_passed"] = bool(report["gate"].get("passed"))
+    return apply_evidence_policy(report, release_gate=release_gate)
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -1226,6 +1292,14 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--allow-paid-apis", action="store_true")
     parser.add_argument("--mock-experiment-runtime", action="store_true")
+    parser.add_argument(
+        "--release-gate",
+        action="store_true",
+        help=(
+            "Require release evidence: mock expected-copy cannot PASS. "
+            "Exit non-zero when evidence_valid is false even if smoke metrics are green."
+        ),
+    )
     parser.add_argument("--no-persist", action="store_true")
     return parser.parse_args(argv)
 
@@ -1250,6 +1324,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             seed=args.seed,
             allow_paid_apis=args.allow_paid_apis,
             mock_experiment_runtime=args.mock_experiment_runtime,
+            release_gate=bool(getattr(args, "release_gate", False)),
         )
         markdown_path, json_path = write_report_files(report)
 
@@ -1270,7 +1345,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
 
         duration_sec = max((_utc_now() - started_at).total_seconds(), 0.0)
-        record_regression_run("pass" if report["gate"]["passed"] else "fail", duration_sec)
+        # Prometheus: smoke metrics vs release — label fail when not release-passed.
+        metrics_ok = bool(report.get("gate", {}).get("metrics_passed", report["gate"].get("passed")))
+        release_ok = bool(report.get("gate", {}).get("release_passed", False))
+        if getattr(args, "release_gate", False):
+            record_label = "pass" if release_ok else "fail"
+        else:
+            record_label = "pass" if metrics_ok else "fail"
+        record_regression_run(record_label, duration_sec)
         set_regression_last_pass_rate(
             report["baseline"],
             report["candidate"],

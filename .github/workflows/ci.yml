@@ -359,7 +359,10 @@ jobs:
         if: steps.regression_changes.outputs.regression == 'true' && !hashFiles('evaluation/curated_cases.jsonl')
         run: echo "evaluation/curated_cases.jsonl is missing; skipping informational regression run."
 
-      - name: Run regression eval
+      # Smoke-only: mock expected-copy is NOT release evidence (plan §7.2).
+      # Exit follows metrics smoke; do not pass --release-gate here.
+      # Release evidence requires real pipeline/provider runs without mock.
+      - name: Run regression eval (smoke, non-release)
         if: steps.regression_changes.outputs.regression == 'true' && hashFiles('evaluation/curated_cases.jsonl')
         run: >
           python scripts/regression_eval.py
