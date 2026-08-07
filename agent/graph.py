@@ -2328,6 +2328,11 @@ class ConversationSession:
     monotonic turn epoch discards late mutations from wall-budget orphan
     workers so ``_history`` / ``_pending_action`` stay coherent.
 
+    Slice 3.1i: ``mutation_version`` / ``expected_version`` give process-local
+    optimistic concurrency for clients; ``user_id`` / ``session_id`` are
+    forwarded into the normal pipeline for sticky experiment assignment.
+    Multi-replica durable version store is still out of scope.
+
     Пример:
         session = ConversationSession(retriever=ret, llm=llm)
 
@@ -2363,16 +2368,57 @@ class ConversationSession:
         with self._lock:
             return list(self._history)
 
+    @property
+    def mutation_version(self) -> int:
+        """Process-local optimistic version (idle = last completed turn epoch)."""
+        with self._lock:
+            return int(self._mutation_epoch)
+
     def _history_snapshot(self) -> list[dict[str, str]]:
         """Copy history for pipeline input (safe under concurrent mutation)."""
         with self._lock:
             return list(self._history)
 
-    def _acquire_turn(self) -> int:
-        """Block until this session is free; return the new turn epoch."""
+    def _stamp_session_version(self, result: GraphState) -> GraphState:
+        """Attach current mutation version so clients can CAS the next turn."""
+        stamped: GraphState = {**result, "session_version": self.mutation_version}
+        return stamped
+
+    def _version_conflict_state(
+        self,
+        question: str,
+        expected_version: int,
+        actual_version: int,
+        trace_id: Optional[str],
+        tenant_id: str,
+    ) -> GraphState:
+        """Fail-closed when client If-Match version does not match (never auto)."""
+        state = create_initial_state(question, trace_id=trace_id, tenant_id=tenant_id)
+        state["answer"] = (
+            "Конфликт версии сессии: состояние диалога изменилось. "
+            "Обновите session_version и повторите запрос."
+        )
+        state["route"] = "conflict"
+        state["quality_score"] = 0
+        state["error"] = True
+        state["error_message"] = (
+            f"session version conflict expected={expected_version} actual={actual_version}"
+        )
+        state["error_node"] = "session_version"
+        state["session_version"] = actual_version
+        return state
+
+    def _acquire_turn(self, *, expected_version: int | None = None) -> int | None:
+        """Block until free; optionally CAS on mutation_version before exclusive turn.
+
+        Returns the new turn epoch, or ``None`` when ``expected_version`` mismatches
+        the idle version (optimistic concurrency conflict, plan §3.1i).
+        """
         with self._lock:
             while self._busy:
                 self._turn_cv.wait()
+            if expected_version is not None and int(expected_version) != self._mutation_epoch:
+                return None
             self._busy = True
             self._mutation_epoch += 1
             turn = self._mutation_epoch
@@ -2868,6 +2914,7 @@ class ConversationSession:
         user_id: str = "anonymous",
         session_id: str | None = None,
         deadline_sec: float | None = None,
+        expected_version: int | None = None,
     ) -> GraphState:
         """Задаёт вопрос с учётом истории диалога.
 
@@ -2875,6 +2922,14 @@ class ConversationSession:
         (or other callers). Combined with ``RAG_ASK_BUDGET_SEC`` via the tighter
         positive timeout and bound as a cooperative request deadline so provider
         entry points refuse new work after the wall elapses (plan §3.1b).
+
+        ``expected_version`` (optional, plan §3.1i): optimistic If-Match against
+        ``mutation_version``. Mismatch returns ``route=conflict`` without running
+        the pipeline (never ``auto``). Successful results include
+        ``session_version`` for the next CAS.
+
+        ``user_id`` / ``session_id`` are forwarded into the normal QA pipeline so
+        sticky experiment assignment can hash the same identity as agentic paths.
         """
         from config.settings import get_settings
         from llm.request_budget import (
@@ -2894,7 +2949,28 @@ class ConversationSession:
         wall_sec = tighter_timeout_sec(budget_sec, deadline_sec)
 
         # Exclusive session turn: concurrent same-session asks queue (3.1c).
-        turn = self._acquire_turn()
+        # Optional CAS on idle mutation_version before exclusive work (3.1i).
+        if expected_version is not None:
+            try:
+                expected_version = int(expected_version)
+            except (TypeError, ValueError):
+                return self._version_conflict_state(
+                    question,
+                    expected_version=-1,
+                    actual_version=self.mutation_version,
+                    trace_id=trace_id,
+                    tenant_id=tenant_id,
+                )
+
+        turn = self._acquire_turn(expected_version=expected_version)
+        if turn is None:
+            return self._version_conflict_state(
+                question,
+                expected_version=int(expected_version or -1),
+                actual_version=self.mutation_version,
+                trace_id=trace_id,
+                tenant_id=tenant_id,
+            )
         invalidate_orphan = False
         try:
 
@@ -2934,6 +3010,8 @@ class ConversationSession:
                             chat_history=self._history_snapshot(),
                             trace_id=trace_id,
                             tenant_id=tenant_id,
+                            user_id=user_id,
+                            session_id=session_id,
                         )
                     except RequestDeadlineExceeded:
                         logger.warning(
@@ -2984,7 +3062,7 @@ class ConversationSession:
                 invalidate_orphan = False  # already invalidated
             else:
                 self._append_history(question, answer, turn=turn)
-            return result
+            return self._stamp_session_version(result)
         finally:
             self._release_turn(turn, invalidate=invalidate_orphan)
 

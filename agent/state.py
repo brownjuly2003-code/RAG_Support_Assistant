@@ -30,7 +30,7 @@ agent/state.py
     Оценка качества ответа по шкале 1–100 (чем выше, тем лучше). Эти
     значения выставляет узел evaluate (self-evaluation LLM).
 
-- route: Literal["auto","human","retry","error","error_escalation","agentic","timeout"] | None
+- route: Literal["auto","human","retry","error","error_escalation","agentic","timeout","conflict"] | None
     Решение маршрутизации:
         "auto"  → ответ достаточно хороший, можно отдать пользователю;
         "human" → лучше эскалировать на человека (оператор поддержки);
@@ -38,6 +38,8 @@ agent/state.py
         "error" → необработанное исключение в пайплайне, эскалировать;
         "error_escalation" → fallback-ответ после error handler;
         "agentic" → ответ собран agentic tool-use flow.
+        "timeout" → wall/cooperative deadline;
+        "conflict" → optimistic session version mismatch (3.1i).
     До узла route — None.
 
 - trace_id: str
@@ -90,7 +92,16 @@ class GraphState(TypedDict, total=False):
     complexity: Literal["simple", "complex", "global", "unknown"]
     retrieval_strategy: Literal["vector", "hybrid", "graph", "factcard"]
     route: Optional[
-        Literal["auto", "human", "retry", "error", "error_escalation", "agentic", "timeout"]
+        Literal[
+            "auto",
+            "human",
+            "retry",
+            "error",
+            "error_escalation",
+            "agentic",
+            "timeout",
+            "conflict",
+        ]
     ]
     trace_id: str
     tenant_id: str
@@ -117,6 +128,8 @@ class GraphState(TypedDict, total=False):
     tool_calls: list[str] | list[dict[str, Any]]
     requires_confirmation: bool
     action_summary: str
+    # Optimistic session CAS token (plan §3.1i); process-local until durable store.
+    session_version: int
 
 
 def create_initial_state(
