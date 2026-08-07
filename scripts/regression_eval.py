@@ -176,6 +176,221 @@ MOCK_EVIDENCE_MODES = frozenset(
     }
 )
 
+# Plan §7.3: durable merge-base baseline artifact (not re-run of candidate SHA).
+BASELINE_ARTIFACT_SCHEMA_VERSION = 1
+BASELINE_ARTIFACT_KIND = "regression-baseline"
+
+
+def build_baseline_artifact(
+    *,
+    case_results: dict[str, CaseRunResult | dict[str, Any]],
+    git_sha: str | None = None,
+    merge_base: str | None = None,
+    dataset_path: str | None = None,
+    baseline_label: str = "baseline",
+    mode: str | None = None,
+    created_at: datetime | None = None,
+) -> dict[str, Any]:
+    """Build a versioned baseline artifact payload from per-case run results."""
+    cases_payload: dict[str, dict[str, Any]] = {}
+    for case_id, result in case_results.items():
+        if isinstance(result, CaseRunResult):
+            cases_payload[str(case_id)] = result.model_dump(mode="json")
+        elif isinstance(result, dict):
+            cases_payload[str(case_id)] = dict(result)
+        else:
+            raise TypeError(f"unsupported baseline result type for {case_id}: {type(result)}")
+    stamp = created_at or _utc_now()
+    return {
+        "schema_version": BASELINE_ARTIFACT_SCHEMA_VERSION,
+        "kind": BASELINE_ARTIFACT_KIND,
+        "created_at": stamp.isoformat(),
+        "git_sha": git_sha,
+        "merge_base": merge_base or git_sha,
+        "dataset_path": dataset_path,
+        "baseline_label": baseline_label,
+        "mode": mode,
+        "cases": cases_payload,
+    }
+
+
+def write_baseline_artifact(artifact: dict[str, Any], path: Path) -> Path:
+    """Persist baseline artifact JSON (UTF-8, trailing newline)."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    payload = dict(artifact)
+    # Never serialize the runtime case_map helper.
+    payload.pop("case_map", None)
+    target.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return target
+
+
+def load_baseline_artifact(path: Path) -> dict[str, Any]:
+    """Load and validate a baseline artifact; attach ``case_map`` of CaseRunResult."""
+    artifact_path = Path(path)
+    if not artifact_path.is_file():
+        raise FileNotFoundError(f"baseline artifact not found: {artifact_path}")
+    raw = json.loads(artifact_path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise ValueError("baseline artifact must be a JSON object")
+    kind = raw.get("kind")
+    if kind != BASELINE_ARTIFACT_KIND:
+        raise ValueError(
+            f"baseline artifact kind must be {BASELINE_ARTIFACT_KIND!r}, got {kind!r}"
+        )
+    version = int(raw.get("schema_version") or 0)
+    if version != BASELINE_ARTIFACT_SCHEMA_VERSION:
+        raise ValueError(
+            f"unsupported baseline artifact schema_version={version}; "
+            f"expected {BASELINE_ARTIFACT_SCHEMA_VERSION}"
+        )
+    cases_raw = raw.get("cases")
+    if not isinstance(cases_raw, dict) or not cases_raw:
+        raise ValueError("baseline artifact must include non-empty cases map")
+    case_map: dict[str, CaseRunResult] = {}
+    for case_id, payload in cases_raw.items():
+        if not isinstance(payload, dict):
+            raise ValueError(f"baseline case {case_id!r} must be an object")
+        case_map[str(case_id)] = CaseRunResult.model_validate(payload)
+    out = dict(raw)
+    out["case_map"] = case_map
+    out["path"] = str(artifact_path)
+    return out
+
+
+def baseline_artifact_from_report(
+    report: dict[str, Any],
+    *,
+    git_sha: str | None = None,
+    merge_base: str | None = None,
+) -> dict[str, Any]:
+    """Extract baseline-side case results from a full regression report."""
+    case_results: dict[str, dict[str, Any]] = {}
+    for entry in report.get("cases") or []:
+        if not isinstance(entry, dict):
+            continue
+        case_id = entry.get("case_id")
+        baseline_payload = entry.get("baseline")
+        if not case_id or not isinstance(baseline_payload, dict):
+            continue
+        case_results[str(case_id)] = baseline_payload
+    if not case_results:
+        raise ValueError("report has no baseline case payloads to artifactize")
+    return build_baseline_artifact(
+        case_results=case_results,
+        git_sha=git_sha,
+        merge_base=merge_base,
+        dataset_path=str(report.get("dataset") or "") or None,
+        baseline_label=str(report.get("baseline") or "baseline"),
+        mode=str(report.get("mode") or "") or None,
+    )
+
+
+def resolve_git_rev(project_root: Path, rev: str = "HEAD") -> str | None:
+    """Best-effort ``git rev-parse``; returns None when git is unavailable."""
+    import subprocess
+
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", rev],
+            cwd=str(project_root),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if completed.returncode != 0:
+        return None
+    value = (completed.stdout or "").strip()
+    return value or None
+
+
+def resolve_git_merge_base(
+    project_root: Path,
+    base_ref: str = "origin/master",
+) -> str | None:
+    """Best-effort ``git merge-base HEAD <base_ref>`` for artifact metadata."""
+    import subprocess
+
+    try:
+        completed = subprocess.run(
+            ["git", "merge-base", "HEAD", base_ref],
+            cwd=str(project_root),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if completed.returncode != 0:
+        return None
+    value = (completed.stdout or "").strip()
+    return value or None
+
+
+def _empty_baseline_required_report(
+    *,
+    baseline: str,
+    candidate: str,
+    dataset_path: Path | None,
+    release_gate: bool,
+    reason: str,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Fail-closed report when a required baseline artifact is missing/unusable."""
+    current_time = now or _utc_now()
+    gate = {
+        "passed": False,
+        "metrics_passed": False,
+        "verdict": "FAIL",
+        "max_regressions": 0,
+        "min_pass_rate": 0.0,
+        "reasons": [reason],
+        "graceful_skip_pass_forbidden": True,
+    }
+    report: dict[str, Any] = {
+        "run_id": _make_run_id(current_time),
+        "created_at": current_time.isoformat(),
+        "baseline": baseline,
+        "candidate": candidate,
+        "dataset": str(dataset_path) if dataset_path is not None else None,
+        "tenant": "all",
+        "baseline_source": "missing",
+        # Real fail-closed gate (not mock smoke): missing merge-base baseline.
+        "mode": "experiment-regression",
+        "evidence_valid": True,
+        "aggregate": {
+            "total_cases": 0,
+            "effective_cases": 0,
+            "infrastructure_failures": 0,
+            "skipped_cases": 0,
+            "baseline_pass_rate": 0.0,
+            "candidate_pass_rate": 0.0,
+            "regressions": 0,
+            "new_passes": 0,
+            "neutral": 0,
+            "baseline_total_cost_usd": 0.0,
+            "candidate_total_cost_usd": 0.0,
+            "baseline_avg_latency_ms": 0.0,
+            "candidate_avg_latency_ms": 0.0,
+            "baseline_refusal_rate": 0.0,
+            "candidate_refusal_rate": 0.0,
+        },
+        "gate": gate,
+        "cases": [],
+        "regressions": [],
+        "new_passes": [],
+        "exit_code": 1,
+    }
+    return apply_evidence_policy(report, release_gate=release_gate)
+
 
 def apply_evidence_policy(
     report: dict[str, Any],
@@ -446,9 +661,12 @@ def run_regression_cases(
     tenant: str = "all",
     run_id: str | None = None,
     now: datetime | None = None,
+    baseline_case_results: dict[str, CaseRunResult] | None = None,
+    baseline_artifact_meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     current_time = now or _utc_now()
     report_run_id = run_id or _make_run_id(current_time)
+    baseline_source = "artifact" if baseline_case_results is not None else "live_executor"
 
     comparisons: list[dict[str, Any]] = []
     regressions: list[dict[str, Any]] = []
@@ -492,8 +710,24 @@ def run_regression_cases(
             )
         return result
 
+    def _baseline_for(case: CuratedCase) -> CaseRunResult:
+        if baseline_case_results is None:
+            return _run_executor(case, baseline)
+        stored = baseline_case_results.get(case.case_id)
+        if stored is None:
+            return CaseRunResult(
+                answer=(
+                    "[provider_unavailable] baseline artifact missing case "
+                    f"{case.case_id}"
+                ),
+                route="error",
+                infrastructure_error=True,
+                skip_reason="baseline_artifact_missing_case",
+            )
+        return stored
+
     for case in cases:
-        baseline_result = _run_executor(case, baseline)
+        baseline_result = _baseline_for(case)
         candidate_result = _run_executor(case, candidate)
 
         baseline_skip = bool(baseline_result.skipped)
@@ -634,13 +868,14 @@ def run_regression_cases(
     gate_passed = bool(gate["passed"])
     exit_code = 0 if gate_passed else 1
 
-    return {
+    report: dict[str, Any] = {
         "run_id": report_run_id,
         "created_at": current_time.isoformat(),
         "baseline": baseline,
         "candidate": candidate,
         "dataset": str(dataset_path) if dataset_path is not None else None,
         "tenant": tenant,
+        "baseline_source": baseline_source,
         "aggregate": {
             "total_cases": total_cases,
             "effective_cases": effective_total_cases,
@@ -672,6 +907,9 @@ def run_regression_cases(
         "new_passes": new_passes,
         "exit_code": exit_code,
     }
+    if baseline_artifact_meta is not None:
+        report["baseline_artifact"] = baseline_artifact_meta
+    return report
 
 
 def _render_summary_table(report: dict[str, Any]) -> str:
@@ -1179,6 +1417,8 @@ def run_regression(
     project_root: Path = PROJECT_ROOT,
     executor: Callable[[CuratedCase, str], CaseRunResult] | None = None,
     now: datetime | None = None,
+    baseline_artifact: Path | str | None = None,
+    require_baseline_artifact: bool = False,
 ) -> dict[str, Any]:
     from config.settings import get_settings
 
@@ -1201,6 +1441,47 @@ def run_regression(
     provider_registry_path = Path(getattr(settings, "provider_registry_path", PROJECT_ROOT / "config" / "providers.yml"))
     baseline_provider_target = _resolve_provider_target(baseline, provider_registry_path)
     candidate_provider_target = _resolve_provider_target(candidate, provider_registry_path)
+
+    baseline_case_results: dict[str, CaseRunResult] | None = None
+    baseline_artifact_meta: dict[str, Any] | None = None
+    artifact_path = Path(baseline_artifact) if baseline_artifact else None
+
+    if require_baseline_artifact and artifact_path is None:
+        return _empty_baseline_required_report(
+            baseline=baseline,
+            candidate=candidate,
+            dataset_path=dataset_path,
+            release_gate=release_gate,
+            reason=(
+                "baseline artifact required but --baseline-artifact was not provided "
+                "(plan §7.3 merge-base baseline)"
+            ),
+            now=now,
+        )
+
+    if artifact_path is not None:
+        try:
+            loaded = load_baseline_artifact(artifact_path)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            if require_baseline_artifact or release_gate:
+                return _empty_baseline_required_report(
+                    baseline=baseline,
+                    candidate=candidate,
+                    dataset_path=dataset_path,
+                    release_gate=release_gate,
+                    reason=f"baseline artifact unusable: {exc}",
+                    now=now,
+                )
+            raise
+        baseline_case_results = loaded["case_map"]
+        baseline_artifact_meta = {
+            "path": loaded.get("path"),
+            "git_sha": loaded.get("git_sha"),
+            "merge_base": loaded.get("merge_base"),
+            "baseline_label": loaded.get("baseline_label"),
+            "schema_version": loaded.get("schema_version"),
+            "case_count": len(baseline_case_results),
+        }
 
     cases = load_curated_cases(dataset_path)
     if tenant != "all":
@@ -1250,6 +1531,8 @@ def run_regression(
         dataset_path=dataset_path,
         tenant=tenant,
         now=now,
+        baseline_case_results=baseline_case_results,
+        baseline_artifact_meta=baseline_artifact_meta,
     )
     if baseline_provider_target or candidate_provider_target:
         report["mode"] = (
@@ -1300,6 +1583,31 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
             "Exit non-zero when evidence_valid is false even if smoke metrics are green."
         ),
     )
+    parser.add_argument(
+        "--baseline-artifact",
+        default=None,
+        help=(
+            "Path to merge-base baseline artifact JSON (plan §7.3). "
+            "When set, baseline case answers are loaded from the artifact "
+            "instead of re-executing the baseline target."
+        ),
+    )
+    parser.add_argument(
+        "--write-baseline-artifact",
+        default=None,
+        help=(
+            "After a successful run, write a baseline artifact from this run's "
+            "baseline-side case results (for later merge-base compare)."
+        ),
+    )
+    parser.add_argument(
+        "--require-baseline-artifact",
+        action="store_true",
+        help=(
+            "Fail closed when --baseline-artifact is missing or unusable "
+            "(release-honest merge-base compare)."
+        ),
+    )
     parser.add_argument("--no-persist", action="store_true")
     return parser.parse_args(argv)
 
@@ -1325,8 +1633,26 @@ def main(argv: Sequence[str] | None = None) -> int:
             allow_paid_apis=args.allow_paid_apis,
             mock_experiment_runtime=args.mock_experiment_runtime,
             release_gate=bool(getattr(args, "release_gate", False)),
+            baseline_artifact=getattr(args, "baseline_artifact", None),
+            require_baseline_artifact=bool(
+                getattr(args, "require_baseline_artifact", False)
+            ),
         )
         markdown_path, json_path = write_report_files(report)
+
+        write_path = getattr(args, "write_baseline_artifact", None)
+        if write_path and report.get("cases"):
+            merge_base = resolve_git_merge_base(PROJECT_ROOT) or resolve_git_rev(
+                PROJECT_ROOT, "HEAD"
+            )
+            head_sha = resolve_git_rev(PROJECT_ROOT, "HEAD")
+            artifact = baseline_artifact_from_report(
+                report,
+                git_sha=head_sha,
+                merge_base=merge_base,
+            )
+            written = write_baseline_artifact(artifact, Path(write_path))
+            report["wrote_baseline_artifact"] = str(written)
 
         if not args.no_persist:
             from db.engine import async_session, engine
