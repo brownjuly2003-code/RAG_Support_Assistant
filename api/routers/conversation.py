@@ -80,6 +80,70 @@ def _resolve_stream_terminal(
     return stream_answer, bool(graph_appended_history), "stream"
 
 
+def _chunk_text_for_sse(text: str, *, chunk_size: int = 48) -> list[str]:
+    """Split a finished answer into SSE token chunks (UX only; not a second LLM)."""
+    body = str(text or "")
+    if not body:
+        return []
+    size = max(1, int(chunk_size))
+    return [body[i : i + size] for i in range(0, len(body), size)]
+
+
+def _graph_result_sources_and_citations(
+    graph_result: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Build sources/citations lists from a graph ask result."""
+    sources: list[dict[str, Any]] = []
+    citations: list[dict[str, Any]] = []
+    graph_citations_raw = graph_result.get("citations") or []
+    if graph_citations_raw:
+        citations = [
+            {
+                "index": int(item.get("index") or 0),
+                "doc_id": str(item.get("doc_id") or ""),
+                "title": str(item.get("title") or ""),
+                "excerpt": str(item.get("excerpt") or ""),
+            }
+            for item in graph_citations_raw
+            if isinstance(item, dict)
+        ]
+    graph_graded = (
+        graph_result.get("graded_docs")
+        or graph_result.get("context_docs")
+        or []
+    )
+    if graph_graded:
+        for idx, item in enumerate(graph_graded, start=1):
+            if not isinstance(item, dict):
+                continue
+            metadata = item.get("metadata", {}) or {}
+            content = item.get("page_content", "") or ""
+            sources.append({
+                "source": metadata.get("source") or metadata.get("file_name") or "",
+                "page_content": content,
+            })
+            if not graph_citations_raw:
+                citations.append({
+                    "index": idx,
+                    "doc_id": str(
+                        metadata.get("doc_id")
+                        or metadata.get("id")
+                        or metadata.get("source")
+                        or metadata.get("file_name")
+                        or f"doc_{idx}"
+                    ),
+                    "title": str(
+                        metadata.get("title")
+                        or metadata.get("source")
+                        or metadata.get("file_name")
+                        or metadata.get("doc_id")
+                        or f"doc_{idx}"
+                    ),
+                    "excerpt": str(content)[:300],
+                })
+    return sources, citations
+
+
 def _append_stream_history(
     session: Any,
     *,
@@ -747,32 +811,135 @@ async def ask_stream(
             docs: list[Any] = []
             plain_docs: list[dict[str, Any]] = []
             chat_history: list[dict[str, str]] = []
-            # H1 / plan §4.1: optional parallel Self-RAG graph for terminal
-            # semantics (route/quality/citations/trace + answer). Stream tokens
-            # remain UX-only; when graph returns a non-empty answer it owns the
-            # final SSE result, DB persist, and the single history mutation.
-            # Opt-in via STREAMING_RAG_PARITY=true (off by default — second pass
-            # cost). Full removal of dual generation is a later §4 slice.
+            # Plan §4.1–4.2: STREAMING_RAG_PARITY=true → single graph generation
+            # (session.ask only). SSE tokens are UX chunks of the graph answer —
+            # not a second LLM stream. Off by default keeps legacy direct stream.
             graph_parity_enabled = bool(
                 getattr(settings_pre, "streaming_rag_parity", False)
             )
             graph_parity_timeout = float(
                 getattr(settings_pre, "request_timeout_sec", 60.0)
             )
-            # When parity runs, session.ask appends turns to session._history
-            # itself; the streaming branch must not re-append or we get
-            # duplicate entries in the conversation log.
             history_pre_len = (
                 len(getattr(session, "_history", []))
                 if hasattr(session, "_history")
                 else None
             )
+            settings = _app.get_settings()
+
             if graph_parity_enabled and hasattr(session, "ask"):
+                # --- 4.2 single graph path (no parallel stream LLM) ---
                 graph_task = loop.run_in_executor(
                     get_request_executor(),
                     _session_ask_with_shared_limits,
                 )
+                graph_result: dict[str, Any] | None = None
+                try:
+                    graph_result = await asyncio.wait_for(
+                        asyncio.shield(graph_task),
+                        timeout=graph_parity_timeout,
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "Streaming graph path exceeded %.1fs timeout; "
+                        "holding pipeline capacity until orphan completes",
+                        graph_parity_timeout,
+                    )
+                    if not capacity_held_for_orphan:
+                        capacity_held_for_orphan = True
+                        _hold_capacity_until_future_done(
+                            loop=loop,
+                            fut=graph_task,
+                            semaphore=semaphore,
+                        )
+                    try:
+                        prometheus_metrics.record_request_timeout("/api/ask/stream")
+                    except Exception:
+                        pass
+                    yield "data: " + _json.dumps({
+                        "type": "error",
+                        "detail": "Request deadline exceeded waiting for graph",
+                        "route": "timeout",
+                        "generation_source": "graph_only",
+                    }) + "\n\n"
+                    return
+                except Exception as graph_exc:
+                    logger.warning("Streaming graph path failed: %s", graph_exc)
+                    yield "data: " + _json.dumps({
+                        "type": "error",
+                        "detail": "Graph pipeline failed",
+                        "route": "error",
+                        "generation_source": "graph_only",
+                    }) + "\n\n"
+                    return
 
+                if not isinstance(graph_result, dict):
+                    yield "data: " + _json.dumps({
+                        "type": "error",
+                        "detail": "Graph pipeline returned no result",
+                        "route": "error",
+                        "generation_source": "graph_only",
+                    }) + "\n\n"
+                    return
+
+                graph_appended_history = False
+                if (
+                    history_pre_len is not None
+                    and hasattr(session, "_history")
+                    and len(session._history) > history_pre_len
+                ):
+                    graph_appended_history = True
+
+                terminal_answer = str(graph_result.get("answer") or "")
+                yield "data: " + _json.dumps({"type": "token_start"}) + "\n\n"
+                for chunk in _chunk_text_for_sse(terminal_answer):
+                    yield "data: " + _json.dumps({
+                        "type": "token",
+                        "token": chunk,
+                    }) + "\n\n"
+
+                if not graph_appended_history:
+                    _append_stream_history(
+                        session,
+                        question=question,
+                        answer=terminal_answer,
+                    )
+
+                quality = int(graph_result.get("quality_score") or 0)
+                quality_source = str(graph_result.get("quality_source") or "llm")
+                route = str(graph_result.get("route") or "human")
+                trace_id_value = str(graph_result.get("trace_id") or "")
+                suggested_questions = list(graph_result.get("suggested_questions") or [])
+                sources, citations = _graph_result_sources_and_citations(graph_result)
+
+                await _persist_ask_messages(
+                    session_id=session_id,
+                    tenant_id=tenant,
+                    question=question,
+                    answer=terminal_answer,
+                    path="stream",
+                )
+                try:
+                    prometheus_metrics.record_quality_score_source(quality_source)
+                except Exception:
+                    pass
+                yield "data: " + _json.dumps({
+                    "type": "result",
+                    "answer": terminal_answer,
+                    "answer_source": "graph",
+                    "generation_source": "graph_only",
+                    "quality_score": quality,
+                    "quality_source": quality_source,
+                    "route": route,
+                    "session_id": session_id,
+                    "sources": sources,
+                    "citations": citations,
+                    "trace_id": trace_id_value,
+                    "suggested_questions": suggested_questions,
+                }) + "\n\n"
+                return
+
+            # --- Legacy direct stream (parity off): single stream LLM path ---
             if hasattr(session, "_retriever") and session._retriever is not None:
                 # Cooperative deadline (plan §3.1g): refuse stream retrieve after wall.
                 try:
@@ -1119,6 +1286,7 @@ async def ask_stream(
                 "type": "result",
                 "answer": terminal_answer,
                 "answer_source": answer_source,
+                "generation_source": "stream",
                 "quality_score": quality,
                 "quality_source": quality_source,
                 "route": route,

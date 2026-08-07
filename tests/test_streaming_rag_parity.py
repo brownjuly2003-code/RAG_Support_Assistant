@@ -107,6 +107,7 @@ def test_stream_final_event_uses_graph_quality_and_route(
     # Plan §4.1: graph owns the terminal answer when parity succeeds (not dual text).
     assert final["answer"] == "ground truth answer"
     assert final.get("answer_source") == "graph"
+    assert final.get("generation_source") == "graph_only"
 
 
 def test_stream_uses_graph_citations_when_available(
@@ -288,7 +289,8 @@ def test_stream_does_not_double_append_history_when_graph_runs(
             self._llm = _StreamingLLM()
             self._history: list[dict] = []
 
-        def ask(self, question, trace_id=None, tenant_id="default"):
+        def ask(self, question, **kwargs):  # noqa: ANN003
+            _ = kwargs
             # mimic ConversationSession._append_history
             self._history.append({"role": "user", "content": question})
             self._history.append({"role": "assistant", "content": "ground truth"})
@@ -318,18 +320,27 @@ def test_stream_does_not_double_append_history_when_graph_runs(
     assert sess._history[1]["role"] == "assistant"
 
 
-def test_stream_survives_when_graph_raises(
+def test_stream_parity_graph_failure_is_fail_closed(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Если parity graph упал — стрим всё равно отдаёт final event с heuristic."""
+    """Plan §4.2: parity path does not fall back to a second stream LLM generation."""
+
+    stream_calls = {"n": 0}
+
+    class _CountingStreamLLM(_StreamingLLM):
+        async def generate_stream(self, messages, **kwargs):  # noqa: ANN001
+            stream_calls["n"] += 1
+            async for tok in super().generate_stream(messages, **kwargs):
+                yield tok
 
     class _Session:
         def __init__(self) -> None:
             self._retriever = _retriever_with_doc()
-            self._llm = _StreamingLLM(tokens=("длинный ", "ответ ", "ещё токены"))
+            self._llm = _CountingStreamLLM(tokens=("should-not-", "stream"))
             self.history: list[dict] = []
 
-        def ask(self, question, trace_id=None, tenant_id="default"):
+        def ask(self, question, **kwargs):  # noqa: ANN003
+            _ = question, kwargs
             raise RuntimeError("simulated graph failure")
 
     _install_session(monkeypatch, _Session())
@@ -343,9 +354,60 @@ def test_stream_survives_when_graph_raises(
     assert response.status_code == 200
 
     events = _parse_events(response.text)
+    err = next(event for event in events if event.get("type") == "error")
+    assert err.get("generation_source") == "graph_only"
+    assert stream_calls["n"] == 0
+    assert not any(e.get("type") == "result" for e in events)
+
+
+def test_stream_parity_does_not_call_stream_llm(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When parity is on, only session.ask generates — no parallel stream LLM."""
+
+    stream_calls = {"n": 0}
+
+    class _CountingStreamLLM(_StreamingLLM):
+        async def generate_stream(self, messages, **kwargs):  # noqa: ANN001
+            stream_calls["n"] += 1
+            async for tok in super().generate_stream(messages, **kwargs):
+                yield tok
+
+    class _Session:
+        def __init__(self) -> None:
+            self._retriever = _retriever_with_doc()
+            self._llm = _CountingStreamLLM()
+            self._history: list[dict[str, str]] = []
+
+        def ask(self, question, **kwargs):  # noqa: ANN003
+            _ = kwargs
+            self._history.append({"role": "user", "content": question})
+            self._history.append({"role": "assistant", "content": "only-graph"})
+            return {
+                "answer": "only-graph",
+                "quality_score": 91,
+                "route": "auto",
+                "trace_id": "trace-single-gen",
+                "citations": [],
+                "suggested_questions": [],
+            }
+
+    _install_session(monkeypatch, _Session())
+    _enable_parity()
+
+    response = client.post(
+        "/api/ask/stream",
+        json={"question": "single-gen"},
+        headers={"Accept": "text/event-stream"},
+    )
+    assert response.status_code == 200
+    events = _parse_events(response.text)
     final = next(event for event in events if event.get("type") == "result")
 
-    # graph failed → trace_id stays empty, but stream completes successfully
-    assert final["answer"] == "длинный ответ ещё токены"
-    assert final["trace_id"] == ""
-    assert final["quality_score"] in (40, 70)
+    assert stream_calls["n"] == 0
+    assert final["answer"] == "only-graph"
+    assert final.get("generation_source") == "graph_only"
+    assert final.get("answer_source") == "graph"
+    token_events = [e for e in events if e.get("type") == "token"]
+    assert token_events, "UX token chunks still emitted from graph answer"
+    assert "".join(e["token"] for e in token_events) == "only-graph"
