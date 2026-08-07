@@ -1,8 +1,157 @@
 # Agent State
 
+## 2026-08-07 Update-87 — record completed slice 4.4 @ `0371971` ✅ START HERE
+
+> **Routing authority:** Update-87 supersedes Update-86 **for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `0371971`
+>   (`feat(escalation): auto-escalate terminal human/error on normal ask path`)
+>   — slice **4.4**
+> - Previous implementation: `ad5e435` — **4.3**
+> - Previous docs: Update-86 `63084ad` (transparency after 4.3)
+> - §4 chain (impl only): `eaf41f3` 4.1 → `f1c846e` 4.2 → `ad5e435` 4.3 →
+>   `0371971` **4.4**
+> - §3 chain ends: `fe2f0aa` **3.1i**
+> - §2 fault-injection last impl: `f347feb` (**2.6g**)
+> - Migrations on disk (not applied this session): **019–023**
+> - This Update-87 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 152]` after impl commit.
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | index/job-object/fault-injection **local residual closed** at documented scopes |
+> | **3.1a–3.1i** | executor, deadlines, session serialize+process-local version, roles, budget **local** |
+> | **4.1–4.4** | stream terminal/history + graph-only parity + durable escalation + **auto human-route** **local** |
+> | Full plan §2 | **NOT** complete (live multi-service DoD open) |
+> | Full plan §3 | **NOT** complete (multi-replica durable session version residual) |
+> | Full plan §4 | **NOT** complete (outbox retry worker; true graph tokens; parity default still off) |
+> | Plan §5+ | **not started** |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+>
+> ---
+>
+> ### Plan §4 map (honest)
+>
+> | Bullet | Local | Residual |
+> |--------|-------|----------|
+> | LangGraph sole path; SSE transmits | partial **4.1–4.2** | true node/token events; legacy stream when parity **off** (default) |
+> | one terminal answer + one history mutation | **4.1–4.2** when parity **on** | dual path when parity off |
+> | idempotent ticket + inbox outbox | **4.3** + migration **023** | outbox **retry worker**; optional transactional outbox table |
+> | ticket_id + delivery_state; no false operator claim | **4.3–4.4** on wired paths | live PG migrate opt-in |
+> | auto-escalate terminal human/error on normal ask | **4.4** | stream path parity for same rule if needed |
+>
+> **§4 ledger:** 4.1 `eaf41f3` → 4.2 `f1c846e` → 4.3 `ad5e435` → **4.4** `0371971`.
+>
+> ---
+>
+> ### 4.4 contract (COMPLETE @ `0371971`)
+>
+> - `/api/ask` success path: if `route` ∈ `{human, error, error_escalation}` and
+>   no graph-owned `ticket_id`, call `create_escalation(source=human_route)`
+> - Response includes `ticket_id` + `delivery_state`
+> - Graph-provided tickets (handle_error / agentic) **passed through** — no second insert
+> - AI draft answer **kept** on quality human route; never inject false
+>   «передан оператору» when durable insert fails
+> - `route=auto` does **not** escalate
+> - Wired surface: `api/routers/conversation.py` success path only (exception
+>   path already covered by 4.3)
+>
+> **Verification:** focused **25 passed**
+> (`test_human_route_escalation` + pipeline exception + escalation service +
+> graph error + agent tools); Ruff clean on scoped paths. Full suite / live
+> PG / migrate / push / deploy **not** run / **not** claimed.
+>
+> ---
+>
+> ### Module owners (high-signal; do not reopen without conflict)
+>
+> | Path | Slice | Role |
+> |------|-------|------|
+> | `services/escalation.py` | **4.3** | idempotent durable escalation |
+> | `api/routers/conversation.py` `/api/ask` | **4.3–4.4** | exception + **auto human-route** escalate |
+> | `api/routers/feedback.py` `/api/escalate` | 4.3 | manual escalate |
+> | `agent/graph.py` handle_error | 4.3 | durable escalate |
+> | `agent/tools.py` create_ticket | 4.3 | → service |
+> | job-object / index stack | 2.1–2.6g | do not re-select |
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **4.5 / next:** outbox retry worker for `delivery_state=failed` **or**
+>   begin plan **§5** grounding / routing fail-closed
+> - multi-replica durable session version
+> - true LangGraph token/node SSE (not chunked finished answer)
+> - flip default stream to graph-only / remove legacy parity-off path
+> - stream-path auto-escalate parity (if stream returns human without ticket)
+> - live multi-service + apply migrations **019–023** (**opt-in**)
+> - real FS deletion / age-budget auto-delete / retention execute HTTP
+> - full suite / release / production readiness
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **4.5 — outbox retry worker for `delivery_state=failed`**
+> (tests-first):
+> - pick pending/failed durable tickets and re-attempt inbox delivery without
+>   creating a second ticket;
+> - still **no** live multi-service / push / deploy / migrate without opt-in.
+>
+> **Alternate:** begin plan **§5** grounding fail-closed if user prioritizes
+> answer quality gates over §4 residual.
+>
+> **Do not re-select:** 2.1–2.6g, **3.1a–3.1i**, **4.1–4.4**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Do not touch/stage/remove without explicit request:
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+>   `_NEXT_SESSION.md` (**pointer only — not routing authority**),
+>   `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
+>   casually), architecture HTML, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live PostgreSQL/Redis/Celery/Chroma drills, `alembic upgrade`
+> (incl. **019–023**), destructive Git, production-readiness claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; Grok implements.
+>
+> **Git advisory:** refresh `git status --short --branch` and
+> `git log -8 --oneline` at session start — **actual Git wins**.
+
+
 ## 2026-08-07 Update-86 — docs-only transparency after 4.3 / Update-85 ✅ START HERE
 
-> **Routing authority:** Update-86 is **docs-only / transparency-only** and
+> **Historical handoff (superseded by Update-87 for start-point routing).**
+> Recorded transparency after **4.3**; **4.4** complete under Update-87.
+>
+> **Original routing note (archival):** Update-86 is **docs-only / transparency-only** and
 > supersedes Update-85 **only for start-point routing**. All older Update
 > blocks below, including headings that literally contain `✅ START HERE`,
 > are **archival**. **Only the first/topmost Update block in this file is
