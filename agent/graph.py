@@ -1061,8 +1061,13 @@ def make_retrieve_node(retriever: Any) -> Callable[[GraphState], GraphState]:
     def node(state: GraphState) -> GraphState:
         if state.get("error"):
             return state
+        from utils.request_deadline import RequestDeadlineExceeded, check_request_deadline
+
         trace_id = state.get("trace_id", "unknown-trace-id")
         try:
+            # Cooperative deadline (plan §3.1g): refuse new retrieve work after wall.
+            # Re-raise so ConversationSession.ask maps to route=timeout (not empty docs).
+            check_request_deadline("retrieve")
             query = state.get("hyde_query") or state.get("search_query") or state.get("question", "")
             requested_strategy = _select_retrieval_strategy(state)
             effective_strategy = requested_strategy
@@ -1093,6 +1098,8 @@ def make_retrieve_node(retriever: Any) -> Callable[[GraphState], GraphState]:
                         if requested_strategy == "graph":
                             effective_strategy = "hybrid"
                         docs = retriever.get_relevant_documents(query)
+                except RequestDeadlineExceeded:
+                    raise
                 except Exception as exc:
                     logger.warning("[retrieve] Retriever error: %s", exc, extra={"trace_id": trace_id})
                     docs = []
@@ -1106,6 +1113,8 @@ def make_retrieve_node(retriever: Any) -> Callable[[GraphState], GraphState]:
             }
             log_step(trace_id, "retrieve", new_state)
             return new_state
+        except RequestDeadlineExceeded:
+            raise
         except Exception as exc:
             return _make_error_state(state, "retrieve", exc)
 

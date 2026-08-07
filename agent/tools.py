@@ -18,6 +18,10 @@ def tool(func: _ToolFunc) -> _ToolFunc:
 
 
 def _load_docs(query: str, tenant_id: str, retriever: Any | None = None) -> list[Any]:
+    # Cooperative deadline (plan §3.1g): refuse new retrieve work after wall.
+    from utils.request_deadline import check_request_deadline
+
+    check_request_deadline("tool.search_kb")
     active_retriever = retriever or get_retriever(tenant_id=tenant_id)
     if hasattr(active_retriever, "invoke"):
         docs = active_retriever.invoke(query)
@@ -50,6 +54,9 @@ def search_kb(query: str, tenant_id: str, retriever: Any | None = None) -> str:
 @tool
 def check_order_status(order_id: str, tenant_id: str) -> str:
     """Check a mock order-status backend and return a customer-facing status."""
+    from utils.request_deadline import check_request_deadline
+
+    check_request_deadline("tool.check_order_status")
     normalized = re.sub(r"\D+", "", order_id) or order_id
     status_map = {
         "42": "Заказ #42: статус 'в пути', доставка ожидается в течение 2 дней.",
@@ -91,6 +98,10 @@ def create_ticket(
     session_id: str = "",
 ) -> str:
     """Create an escalation ticket. This action is irreversible and requires confirmation."""
+    # Cooperative deadline (plan §3.1g): refuse irreversible side effects after wall.
+    from utils.request_deadline import check_request_deadline
+
+    check_request_deadline("tool.create_ticket")
     ticket_id = asyncio.run(
         _persist_ticket(
             summary=summary,

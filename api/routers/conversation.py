@@ -674,7 +674,9 @@ async def ask_stream(
             set_llm_request_budget,
         )
         from utils.request_deadline import (
+            RequestDeadlineExceeded,
             bind_request_deadline,
+            check_request_deadline,
             clear_request_deadline,
             set_request_deadline,
         )
@@ -727,6 +729,24 @@ async def ask_stream(
                 )
 
             if hasattr(session, "_retriever") and session._retriever is not None:
+                # Cooperative deadline (plan §3.1g): refuse stream retrieve after wall.
+                try:
+                    check_request_deadline("stream.retrieve")
+                except RequestDeadlineExceeded as deadline_exc:
+                    logger.warning(
+                        "Streaming retrieve refused after deadline: %s",
+                        deadline_exc,
+                    )
+                    try:
+                        prometheus_metrics.record_request_timeout("/api/ask/stream")
+                    except Exception:
+                        pass
+                    yield "data: " + _json.dumps({
+                        "type": "error",
+                        "detail": "Request deadline exceeded before retrieval",
+                        "route": "timeout",
+                    }) + "\n\n"
+                    return
                 docs = await asyncio.get_running_loop().run_in_executor(
                     None,
                     session._retriever.get_relevant_documents,
