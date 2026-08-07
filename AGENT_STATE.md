@@ -1,8 +1,143 @@
 # Agent State
 
+## 2026-08-07 Update-82 — record completed slice 3.1i @ `fe2f0aa` ✅ START HERE
+
+> **Routing authority:** Update-82 supersedes Update-81 **for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `fe2f0aa`
+>   (`feat(session): optimistic version CAS and sticky identity to pipeline`)
+>   — slice **3.1i**
+> - Previous implementation: `ab7b417` — **3.1h** reranker deadline
+> - Previous docs: Update-81 `88ea9f9`
+> - §3 chain (impl only): 3.1a…3.1h → `fe2f0aa` 3.1i
+> - §2 fault-injection last impl: `f347feb` (**2.6g**)
+> - This Update-82 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 143]` before this docs commit.
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | local residual closed at documented scopes |
+> | **3.1a–3.1i** | executor, deadlines (provider/stream/retrieve/tool/reranker), session serialize + **process-local** optimistic version + sticky ids, roles, budget **local** at documented scopes |
+> | Full plan §2 | **NOT** complete (live multi-service DoD open) |
+> | Full plan §3 | **NOT** complete (multi-replica durable version store residual) |
+> | Plan §4+ | **not started** |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+>
+> ---
+>
+> ### Plan §3 map (honest)
+>
+> | Plan §3 bullet (order) | Local slices | Residual |
+> |------------------------|--------------|----------|
+> | nested executor / capacity until work done | **3.1a** + **3.1f** | — documented scopes |
+> | cooperative deadline provider/retriever/reranker/tools | **3.1b** + **3.1f** + **3.1g** + **3.1h** | — cooperative scopes |
+> | per-session serialize / optimistic version + sticky ids | **3.1c** + **3.1i** | multi-replica durable version store; HTTP If-Match surface optional |
+> | max_tokens/temperature per LLM role | **3.1d** | — |
+> | per-request LLM call/token budget | **3.1e** + **3.1f** | — |
+>
+> ---
+>
+> ### §3 implementation ledger (quick)
+>
+> | Slice | Impl SHA | Surface |
+> |-------|----------|---------|
+> | 3.1a–3.1h | (see Update-81) | executor … reranker |
+> | **3.1i** | `fe2f0aa` | `mutation_version` / `expected_version` CAS; sticky ids to pipeline |
+>
+> ---
+>
+> ### 3.1i contract (COMPLETE @ `fe2f0aa`)
+>
+> - `ConversationSession.mutation_version` public read of process-local epoch
+> - `ask(expected_version=…)` CAS under turn lock before exclusive work;
+>   mismatch → `route=conflict`, `error_node=session_version`, **never auto**;
+>   pipeline not invoked
+> - Successful (and stamped) results include `session_version` for next CAS
+> - `user_id` / `session_id` forwarded into `run_qa_pipeline` (sticky experiments)
+> - **Out of scope:** Redis/DB durable multi-replica version store; HTTP If-Match
+>
+> **Verification (3.1i):** focused **34 passed**
+> (`test_session_version` + `test_session_serialize` + agent tools + deadline +
+> LLM budget); Ruff clean. Full suite / live drills **not** run.
+>
+> ---
+>
+> ### Module owners (do not reopen without proven conflict)
+>
+> | Path | Slice | Role |
+> |------|-------|------|
+> | `agent/graph.py` `ConversationSession` | 3.1a–e + **3.1i** | turn lock, version CAS, sticky forward |
+> | `agent/state.py` | **3.1i** | `route=conflict`, `session_version` field |
+> | deadline / budget / tools / rerank | 3.1b–h | do not re-select |
+> | job-object / index stack | 2.1–2.6g | do not re-select |
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - multi-replica durable session version store (product opt-in design)
+> - optional HTTP `If-Match` / expose `session_version` on `/api/ask`
+> - live multi-service drills / migrations **019–022** (**opt-in**)
+> - plan **§4+** unified LangGraph sync/SSE + durable escalation **← next default**
+> - real FS deletion / age-budget auto-delete / retention execute HTTP
+> - full suite / push / deploy / production-readiness **not** claimed
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **4.1** (or first atomic §4 slice): begin plan **§4** unified LangGraph
+> sync/SSE path — **read §4 DoD first**, tests-first, one atomic boundary only
+> (do not boil the ocean). Alternate: multi-replica durable version store design
+> if user prioritizes session durability over pipeline unification.
+>
+> **Do not re-select:** 2.1–2.6g, **3.1a–3.1i**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Do not touch/stage/remove without explicit request:
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked (incl.):** `_NEXT_SESSION.md`, plan file, pytest temps, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live PostgreSQL/Redis/Celery/Chroma drills, destructive Git,
+> production-readiness claims.
+>
+> **Standing preference:** Grok implements; one user turn = one named atomic
+> slice; local commit only.
+>
+> **Git advisory:** refresh `git status --short --branch` and
+> `git log -5 --oneline` at session start — **actual Git wins**.
+
 ## 2026-08-07 Update-81 — record completed slice 3.1h @ `ab7b417` ✅ START HERE
 
-> **Routing authority:** Update-81 supersedes Update-80 **for start-point
+> **Historical handoff (superseded by Update-82 for start-point routing).**
+> Recorded **3.1h** @ `ab7b417`; docs `88ea9f9`. **3.1i** complete under Update-82.
+>
+> **Original routing note (archival):** Update-81 supersedes Update-80 **for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old
