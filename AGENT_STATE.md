@@ -1,8 +1,82 @@
 # Agent State
 
+## 2026-08-07 Update-84 — record completed slice 4.2 @ `f1c846e` ✅ START HERE
+
+> **Routing authority:** Update-84 supersedes Update-83 **for start-point
+> routing**. Older blocks with `✅ START HERE` are **archival**. Only the
+> first/topmost Update is authoritative.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `f1c846e`
+>   (`feat(stream): single graph generation when streaming parity is enabled`)
+>   — slice **4.2**
+> - Previous: `eaf41f3` — **4.1**; `fe2f0aa` — **3.1i**
+> - Previous docs: Update-83 `4ce63c5`
+> - This Update-84 docs SHA unknown in-file — refresh `git log`
+>
+> **Branch advisory:** was `ahead 147` before docs — refresh.
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** + **3.1a–3.1i** | local at documented scopes |
+> | **4.1** | single terminal answer/history when parity succeeds |
+> | **4.2** | parity on → **graph-only generation** (no parallel stream LLM) |
+> | Full plan §2 / §3 / §4 | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
+>
+> ---
+>
+> ### Plan §4 map (honest)
+>
+> | Plan §4 bullet | Local | Residual |
+> |----------------|-------|----------|
+> | LangGraph sole execution + SSE transmit | partial (**4.2** when parity on) | true node/token events from graph; legacy stream when parity off |
+> | remove dual stream+graph generation; one terminal + history | **4.1** + **4.2** (parity path) | parity still opt-in default false; legacy direct stream remains |
+> | idempotent escalation + outbox | not started | **← next 4.3** |
+> | ticket_id / delivery state | not started | with 4.3 |
+>
+> ---
+>
+> ### 4.2 contract (COMPLETE @ `f1c846e`)
+>
+> - `STREAMING_RAG_PARITY=true`: only `session.ask` generates; SSE tokens =
+>   chunked graph answer (`generation_source=graph_only`)
+> - Graph timeout/failure → SSE `type=error`, **no** second stream LLM
+> - Parity off: legacy direct stream unchanged (`generation_source=stream`)
+>
+> **Verification:** 13 passed stream suite; Ruff clean. Full suite **not** run.
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **4.3** — durable escalation / idempotent ticket+inbox outbox
+> (plan §4 bullets 3–4). Read plan DoD; tests-first; no live multi-service
+> without opt-in.
+>
+> Alternate: make graph-only stream the default path (flip parity / remove
+> legacy stream) as a separate named slice.
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–3.1i, **4.1**, **4.2**.
+>
+> ---
+>
+> ### Protected / gates
+>
+> Dirty backlog/README/audit/plan_sol — do not touch. No push/deploy/live
+> without opt-in. Refresh git status/log — actual Git wins.
+
 ## 2026-08-07 Update-83 — record completed slice 4.1 @ `eaf41f3` ✅ START HERE
 
-> **Routing authority:** Update-83 supersedes Update-82 **for start-point
+> **Historical handoff (superseded by Update-84 for start-point routing).**
+> Recorded **4.1** @ `eaf41f3`. **4.2** complete under Update-84.
+>
+> **Original routing note (archival):** Update-83 supersedes Update-82 **for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old
