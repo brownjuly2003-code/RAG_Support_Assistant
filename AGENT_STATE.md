@@ -1,88 +1,59 @@
 # Agent State
 
-## 2026-08-07 Update-61 — record completed slice 2.4k @ `9e358f1` ✅ START HERE
+## 2026-08-07 Update-62 — record completed slice 2.5a @ `0855528` ✅ START HERE
 
-> **Routing authority:** Update-61 supersedes Update-60 **only for
+> **Routing authority:** Update-62 supersedes Update-61 **only for
 > start-point routing**. All older Update blocks below, including headings
 > that literally contain `✅ START HERE`, are **archival**. **Only the
 > first/topmost Update block in this file is authoritative.** Never select
 > work by grepping old `START HERE` markers.
 >
-> **Latest implementation:** `9e358f1`
-> (`feat(ingestion): load job statuses and wire CLI transition annotations`)
-> — slice **2.4k** (status load + CLI annotation wiring; **no** deletion).
+> **Latest implementation:** `0855528`
+> (`feat(admin): read-only job-object inventory preview HTTP surface`) —
+> slice **2.5a** (admin GET inventory preview + audit; **no** deletion).
 >
-> **Previous lineage (actual Git wins over embedded hashes):**
-> - Implementation **2.4j:** `ea3f59e` (ownership annotations)
-> - Docs Update-59: `a077f0d`; Update-60: `3c96a03`
-> - This Update-61 docs commit SHA is **unknown inside its own content**;
->   next session: `git log -5 --oneline`.
+> **Previous lineage (actual Git wins):** **2.4k** `9e358f1`; docs Update-61
+> `33327b9`. This Update-62 docs SHA is unknown inside its own content.
 >
-> **Completion truth:** slices **2.1 through 2.4k** remain locally complete
-> and verified **only at documented scopes**. Full plan step 2 and full
-> immutable-original lifecycle remain **incomplete**.
+> **Completion truth:** **2.1–2.4k + 2.5a** locally complete at documented
+> scopes only. Full plan step 2 / full immutable lifecycle **incomplete**.
 >
-> **Job-object stack already landed (do not re-select):**
-> | Slice | Commit | Role |
-> |-------|--------|------|
-> | 2.4a | `a1dcd5c` | immutable upload originals + flat current view |
-> | 2.4b | `29be31a` | manager build publication receipt |
-> | 2.4c | `999c90f` | async worker receipt persistence |
-> | 2.4d | `dfbbca0` | sync non-default upload receipt |
-> | 2.4e | `13be7d9` | read-only job-object tree classifier |
-> | 2.4f | `68cf045` | tenant load + preview |
-> | 2.4g | `1ccb39b` | fail-closed retention policy (empty candidates) |
-> | 2.4h | `9761caf` | guarded retention command (empty → no-op) |
-> | 2.4i | `f0f79b9` | operator CLI inventory + policy + optional no-op |
-> | 2.4j | `ea3f59e` | failed-transition ownership annotations |
-> | 2.4k | `9e358f1` | job status load + CLI transition annotations |
->
-> **2.4k contract:**
-> - `ingestion.jobs.sync_list_job_statuses_for_tenant(tenant_id) ->
->   dict[str, str]` — read-only, tenant-scoped, empty tenant fails closed
-> - CLI loads statuses (injectable), calls
->   `annotate_job_object_transition_context`, surfaces
->   `transition_annotations` in human + JSON
-> - failed+protected → `retained_after_failed_transition`,
+> **2.5a contract:**
+> - `GET /api/admin/job-objects/inventory` — admin role, JWT tenant only
+> - uses `ingestion.job_object_operator.load_and_run_operator_preview`
+>   (`execute=False`); composition shared with CLI
+> - response: inventory + dispositions + transition_annotations; **no**
+>   `execution` block
+> - audit action `job_object_inventory_preview`
+> - failed+protected remains `retained_after_failed_transition`,
 >   `auto_delete_eligible=false`
 >
-> **Key invariant (unchanged):** failed jobs with `source_path`-matched
-> originals are intentional retention, **not** GC candidates.
+> **Verification (2.5a):** focused green **61 passed** (admin job-objects +
+> orphans + CLI + retention + inventory); Ruff clean. Full suite / live
+> services **not** run.
 >
-> **Verification (2.4k):** focused green **53 passed** (orphans + CLI +
-> retention + inventory); scoped Ruff clean; `git diff --check` clean on
-> staged paths. Full suite / live services **not** run.
+> **Open boundaries:** **no** real FS deletion; **no** age/budget; **no**
+> orphan cleanup mutations; **no** job-object retention execute HTTP; **no**
+> DB model field for index version/collection; **no** live drills;
+> **no** push/deploy / production claim.
 >
-> **Open boundaries (honest):** **no** real FS deletion path; **no**
-> age/budget thresholds; **no** orphan cleanup mutations; **no** admin HTTP
-> surface; **no** DB model/migration field for index version/collection;
-> **no** full suite / live drills; **no** push/deploy / production-readiness
-> claim.
+> **Next candidate (re-scope — not started):** do **not** re-select
+> 2.1–2.4k/2.5a. Prefer another plan §2 non-deletion gap, or explicit
+> opt-in before deletion design. Plan source:
+> untracked `rag-remediation-plan-2026-08-03.md` §2.
 >
-> **Active writer / WIP:** none.
+> **Protected dirty/untracked:** do not touch without request. No plan
+> checkbox edits. Gates: no push/deploy/live without opt-in.
 >
-> **Next candidate (re-scope required — not started):** job-object
-> operator-visibility track is complete through **2.4k**. Do **not**
-> re-select 2.1–2.4k. Do **not** invent auto-delete classes or start real
-> FS deletion without explicit product opt-in. Next session must re-read
-> plan §2 + this handoff and pick **one** remaining non-deletion gap (or
-> get explicit opt-in before any deletion design). Details:
-> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
->
-> **Protected dirty / untracked state:** do not touch/stage/remove without
-> explicit request. Do **not** edit the active untracked plan checkboxes.
-> Untracked `_NEXT_SESSION.md` is a pointer only — **not** routing
-> authority.
->
-> **External gates (not authorized):** push, deploy, live services,
-> destructive Git, production-readiness claims.
->
-> **Standing execution preference:** **Grok** implements/content-writes;
-> one user turn = **one** named atomic slice; local commit only.
->
-> **Git advisory only:** branch observed as
-> `master...origin/master [ahead 103]` after 2.4k impl — refresh next
-> session.
+> **Git advisory:** `master...origin/master [ahead 105]` after 2.5a impl —
+> refresh next session.
+
+## 2026-08-07 Update-61 — record completed slice 2.4k @ `9e358f1` ✅ START HERE
+
+> **Historical handoff (superseded by Update-62 for start-point routing).**
+> Completed **2.4k** @ `9e358f1`. Later closed by Update-62 / **2.5a**
+> @ `0855528`. Next-work pointer naming re-scope-after-2.4k only is **stale**
+> for start routing (re-scope still required after 2.5a).
 
 ## 2026-08-07 Update-60 — docs-only transparency after Update-59 @ `a077f0d` ✅ START HERE
 

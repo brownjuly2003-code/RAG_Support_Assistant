@@ -1,15 +1,14 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 (Update-61 after completed **2.4k** @ `9e358f1`;
-previous implementation `ea3f59e` / **2.4j**; next requires re-scope —
-job-object operator-visibility track complete through 2.4k)
+**Обновлено:** 2026-08-07 (Update-62 after completed **2.5a** @ `0855528`;
+previous **2.4k** `9e358f1`; next requires re-scope — job-object
+operator-visibility includes CLI + read-only admin HTTP)
 
 **Назначение:** самодостаточный next-session handoff для coding agent после
 compacted context. История срезов — в [`AGENT_STATE.md`](../AGENT_STATE.md)
-(**только верхний блок Update-61** — routing authority; older blocks including
-literal `✅ START HERE` headings are archival). Evidence 2.4k — ниже;
-2.4j — Update-59 / `a077f0d` + Update-60 / `3c96a03`. Активный plan source —
-untracked/protected
+(**только верхний блок Update-62** — routing authority; older blocks including
+literal `✅ START HERE` headings are archival). Evidence 2.5a — ниже;
+2.4k — Update-61. Активный plan source — untracked/protected
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
 
 ## Нулевая неоднозначность: состояние на входе
@@ -19,21 +18,21 @@ untracked/protected
 
 | Факт | Значение |
 |------|----------|
-| Latest implementation | `9e358f1` (`feat(ingestion): load job statuses and wire CLI transition annotations`) — **2.4k** |
-| Previous implementation | `ea3f59e` (slice **2.4j**) |
-| Latest pre-2.4k docs | Update-60 `3c96a03`; Update-59 `a077f0d` |
-| This Update-61 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
-| Branch advisory | `master...origin/master [ahead 103]` after 2.4k impl — **refresh mandatory** |
+| Latest implementation | `0855528` (`feat(admin): read-only job-object inventory preview HTTP surface`) — **2.5a** |
+| Previous implementation | `9e358f1` (slice **2.4k**) |
+| Latest pre-2.5a docs | Update-61 `33327b9` |
+| This Update-62 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
+| Branch advisory | `master...origin/master [ahead 105]` after 2.5a impl — **refresh mandatory** |
 | Active writer | **none** |
 | Unfinished WIP in next targets | **none known** |
-| Locally complete (documented scopes) | **2.1–2.4k** |
-| Not complete / not claimed | full plan step 2; full immutable lifecycle; real FS deletion; orphan cleanup mutations; age/budget thresholds; admin HTTP; DB model/migration field; full suite; live drills; project/release/production readiness |
-| Next allowed candidate | **re-scope** — do **not** re-select 2.1–2.4k; do **not** invent deletion without explicit opt-in |
+| Locally complete (documented scopes) | **2.1–2.4k + 2.5a** |
+| Not complete / not claimed | full plan step 2; full immutable lifecycle; real FS deletion; orphan cleanup mutations; age/budget thresholds; job-object retention execute HTTP; DB model/migration field; full suite; live drills; project/release/production readiness |
+| Next allowed candidate | **re-scope** — do **not** re-select 2.1–2.4k/2.5a; do **not** invent deletion without explicit opt-in |
 | Gates | no push / deploy / live services / destructive Git / production claims |
 
-**Known verification (2.4k):** focused green **53 passed** (orphans + CLI +
-retention + inventory); scoped Ruff clean; staged-path `git diff --check`
-clean. Full suite / live services **not** run.
+**Known verification (2.5a):** focused green **61 passed** (admin job-objects
++ orphans + CLI + retention + inventory); Ruff clean. Full suite / live
+services **not** run.
 
 **Key invariant (do not violate):** failed jobs with `source_path`-matched
 job-objects are `retained_after_failed_transition` — intentional retention,
@@ -48,7 +47,9 @@ job-objects are `retained_after_failed_transition` — intentional retention,
 | `ingestion/job_object_inventory.py` | 2.4e/2.4f | classify + tenant preview |
 | `ingestion/job_object_retention.py` | 2.4g/2.4h | fail-closed policy + guarded no-op command |
 | `ingestion/job_object_orphans.py` | 2.4j | transition ownership annotations |
-| `scripts/preview_job_object_inventory.py` | 2.4i/2.4k | operator CLI + status annotations |
+| `ingestion/job_object_operator.py` | 2.4i–2.5a | shared composition + load_and_run + JSON |
+| `scripts/preview_job_object_inventory.py` | 2.4i/2.4k | operator CLI (thin; uses operator module) |
+| `api/routers/admin_ops.py` | 2.5a | `GET /admin/job-objects/inventory` (read-only) |
 | `vectordb/*` index retention | 2.1–2.3i | **separate** Chroma subsystem — must not delete job-objects |
 
 ### Protected state (do not touch/stage/remove without explicit request)
@@ -77,16 +78,16 @@ next-candidate WIP на момент этого handoff.
    `git log -5 --oneline` as **separate** commands; **actual Git wins** over
    embedded hashes/counts (known implementation `9e358f1` / **2.4k**; known
    Update-60 docs `3c96a03`; this Update-61 docs SHA from fresh `git log`).
-3. Read **only** top **Update-61** in `AGENT_STATE.md` + this
+3. Read **only** top **Update-62** in `AGENT_STATE.md` + this
    **Нулевая неоднозначность** capsule first; treat older Update blocks
-   (including Update-60) as archive. Do **not** reselect 2.1–2.4k.
+   as archive. Do **not** reselect 2.1–2.4k/2.5a.
 4. **Re-scope before coding:** job-object operator-visibility track is
-   complete through **2.4k**. Pick **one** remaining plan §2 gap that is
-   still non-deletion, **or** get explicit product opt-in before any
-   deletion/age/budget design. Do **not** invent auto-delete classes.
-   Re-check protected dirty/untracked list. Do **not** reopen 2.4a–2.4k
-   domain semantics unless investigation proves a required conflict —
-   then **stop and re-scope**.
+   complete through **2.5a** (CLI + read-only admin HTTP). Pick **one**
+   remaining plan §2 gap that is still non-deletion, **or** get explicit
+   product opt-in before any deletion/age/budget design. Do **not** invent
+   auto-delete classes. Re-check protected dirty/untracked list. Do **not**
+   reopen 2.4a–2.5a domain semantics unless investigation proves a required
+   conflict — then **stop and re-scope**.
 5. Use **Grok** via the local verified route; announce counters
    `slice 1/1`, `delegated run N/3`, `QA follow-up N/1`. Execute **at most
    one** named atomic next candidate.
@@ -146,18 +147,38 @@ Push/deploy not authorized.
 | **2.4i** | operator CLI for inventory + policy + optional guarded no-op | `f0f79b9` | Update-58 |
 | **2.4j** | failed-transition ownership annotations (no deletion) | `ea3f59e` | Update-59 `a077f0d` + Update-60 handoff |
 | **2.4k** | job status load + CLI transition annotations (no deletion) | `9e358f1` | Update-61 |
+| **2.5a** | read-only admin job-object inventory HTTP preview + audit | `0855528` | Update-62 |
 
-Срезы **2.1–2.4k** локально complete и verified at documented scopes
-(**2.4k** only at status load + CLI annotation wiring). Локальный operator
-surface для index retention preview + guarded execution и validated rollback
-**present**. Immutable upload originals + receipts + job-object
-inventory/policy/command/CLI/annotation stack **present** through 2.4k.
-Failed-transition ownership annotations **wired into CLI** after 2.4k
-(failed jobs with source_path originals are retained, not GC). Полный plan
-step 2, full immutable lifecycle, real FS deletion path, orphan cleanup
-mutations, age/budget thresholds, admin HTTP, fault injection, live drills,
-project и release — **не** complete. **2.1–2.4k must never be selected
-again.** Next work requires **re-scope** (still **no** deletion by default).
+Срезы **2.1–2.4k + 2.5a** локально complete at documented scopes.
+Job-object operator-visibility: CLI + shared composition module + admin GET.
+Полный plan step 2, real FS deletion, age/budget, retention execute HTTP,
+fault injection, live drills — **не** complete. **Do not re-select
+2.1–2.4k/2.5a.** Next work requires **re-scope** (still **no** deletion by
+default). Plan: `rag-remediation-plan-2026-08-03.md` §2.
+
+## Контракт 2.5a (admin job-object inventory preview) — COMPLETE
+
+Read-only admin HTTP at `0855528`:
+
+- `GET /api/admin/job-objects/inventory` — `require_role("admin")`
+- JWT tenant only; foreign `tenant_id` query ignored by design
+- `load_and_run_operator_preview(..., execute=False)` via `asyncio.to_thread`
+- response: inventory_entries, dispositions, transition_annotations,
+  auto_delete_candidates; **no** execution block
+- audit: `job_object_inventory_preview` / `job-objects/inventory`
+- shared composition: `ingestion/job_object_operator.py` (CLI reuses)
+
+**Paths changed in `0855528`:**
+
+- `ingestion/job_object_operator.py` (new)
+- `scripts/preview_job_object_inventory.py` (thin CLI)
+- `api/routers/admin_ops.py`
+- `tests/test_admin_job_object_inventory.py` (new)
+
+**Boundary:** read-only HTTP only. **Нет** deletion, execute endpoint,
+age/budget, plan checkbox edits, push/deploy.
+
+**Verification:** 61 passed focused; Ruff clean.
 
 ## Контракт 2.4k (status load + CLI transition annotations) — COMPLETE
 
