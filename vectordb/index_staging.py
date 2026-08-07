@@ -10,7 +10,12 @@ from typing import Any
 
 from config.settings import get_settings
 from utils.tenant_naming import physical_tenant_component
-from vectordb.index_lifecycle_faults import KNOWN_QUERY, maybe_inject
+from vectordb.index_lifecycle_faults import (
+    EMBEDDINGS,
+    KNOWN_QUERY,
+    IndexLifecycleFaultError,
+    maybe_inject,
+)
 from vectordb.tenant_lock import TenantIndexLockToken, require_tenant_index_lock
 
 _COLLECTION_NAME_MAX_LENGTH = 63
@@ -109,6 +114,11 @@ def _validate_candidate(
         raise IndexStagingValidationError(
             f"Staged collection count mismatch: expected {expected_count}, got {actual_count}"
         )
+
+    # Inject after count checks and before the embedding dimension probe so a
+    # failed embeddings boundary cannot leave an unpublished candidate live or
+    # advance inventory/publish.
+    maybe_inject(EMBEDDINGS)
 
     embed_query = getattr(embeddings, "embed_query", None)
     if not callable(embed_query):
@@ -320,6 +330,10 @@ def build_staged_collection(
         except IndexStagingCleanupError:
             raise
         if isinstance(exc, IndexStagingError):
+            raise
+        # Named lifecycle faults must surface as-is (not wrapped as build errors)
+        # so tests and drills can assert the exact inject boundary.
+        if isinstance(exc, IndexLifecycleFaultError):
             raise
         if isinstance(exc, Exception):
             raise IndexStagingBuildError(

@@ -7,7 +7,8 @@ production paths stay inert unless a caller deliberately arms a point.
 
 2.6a covers the inventory-write and manifest-publish commit boundaries.
 2.6b adds the staged known-query validation boundary (before inventory).
-Later slices may reserve additional point names (embeddings, cleanup)
+2.6c adds the staged embedding-dimension validation boundary (during build).
+Later slices may reserve additional point names (cleanup, concurrency)
 without changing this module's fail-closed defaults.
 """
 from __future__ import annotations
@@ -24,12 +25,15 @@ INVENTORY_WRITE: Final[str] = "inventory_write"
 MANIFEST_PUBLISH: Final[str] = "manifest_publish"
 # Staged known-query validation boundary (before inventory/publish).
 KNOWN_QUERY: Final[str] = "known_query"
+# Staged embedding-dimension validation boundary (during candidate build).
+EMBEDDINGS: Final[str] = "embeddings"
 
 _KNOWN_POINTS: Final[frozenset[str]] = frozenset(
     {
         INVENTORY_WRITE,
         MANIFEST_PUBLISH,
         KNOWN_QUERY,
+        EMBEDDINGS,
     }
 )
 
@@ -125,6 +129,7 @@ def _normalize_action(
 
 
 __all__ = [
+    "EMBEDDINGS",
     "INVENTORY_WRITE",
     "KNOWN_QUERY",
     "MANIFEST_PUBLISH",
