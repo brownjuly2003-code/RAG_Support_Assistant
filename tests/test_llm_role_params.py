@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
-from llm.providers.base import LLMResponse, ProviderBackedLLM
 from llm import role_params as rp
+from llm.providers.base import LLMResponse, ProviderBackedLLM
 
 
 def test_default_roles_have_safe_params() -> None:
