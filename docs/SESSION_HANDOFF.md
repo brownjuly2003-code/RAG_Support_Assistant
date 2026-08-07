@@ -1,85 +1,53 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 (Update-69 records completed **2.6e** @ `fbc2293`;
-next ordered candidate **2.6f** residual — duplicate job / worker recovery)
+**Обновлено:** 2026-08-07 (Update-70 records completed **2.6f** @ `53a398f`;
+next ordered candidate **2.6g** worker outage/recovery)
 
 **Назначение:** самодостаточный next-session handoff после compacted context.
 Routing: **только** верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md)
-(**Update-69**). Older blocks with literal `✅ START HERE` are **archival**.
-Plan source (untracked/protected):
+(**Update-70**). Plan source:
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
 
 ---
 
 ## Нулевая неоднозначность: состояние на входе
 
-Сканируй эту капсулу **первой**.
-
 | Факт | Значение |
 |------|----------|
-| Latest implementation | `fbc2293` — **2.6e** same-tenant lock contention fail-closed |
-| Previous implementation | `5b9e384` — **2.6d** cleanup discard-path |
-| Previous docs | `08bad89` — Update-68 |
-| This Update-69 docs commit | **unknown in-file**; next session: `git log -5 --oneline` |
-| Active writer / unfinished WIP | **none** |
-| Locally complete (documented scopes only) | **2.1–2.5b + 2.6a–2.6e** |
-| Full plan §2 / project / release / prod | **NOT** complete / **NOT** claimed |
-| Next ordered candidate | **2.6f** duplicate job / worker recovery (**not started**) |
-| Gates | no push / deploy / live services / destructive Git / prod claims |
+| Latest implementation | `53a398f` — **2.6f** duplicate job fail-closed |
+| Previous implementation | `fbc2293` — **2.6e** lock contention |
+| Locally complete | **2.1–2.5b + 2.6a–2.6f** |
+| Next ordered | **2.6g** worker outage/recovery (**not started**) |
+| Full plan §2 / prod | **NOT** complete / **NOT** claimed |
+| Gates | no push / deploy / live services without opt-in |
 
-**Known verification (2.6e):** 11 passed (lock contention + tenant lock);
-Ruff clean. Full suite / live drills **not** run.
+**Verification (2.6f):** 8 passed focused/adjacent; Ruff clean.
 
-**Key invariant:** failed jobs with `source_path`-matched job-objects →
-`retained_after_failed_transition`. `auto_delete_eligible` always `False`.
+### Plan §2 residual
 
-### Plan §2 map (honest)
+| Residual | Status |
+|----------|--------|
+| fault inject inventory→cleanup | **2.6a–2.6d** local |
+| lock contention | **2.6e** local |
+| duplicate job | **2.6f** local |
+| worker outage/recovery | **← next 2.6g** |
+| live multi-service drills | opt-in only |
 
-| Plan §2 bullet | Local work | Residual |
-|----------------|------------|----------|
-| fault injection expand | **2.6a–2.6e** | **← next 2.6f+** |
-| live multi-service drills | not started | **opt-in**; migrations **019–022** |
-
-### Named fault / contention contracts
-
-| Contract | Slice |
-|----------|-------|
-| `inventory_write` / `manifest_publish` | 2.6a |
-| `known_query` | 2.6b |
-| `embeddings` | 2.6c |
-| `cleanup` | 2.6d |
-| tenant lock contention (build path) | 2.6e |
-
-### Protected state
+### Protected
 
 Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`  
-Untracked plan/temps/presentations/`_NEXT_SESSION.md` — do not stage casually.
-
-**Routing rule:** first/topmost Update in `AGENT_STATE.md` only.
+Untracked plan/temps/`_NEXT_SESSION.md` — pointer only.
 
 ---
 
-## Быстрый старт следующей сессии
+## Быстрый старт
 
-1. Cycle-guard preflight.
-2. `cd D:\RAG_Support_Assistant`
-3. `git status --short --branch` and `git log -5 --oneline`
-4. Read **only** top **Update-69** + this capsule. Do **not** reselect **2.1–2.6e**.
-5. Default **2.6f** (below). One slice per turn. Local commit only.
-6. Stop/yield after one slice.
+1. `git status` / `git log -5`
+2. Top **Update-70** only
+3. One slice: default **2.6g**
+4. Local commit only; yield after one slice
 
-**Not authorized without opt-in:** push, deploy, live multi-service drills.
-
----
-
-## Назначение и приоритет источников
-
-1. Fresh git status/log.
-2. Top `AGENT_STATE.md` (**Update-69**) + this capsule.
-3. Dirty backlog/README/audit — protected stale.
-4. One user turn = one named atomic slice.
-
-**Authoritative implementation:** `fbc2293` (**2.6e**).
+**Authoritative implementation:** `53a398f` (**2.6f**).
 
 ---
 
@@ -107,9 +75,10 @@ Untracked plan/temps/presentations/`_NEXT_SESSION.md` — do not stage casually.
 | **2.6b** | known-query fail-closed fault injection | `0e4451e` | Update-66 |
 | **2.6c** | embeddings fail-closed fault injection | `3ba7986` | Update-67 |
 | **2.6d** | cleanup discard-path fault injection | `5b9e384` | Update-68 |
-| **2.6e** | same-tenant lock contention fail-closed | `fbc2293` | **Update-69** |
+| **2.6e** | same-tenant lock contention fail-closed | `fbc2293` | Update-69 |
+| **2.6f** | duplicate job fail-closed (no double publish) | `53a398f` | **Update-70** |
 
-**Do not re-select 2.1–2.6e.**
+**Do not re-select 2.1–2.6f.**
 
 ---
 
@@ -285,66 +254,63 @@ python -m ruff check tests/test_index_lock_contention.py tests/test_tenant_index
 
 ---
 
-## Следующий named candidate: 2.6f residual fault injection (не начат)
+## 2.6f (duplicate job fail-closed) — COMPLETE
 
-**Plan order:** residual of section 2 fault-injection after **2.6e**.
-**Name:** **2.6f — duplicate job fail-closed** (preferred), **or**
-worker-recovery atomic — **one** per turn.
+At `53a398f`:
 
-### Intent
+- `tests/test_duplicate_job_fail_closed.py`
+- terminal completed/failed redelivery → claim fail-closed before load/build
+- concurrent claim → one winner, one `JobOwnershipError`
+- idempotent create reuse → single durable row
+- no production code change (existing CAS claim is the contract)
 
-1. Prove duplicate same-payload / same-idempotency job handling stays
-   fail-closed (no double index publish, durable job contract intact).
-2. Tests-first; reuse existing ingestion job paths; no live multi-service.
-3. Do not invent age-budget deletion in the same turn.
+**Boundary:** duplicate job delivery only. Worker outage/recovery is **2.6g**.
+No live multi-service, no deletion/age-budget.
 
-### Suggested acceptance (tests-first)
+**Verification:** 8 passed; Ruff clean.
 
-1. One focused duplicate-job scenario + proportional gate.
-2. No auto-delete / age-budget / plan checkbox edits.
-3. Scoped Ruff + green tests.
-4. Local commit only; optional handoff Update after slice.
-
-### Explicitly out of 2.6f
-
-- live PG/Redis/Celery recovery drills (opt-in separate)
-- real FS job-object deletion / age-budget
-- plan checkbox bulk-edit
-- push / deploy
-
-### Reference commands (2.6f — after work lands)
+### Reference commands (2.6f)
 
 ```powershell
-python -m pytest tests/<new_or_targeted> -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-6f-<unique>
+python -m pytest tests/test_duplicate_job_fail_closed.py tests/test_ingestion_liveness.py::test_worker_refuses_duplicate_claim_before_load -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-6f-<unique>
 ```
 
 ---
 
-## Что остаётся открытым (после 2.6e / Update-69)
+## Следующий named candidate: 2.6g residual (не начат)
 
-- **2.6f+** duplicate job / worker outage-recovery (next ordered)
-- live migrations **019–022** + advisory-lock drills (**opt-in**)
-- real job-object FS deletion / age-budget
-- orphan cleanup mutations / job-object retention execute HTTP
-- full suite, release gates, project/production readiness
+**Name:** **2.6g — worker outage/recovery fail-closed** (preferred next residual
+of plan §2 fault injection).
 
-**Superseded next-work text:** any handoff still saying next is 2.6d, 2.6e,
-or vague residual without naming **2.6f** is **stale**.
+### Intent
+
+1. Prove stale lease / reaper / lost-ownership paths fail closed without
+   double-complete or silent index publish after outage.
+2. Prefer tests-first against existing liveness/reaper contracts; no live Celery
+   without opt-in.
+3. One atomic slice only.
+
+### Explicitly out of 2.6g
+
+- live Redis/Postgres/Celery multi-service drills (opt-in)
+- age-budget deletion / plan checkbox bulk-edit
+- push / deploy
 
 ---
 
-## Windows / tooling notes
+## Что остаётся открытым (после 2.6f / Update-70)
 
-- Unique ignored basetemp: `--basetemp=.tmp/pytest-<slice>`
-- One atomic slice per user turn; stop after commit + optional docs
+- **2.6g** worker outage/recovery
+- live migrations **019–022** + advisory-lock drills (**opt-in**)
+- real job-object FS deletion / age-budget
+- full suite / release / production readiness
+
+**Superseded next-work text:** next is **2.6g**, not 2.6f/2.6e.
 
 ---
 
 ## Do not
 
-- Re-select **2.1–2.6e**
-- Treat failed job-objects as deletable orphans
+- Re-select **2.1–2.6f**
+- Push / deploy / live multi-service without opt-in
 - Invent auto-delete / age-budget without opt-in
-- Edit plan checkboxes casually
-- Push / deploy / live multi-service without explicit user opt-in
-- Use grepped historical `✅ START HERE` as work queue
