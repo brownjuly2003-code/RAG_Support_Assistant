@@ -62,30 +62,49 @@ class OllamaProvider:
         tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        _ = tools, kwargs
+        _ = tools
         prompt = flatten_messages(messages)
         started = time.perf_counter()
+
+        # Plan §3.1d: optional role generation params (ignored if constructor rejects).
+        gen_kwargs: dict[str, Any] = {}
+        if kwargs.get("temperature") is not None:
+            gen_kwargs["temperature"] = float(kwargs["temperature"])
+        if kwargs.get("max_tokens") is not None:
+            # LangChain Ollama uses num_predict for completion length.
+            gen_kwargs["num_predict"] = int(kwargs["max_tokens"])
+
+        def _make(cls: Any) -> Any:
+            base = {
+                "model": self.model_name,
+                "base_url": self._base_url,
+                **gen_kwargs,
+            }
+            try:
+                return _instantiate_with_timeout(
+                    cls,
+                    timeout_sec=self._timeout_sec,
+                    **base,
+                )
+            except TypeError:
+                # Older bindings may not accept temperature/num_predict.
+                return _instantiate_with_timeout(
+                    cls,
+                    timeout_sec=self._timeout_sec,
+                    model=self.model_name,
+                    base_url=self._base_url,
+                )
 
         try:
             from langchain_ollama import (
                 OllamaLLM as ollama_llm_cls,  # type: ignore[import-not-found]
             )
 
-            llm = _instantiate_with_timeout(
-                ollama_llm_cls,
-                timeout_sec=self._timeout_sec,
-                model=self.model_name,
-                base_url=self._base_url,
-            )
+            llm = _make(ollama_llm_cls)
         except ImportError:
             from langchain_community.llms import Ollama as community_ollama_cls
 
-            llm = _instantiate_with_timeout(
-                community_ollama_cls,
-                timeout_sec=self._timeout_sec,
-                model=self.model_name,
-                base_url=self._base_url,
-            )
+            llm = _make(community_ollama_cls)
 
         text = str(llm.invoke(prompt))
         input_tokens = estimate_tokens(prompt)

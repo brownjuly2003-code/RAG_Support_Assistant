@@ -82,6 +82,7 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `RAG_GRAPH_MIN_CROSSDOC_SHARE` | `0.15` | `auto`: minimal cross-doc entity share (connectivity gate) |
 | `RAG_GRAPH_CROSSDOC_SHARE` | unset | Measured probe value (`scripts/graph_probe.py`; 2026-06-06 corpus: **0.296**, gate passed); unset = probe not run, `auto` stays off |
 | `RAG_ASK_BUDGET_SEC` | `0` | Optional wall-clock budget for a single `ConversationSession.ask()` outside the HTTP path (which already has `request_timeout_sec`). `0` = off (blocking). When >0 and exceeded, `ask()` returns a graceful degraded result (`route="timeout"`) instead of hanging on a flapping provider; the background run is not cancellable |
+| `RAG_LLM_ROLE_PARAMS` | `` | Optional JSON object of per-role overrides `{ "generate": {"temperature": 0.1, "max_tokens": 2048}, ... }`. Roles: `generate`, `grade`, `transform`, `evaluate`, `verify`, `classify`, `suggest`, `rewrite`, `agentic`, `default`. Built-in safe defaults apply when unset (plan §3.1d) |
 | `RAG_SELF_RAG_MAX_ITER` | `2` | Maximum Self-RAG iterations |
 | `RAG_SELF_RAG_MIN_QUALITY` | `70` | Minimum quality score to avoid retry/escalation |
 | `STREAMING_QUALITY_EVAL` | `true` | Streaming `/api/ask/stream` runs one cheap Self-RAG self-eval so streamed answers are quality-routed on par with non-streaming; set `false` to roll back to the legacy synthetic-score streaming path |

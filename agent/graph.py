@@ -223,8 +223,31 @@ def make_handle_error_node() -> Callable[[GraphState], GraphState]:
 class SupportsInvoke(Protocol):
     """Протокол для объектов, у которых есть метод invoke(prompt: str) -> str."""
 
-    def invoke(self, prompt: str) -> str:  # pragma: no cover
+    def invoke(self, prompt: str, **kwargs: Any) -> str:  # pragma: no cover
         ...
+
+
+def _invoke_llm(
+    llm: SupportsInvoke,
+    prompt: str,
+    *,
+    role: str = "default",
+) -> str:
+    """Invoke LLM with plan §3.1d per-role temperature / max_tokens.
+
+    Falls back to bare ``invoke(prompt)`` when the backend rejects kwargs
+    (legacy fakes / LocalOllama without generation options).
+    """
+    from llm.role_params import generation_kwargs_for_role
+
+    params = generation_kwargs_for_role(role)
+    invoke = getattr(llm, "invoke", None)
+    if not callable(invoke):
+        raise TypeError("llm does not support invoke()")
+    try:
+        return str(invoke(prompt, **params))
+    except TypeError:
+        return str(invoke(prompt))
 
 
 _USE_DEFAULT_BREAKER = object()
@@ -295,11 +318,18 @@ class LocalOllamaLLM:
             on_event=_retry_prom_hook,
         )
 
-    def invoke(self, prompt: str) -> str:
+    def invoke(self, prompt: str, **kwargs: Any) -> str:
         invoke_with_retry = getattr(self, "_invoke_with_retry", self._llm.invoke)
+
+        def _call(text: str) -> str:
+            try:
+                return str(invoke_with_retry(text, **kwargs)) if kwargs else str(invoke_with_retry(text))
+            except TypeError:
+                return str(invoke_with_retry(text))
+
         if self._breaker is None:
-            return invoke_with_retry(prompt)
-        return cast("CircuitBreaker", self._breaker).call(invoke_with_retry, prompt)
+            return _call(prompt)
+        return cast("CircuitBreaker", self._breaker).call(_call, prompt)
 
 
 _default_breaker: CircuitBreaker | None = None
@@ -825,7 +855,7 @@ def make_classify_complexity_node(
                     else ""
                 ).strip().upper()
             else:
-                raw = classifier_llm.invoke(prompt).strip().upper()
+                raw = _invoke_llm(classifier_llm, prompt, role="classify").strip().upper()
             usage = _capture_llm_usage(classifier_llm, "classify_complexity")
             trace_llm_call(
                 trace_id=trace_id,
@@ -896,7 +926,7 @@ def make_transform_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Gra
 
             try:
                 t0 = time.monotonic()
-                raw_search_query = llm.invoke(prompt).strip()
+                raw_search_query = _invoke_llm(llm, prompt, role="transform").strip()
                 usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "transform_query"))
                 usage_recorded = True
                 trace_llm_call(
@@ -923,7 +953,7 @@ def make_transform_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Gra
                 try:
                     hyde_prompt = _build_hyde_prompt(question)
                     t0 = time.monotonic()
-                    hyde_doc = llm.invoke(hyde_prompt).strip()
+                    hyde_doc = _invoke_llm(llm, hyde_prompt, role="transform").strip()
                     usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "transform_query"))
                     usage_recorded = True
                     trace_llm_call(
@@ -1126,7 +1156,9 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
                                 raw_verdict = str(structured)
                                 batch_grades = _coerce_doc_grade_batch(structured, len(context_docs))
                         if batch_grades is None:
-                            raw_verdict = llm.invoke(batch_prompt).strip()
+                            raw_verdict = _invoke_llm(
+                                llm, batch_prompt, role="grade"
+                            ).strip()
                             batch_grades = _parse_doc_grade_batch_text(raw_verdict, len(context_docs))
                         usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "grade_docs"))
                         usage_recorded = True
@@ -1177,10 +1209,14 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
                                     is_relevant = bool(structured["relevant"])
                                     raw_verdict = str(structured.get("reason") or "")
                                 else:
-                                    raw_verdict = llm.invoke(prompt).strip()
+                                    raw_verdict = _invoke_llm(
+                                        llm, prompt, role="grade"
+                                    ).strip()
                                     is_relevant = raw_verdict.upper().startswith("YES")
                             else:
-                                raw_verdict = llm.invoke(prompt).strip()
+                                raw_verdict = _invoke_llm(
+                                    llm, prompt, role="grade"
+                                ).strip()
                                 is_relevant = raw_verdict.upper().startswith("YES")
                             usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "grade_docs"))
                             usage_recorded = True
@@ -1257,7 +1293,7 @@ def make_generate_node(
                 span.set_attribute("rag.input_docs", len(docs))
                 try:
                     t0 = time.monotonic()
-                    answer = llm.invoke(prompt)
+                    answer = _invoke_llm(llm, prompt, role="generate")
                     usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "generate"))
                     usage_recorded = True
                     trace_llm_call(
@@ -1383,7 +1419,7 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
             model = _get_llm_model_name(llm) or ""
             extract_prompt = build_extract_claims_prompt(answer)
             t0 = time.monotonic()
-            raw_claims = llm.invoke(extract_prompt).strip()
+            raw_claims = _invoke_llm(llm, extract_prompt, role="verify").strip()
             usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "verify_facts"))
             usage_recorded = True
             trace_llm_call(
@@ -1465,7 +1501,7 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                             pass
                         continue
                 t0 = time.monotonic()
-                verdict = llm.invoke(verify_prompt).strip()
+                verdict = _invoke_llm(llm, verify_prompt, role="verify").strip()
                 usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "verify_facts"))
                 trace_llm_call(
                     trace_id=trace_id,
@@ -1556,7 +1592,7 @@ def make_evaluate_node(
                 span.set_attribute("rag.tenant_id", str(state.get("tenant_id", "default")))
                 try:
                     t0 = time.monotonic()
-                    raw = llm.invoke(prompt)
+                    raw = _invoke_llm(llm, prompt, role="evaluate")
                     usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "evaluate"))
                     usage_recorded = True
                     trace_llm_call(
@@ -1635,7 +1671,7 @@ def make_suggest_questions_node(llm: SupportsInvoke) -> Callable[[GraphState], G
                 context_snippet=context_snippet,
             )
             t0 = time.monotonic()
-            raw = llm.invoke(prompt)
+            raw = _invoke_llm(llm, prompt, role="suggest")
             usage = _capture_llm_usage(llm, "suggest_questions")
             trace_llm_call(
                 trace_id=trace_id,
@@ -1743,7 +1779,7 @@ def make_rewrite_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Graph
             usage_recorded = False
             try:
                 t0 = time.monotonic()
-                raw_new_query = llm.invoke(prompt).strip()
+                raw_new_query = _invoke_llm(llm, prompt, role="rewrite").strip()
                 usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "rewrite_query"))
                 usage_recorded = True
                 trace_llm_call(
@@ -2439,7 +2475,14 @@ class ConversationSession:
             )
             try:
                 t0 = time.monotonic()
-                response = tool_llm.generate_with_tools(messages, _agentic_tool_definitions())
+                from llm.role_params import generation_kwargs_for_role
+
+                agentic_kwargs = generation_kwargs_for_role("agentic")
+                response = tool_llm.generate_with_tools(
+                    messages,
+                    _agentic_tool_definitions(),
+                    **agentic_kwargs,
+                )
             except Exception as exc:
                 logger.warning("[agentic] provider tool loop unavailable: %s", exc)
                 return None

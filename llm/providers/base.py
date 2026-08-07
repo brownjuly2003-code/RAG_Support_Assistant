@@ -476,8 +476,9 @@ class ProviderBackedLLM:
             self.last_response = responses[-1]
         return responses
 
-    def invoke(self, prompt: str) -> str:
-        response = self.generate([{"role": "user", "content": prompt}])
+    def invoke(self, prompt: str, **kwargs: Any) -> str:
+        """Invoke with optional generation kwargs (temperature, max_tokens, …)."""
+        response = self.generate([{"role": "user", "content": prompt}], **kwargs)
         return response.text
 
 

@@ -388,6 +388,11 @@ class Settings:
     quality_threshold: int = field(
         default_factory=lambda: int(os.getenv("QUALITY_THRESHOLD", "80"))
     )
+    # Plan §3.1d: optional JSON map of per-role {temperature, max_tokens} overrides.
+    # Empty = built-in safe defaults only (see llm/role_params.py).
+    llm_role_params_json: str = field(
+        default_factory=lambda: os.getenv("RAG_LLM_ROLE_PARAMS", "") or ""
+    )
     # 800/200 are MEASURED for this corpus, not arbitrary (Phase-0 co-occur gate,
     # docs/operations/2026-06-05-chunk-size-phase0-justification.md): cap=800 keeps
     # 98/100 curated kw-bundles within a single chunk; cap=1200/1600 recover exactly
