@@ -1,19 +1,18 @@
 # Agent State
 
-## 2026-08-07 Update-95 — completed slice 6.3 independent judge @ `d6e3a55` ✅ START HERE
+## 2026-08-07 Update-96 — completed slice 7.1 eval gate fail-closed @ `94ac64e` ✅ START HERE
 
-> **Routing authority:** Update-95 supersedes Update-94 **for start-point
-> routing**. All older Update blocks below are **archival**. **Only the
-> first/topmost Update block is authoritative.**
+> **Routing authority:** Update-96 supersedes Update-95. Only the topmost
+> Update block is authoritative.
 >
 > **Known lineage (actual Git wins):**
-> - Latest implementation: `d6e3a55`
->   (`feat(judge): independent judge policy fail-closed (6.3)`)
-> - Previous: `d0317e9` **6.2**; `b3494a0` **6.1**; `1cdecb2` **5.3**
+> - Latest implementation: `94ac64e`
+>   (`feat(eval): fail-closed regression gate on skip and infra (7.1)`)
+> - Previous: `d6e3a55` **6.3**; `d0317e9` **6.2**; `b3494a0` **6.1**
 > - Migrations on disk (not applied): **019-023**
 >
-> **Branch advisory:** was `master...origin/master [ahead 167]` after 6.3 impl.
-> **Active writer / WIP:** **none**.
+> **Branch advisory:** was `master...origin/master [ahead 169]` after 7.1.
+> **WIP:** none.
 >
 > ---
 >
@@ -21,66 +20,64 @@
 >
 > | Band | Status |
 > |------|--------|
-> | **2.1–5.3** | local at documented scopes |
-> | **6.1–6.3** | unmeasured agentic + pre-response safety + independent judge **local** |
-> | Full plan §6 | **NOT** complete (calibration / measured agentic evaluate open) |
+> | **2.1–5.3** + **6.1–6.3** | local at documented scopes |
+> | **7.1** | regression gate fail-closed skip/infra **local** @ `94ac64e` |
+> | Full plan §7 | **NOT** complete (dataset expansion, live/det split, baseline merge-base) |
 > | Production | **NOT** claimed |
 >
-> **Maps:** SESSION_HANDOFF, PLAN_CLOSURE_STATUS, `_NEXT_SESSION.md` (pointer).
+> ---
+>
+> ### Plan 7.1 contract (local)
+>
+> - `decide_regression_gate()` in `scripts/regression_eval.py`
+> - `infrastructure_failures > 0` → FAIL exit 1
+> - `skipped=true` cases → FAIL (no graceful pass / no score 1.0 unlock)
+> - empty effective set / zero cases → FAIL
+> - verdict only `PASS`|`FAIL` (never `PASSED (graceful skip)`)
+> - executor exceptions → infrastructure outcome
+> - mock modes mark `evidence_valid=false` (not release evidence)
+> - CI path filter expanded: agent/**, llm/**, vectordb/**, ingestion/**, …
 >
 > ---
 >
-> ### Plan 6.3 contract (local)
+> ### Known verification (7.1)
 >
-> - Module: `agent/judge_policy.py` — resolve independent judge, fail-closed fields
-> - Setting: `judge_independence_required` (`JUDGE_INDEPENDENCE_REQUIRED`;
->   default **true** when `RAG_ENV=production`, else false)
-> - Evaluate wires both fast/strong; prefers independent (fast when generator
->   is strong)
-> - Judge unavailable / error / parse failure → quality 0, `unmeasured`,
->   `not_verified`, `judge_status`; **no** silent default 50 + `llm`
-> - `route_or_retry`: non-ok `judge_status` → **human** (no Self-RAG retry)
+> - Focused: **33 passed** (gate fail-closed + regression_runner + infra
+>   detection + workflow path filter); Ruff clean
+> - Full suite / live / push / deploy **not** run / **not** claimed
 >
 > ---
 >
-> ### Known verification (6.3)
+> ### Open boundaries
 >
-> - Focused: **38 passed** (judge_policy + magic evaluate wiring + grounding +
->   citation + graph error; plus response_safety/agent_tools/human-route band);
->   Ruff clean
-> - Full suite / live / migrate / push **not** run / **not** claimed
->
-> ---
->
-> ### Open boundaries (honest)
->
-> - **← next 6.4 / §7:** calibration thresholds **or** honest eval gate skip
->   policy (plan remainder)
-> - measured agentic evaluate when KB context exists
-> - dual-model residual: judge vs fact-checker not always three-way independent
-> - 5 live metrics; graph SSE; outbox schedule; multi-replica
-> - live multi-service + migrations **019-023** (**opt-in**)
+> - **← next 7.2 / residual §7:** baseline from merge-base artifact; no
+>   expected-copy executor for release; dataset expansion; det vs live gates
+> - mock CI still uses `--mock-experiment-runtime` (flagged non-evidence)
+> - §8 widget; §1 live; migrate 019-023
 >
 > ---
 >
-> ### Next candidate only (not started) - default
+> ### Next candidate only - default
 >
-> named **7.1 - eval gate fail-closed on skip/infrastructure error**
-> (plan §7: no graceful skip as PASSED, no fake 1.0):
-> - tests-first; still no live/push/deploy/migrate without opt-in.
+> named **7.2 - honest release evidence (no mock expected-copy as gate pass)**
+> or **8.1 widget bootstrap security** if product prioritizes edge.
 >
-> Alternate: **6.4** human-labelled calibration artifact scaffolding.
+> Prefer **7.2**: release/strict path must not treat mock expected-copy as
+> PASSED evidence (CI may keep mock as smoke but exit/label honestly).
 >
-> **Do not re-select:** 2.x, 3.1*, 4.1–4.5, 5.1–5.3, **6.1–6.3**.
+> **Do not re-select:** 2.x–6.3, **7.1**.
 >
 > ---
 >
-> ### Protected / gates
+> ### Gates
 >
-> Dirty: BACKLOG, README, audit, plan_sol. No push/deploy/live/migrate without
-> opt-in. One atomic slice per turn; local commit only.
->
-> **Git advisory:** refresh status + log — **actual Git wins**.
+> No push/deploy/live/migrate without opt-in. One atomic slice per turn.
+
+
+## 2026-08-07 Update-95 — completed slice 6.3 independent judge @ `d6e3a55` ✅ START HERE
+
+> **Historical handoff (superseded by Update-96 for start-point routing).**
+> Recorded **6.3** @ `d6e3a55`. Next was 7.1 — now done @ `94ac64e`.
 
 
 ## 2026-08-07 Update-94 — completed slice 6.2 pre-response safety @ `d0317e9` ✅ START HERE
