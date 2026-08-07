@@ -1,8 +1,108 @@
 # Agent State
 
+## 2026-08-07 Update-101 — completed slice 8.3 OIDC identity binding @ `13a9a5b` ✅ START HERE
+
+> **Routing authority:** Update-101 supersedes Update-100 **only for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `13a9a5b`
+>   (`feat(auth): OIDC email_verified and issuer-subject identity binding (8.3)`)
+>   - slice **8.3**
+> - Previous: `756562e` — **8.2**; docs Update-100 `84f8df5`
+> - 8 chain: `0bee13e` 8.1 · `756562e` 8.2 · **`13a9a5b` 8.3**
+> - Migrations on disk (not applied): **019–023**
+> - This Update-101 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 178]` after impl (before this docs commit).
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** … **7.1–7.2** | local at documented scopes (unchanged) |
+> | **8.1** | widget bootstrap **local** @ `0bee13e` |
+> | **8.2** | ASGI body limits + upload stream **local** @ `756562e` |
+> | **8.3** | OIDC email_verified + (issuer, subject) **local** @ `13a9a5b` |
+> | Full plan §1–§10 | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
+>
+> ---
+>
+> ### 8.3 contract (local)
+>
+> - `require_email_verified` / `email_is_verified` — create/link fail closed
+>   without explicit verified email.
+> - Durable identity: `User.sso_provider` = **issuer URL**,
+>   `User.sso_subject_id` = **sub** (not short provider name).
+> - `resolve_oidc_issuer` prefers `iss`, defaults per provider, rejects mismatch.
+> - Unbound local user may link once; different existing identity →
+>   `ValueError` / HTTP 400 («already linked»).
+> - Shared `match_tenant_from_email_domains` (exact + `*:tenant`); OIDC still
+>   raises if unmapped; email channel falls back to `default`.
+>
+> ---
+>
+> ### Known verification (8.3 this turn)
+>
+> - `tests/test_oidc_identity.py` + `tests/test_oidc_flow.py`: **19 passed**
+> - `tests/test_email_channel.py`: **9 passed**
+> - Ruff clean on touched files.
+> - Full suite / live IdP / migrate / push / deploy **not** run / **not** claimed.
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next 8.x residual:** production secrets / dev-admin fail-closed **or**
+>   Playwright widget E2E
+> - 7 residual: merge-base; dataset; live provider gate
+> - 6 residual: calibration; measured agentic
+> - 5 residual: live metrics ×3
+> - live multi-service + migrate **019–023** (**opt-in**)
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **8.4 — production secrets / dev-admin fail-closed** (tests-first),
+> **or** Playwright widget E2E — one atomic residual only.
+>
+> **Do not re-select:** through **8.3**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked:** plan file, `_NEXT_SESSION.md` (pointer), pytest temps, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live drills, `alembic upgrade`, destructive Git, production claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; quality > speed. **Actual Git wins.**
+
+
 ## 2026-08-07 Update-100 — completed slice 8.2 body limits / upload stream @ `756562e` ✅ START HERE
 
-> **Routing authority:** Update-100 supersedes Update-99 **only for start-point
+> **Historical handoff (superseded by Update-101 for start-point routing).**
+> Recorded **8.2** @ `756562e`. Next was 8.3 — now done @ `13a9a5b`.
+>
+> **Original routing note (archival):** Update-100 supersedes Update-99 **only for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old

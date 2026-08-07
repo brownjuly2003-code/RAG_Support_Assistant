@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 — **Update-100** (record **8.2** @ `756562e`).  
+**Обновлено:** 2026-08-07 — **Update-101** (record **8.3** @ `13a9a5b`).  
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей  
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-100**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-101**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-100; dirty  
+**Не использовать:** старые `✅ START HERE` ниже Update-101; dirty  
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` как единственный SoT  
 (это pointer only).
 
@@ -27,20 +27,20 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **implementation** | `756562e` — **8.2** ASGI received-byte limits + upload stream/atomic |
-| Previous impl | `0bee13e` — **8.1** |
-| Previous docs | Update-99 `f09196c` |
-| This Update-100 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | `master...origin/master [ahead 176]` after 8.2 impl — **refresh mandatory** |
+| Latest **implementation** | `13a9a5b` — **8.3** OIDC email_verified + (issuer, subject) |
+| Previous impl | `756562e` — **8.2**; `0bee13e` — **8.1** |
+| Previous docs | Update-100 `84f8df5` |
+| This Update-101 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | `master...origin/master [ahead 178]` after 8.3 impl — **refresh mandatory** |
 | Active writer / WIP | **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.2** + **8.1–8.2** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.2** + **8.1–8.3** |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered (default) | **8.x residual** — OIDC / secrets / Playwright E2E (one atomic) |
+| Next ordered (default) | **8.4** production secrets / dev-admin **or** Playwright E2E |
 | Gates | **no** push / deploy / live multi-service / migrate 019–023 without **explicit opt-in** |
 
-**Last known verification (8.2):** focused body + adjacent upload security/idempotency  
-**64 passed**; Ruff clean on touched files. Full suite / live **not** claimed.
+**Last known verification (8.3):** oidc identity + flow **19 passed**; email channel  
+**9 passed**; Ruff clean. Full suite / live IdP **not** claimed.
 
 ---
 
@@ -52,7 +52,7 @@
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
 5. Read ONLY top Update-100 in AGENT_STATE.md + this file §1–§9
-6. Default work: one §8 residual (OIDC / secrets / Playwright). Announce: slice 1/1
+6. Default work: 8.4 secrets fail-closed OR Playwright E2E. Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
 ```
@@ -74,7 +74,7 @@ claims, bulk plan checkbox edits.
 | **5** grounding fail-closed | **5.1–5.3** local | live metrics DoD ×3; relevance≠quality residual |
 | **6** judge / safety / agentic | **6.1–6.3** local | calibration; measured agentic evaluate when KB context |
 | **7** eval gate | **7.1–7.2** local | merge-base baseline artifact; dataset expansion; live provider gate |
-| **8** widget / edge | **8.1–8.2** local | **← OIDC; secrets; Playwright E2E** |
+| **8** widget / edge | **8.1–8.3** local | **← secrets; Playwright E2E** |
 | **9** cache / architecture / SLO | partial historical | as plan |
 | **10** final verification | not started | after 1–9 + opt-in evidence |
 
@@ -92,7 +92,8 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | Slice | SHA | Surface |
 |-------|-----|---------|
 | **8.1** | `0bee13e` | widget bootstrap JWT, origins, frame-ancestors, session/token JS |
-| **8.2** | **`756562e`** | ASGI received-byte body limits; upload stream temp + exclusive/atomic place |
+| **8.2** | `756562e` | ASGI received-byte body limits; upload stream temp + exclusive/atomic place |
+| **8.3** | **`13a9a5b`** | OIDC email_verified; identity (issuer, subject); no rebind; shared tenant map |
 
 ### §7 eval gate
 
@@ -109,6 +110,14 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 ---
 
 ## 5. Contracts (recent complete slices)
+
+### 8.3 @ `13a9a5b`
+
+- `email_is_verified` / `require_email_verified` — create/link fail closed
+- Identity key: `User.sso_provider` = issuer URL, `User.sso_subject_id` = sub
+- `resolve_oidc_issuer` — prefer `iss`, provider default, reject mismatch
+- Unbound local user links once; different existing identity refused
+- Shared `match_tenant_from_email_domains` (`*` wildcard); email channel uses it
 
 ### 8.2 @ `756562e`
 
@@ -146,6 +155,8 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 
 | Path | Slices | Role |
 |------|--------|------|
+| `auth/oidc.py` | **8.3** | email_verified, issuer/subject, tenant map |
+| `channels/email_channel.py` | **8.3** | shared tenant domain matcher |
 | `api/body_limit.py` | **8.2** | received-byte receive wrapper |
 | `api/app.py` `_body_size_limit` | **8.2** | middleware wiring |
 | `api/routers/upload.py` | **8.2** (+2.4a) | stream temp + exclusive/atomic place |
@@ -176,10 +187,18 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 14. Widget: empty allowlist → no bootstrap; framing only via allowlisted ancestors  
 15. Body limits: trust **received** ASGI bytes, not Content-Length alone  
 16. Upload: stream to temp + exclusive immutable place + atomic flat rename; no orphan `.part`  
+17. OIDC: no create/link without verified email; identity is (issuer, subject); no silent rebind  
 
 ---
 
 ## 8. Verification recipes (last known green; re-run when coding)
+
+### §8.3 band
+
+```powershell
+python -m pytest tests/test_oidc_identity.py tests/test_oidc_flow.py tests/test_email_channel.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step8-3-<unique>
+python -m ruff check auth/oidc.py channels/email_channel.py tests/test_oidc_identity.py
+```
 
 ### §8.2 band
 
@@ -204,19 +223,18 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 ---
 
-## 9. Next named candidate: 8.x residual (not started)
+## 9. Next named candidate: 8.4 residual (not started)
 
 **Options (pick one atomic slice):**
 
-1. **OIDC** — require `email_verified`; identity `(issuer, subject)`; unified tenant email resolver  
-2. **Secrets** — reject placeholder encryption/session secrets and production dev-admin bypass  
-3. **Playwright E2E** — cross-origin widget bootstrap for 8.1  
+1. **Secrets (default)** — reject placeholder encryption/session secrets and production dev-admin bypass  
+2. **Playwright E2E** — cross-origin widget bootstrap for 8.1  
 
 ### Out of next slice without opt-in
 
 - live multi-service / migrate / push / deploy  
-- re-select through **8.2**  
-- combining OIDC + secrets + E2E in one turn  
+- re-select through **8.3**  
+- combining secrets + E2E in one turn  
 
 ### Alternates (only if user prioritizes)
 
@@ -240,7 +258,7 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 - Grep old `✅ START HERE` for work selection  
 - Re-select **2.1–2.6g**, **3.1a–3.1i**, **4.1–4.5**, **5.1–5.3**, **6.1–6.3**,  
-  **7.1–7.2**, **8.1**, **8.2**  
+  **7.1–7.2**, **8.1**, **8.2**, **8.3**  
 - Claim full plan sections or production readiness  
 - Edit plan checkboxes casually  
 - Push / deploy / live multi-service / migrate without explicit opt-in  

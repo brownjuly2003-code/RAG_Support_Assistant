@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-07 (Update-100 after 8.2)  
+**Date:** 2026-08-07 (Update-101 after 8.3)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-100**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-101**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -25,7 +25,7 @@
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.3 local** | OPEN (calibration / measured agentic) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.2 local** | OPEN (merge-base / dataset / live gate) | **yes** |
-| **8** widget / edge security | **8.1–8.2 local** | OPEN (OIDC, secrets, E2E) | yes |
+| **8** widget / edge security | **8.1–8.3 local** | OPEN (secrets, E2E) | yes |
 | **9** cache / architecture / SLO | partial historical | OPEN | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
@@ -51,12 +51,13 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 8 | §7.2 honest release evidence (no mock PASS) | **done** `25788ee` |
 | 9 | §8.1 widget bootstrap security | **done** `0bee13e` |
 | 10 | §8.2 ASGI body limits / upload stream | **done** `756562e` |
-| 11 | **§8.x OIDC / secrets / Playwright E2E** | **← next** (one atomic) |
-| 12 | §6.x calibration + measured agentic evaluate | residual |
-| 13 | §7.x merge-base baseline / live provider gate | residual |
-| 14 | §4 residual (graph tokens / parity default) | residual |
-| 15 | §2/§3 residual if product needs | residual |
-| 16 | §1 + §10 | **opt-in live only** |
+| 11 | §8.3 OIDC email_verified / (issuer, subject) | **done** `13a9a5b` |
+| 12 | **§8.4 secrets / Playwright E2E** | **← next** (one atomic) |
+| 13 | §6.x calibration + measured agentic evaluate | residual |
+| 14 | §7.x merge-base baseline / live provider gate | residual |
+| 15 | §4 residual (graph tokens / parity default) | residual |
+| 16 | §2/§3 residual if product needs | residual |
+| 17 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -148,10 +149,12 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 |-------|--------|-----|----------|
 | **8.1** | **done local** | `0bee13e` | bootstrap JWT, allowlist, frame-ancestors, session/token JS |
 | **8.2** | **done local** | `756562e` | ASGI received-byte limits; upload stream + exclusive/atomic place |
-| 8.x | **← next** | — | OIDC email_verified; production secrets; Playwright E2E |
+| **8.3** | **done local** | `13a9a5b` | email_verified; (issuer, subject); no rebind; shared tenant map |
+| 8.4 | **← next** | — | production secrets / dev-admin; Playwright E2E |
 
 **8.1 residual:** no Playwright cross-origin E2E yet; production must set `WIDGET_ALLOWED_ORIGINS`.  
-**8.2 residual:** none local for body/upload stream scope; full §8 still needs OIDC/secrets/E2E.
+**8.2 residual:** none local for body/upload stream scope.  
+**8.3 residual:** live IdP drill not run; legacy rows with short provider names need operator re-link if any.
 
 ---
 
