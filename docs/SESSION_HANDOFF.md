@@ -1,6 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 — **Update-102** (record **8.4** @ `68a30b2`).  
+**Обновлено:** 2026-08-07 — **Update-103** (docs-only full transparency after  
+**8.4** @ `68a30b2` + docs Update-102 `8e3047f`).  
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей  
 истории `AGENT_STATE.md`.
 
@@ -11,11 +12,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-102**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-103**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-102; dirty  
+**Не использовать:** старые `✅ START HERE` ниже Update-103; dirty  
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` как единственный SoT  
 (это pointer only).
 
@@ -28,9 +29,9 @@
 | Факт | Значение |
 |------|----------|
 | Latest **implementation** | `68a30b2` — **8.4** production secrets / no dev-admin bypass |
-| Previous impl | `13a9a5b` 8.3 · `756562e` 8.2 · `0bee13e` 8.1 |
-| Previous docs | Update-101 `19f44a5` |
-| This Update-102 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Latest **docs before this Update** | `8e3047f` — Update-102 |
+| This Update-103 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | `master...origin/master [ahead 181]` before this docs commit — **refresh mandatory** |
 | Active writer / WIP | **none** |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.2** + **8.1–8.4** |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
@@ -38,8 +39,12 @@
 | Next ordered (default) | **8.5** Playwright widget E2E (cross-origin bootstrap) |
 | Gates | **no** push / deploy / live multi-service / migrate 019–023 without **explicit opt-in** |
 
-**Last known verification (8.4):** production secrets + cors **17 passed**; Ruff clean.  
-Full suite / live **not** claimed.
+**This Update-103 is docs-only:** no code/test/plan-checkbox change; project  
+tests **not** re-run here. Implementation state unchanged after `68a30b2`.
+
+**Last known verification (8.4; not re-run this docs turn):** focused **17  
+passed** (production secrets + CORS hardening); Ruff clean. Full suite / live  
+**not** claimed.
 
 ---
 
@@ -50,8 +55,8 @@ Full suite / live **not** claimed.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-100 in AGENT_STATE.md + this file §1–§9
-6. Default work: 8.5 Playwright widget E2E (or other residual). Announce: slice 1/1
+5. Read ONLY top Update-103 in AGENT_STATE.md + this file §1–§11
+6. Default work: 8.5 Playwright widget E2E (below). Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
 ```
@@ -73,8 +78,8 @@ claims, bulk plan checkbox edits.
 | **5** grounding fail-closed | **5.1–5.3** local | live metrics DoD ×3; relevance≠quality residual |
 | **6** judge / safety / agentic | **6.1–6.3** local | calibration; measured agentic evaluate when KB context |
 | **7** eval gate | **7.1–7.2** local | merge-base baseline artifact; dataset expansion; live provider gate |
-| **8** widget / edge | **8.1–8.4** local | **← Playwright E2E** |
-| **9** cache / architecture / SLO | partial historical | as plan |
+| **8** widget / edge | **8.1–8.4** local | **← 8.5 Playwright E2E**; live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
+| **9** cache / architecture / SLO | partial historical | as plan; DEP-01 docs-site audit residual |
 | **10** final verification | not started | after 1–9 + opt-in evidence |
 
 **Release / production: NOT claimable** until §1 live + §5 live quality +  
@@ -93,7 +98,7 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | **8.1** | `0bee13e` | widget bootstrap JWT, origins, frame-ancestors, session/token JS |
 | **8.2** | `756562e` | ASGI received-byte body limits; upload stream temp + exclusive/atomic place |
 | **8.3** | `13a9a5b` | OIDC email_verified; identity (issuer, subject); no rebind; shared tenant map |
-| **8.4** | **`68a30b2`** | production placeholders rejected; ALLOW_DEV_ADMIN_LOGIN banned |
+| **8.4** | **`68a30b2`** | production placeholders rejected; `ALLOW_DEV_ADMIN_LOGIN` banned |
 
 ### §7 eval gate
 
@@ -104,8 +109,13 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 
 ### §6 / §5 / §4 / §3 (summary)
 
-- Ends: 6.3 `d6e3a55`, 5.3 `1cdecb2`, 4.5 `6453530`, 3.1i `fe2f0aa`  
-- See older handoff / git for full contracts  
+| Band | Ends at SHA | Note |
+|------|-------------|------|
+| §6 | `d6e3a55` **6.3** | independent judge fail-closed |
+| §5 | `1cdecb2` **5.3** | grader fail-closed |
+| §4 | `6453530` **4.5** | outbox retry API |
+| §3 | `fe2f0aa` **3.1i** | runtime/session/budget band |
+| §2 | `f347feb` **2.6g** | fault-injection residual closed local |
 
 ---
 
@@ -113,48 +123,51 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 
 ### 8.4 @ `68a30b2`
 
-- `production_secret_rejection_reason` / `is_known_insecure_secret`
-- Production rejects empty + known placeholders for encryption/JWT/session
-- Session min length 32; encryption min length 16
-- `ALLOW_DEV_ADMIN_LOGIN` forbidden in production; `ADMIN_PASSWORD_HASH` required
+- Helpers: `is_known_insecure_secret`, `production_secret_rejection_reason`
+- Known placeholders include `.env.example`  
+  `changeme-generate-with-secrets-token_urlsafe` and  
+  `dev-secret-change-in-production!`
+- Production rejects empty + placeholders for:
+  - `DB_ENCRYPTION_KEY` (min length **16**)
+  - `JWT_SECRET` (min length **32**)
+  - `SESSION_SECRET_KEY` (min length **32**; falls back to JWT env for length check)
+- `ALLOW_DEV_ADMIN_LOGIN` **forbidden** in production even if hash is set
+- `ADMIN_PASSWORD_HASH` **required**; no bypass path; error text must not offer  
+  `ALLOW_DEV_ADMIN_LOGIN=1` as a production fix
+- Development still allows weak secrets / dev-admin flag
 
 ### 8.3 @ `13a9a5b`
 
 - `email_is_verified` / `require_email_verified` — create/link fail closed
-- Identity key: `User.sso_provider` = issuer URL, `User.sso_subject_id` = sub
+- Identity key: `User.sso_provider` = **issuer URL**, `User.sso_subject_id` = **sub**
 - `resolve_oidc_issuer` — prefer `iss`, provider default, reject mismatch
 - Unbound local user links once; different existing identity refused
-- Shared `match_tenant_from_email_domains` (`*` wildcard); email channel uses it
+- Shared `match_tenant_from_email_domains` (`*` wildcard); email channel uses it  
+  (OIDC still raises if unmapped; email falls back to `default`)
 
 ### 8.2 @ `756562e`
 
-- `api/body_limit.py`: `make_limited_receive` + `BodySizeExceeded` + `parse_content_length`
-- Non-upload middleware: Content-Length early reject **and** wrap `request._receive`
-  to count actual ASGI body bytes against `max_request_body_bytes`
+- `api/body_limit.py`: `make_limited_receive` + `BodySizeExceeded`
+- Non-upload middleware: Content-Length early reject **and** wrap receive for  
+  actual ASGI bytes (`max_request_body_bytes`)
 - Metrics: `content_length_too_large`, `received_bytes_too_large`, `upload_too_large`
-- `/api/upload` still bypasses general body middleware (multipart overhead ≠ file bytes)
-- Upload: `_stream_upload_to_temp` (size + streaming fingerprint) → job allocate →
-  `_place_exclusive_from_path` (O_EXCL stream copy) → `_atomic_replace_from_path`
-  (flat current); temp `.part` always cleaned
-- Fingerprint stays aligned with `compute_payload_fingerprint(safe_name, content)`
+- `/api/upload` bypasses general body middleware (multipart ≠ file bytes)
+- Upload: stream → temp `.part` → exclusive place → atomic flat rename;  
+  fingerprint matches `compute_payload_fingerprint`
 
 ### 8.1 @ `0bee13e`
 
 - `POST /api/widget/bootstrap` → short-lived JWT `type=widget`, `aud=widget`
 - Env: `WIDGET_ALLOWED_ORIGINS` (empty → 403), `WIDGET_TOKEN_TTL_SEC` (default 900)
 - Origin body must match `Origin` header when present
-- `/static/widget.html`: CSP `frame-ancestors` from allowlist; **no** global
+- `/static/widget.html`: CSP `frame-ancestors` from allowlist; **no** global  
   `X-Frame-Options: DENY` on that path
 - `static/widget.inline.js` / `widget.js`: handshake ack, Bearer, `session_id` reuse
 
-### 7.2 @ `25788ee`
+### 7.2 / 7.1 (summary)
 
-- `apply_evidence_policy()` — mock modes never release `PASS`
-- Smoke exit follows metrics; `--release-gate` fails without evidence
-
-### 7.1 @ `94ac64e`
-
-- `decide_regression_gate()` — infra/skip/empty → FAIL
+- Mock expected-copy → `SMOKE_PASS` only; never release `PASS`
+- Infra/skip/zero-effective → gate FAIL
 
 ---
 
@@ -163,6 +176,7 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | Path | Slices | Role |
 |------|--------|------|
 | `config/settings.py` | **8.4** | production secret / dev-admin gates |
+| `tests/test_settings_production_secrets.py` | **8.4** | secret-negative tests |
 | `auth/oidc.py` | **8.3** | email_verified, issuer/subject, tenant map |
 | `channels/email_channel.py` | **8.3** | shared tenant domain matcher |
 | `api/body_limit.py` | **8.2** | received-byte receive wrapper |
@@ -171,7 +185,7 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | `api/routers/widget.py` | **8.1** | bootstrap + origin/frame helpers |
 | `auth/jwt_handler.py` | **8.1** | `create_widget_token` / widget verify |
 | `auth/dependencies.py` | **8.1** | accept widget Bearer |
-| `static/widget*.js` | **8.1** | handshake, token, session |
+| `static/widget*.js` / `widget.html` | **8.1** | handshake, token, session, CSP |
 | `scripts/regression_eval.py` | **7.1–7.2** | gate + evidence policy |
 | job-object / index stack | 2.1–2.6g | **do not re-select** |
 
@@ -196,7 +210,7 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 15. Body limits: trust **received** ASGI bytes, not Content-Length alone  
 16. Upload: stream to temp + exclusive immutable place + atomic flat rename; no orphan `.part`  
 17. OIDC: no create/link without verified email; identity is (issuer, subject); no silent rebind  
-18. Production: no placeholder secrets; no ALLOW_DEV_ADMIN_LOGIN; admin hash required  
+18. Production: no placeholder secrets; no `ALLOW_DEV_ADMIN_LOGIN`; admin hash required  
 
 ---
 
@@ -220,7 +234,7 @@ python -m ruff check auth/oidc.py channels/email_channel.py tests/test_oidc_iden
 
 ```powershell
 python -m pytest tests/test_body_size_limits.py tests/test_upload_security.py tests/test_upload_idempotency.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step8-2-<unique>
-python -m ruff check api/body_limit.py api/app.py api/routers/upload.py tests/test_body_size_limits.py tests/test_upload_security.py tests/test_upload_idempotency.py
+python -m ruff check api/body_limit.py api/app.py api/routers/upload.py tests/test_body_size_limits.py
 ```
 
 ### §8.1 band
@@ -239,14 +253,26 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 ---
 
-## 9. Next named candidate: 8.5 residual (not started)
+## 9. Next named candidate: 8.5 (not started)
 
-**Default:** Playwright cross-origin widget bootstrap E2E for 8.1  
+**Name:** **8.5 — Playwright cross-origin widget bootstrap E2E**  
+**Why next:** last open local residual of plan §8 Проверка after 8.1–8.4 code  
+contracts; validates embed/auth/session under allowlisted origin.
 
-### Out of next slice without opt-in
+### Intent
+
+1. Embed `/static/widget.html` from an allowlisted parent origin.  
+2. Bootstrap handshake → short-lived widget JWT → `/api/ask` (or equivalent) with Bearer.  
+3. Reuse `session_id` across turns when provided.  
+4. Fail closed: empty `WIDGET_ALLOWED_ORIGINS`, disallowed ancestor, bad origin body.  
+5. Prefer existing Playwright skill/fixtures if present; keep scope to widget surface.
+
+### Out of 8.5 without opt-in
 
 - live multi-service / migrate / push / deploy  
 - re-select through **8.4**  
+- full browser matrix / flaky long suite expansion without need  
+- OIDC live IdP drill  
 
 ### Alternates (only if user prioritizes)
 

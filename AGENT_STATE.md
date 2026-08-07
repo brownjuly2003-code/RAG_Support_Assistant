@@ -1,20 +1,36 @@
 # Agent State
 
-## 2026-08-07 Update-102 — completed slice 8.4 production secrets fail-closed @ `68a30b2` ✅ START HERE
+## 2026-08-07 Update-103 — docs-only full transparency after 8.4 / Update-102 ✅ START HERE
 
-> **Routing authority:** Update-102 supersedes Update-101 **only for start-point
-> routing**. All older Update blocks below, including headings that literally
-> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
-> block in this file is authoritative.** Never select work by grepping old
-> `START HERE` markers.
+> **Routing authority:** Update-103 is **docs-only / transparency-only** and
+> supersedes Update-102 **only for start-point routing**. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`,
+> are **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
 >
-> **Known lineage (actual Git wins):**
+> **No new implementation in this docs turn.** Code, tests, plan checkboxes,
+> backlog, README, audit, settings, and API paths were **not** edited here.
+> Project tests were **not** re-run. Protected dirty files were not staged.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
 > - Latest implementation: `68a30b2`
 >   (`feat(security): reject production placeholders and dev-admin bypass (8.4)`)
 >   - slice **8.4**
-> - Previous: `13a9a5b` — **8.3**; docs Update-101 `19f44a5`
-> - 8 chain: `0bee13e` 8.1 · `756562e` 8.2 · `13a9a5b` 8.3 · **`68a30b2` 8.4**
+> - Latest impl docs before this turn: `8e3047f` (Update-102)
+> - Quality chain (recent):
+>   - 5: `7c53bdb` 5.1 · `50bb220` 5.2 · `1cdecb2` **5.3**
+>   - 6: `b3494a0` 6.1 · `d0317e9` 6.2 · `d6e3a55` **6.3**
+>   - 7: `94ac64e` 7.1 · `25788ee` **7.2**
+>   - 8: `0bee13e` 8.1 · `756562e` 8.2 · `13a9a5b` 8.3 · **`68a30b2` 8.4**
+> - 4 chain ends: `6453530` **4.5**
+> - 3 chain ends: `fe2f0aa` **3.1i**
+> - 2 fault-injection last: `f347feb` (**2.6g**)
 > - Migrations on disk (not applied): **019–023**
+> - This Update-103 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 181]` before this docs commit.
 >
 > **Active writer / WIP:** **none**.
 >
@@ -24,69 +40,124 @@
 >
 > | Band | Status |
 > |------|--------|
-> | **8.1–8.4** | local at documented scopes |
-> | Full plan §1–§10 | **NOT** complete |
+> | **2.1–2.6g** | local residual closed at documented scopes |
+> | **3.1a–3.1i** | local at documented scopes |
+> | **4.1–4.5** | stream parity + durable escalation **local** |
+> | **5.1–5.3** | grounding + citation-bound + grader fail-closed **local** |
+> | **6.1–6.3** | unmeasured agentic + pre-response safety + independent judge **local** |
+> | **7.1–7.2** | eval gate fail-closed + mock ≠ release PASS **local** |
+> | **8.1** | widget bootstrap security **local** @ `0bee13e` |
+> | **8.2** | ASGI received-byte limits + upload stream/atomic **local** @ `756562e` |
+> | **8.3** | OIDC email_verified + (issuer, subject) **local** @ `13a9a5b` |
+> | **8.4** | production placeholders + no dev-admin bypass **local** @ `68a30b2` |
+> | Full plan §1–§10 | **NOT** complete (live DoD / calibration / E2E / Gate A open) |
 > | Project / release / production | **NOT** claimed |
 >
-> ---
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
 >
-> ### 8.4 contract (local)
->
-> - `is_known_insecure_secret` / `production_secret_rejection_reason` helpers
-> - Production rejects empty + known placeholders for DB_ENCRYPTION_KEY,
->   JWT_SECRET, SESSION_SECRET_KEY (incl. `.env.example` sample)
-> - JWT/session min length **32**; encryption min length **16**
-> - `ALLOW_DEV_ADMIN_LOGIN` **forbidden** in production (even with hash set)
-> - `ADMIN_PASSWORD_HASH` still required; no bypass path
+> **Transparency maps:**
+> - [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) — full next-session capsule
+> - [`docs/PLAN_CLOSURE_STATUS.md`](docs/PLAN_CLOSURE_STATUS.md) — residual matrix
+> - [`_NEXT_SESSION.md`](_NEXT_SESSION.md) — pointer only (not SoT)
 >
 > ---
 >
-> ### Known verification (8.4 this turn)
+> ### Recent quality path (impl SHAs)
 >
-> - `tests/test_settings_production_secrets.py` + cors hardening: **17 passed**
-> - Ruff clean
-> - Full suite / live / push / deploy **not** claimed
+> | Slice | SHA | One-line |
+> |-------|-----|----------|
+> | 5.3 | `1cdecb2` | grader fail-closed |
+> | 6.1 | `b3494a0` | agentic unmeasured |
+> | 6.2 | `d0317e9` | PII + injection pre-response |
+> | 6.3 | `d6e3a55` | independent judge |
+> | 7.1 | `94ac64e` | eval gate skip/infra FAIL |
+> | 7.2 | `25788ee` | mock SMOKE only |
+> | 8.1 | `0bee13e` | widget bootstrap + frame-ancestors |
+> | 8.2 | `756562e` | ASGI body limits + upload stream |
+> | 8.3 | `13a9a5b` | OIDC email_verified + issuer/subject |
+> | **8.4** | **`68a30b2`** | production secrets + ban dev-admin |
+>
+> ---
+>
+> ### Known verification (last impl 8.4; not re-run this docs turn)
+>
+> | Slice | Last known gate |
+> |-------|-----------------|
+> | **8.4** | 17 passed (`test_settings_production_secrets` + cors); Ruff clean |
+> | **8.3** | 19 oidc + 9 email_channel; Ruff clean |
+> | **8.2** | 64 body+upload security/idempotency; Ruff clean |
+> | **8.1** | 12 widget bootstrap + headers + assets; Ruff clean |
+>
+> Full suite / live multi-service / migrate / push / deploy **not** run /
+> **not** claimed.
 >
 > ---
 >
 > ### Open boundaries (honest)
 >
-> - **← next §8 residual:** Playwright widget E2E (cross-origin bootstrap)
-> - 7 residual: merge-base; dataset; live provider gate
-> - 6 residual: calibration; measured agentic
-> - 5 residual: live metrics ×3
+> - **← next 8.5:** Playwright cross-origin widget bootstrap E2E (for 8.1)
+> - §8 residual after 8.5: production must set `WIDGET_ALLOWED_ORIGINS`; live IdP
+> - 7 residual: merge-base baseline artifact; dataset expansion; live provider gate
+> - 6 residual: calibration; measured agentic evaluate when KB context exists
+> - 5 residual: live precision/recall/faithfulness ×3
+> - 4 residual: true graph SSE tokens; parity default off; outbox schedule
+> - multi-replica durable session version
 > - DEP-01 docs-site dependency audit residual
-> - live multi-service + migrate **019–023** (**opt-in**)
+> - live multi-service + migrations **019–023** (**opt-in**)
+> - plan 9–10; full suite / release / production
 >
 > ---
 >
 > ### Next candidate only (not started) — default
 >
-> named **8.5 — Playwright widget E2E** (cross-origin bootstrap for 8.1),
-> **or** §7 merge-base baseline / other residual — one atomic only.
+> named **8.5 — Playwright widget E2E** (tests-first where practical):
+> - cross-origin embed of `/static/widget.html` under allowlisted origin;
+> - bootstrap handshake + short-lived widget JWT + session_id reuse;
+> - reject empty allowlist / disallowed ancestor;
+> - still **no** live multi-service / push / deploy / migrate without opt-in.
 >
-> **Do not re-select:** through **8.4**.
+> **Alternates (only if user prioritizes):** §7 merge-base baseline; DEP-01
+> docs-site audit; live §1 / migrate 019–023 (**explicit opt-in only**).
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–3.1i, 4.1–4.5, 5.1–5.3, 6.1–6.3,
+> 7.1–7.2, **8.1–8.4**.
 >
 > ---
 >
 > ### Protected dirty / untracked
 >
+> Do not touch/stage/remove without explicit request:
 > - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
 >   `plan_sol_23_07_26`
-> - **Untracked:** plan file, `_NEXT_SESSION.md` (pointer), pytest temps, etc.
+> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+>   `_NEXT_SESSION.md` (**pointer only — not routing authority**),
+>   `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
+>   casually), architecture HTML, etc.
 >
 > ---
 >
 > ### External gates (not authorized without opt-in)
 >
-> push, deploy, live drills, `alembic upgrade`, destructive Git, production claims.
+> push, deploy, live PostgreSQL/Redis/Celery/Chroma drills, `alembic upgrade`
+> (incl. **019–023**), destructive Git, production-readiness claims.
 >
-> **Standing preference:** one named atomic slice per turn; local commit only.
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; quality > speed.
+>
+> **Git advisory:** refresh `git status --short --branch` and
+> `git log -12 --oneline` at session start — **actual Git wins**.
+
+
+## 2026-08-07 Update-102 — completed slice 8.4 production secrets fail-closed @ `68a30b2` ✅ START HERE
+
+> **Historical handoff (superseded by Update-103 for start-point routing).**
+> Recorded **8.4** @ `68a30b2`; docs `8e3047f`. Full transparency under Update-103.
 
 
 ## 2026-08-07 Update-101 — completed slice 8.3 OIDC identity binding @ `13a9a5b` ✅ START HERE
 
-> **Historical handoff (superseded by Update-102 for start-point routing).**
+> **Historical handoff (superseded by Update-103 for start-point routing).**
 > Recorded **8.3** @ `13a9a5b`. Next was 8.4 — now done @ `68a30b2`.
 >
 > **Original routing note (archival):** Update-101 supersedes Update-100 **only for start-point
