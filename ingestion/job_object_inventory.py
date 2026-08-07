@@ -63,6 +63,24 @@ class JobObjectInventoryEntry:
     job_id: str | None
 
 
+@dataclass(frozen=True)
+class JobObjectInventoryPreview:
+    """Read-only tenant-scoped inventory preview (plan 2.4f).
+
+    Composes known job refs with classifier output. Never deletes or mutates
+    filesystem state and never invents age/budget deletion policy.
+    """
+
+    tenant_id: str
+    known_job_count: int
+    entries: tuple[JobObjectInventoryEntry, ...]
+
+
+def _normalize_preview_tenant_id(tenant_id: str | None) -> str:
+    raw = str(tenant_id or "").strip()
+    return raw if raw else "default"
+
+
 def _require_upload_under_project(upload_dir: Path, project_root: Path) -> Path:
     try:
         resolved_upload = upload_dir.resolve(strict=False)
@@ -238,3 +256,30 @@ def classify_job_object_tree(
             )
         )
     return tuple(entries)
+
+
+def preview_tenant_job_object_inventory(
+    upload_dir: Path | str,
+    *,
+    tenant_id: str,
+    known_jobs: Sequence[KnownJobObjectRef],
+    project_root: Path | str,
+) -> JobObjectInventoryPreview:
+    """Tenant-scoped read-only preview: known refs + classify; no mutation.
+
+    ``known_jobs`` is supplied by the caller (typically
+    ``ingestion.jobs.sync_list_known_job_object_refs``). This function does not
+    open a database session, delete files, or apply retention policy.
+    """
+    normalized_tenant = _normalize_preview_tenant_id(tenant_id)
+    known = tuple(known_jobs)
+    entries = classify_job_object_tree(
+        upload_dir,
+        known_jobs=known,
+        project_root=project_root,
+    )
+    return JobObjectInventoryPreview(
+        tenant_id=normalized_tenant,
+        known_job_count=len(known),
+        entries=entries,
+    )

@@ -626,3 +626,33 @@ def sync_mark_failed(
                 f"Lost lease failing ingestion job {job_id}"
             )
         session.commit()
+
+
+def sync_list_known_job_object_refs(tenant_id: str) -> tuple[Any, ...]:
+    """Load durable ``(job_id, source_path)`` refs for one tenant (read-only).
+
+    Returns ``KnownJobObjectRef`` instances for inventory preview (plan 2.4f).
+    Blank ``source_path`` rows are skipped (cannot protect a path). Never
+    mutates rows or filesystem state.
+    """
+    # Local import keeps jobs↔inventory coupling to this preview helper only.
+    from ingestion.job_object_inventory import KnownJobObjectRef
+
+    if not tenant_id or not str(tenant_id).strip():
+        raise ValueError("tenant_id is required")
+    tid = str(tenant_id).strip()
+
+    with sync_session() as session:
+        rows = session.execute(
+            select(IngestionJob.id, IngestionJob.source_path)
+            .where(IngestionJob.tenant_id == tid)
+            .order_by(IngestionJob.created_at, IngestionJob.id)
+        ).all()
+
+    refs = []
+    for job_id, source_path in rows:
+        path = str(source_path or "").strip()
+        if not path:
+            continue
+        refs.append(KnownJobObjectRef(job_id=str(job_id), source_path=path))
+    return tuple(refs)

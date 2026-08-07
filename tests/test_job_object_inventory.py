@@ -342,3 +342,223 @@ def test_upload_dir_outside_project_root_is_rejected(
             known_jobs=(),
             project_root=project_root,
         )
+
+
+# ---------------------------------------------------------------------------
+# 2.4f — tenant-scoped inventory preview (load known refs + classify; no delete)
+# ---------------------------------------------------------------------------
+
+
+def test_preview_composes_known_refs_and_classifier_without_mutation(
+    tmp_path: Path,
+) -> None:
+    inv = _inventory()
+    project_root = tmp_path / "project"
+    upload_dir = project_root / "data" / "uploads"
+    job_id = _job_id()
+    absolute = _write(
+        upload_dir / "job-objects" / str(job_id) / "doc.md",
+        b"immutable",
+    )
+    known = _ref(project_root, upload_dir, job_id, "doc.md")
+    orphan_id = _job_id()
+    orphan = _write(
+        upload_dir / "job-objects" / str(orphan_id) / "orphan.md",
+        b"orphan",
+    )
+
+    preview = inv.preview_tenant_job_object_inventory(
+        upload_dir,
+        tenant_id="acme",
+        known_jobs=(known,),
+        project_root=project_root,
+    )
+
+    assert preview.tenant_id == "acme"
+    assert preview.known_job_count == 1
+    assert len(preview.entries) == 2
+    by_job = {entry.job_id: entry for entry in preview.entries}
+    assert by_job[str(job_id)].classification == "protected"
+    assert by_job[str(orphan_id)].classification == "unrecorded"
+    assert absolute.is_file() and absolute.read_bytes() == b"immutable"
+    assert orphan.is_file() and orphan.read_bytes() == b"orphan"
+    # Preview has no deletion vocabulary.
+    labels = {entry.classification for entry in preview.entries}
+    assert labels <= {"protected", "unrecorded", "untrusted"}
+    assert "deletable" not in labels
+
+
+def test_preview_falsey_tenant_normalizes_to_default(
+    tmp_path: Path,
+) -> None:
+    inv = _inventory()
+    project_root = tmp_path / "project"
+    upload_dir = project_root / "data" / "uploads"
+    upload_dir.mkdir(parents=True)
+
+    preview = inv.preview_tenant_job_object_inventory(
+        upload_dir,
+        tenant_id="  ",
+        known_jobs=(),
+        project_root=project_root,
+    )
+    assert preview.tenant_id == "default"
+    assert preview.known_job_count == 0
+    assert preview.entries == ()
+
+
+def test_preview_rejects_upload_dir_outside_project_root(
+    tmp_path: Path,
+) -> None:
+    inv = _inventory()
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    foreign = tmp_path / "foreign" / "uploads"
+    foreign.mkdir(parents=True)
+
+    with pytest.raises(inv.JobObjectInventoryValidationError):
+        inv.preview_tenant_job_object_inventory(
+            foreign,
+            tenant_id="t1",
+            known_jobs=(),
+            project_root=project_root,
+        )
+
+
+def test_sync_list_known_job_object_refs_is_tenant_scoped(
+    ingestion_jobs_db,
+) -> None:
+    from db.models import IngestionJob
+    from ingestion import jobs as jobs_mod
+    from ingestion.job_object_inventory import KnownJobObjectRef
+
+    job_a = uuid.uuid4()
+    job_b = uuid.uuid4()
+    job_other = uuid.uuid4()
+    with jobs_mod.sync_session() as session:
+        session.add_all(
+            [
+                IngestionJob(
+                    id=job_a,
+                    tenant_id="tenant-a",
+                    filename="a.md",
+                    source_path="data/uploads/job-objects/%s/a.md" % job_a,
+                    status="completed",
+                ),
+                IngestionJob(
+                    id=job_b,
+                    tenant_id="tenant-a",
+                    filename="b.md",
+                    source_path="data/uploads/job-objects/%s/b.md" % job_b,
+                    status="failed",
+                ),
+                IngestionJob(
+                    id=job_other,
+                    tenant_id="tenant-b",
+                    filename="other.md",
+                    source_path="data/uploads/job-objects/%s/other.md" % job_other,
+                    status="completed",
+                ),
+            ]
+        )
+        session.commit()
+
+    refs = jobs_mod.sync_list_known_job_object_refs("tenant-a")
+    assert isinstance(refs, tuple)
+    assert all(isinstance(ref, KnownJobObjectRef) for ref in refs)
+    assert {ref.job_id for ref in refs} == {str(job_a), str(job_b)}
+    assert all(ref.source_path for ref in refs)
+    # Other tenant never leaks.
+    assert str(job_other) not in {ref.job_id for ref in refs}
+
+
+def test_sync_list_known_job_object_refs_skips_blank_source_path(
+    ingestion_jobs_db,
+) -> None:
+    from db.models import IngestionJob
+    from ingestion import jobs as jobs_mod
+
+    good_id = uuid.uuid4()
+    blank_id = uuid.uuid4()
+    with jobs_mod.sync_session() as session:
+        session.add_all(
+            [
+                IngestionJob(
+                    id=good_id,
+                    tenant_id="skip-blank",
+                    filename="good.md",
+                    source_path="data/uploads/job-objects/%s/good.md" % good_id,
+                    status="completed",
+                ),
+                IngestionJob(
+                    id=blank_id,
+                    tenant_id="skip-blank",
+                    filename="blank.md",
+                    source_path="   ",
+                    status="completed",
+                ),
+            ]
+        )
+        session.commit()
+
+    refs = jobs_mod.sync_list_known_job_object_refs("skip-blank")
+    assert len(refs) == 1
+    assert refs[0].job_id == str(good_id)
+
+
+def test_sync_list_known_job_object_refs_requires_tenant(
+    ingestion_jobs_db,
+) -> None:
+    from ingestion import jobs as jobs_mod
+
+    with pytest.raises(ValueError, match="tenant_id"):
+        jobs_mod.sync_list_known_job_object_refs("")
+    with pytest.raises(ValueError, match="tenant_id"):
+        jobs_mod.sync_list_known_job_object_refs("   ")
+
+
+def test_tenant_preview_end_to_end_load_and_classify(
+    tmp_path: Path,
+    ingestion_jobs_db,
+) -> None:
+    """Operator path: load tenant refs from DB, classify tree, never mutate."""
+    from db.models import IngestionJob
+    from ingestion import jobs as jobs_mod
+
+    inv = _inventory()
+    project_root = tmp_path / "project"
+    upload_dir = project_root / "data" / "uploads"
+    job_id = _job_id()
+    absolute = _write(
+        upload_dir / "job-objects" / str(job_id) / "guide.md",
+        b"v1",
+    )
+    source_path = absolute.resolve().relative_to(project_root.resolve()).as_posix()
+
+    with jobs_mod.sync_session() as session:
+        session.add(
+            IngestionJob(
+                id=job_id,
+                tenant_id="e2e-tenant",
+                filename="guide.md",
+                source_path=source_path,
+                status="completed",
+            )
+        )
+        session.commit()
+
+    known = jobs_mod.sync_list_known_job_object_refs("e2e-tenant")
+    preview = inv.preview_tenant_job_object_inventory(
+        upload_dir,
+        tenant_id="e2e-tenant",
+        known_jobs=known,
+        project_root=project_root,
+    )
+
+    assert preview.tenant_id == "e2e-tenant"
+    assert preview.known_job_count == 1
+    assert len(preview.entries) == 1
+    assert preview.entries[0].classification == "protected"
+    assert preview.entries[0].job_id == str(job_id)
+    assert absolute.is_file()
+    assert absolute.read_bytes() == b"v1"
