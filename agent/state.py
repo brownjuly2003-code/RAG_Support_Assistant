@@ -138,6 +138,9 @@ class GraphState(TypedDict, total=False):
     # Durable escalation (plan §4.3).
     ticket_id: str | None
     delivery_state: str
+    # Pre-response safety (plan §6.2): allow | redact | refuse | human.
+    safety_action: Optional[Literal["allow", "redact", "refuse", "human"]]
+    safety_reasons: list[str]
 
 
 def create_initial_state(

@@ -91,6 +91,7 @@ from agent.prompts import (  # noqa: E402
     build_suggested_questions_prompt,
     build_verify_claim_prompt,
 )
+from agent.response_safety import apply_pre_response_safety  # noqa: E402
 from agent.state import GraphState, create_initial_state  # noqa: E402
 from tracing.sqlite_trace import finish_trace, log_step, start_trace  # noqa: E402
 
@@ -808,6 +809,11 @@ def _agentic_unmeasured_gate(
         "fact_verification_skipped": True,
         "factuality_score": 0,
     }
+
+
+def _finalize_agentic_terminal(state: GraphState) -> GraphState:
+    """Apply §6.2 pre-response safety on agentic terminals before delivery."""
+    return cast(GraphState, apply_pre_response_safety(state))
 
 
 def _agentic_tool_definitions() -> list[dict[str, Any]]:
@@ -2026,6 +2032,23 @@ def make_log_node() -> Callable[[GraphState], GraphState]:
     return node
 
 
+def make_response_safety_node() -> Callable[[GraphState], GraphState]:
+    """Pre-response PII + document prompt-injection gate (plan §6.2)."""
+
+    def node(state: GraphState) -> GraphState:
+        if state.get("error"):
+            return state
+        trace_id = state.get("trace_id", "unknown-trace-id")
+        try:
+            new_state = cast(GraphState, apply_pre_response_safety(state))
+            log_step(trace_id, "response_safety", new_state)
+            return new_state
+        except Exception as exc:
+            return _make_error_state(state, "response_safety", exc)
+
+    return node
+
+
 # ---------------------------------------------------------------------------
 # Conditional routing function
 # ---------------------------------------------------------------------------
@@ -2035,16 +2058,21 @@ def _should_retry(state: GraphState) -> str:
     """Conditional edge: определяет, куда идти после route_or_retry.
 
     Returns:
-        "error" → handle_error → END  (необработанное исключение)
-        "retry" → rewrite_query → retrieve → ...  (Self-RAG loop)
-        "end"   → log → END  (auto / human, финал)
+        "error"  → handle_error → END  (необработанное исключение)
+        "retry"  → rewrite_query → retrieve → ...  (Self-RAG loop)
+        "safety" → response_safety → suggest|log  (terminal; plan §6.2)
     """
     route = state.get("route", "human")
     if state.get("error") or route == "error":
         return "error"
     if route == "retry":
         return "retry"
-    if route == "auto":
+    return "safety"
+
+
+def _after_response_safety(state: GraphState) -> str:
+    """After safety: only clean auto may get suggested questions."""
+    if state.get("route") == "auto":
         return "suggest"
     return "end"
 
@@ -2157,6 +2185,7 @@ def build_support_graph(
     # suggest_questions is cosmetic follow-up text — fast is enough there too.
     workflow.add_node("evaluate", make_evaluate_node(llm_fast, llm_fast))
     workflow.add_node("route_or_retry", make_route_or_retry_node(min_quality=min_quality))
+    workflow.add_node("response_safety", make_response_safety_node())
     workflow.add_node("suggest_questions", make_suggest_questions_node(llm_fast))
     workflow.add_node("rewrite_query", make_rewrite_query_node(llm_strong))
     workflow.add_node("log", make_log_node())
@@ -2188,13 +2217,20 @@ def build_support_graph(
     workflow.add_edge("verify_facts", "evaluate")
     workflow.add_edge("evaluate", "route_or_retry")
 
-    # Conditional: retry или finish
+    # Conditional: retry or terminal safety (plan §6.2) then suggest/log
     workflow.add_conditional_edges(
         "route_or_retry",
         _should_retry,
         {
             "error": "handle_error",
             "retry": "rewrite_query",
+            "safety": "response_safety",
+        },
+    )
+    workflow.add_conditional_edges(
+        "response_safety",
+        _after_response_safety,
+        {
             "suggest": "suggest_questions",
             "end": "log",
         },
@@ -2754,6 +2790,7 @@ class ConversationSession:
                     "action_summary": "",
                 }
                 final_state = _apply_llm_usage(final_state, usage)
+                final_state = _finalize_agentic_terminal(final_state)
                 log_step(active_trace_id, "agentic_answer", final_state)
                 return final_state
 
@@ -2799,6 +2836,7 @@ class ConversationSession:
                         "action_summary": action_summary,
                     }
                     confirmation_state = _apply_llm_usage(confirmation_state, usage)
+                    confirmation_state = _finalize_agentic_terminal(confirmation_state)
                     log_step(active_trace_id, "confirmation_gate", confirmation_state)
                     return confirmation_state
                 else:
@@ -2825,6 +2863,7 @@ class ConversationSession:
             "action_summary": "",
         }
         fallback_state = _apply_llm_usage(fallback_state, usage)
+        fallback_state = _finalize_agentic_terminal(fallback_state)
         log_step(active_trace_id, "agentic_fallback", fallback_state)
         return fallback_state
 
@@ -2874,6 +2913,7 @@ class ConversationSession:
                         "action_summary": "",
                     }
                 )
+                state = _finalize_agentic_terminal(state)
                 log_step(active_trace_id, "create_ticket", state)
                 finish_trace(active_trace_id, state)
                 return state
@@ -2888,6 +2928,7 @@ class ConversationSession:
                         "action_summary": "",
                     }
                 )
+                state = _finalize_agentic_terminal(state)
                 log_step(active_trace_id, "confirmation_cancelled", state)
                 finish_trace(active_trace_id, state)
                 return state
@@ -2901,6 +2942,7 @@ class ConversationSession:
                     "action_summary": pending_snapshot["action_summary"],
                 }
             )
+            state = _finalize_agentic_terminal(state)
             log_step(active_trace_id, "await_confirmation", state)
             finish_trace(active_trace_id, state)
             return state
@@ -2914,6 +2956,8 @@ class ConversationSession:
             session_id=session_id,
         )
         if provider_agentic_result is not None:
+            # Provider path already finalizes each terminal; re-apply is idempotent.
+            provider_agentic_result = _finalize_agentic_terminal(provider_agentic_result)
             finish_trace(active_trace_id, provider_agentic_result)
             return provider_agentic_result
 
@@ -2936,6 +2980,7 @@ class ConversationSession:
                     "action_summary": action_summary,
                 }
             )
+            state = _finalize_agentic_terminal(state)
             log_step(active_trace_id, "confirmation_gate", state)
             finish_trace(active_trace_id, state)
             return state
@@ -2982,6 +3027,7 @@ class ConversationSession:
                 "action_summary": "",
             }
         )
+        state = _finalize_agentic_terminal(state)
         finish_trace(active_trace_id, state)
         return state
 
