@@ -1,15 +1,15 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 (Update-55 after completed **2.4f** impl `68cf045`;
-previous implementation `13be7d9` / **2.4e**; previous docs `af13b3f` /
-Update-54; next candidate **2.4g job-object GC/retention executor ownership
-investigation** not started)
+**Обновлено:** 2026-08-07 (Update-56 after completed **2.4g** impl `1ccb39b`;
+previous implementation `68cf045` / **2.4f**; previous docs `a78df07` /
+Update-55; next candidate **2.4h guarded job-object retention command** not
+started)
 
 **Назначение:** самодостаточный next-session handoff для coding agent после
 compacted context. История срезов — в [`AGENT_STATE.md`](../AGENT_STATE.md)
-(**только верхний блок Update-55** — routing authority; older blocks including
-literal `✅ START HERE` headings are archival). Evidence 2.4f — ниже +
-Update-55; 2.4e — Update-53 / `0de7889`; 2.4d — Update-51 / `ecf73fe`.
+(**только верхний блок Update-56** — routing authority; older blocks including
+literal `✅ START HERE` headings are archival). Evidence 2.4g — ниже +
+Update-56; 2.4f — Update-55 / `a78df07`; 2.4e — Update-53 / `0de7889`.
 Активный plan source — untracked/protected
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
 
@@ -20,28 +20,26 @@ Update-55; 2.4e — Update-53 / `0de7889`; 2.4d — Update-51 / `ecf73fe`.
 
 | Факт | Значение |
 |------|----------|
-| Latest implementation | `68cf045` (`feat(ingestion): tenant-scoped job-object inventory preview`) — **2.4f** (read-only tenant preview scope) |
-| Previous implementation | `13be7d9` (slice **2.4e**) |
-| Previous docs / transparency | `af13b3f` (Update-54) / `0de7889` (Update-53) |
-| This Update-55 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
-| Branch advisory | `master...origin/master [ahead 92]` after impl — **refresh mandatory** |
+| Latest implementation | `1ccb39b` (`feat(ingestion): fail-closed job-object retention policy`) — **2.4g** (fail-closed policy assessment; no deletion) |
+| Previous implementation | `68cf045` (slice **2.4f**) |
+| Previous docs | `a78df07` (Update-55) |
+| This Update-56 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
+| Branch advisory | `master...origin/master [ahead 94]` after impl — **refresh mandatory** |
 | Active writer | **none** |
 | Unfinished WIP in next targets | **none known** |
-| Locally complete (documented scopes) | **2.1–2.4f** |
-| Not complete / not claimed | full plan step 2; full immutable lifecycle; GC/retention executor; orphan cleanup mutations; age/budget delete policy; admin/CLI operator surface; DB model/migration field; full suite; live drills; project/release/production readiness |
-| Next allowed candidate | **2.4g job-object GC/retention executor ownership/policy investigation** (**not started**; still **no** deletion) |
+| Locally complete (documented scopes) | **2.1–2.4g** |
+| Not complete / not claimed | full plan step 2; full immutable lifecycle; GC/delete executor; orphan cleanup mutations; age/budget delete thresholds; admin/CLI operator surface; DB model/migration field; full suite; live drills; project/release/production readiness |
+| Next allowed candidate | **2.4h guarded job-object retention command** (**not started**; empty expected candidates only / no-op; still **no** FS mutation by default) |
 | Gates | no push / deploy / live services / destructive Git / production claims |
 
-**Known verification (2.4f):** tests-first red 7 failed (`AttributeError`
-missing preview/loader); green focused **18 passed**; adjacent gate **98
-passed** (`test_job_object_inventory` + `test_upload_idempotency` +
-`test_upload_security` + `test_ingestion_job_contract`); scoped Ruff clean;
-`git diff --check` clean; mypy on Python 3.12 Success (2 files; host 3.13
-hits known NumPy stub syntax issue). Full suite / live services **not** run.
-Remaining honest limitations after 2.4f: tenant-scoped load+classify preview
-exists, but **no** GC executor, **no** admin/CLI operator surface, **no**
-age/budget delete policy, **no** orphan cleanup mutations, **no** DB
-model/migration field.
+**Known verification (2.4g):** tests-first red 7 failed (`ModuleNotFoundError`);
+green focused **25 passed** (retention + inventory); adjacent gate **105
+passed**; scoped Ruff clean; `git diff --check` clean; mypy Python 3.12
+Success (1 file). Full suite / live services **not** run. Remaining honest
+limitations after 2.4g: fail-closed policy exists with **empty** auto-delete
+candidates, but **no** guarded executor command, **no** FS mutation, **no**
+age/budget thresholds, **no** orphan cleanup mutations, **no** admin/CLI
+operator surface, **no** DB model/migration field.
 
 **Protected state (do not touch/stage/remove without explicit request):**
 
@@ -67,18 +65,19 @@ next-candidate WIP на момент этого handoff.
 1. **Cycle-guard preflight** on the latest user message.
 2. `cd D:\RAG_Support_Assistant`; run fresh `git status --short --branch` and
    `git log -5 --oneline` as **separate** commands; **actual Git wins** over
-   embedded hashes/counts (known implementation is `68cf045` / **2.4f**;
-   previous `13be7d9` / **2.4e**).
-3. Read **only** top **Update-55** in `AGENT_STATE.md` + this
+   embedded hashes/counts (known implementation is `1ccb39b` / **2.4g**;
+   previous `68cf045` / **2.4f**).
+3. Read **only** top **Update-56** in `AGENT_STATE.md` + this
    **Нулевая неоднозначность** capsule first; treat older Update blocks
-   as archive. Do **not** reselect 2.1–2.4f.
-4. For **2.4g**: investigate GC/retention **executor ownership** for
-   job-objects / legacy-previous **read-only** first. Still **no** deletion,
-   age/budget policy invention, or filesystem mutation without a later
-   test-first contract. Re-check protected dirty/untracked list. Do **not**
-   reopen completed 2.4e/2.4f preview/classifier semantics, 2.4a–2.4d
-   upload/receipt surfaces, or index retention operator surfaces unless
-   investigation proves a required conflict — then **stop and re-scope**.
+   as archive. Do **not** reselect 2.1–2.4g.
+4. For **2.4h**: add a **guarded retention command** that requires an exact
+   expected candidate tuple. Under current policy only `()` is valid and
+   execution is a **no-op** (still **no** filesystem mutation / age-budget
+   invention). Do **not** invent auto-delete classes. Re-check protected
+   dirty/untracked list. Do **not** reopen completed 2.4e–2.4g policy/
+   inventory, 2.4a–2.4d upload/receipt, or index retention operator surfaces
+   unless investigation proves a required conflict — then **stop and
+   re-scope**.
 5. Use **Grok** via the local verified route; announce counters
    `slice 1/1`, `delegated run N/3`, `QA follow-up N/1`. Execute **at most
    one** named atomic next candidate.
@@ -95,12 +94,12 @@ opt-in and must **not** be selected as the default next slice.
 
 1. `git status --short --branch` и `git log -5 --oneline` — авторитетный
    источник текущего filesystem/Git state.
-2. Далее: верхний блок `AGENT_STATE.md` (**Update-55**) и эта капсула
+2. Далее: верхний блок `AGENT_STATE.md` (**Update-56**) и эта капсула
    (**Нулевая неоднозначность**).
 3. `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26` и их
    dirty working-tree contents — protected user state; могут быть stale. Они
-   **не** переопределяют Update-55 и **не** дают права повторять уже
-   завершённые срезы 2.1–2.4f.
+   **не** переопределяют Update-56 и **не** дают права повторять уже
+   завершённые срезы 2.1–2.4g.
 4. Untracked `_NEXT_SESSION.md` — **archival / may still describe old step
    4.8d**; **not** routing authority.
 5. `rag-remediation-plan-2026-08-03.md` — активный plan source
@@ -108,14 +107,14 @@ opt-in and must **not** be selected as the default next slice.
    Старый `plan_sol_23_07_26` — protected legacy.
 6. Один user turn = максимум один named atomic slice.
 
-**Authoritative implementation state:** latest implementation is `68cf045`
-(`feat(ingestion): tenant-scoped job-object inventory preview`) — slice
-**2.4f** locally complete/verified at the **bounded read-only tenant preview
-scope**. Previous implementation: `13be7d9` (slice **2.4e**). Previous docs:
-`af13b3f` (Update-54). Do **not** embed a guessed future Update-55 docs
-commit hash; next session reads actual `git log`. Branch advisory
-`master...origin/master [ahead 92]` after impl — refresh mandatory.
-Push/deploy not authorized.
+**Authoritative implementation state:** latest implementation is `1ccb39b`
+(`feat(ingestion): fail-closed job-object retention policy`) — slice
+**2.4g** locally complete/verified at the **bounded fail-closed policy
+assessment scope** (no deletion). Previous implementation: `68cf045` (slice
+**2.4f**). Previous docs: `a78df07` (Update-55). Do **not** embed a guessed
+future Update-56 docs commit hash; next session reads actual `git log`.
+Branch advisory `master...origin/master [ahead 94]` after impl — refresh
+mandatory. Push/deploy not authorized.
 
 ## Карта реализации
 
@@ -138,21 +137,58 @@ Push/deploy not authorized.
 | **2.4d** | sync non-default upload index publication receipt persistence | `dfbbca0` | Update-51 `ecf73fe` + Update-52 handoff |
 | **2.4e** | job-object inventory classification (read-only; no deletion) | `13be7d9` | Update-53 `0de7889` + Update-54 handoff |
 | **2.4f** | tenant-scoped job-object inventory preview (load refs + classify; no deletion) | `68cf045` | Update-55 |
+| **2.4g** | fail-closed job-object retention policy (never_auto_delete; empty candidates) | `1ccb39b` | Update-56 |
 
-Срезы **2.1–2.4f** локально complete и verified at documented scopes
-(**2.4f** only at read-only tenant preview; **2.4e** only at read-only
-classification; **2.4d** only at bounded sync non-default upload; **2.4c**
-only at bounded async-worker). Локальный operator surface для index retention
-preview + guarded execution и validated rollback **present**. Immutable
-upload originals + flat current view **present** after 2.4a.
-Manager/async/sync publication receipts **present** after 2.4b–2.4d.
-Job-object tree classifier **present** after 2.4e. Tenant-scoped load+classify
-preview **present** after 2.4f. Полный plan step 2, full immutable lifecycle,
-GC/retention executor, orphan cleanup mutations, age/budget delete policy,
-admin/CLI operator surface, fault injection, live drills, project и release —
-**не** complete. **2.1–2.4f must never be selected again.** Next safe
-candidate is **2.4g job-object GC/retention executor ownership/policy
-investigation** (**not started**; still **no** deletion).
+Срезы **2.1–2.4g** локально complete и verified at documented scopes
+(**2.4g** only at fail-closed policy assessment; **2.4f** only at read-only
+tenant preview; **2.4e** only at read-only classification). Локальный
+operator surface для index retention preview + guarded execution и validated
+rollback **present**. Immutable upload originals + flat current view
+**present** after 2.4a. Manager/async/sync publication receipts **present**
+after 2.4b–2.4d. Job-object tree classifier **present** after 2.4e.
+Tenant-scoped load+classify preview **present** after 2.4f. Fail-closed
+job-object retention policy **present** after 2.4g (auto-delete candidates
+always empty). Полный plan step 2, full immutable lifecycle, GC/delete
+executor, orphan cleanup mutations, age/budget delete thresholds, admin/CLI
+operator surface, fault injection, live drills, project и release — **не**
+complete. **2.1–2.4g must never be selected again.** Next safe candidate is
+**2.4h guarded job-object retention command** (**not started**; empty
+expected candidates / no-op; still **no** FS mutation by default).
+
+## Контракт 2.4g (fail-closed job-object retention policy) — COMPLETE
+
+Ownership investigation + fail-closed policy assessment at `1ccb39b`:
+
+**Ownership findings (encoded in module docstring + behavior):**
+
+- create path: `api/routers/upload.py` (2.4a) — not GC
+- durable ref: `IngestionJob.source_path`
+- classify/preview: `ingestion.job_object_inventory` (2.4e/2.4f)
+- index retention (`vectordb/*`) is a **separate** Chroma subsystem — must
+  not delete `job-objects/**` / `legacy-previous/**`
+- no pre-existing job-object GC/executor module
+
+**Policy contract:**
+
+- `assess_job_object_retention_policy(entries)` →
+  `JobObjectRetentionAssessment`
+- every known classification (`protected`, `unrecorded`, `untrusted`) →
+  disposition `never_auto_delete` with distinct reasons
+- `auto_delete_candidates` always `()`
+- unknown classification → `JobObjectRetentionValidationError`
+- no age/budget fields; no filesystem mutation
+
+**Implementation paths changed in `1ccb39b` only:**
+
+- `ingestion/job_object_retention.py`
+- `tests/test_job_object_retention.py`
+
+**Boundary:** policy assessment only. **Нет** delete executor, FS mutation,
+age/budget thresholds, admin/CLI, upload-path edits, index retention changes,
+settings, UI, plan checkbox edits, live-service, push, or deploy.
+
+**Verification (2.4g):** red 7 failed → green focused 25 passed; adjacent 105
+passed; Ruff clean; diff-check clean; mypy Python 3.12 Success (1 file).
 
 ## Контракт 2.4d (sync non-default upload index publication receipt) — COMPLETE
 
@@ -802,11 +838,21 @@ python -m mypy ingestion/job_object_inventory.py ingestion/jobs.py --config-file
 git diff --check -- ingestion/job_object_inventory.py ingestion/jobs.py tests/test_job_object_inventory.py
 ```
 
-### Reference commands (2.4g candidate) — after investigation/contract
+### Reference commands (2.4g — landed)
 
 ```powershell
-# Adjust once 2.4g lands; keep inventory preview green:
-python -m pytest tests/test_job_object_inventory.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4g-<unique>
+python -m pytest tests/test_job_object_retention.py tests/test_job_object_inventory.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4g-<unique>
+python -m pytest tests/test_job_object_retention.py tests/test_job_object_inventory.py tests/test_upload_idempotency.py tests/test_upload_security.py tests/test_ingestion_job_contract.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4g-adj-<unique>
+python -m ruff check ingestion/job_object_retention.py tests/test_job_object_retention.py
+python -m mypy ingestion/job_object_retention.py --config-file pyproject.toml
+git diff --check -- ingestion/job_object_retention.py tests/test_job_object_retention.py
+```
+
+### Reference commands (2.4h candidate) — after command lands
+
+```powershell
+# Adjust once 2.4h lands; keep policy + inventory green:
+python -m pytest tests/test_job_object_retention.py tests/test_job_object_inventory.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4h-<unique>
 ```
 
 ### Reference commands (2.4d) — только при new code/failure
@@ -875,63 +921,64 @@ never claim unconditional full-file Mypy cleanliness without evidence.
 - DB migration/model fields for index version/collection; API/UI surfaces
   (out of 2.4f preview scope unless proven required).
 
-**Remaining honest limitations after 2.4f:**
+**Remaining honest limitations after 2.4g:**
 
 - both accepted upload paths still record publication receipts (2.4c/2.4d)
 - read-only job-object classifier exists (`13be7d9`)
-- tenant-scoped DB load + preview composition exists (`68cf045`) but **no**
-  admin/CLI operator surface
+- tenant-scoped DB load + preview composition exists (`68cf045`)
+- fail-closed retention policy exists (`1ccb39b`) with **empty** auto-delete
+  candidates
 - full immutable-original lifecycle is still **not** complete
-- no GC/retention **executor** for `job-objects` or `legacy-previous`
+- no guarded GC/delete **executor command** for `job-objects` / legacy
 - no orphan cleanup **mutations** on failed transitions
-- no age/budget delete policy vocabulary
+- no age/budget delete thresholds
+- no admin/CLI operator surface
 - no migration/model field for index version/collection on the job
 - no live concurrency/fault-injection; full suite not run
 - full plan step 2 / project / release / production readiness **not** complete
 
-**Next candidate (not started):** **2.4g job-object GC/retention executor
-ownership/policy investigation**. Candidate only — **not** completed work and
-**not** started. Confirm owners and safety invariants **read-only** before
-any delete path. Still **no** deletion. Do **not** invent age/budget delete
-rules, edit the plan, reopen 2.1–2.4f, or mark 2.4g started/complete from
-docs alone.
+**Next candidate (not started):** **2.4h guarded job-object retention
+command**. Candidate only — **not** completed work and **not** started.
+Require exact expected candidate tuple; under current policy only `()` is
+valid and execution is a no-op (still **no** FS mutation). Do **not** invent
+auto-delete classes or age/budget rules, edit the plan, reopen 2.1–2.4g, or
+mark 2.4h started/complete from docs alone.
 
-**Superseded / do not re-select:** 2.1–2.4f are complete. Historical
-next-work text that still names **2.4a**–**2.4f** as the next candidate is
+**Superseded / do not re-select:** 2.1–2.4g are complete. Historical
+next-work text that still names **2.4a**–**2.4g** as the next candidate is
 stale. Historical headings containing `✅ START HERE` are archival.
 
-### Следующий named candidate: 2.4g job-object GC/retention executor ownership (не начат)
+### Следующий named candidate: 2.4h guarded job-object retention command (не начат)
 
-Smallest safe framing: investigate whether/where a GC or retention executor
-for `job-objects` / `legacy-previous` should live, which classifications from
-2.4e/2.4f are never auto-deletable, and which invariants protect
-`source_path`-matched and legacy-previous objects. **Not started.** **Do not
-re-select 2.4a–2.4f.** No active writer and no unfinished next-candidate WIP
-at this handoff.
+Smallest safe framing: unwired domain command that requires an exact
+`expected_candidates` tuple (mirroring index retention guard pattern). Under
+2.4g policy only the empty tuple is valid; execution reports no deletions
+and **must not** mutate the filesystem. Non-empty expected tuples fail
+closed. **Not started.** **Do not re-select 2.4a–2.4g.**
 
 **Candidate ownership (confirm read-only next session):**
 
 | Surface | Module / symbols | Notes |
 |---------|------------------|-------|
-| Classifier (do not reopen semantics) | `ingestion.job_object_inventory.classify_job_object_tree` | 2.4e complete @ `13be7d9` |
-| Tenant preview (do not reopen) | `preview_tenant_job_object_inventory` + `sync_list_known_job_object_refs` | 2.4f complete @ `68cf045` |
-| Known job rows | `IngestionJob.id` + `source_path` / `ingestion/jobs.py` | durable references |
+| Policy (do not reopen) | `assess_job_object_retention_policy` | 2.4g complete @ `1ccb39b` |
+| Classifier / preview (do not reopen) | `job_object_inventory` | 2.4e/2.4f |
 | Create path (do not reopen) | `api/routers/upload.py` | 2.4a |
-| GC / delete executor | **none** | investigation target for 2.4g |
+| Index retention (do not couple deletes) | `vectordb/*` | separate Chroma subsystem |
+| Guarded job-object command | **none** | 2.4h target |
 
-**Evidence-based boundary for 2.4g:**
+**Evidence-based boundary for 2.4h:**
 
-- investigation / ownership first — **no** filesystem mutation by default
-- **no** inventing age/budget deletion policy without evidence
-- **no** reopening 2.4e/2.4f labels without proven conflict
+- guarded command only — **no** inventing auto-delete classes
+- **no** age/budget thresholds without explicit later policy expansion
+- **no** reopening 2.4e–2.4g without proven conflict
 - **no** plan checkbox edits from docs turns
-- do **not** mark 2.4g started/complete from docs alone
+- do **not** mark 2.4h started/complete from docs alone
 
 **Plan source (direction only):** active untracked plan
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)
 §2 still carries the broader immutable/versioned originals + lifecycle bind
-item (do **not** edit plan checkboxes here). 2.4f landed tenant preview
-wiring; 2.4g is the GC/executor ownership candidate only.
+item (do **not** edit plan checkboxes here). 2.4g landed fail-closed policy;
+2.4h is the guarded command candidate only.
 
 ### Historical 2.4d ownership notes (archive; 2.4d COMPLETE @ `dfbbca0`)
 
@@ -991,19 +1038,19 @@ corpus scanning.
 
 ### Explicit non-goals (next candidate and standing)
 
-- Re-opening completed 2.4f preview/loader, 2.4e classifier semantics, 2.4d
-  sync upload receipt surfaces, 2.4c async-worker surfaces, 2.4b manager
-  receipt surfaces, 2.4a upload write path, or index retention operator
+- Re-opening completed 2.4g policy, 2.4f preview/loader, 2.4e classifier
+  semantics, 2.4d–2.4a upload/receipt surfaces, or index retention operator
   surfaces without proven conflict
 - Settings/policy rewrite, UI, Helm/PVC/object-storage migration
-- Age/budget **deletion** policy or filesystem mutation in the 2.4g
-  investigation slice without an explicit later test-first contract
+- Inventing auto-delete classifications or age/budget thresholds in the 2.4h
+  guarded-command slice without explicit policy expansion
+- Filesystem mutation under current empty-candidate policy
 - Editing plan checkboxes from docs turns
 - DB migration / model field for index version/collection without proven need
 - Full fault-injection matrix; concurrent multi-tenant load drills
 - Live PostgreSQL/Redis/Celery/Chroma; push; deploy; production readiness
 - Claiming full plan step 2 or full immutable lifecycle “done” from
-  classification, preview, or receipt wiring alone
+  classification, preview, policy, or receipt wiring alone
 
 ### Stop / re-scope conditions
 
@@ -1018,6 +1065,9 @@ corpus scanning.
 
 ## Definition of done / stop conditions
 
+- **2.4g is complete** at implementation commit `1ccb39b` with the
+  verification ledger above, **only at the bounded fail-closed policy
+  assessment scope**. **Do not re-select 2.4g.**
 - **2.4f is complete** at implementation commit `68cf045` with the
   verification ledger above, **only at the bounded read-only tenant preview
   scope**. **Do not re-select 2.4f.**
@@ -1035,11 +1085,11 @@ corpus scanning.
 - **2.4a is complete** at implementation commit `a1dcd5c`. **Do not
   re-select 2.4a.**
 - **Do not re-select 2.3i** (`ac4b317`) or **2.1–2.3h.**
-- Next candidate **2.4g** is **done only after** read-only ownership evidence
-  and (if chosen) a separate tests-first GC/executor contract, one
-  independent proportional gate, protected-surface checks, scoped
-  diff-check, and local explicit-path commit. Do **not** mark 2.4g
-  started/complete from docs alone. Default is **no** deletion.
+- Next candidate **2.4h** is **done only after** tests-first evidence for a
+  guarded retention command (exact expected candidates; empty-only / no-op
+  under current policy; no FS mutation), one independent proportional gate,
+  protected-surface checks, scoped diff-check, and local explicit-path
+  commit. Do **not** mark 2.4h started/complete from docs alone.
 - **No** full-suite / live / deploy / push / production-readiness claims.
 - **Stop/yield after one named slice** because one user turn equals one
   slice.
