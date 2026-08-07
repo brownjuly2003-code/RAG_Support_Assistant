@@ -315,6 +315,8 @@ def test_api_ask_passes_confirm_flag_into_session(
             confirm: bool | None = None,
             user_id: str | None = None,
             session_id: str | None = None,
+            deadline_sec: float | None = None,
+            **kwargs: object,
         ) -> dict:
             captured["question"] = question
             captured["trace_id"] = trace_id
@@ -322,6 +324,7 @@ def test_api_ask_passes_confirm_flag_into_session(
             captured["confirm"] = confirm
             captured["user_id"] = user_id
             captured["session_id"] = session_id
+            captured["deadline_sec"] = deadline_sec
             return {
                 "answer": "ok",
                 "quality_score": 80,

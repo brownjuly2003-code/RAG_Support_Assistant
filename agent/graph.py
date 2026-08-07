@@ -2250,6 +2250,10 @@ class ConversationSession:
 
     Хранит историю и автоматически передаёт её в каждый вызов графа.
 
+    Concurrent same-session ``ask`` calls are serialized (plan §3.1c). A
+    monotonic turn epoch discards late mutations from wall-budget orphan
+    workers so ``_history`` / ``_pending_action`` stay coherent.
+
     Пример:
         session = ConversationSession(retriever=ret, llm=llm)
 
@@ -2273,16 +2277,112 @@ class ConversationSession:
         self._max_history = max_history
         self._history: list[dict[str, str]] = []
         self._pending_action: dict[str, str] | None = None
+        # Per-session serialize + epoch (plan §3.1c / REL-01 session races).
+        self._lock = threading.RLock()
+        self._turn_cv = threading.Condition(self._lock)
+        self._busy = False
+        self._mutation_epoch = 0
+        self._active_turn: int | None = None
 
     @property
     def history(self) -> list[dict[str, str]]:
-        return list(self._history)
+        with self._lock:
+            return list(self._history)
 
-    def _append_history(self, question: str, answer: str) -> None:
-        self._history.append({"role": "user", "content": question})
-        self._history.append({"role": "assistant", "content": answer})
-        if len(self._history) > self._max_history * 2:
-            self._history = self._history[-(self._max_history * 2):]
+    def _history_snapshot(self) -> list[dict[str, str]]:
+        """Copy history for pipeline input (safe under concurrent mutation)."""
+        with self._lock:
+            return list(self._history)
+
+    def _acquire_turn(self) -> int:
+        """Block until this session is free; return the new turn epoch."""
+        with self._lock:
+            while self._busy:
+                self._turn_cv.wait()
+            self._busy = True
+            self._mutation_epoch += 1
+            turn = self._mutation_epoch
+            self._active_turn = turn
+            return turn
+
+    def _release_turn(self, turn: int, *, invalidate: bool = False) -> None:
+        """End exclusive turn; optionally invalidate orphan worker mutations."""
+        with self._lock:
+            if invalidate and self._mutation_epoch == turn:
+                # Bump so late budget-orphan writes see a stale turn.
+                self._mutation_epoch += 1
+            if self._active_turn == turn:
+                self._active_turn = None
+            self._busy = False
+            self._turn_cv.notify_all()
+
+    def _turn_is_current(self, turn: int) -> bool:
+        return turn == self._mutation_epoch
+
+    def _append_history(
+        self,
+        question: str,
+        answer: str,
+        *,
+        turn: int | None = None,
+        force: bool = False,
+    ) -> None:
+        with self._lock:
+            if (
+                not force
+                and turn is not None
+                and not self._turn_is_current(turn)
+            ):
+                logger.warning(
+                    "Discarding stale session history append turn=%s epoch=%s",
+                    turn,
+                    self._mutation_epoch,
+                )
+                return
+            self._history.append({"role": "user", "content": question})
+            self._history.append({"role": "assistant", "content": answer})
+            if len(self._history) > self._max_history * 2:
+                self._history = self._history[-(self._max_history * 2) :]
+
+    def _set_pending_action(
+        self,
+        value: dict[str, str] | None,
+        *,
+        turn: int | None = None,
+    ) -> bool:
+        """Mutate pending action only for the current session turn."""
+        with self._lock:
+            # Prefer explicit turn; fall back to active turn ownership.
+            if turn is None:
+                if self._active_turn is None or not self._turn_is_current(self._active_turn):
+                    return False
+            elif not self._turn_is_current(turn):
+                logger.warning(
+                    "Discarding stale pending_action write turn=%s epoch=%s",
+                    turn,
+                    self._mutation_epoch,
+                )
+                return False
+            self._pending_action = None if value is None else dict(value)
+            return True
+
+    def _get_pending_action_copy(self) -> dict[str, str] | None:
+        with self._lock:
+            if self._pending_action is None:
+                return None
+            return dict(self._pending_action)
+
+    def _take_pending_action(self, *, turn: int | None = None) -> dict[str, str] | None:
+        with self._lock:
+            if turn is not None and not self._turn_is_current(turn):
+                return None
+            if turn is None and (
+                self._active_turn is None or not self._turn_is_current(self._active_turn)
+            ):
+                return None
+            pending = self._pending_action
+            self._pending_action = None
+            return dict(pending) if pending is not None else None
 
     def _select_agentic_llm(self) -> Any | None:
         if self._llm is not None and _llm_supports_tool_use(self._llm):
@@ -2408,11 +2508,13 @@ class ConversationSession:
                     summary = str(arguments.get("summary") or question).strip()
                     priority = str(arguments.get("priority") or "medium").strip() or "medium"
                     action_summary = f"создать тикет по запросу: {summary[:120]}"
-                    self._pending_action = {
-                        "summary": summary,
-                        "priority": priority,
-                        "action_summary": action_summary,
-                    }
+                    self._set_pending_action(
+                        {
+                            "summary": summary,
+                            "priority": priority,
+                            "action_summary": action_summary,
+                        }
+                    )
                     confirmation_state: GraphState = {
                         **state,
                         "answer": f"Подтвердите: {action_summary}",
@@ -2481,10 +2583,12 @@ class ConversationSession:
             tenant_id=tenant_id,
         )
 
-        if self._pending_action is not None:
+        pending_snapshot = self._get_pending_action_copy()
+        if pending_snapshot is not None:
             if confirm is True:
-                pending = self._pending_action
-                self._pending_action = None
+                pending = self._take_pending_action()
+                if pending is None:
+                    pending = pending_snapshot
                 ticket_result = agent_tools.create_ticket(
                     summary=pending["summary"],
                     priority=pending["priority"],
@@ -2508,7 +2612,7 @@ class ConversationSession:
                 finish_trace(active_trace_id, state)
                 return state
             if confirm is False:
-                self._pending_action = None
+                self._set_pending_action(None)
                 state.update(
                     {
                         "answer": "Действие отменено.",
@@ -2527,14 +2631,14 @@ class ConversationSession:
 
             state.update(
                 {
-                    "answer": f"Подтвердите: {self._pending_action['action_summary']}",
+                    "answer": f"Подтвердите: {pending_snapshot['action_summary']}",
                     "route": "agentic",
                     "quality_score": 80,
                     "relevance_score": 0.8,
                     "quality_source": "fixed",
                     "tool_calls": [],
                     "requires_confirmation": True,
-                    "action_summary": self._pending_action["action_summary"],
+                    "action_summary": pending_snapshot["action_summary"],
                 }
             )
             log_step(active_trace_id, "await_confirmation", state)
@@ -2556,11 +2660,13 @@ class ConversationSession:
         if has_ticket_intent:
             summary = question.strip()
             action_summary = f"создать тикет по запросу: {summary[:120]}"
-            self._pending_action = {
-                "summary": summary,
-                "priority": "medium",
-                "action_summary": action_summary,
-            }
+            self._set_pending_action(
+                {
+                    "summary": summary,
+                    "priority": "medium",
+                    "action_summary": action_summary,
+                }
+            )
             state.update(
                 {
                     "answer": f"Подтвердите: {action_summary}",
@@ -2701,57 +2807,82 @@ class ConversationSession:
         budget_sec = float(getattr(settings, "ask_budget_sec", 0.0) or 0.0)
         wall_sec = tighter_timeout_sec(budget_sec, deadline_sec)
 
-        def _run() -> GraphState:
-            # Bind on the worker thread (ContextVar does not cross executors).
-            if wall_sec > 0:
-                bind_request_deadline(wall_sec, source="ask")
-            try:
+        # Exclusive session turn: concurrent same-session asks queue (3.1c).
+        turn = self._acquire_turn()
+        invalidate_orphan = False
+        try:
+
+            def _run() -> GraphState:
+                # Bind on the worker thread (ContextVar does not cross executors).
+                if wall_sec > 0:
+                    bind_request_deadline(wall_sec, source="ask")
                 try:
-                    if getattr(settings, "agentic_mode", False):
-                        agentic_result = self._run_agentic_flow(
+                    try:
+                        if getattr(settings, "agentic_mode", False):
+                            agentic_result = self._run_agentic_flow(
+                                question=question,
+                                trace_id=trace_id,
+                                tenant_id=tenant_id,
+                                user_id=user_id,
+                                session_id=session_id,
+                                confirm=confirm,
+                            )
+                            if agentic_result is not None:
+                                return agentic_result
+
+                        return run_qa_pipeline(
                             question=question,
+                            retriever=self._retriever,
+                            llm=self._llm,
+                            max_iterations=self._max_iterations,
+                            chat_history=self._history_snapshot(),
                             trace_id=trace_id,
                             tenant_id=tenant_id,
-                            user_id=user_id,
-                            session_id=session_id,
-                            confirm=confirm,
                         )
-                        if agentic_result is not None:
-                            return agentic_result
+                    except RequestDeadlineExceeded:
+                        logger.warning(
+                            "ConversationSession.ask hit cooperative deadline "
+                            "wall_sec=%.1fs",
+                            wall_sec,
+                            extra={"trace_id": trace_id},
+                        )
+                        return self._timed_out_state(
+                            question, wall_sec, trace_id, tenant_id
+                        )
+                finally:
+                    clear_request_deadline()
 
-                    return run_qa_pipeline(
-                        question=question,
-                        retriever=self._retriever,
-                        llm=self._llm,
-                        max_iterations=self._max_iterations,
-                        chat_history=self._history,
-                        trace_id=trace_id,
-                        tenant_id=tenant_id,
-                    )
-                except RequestDeadlineExceeded:
-                    logger.warning(
-                        "ConversationSession.ask hit cooperative deadline "
-                        "wall_sec=%.1fs",
-                        wall_sec,
-                        extra={"trace_id": trace_id},
-                    )
-                    return self._timed_out_state(
-                        question, wall_sec, trace_id, tenant_id
-                    )
-            finally:
-                clear_request_deadline()
+            if budget_sec > 0:
+                result = self._run_within_budget(
+                    _run, budget_sec, question, trace_id, tenant_id
+                )
+            else:
+                result = _run()
 
-        if budget_sec > 0:
-            result = self._run_within_budget(
-                _run, budget_sec, question, trace_id, tenant_id
-            )
-        else:
-            result = _run()
-
-        answer = result.get("answer") or ""
-        self._append_history(question, answer)
-        return result
+            answer = result.get("answer") or ""
+            # Wall-budget path returns while the worker may still run: bump
+            # epoch immediately so orphan cannot write history/pending, then
+            # force-append the client-visible timeout answer.
+            if result.get("error_node") == "wall_budget":
+                with self._lock:
+                    if self._mutation_epoch == turn:
+                        self._mutation_epoch += 1
+                    # Drop any pending set by the orphan mid-flight.
+                    self._pending_action = None
+                self._append_history(question, answer, force=True)
+                invalidate_orphan = False  # already invalidated
+            else:
+                self._append_history(question, answer, turn=turn)
+            return result
+        finally:
+            self._release_turn(turn, invalidate=invalidate_orphan)
 
     def clear(self) -> None:
-        """Сбрасывает историю."""
-        self._history.clear()
+        """Сбрасывает историю (waits for any in-flight exclusive turn)."""
+        with self._lock:
+            while self._busy:
+                self._turn_cv.wait()
+            self._mutation_epoch += 1
+            self._active_turn = None
+            self._history.clear()
+            self._pending_action = None
