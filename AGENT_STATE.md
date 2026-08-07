@@ -1,17 +1,17 @@
 # Agent State
 
-## 2026-08-07 Update-96 — completed slice 7.1 eval gate fail-closed @ `94ac64e` ✅ START HERE
+## 2026-08-07 Update-97 — completed slice 7.2 mock not release PASS @ `25788ee` ✅ START HERE
 
-> **Routing authority:** Update-96 supersedes Update-95. Only the topmost
-> Update block is authoritative.
+> **Routing authority:** Update-97 supersedes Update-96. Only topmost Update
+> is authoritative.
 >
 > **Known lineage (actual Git wins):**
-> - Latest implementation: `94ac64e`
->   (`feat(eval): fail-closed regression gate on skip and infra (7.1)`)
-> - Previous: `d6e3a55` **6.3**; `d0317e9` **6.2**; `b3494a0` **6.1**
+> - Latest implementation: `25788ee`
+>   (`feat(eval): mock expected-copy cannot claim release PASS (7.2)`)
+> - Previous: `94ac64e` **7.1**; `d6e3a55` **6.3**
 > - Migrations on disk (not applied): **019-023**
 >
-> **Branch advisory:** was `master...origin/master [ahead 169]` after 7.1.
+> **Branch advisory:** was `master...origin/master [ahead 171]` after 7.2.
 > **WIP:** none.
 >
 > ---
@@ -20,58 +20,48 @@
 >
 > | Band | Status |
 > |------|--------|
-> | **2.1–5.3** + **6.1–6.3** | local at documented scopes |
-> | **7.1** | regression gate fail-closed skip/infra **local** @ `94ac64e` |
-> | Full plan §7 | **NOT** complete (dataset expansion, live/det split, baseline merge-base) |
+> | **2.1–6.3** + **7.1–7.2** | local at documented scopes |
+> | Full plan §7 | **NOT** complete (merge-base baseline, dataset expansion, live gate) |
 > | Production | **NOT** claimed |
 >
 > ---
 >
-> ### Plan 7.1 contract (local)
+> ### Plan 7.2 contract (local)
 >
-> - `decide_regression_gate()` in `scripts/regression_eval.py`
-> - `infrastructure_failures > 0` → FAIL exit 1
-> - `skipped=true` cases → FAIL (no graceful pass / no score 1.0 unlock)
-> - empty effective set / zero cases → FAIL
-> - verdict only `PASS`|`FAIL` (never `PASSED (graceful skip)`)
-> - executor exceptions → infrastructure outcome
-> - mock modes mark `evidence_valid=false` (not release evidence)
-> - CI path filter expanded: agent/**, llm/**, vectordb/**, ingestion/**, …
+> - `apply_evidence_policy()` in `scripts/regression_eval.py`
+> - Mock modes → `verdict=SMOKE_PASS|SMOKE_FAIL`, never release `PASS`
+> - `gate.passed` / `release_passed` false without `evidence_valid`
+> - Smoke exit: metrics; `--release-gate` exit: requires evidence
+> - CI: mock smoke job renamed; **no** `--release-gate`
 >
 > ---
 >
-> ### Known verification (7.1)
+> ### Known verification (7.2)
 >
-> - Focused: **33 passed** (gate fail-closed + regression_runner + infra
->   detection + workflow path filter); Ruff clean
-> - Full suite / live / push / deploy **not** run / **not** claimed
->
-> ---
->
-> ### Open boundaries
->
-> - **← next 7.2 / residual §7:** baseline from merge-base artifact; no
->   expected-copy executor for release; dataset expansion; det vs live gates
-> - mock CI still uses `--mock-experiment-runtime` (flagged non-evidence)
-> - §8 widget; §1 live; migrate 019-023
+> - Focused: **35 passed** (evidence policy + gate fail-closed + runner +
+>   provider benchmark); Ruff clean
 >
 > ---
 >
-> ### Next candidate only - default
+> ### Open / next
 >
-> named **7.2 - honest release evidence (no mock expected-copy as gate pass)**
-> or **8.1 widget bootstrap security** if product prioritizes edge.
+> - **← next 8.1:** widget bootstrap security (plan §8) **or**
+>   residual §7 merge-base baseline / live provider gate
+> - Prefer **8.1** unless user prioritizes more eval infrastructure
 >
-> Prefer **7.2**: release/strict path must not treat mock expected-copy as
-> PASSED evidence (CI may keep mock as smoke but exit/label honestly).
->
-> **Do not re-select:** 2.x–6.3, **7.1**.
+> **Do not re-select:** through **7.2**.
 >
 > ---
 >
 > ### Gates
 >
 > No push/deploy/live/migrate without opt-in. One atomic slice per turn.
+
+
+## 2026-08-07 Update-96 — completed slice 7.1 eval gate fail-closed @ `94ac64e` ✅ START HERE
+
+> **Historical handoff (superseded by Update-97 for start-point routing).**
+> Recorded **7.1** @ `94ac64e`. Next was 7.2 — now done @ `25788ee`.
 
 
 ## 2026-08-07 Update-95 — completed slice 6.3 independent judge @ `d6e3a55` ✅ START HERE

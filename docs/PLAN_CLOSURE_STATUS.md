@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-07 (Update-96 after 7.1)  
+**Date:** 2026-08-07 (Update-97 after 7.2)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-96**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-97**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -24,7 +24,7 @@
 | **4** unified pipeline + escalation | **4.1–4.5 local** | **OPEN** true graph tokens; parity default off; schedule wiring | partial |
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.3 local** | OPEN (calibration / measured agentic) | **yes** |
-| **7** eval gate fail-closed | **7.1 local** | OPEN (mock evidence / dataset / merge-base) | **yes** |
+| **7** eval gate fail-closed | **7.1–7.2 local** | OPEN (merge-base baseline / dataset / live gate) | **yes** |
 | **8** widget / edge security | partial historical | OPEN | yes |
 | **9** cache / architecture / SLO | partial historical | OPEN | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
@@ -49,7 +49,8 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 6 | §6.3 independent judge policy | **done** `d6e3a55` |
 | 7 | §6.x calibration + measured agentic evaluate | not started |
 | 8 | §7.1 eval gate fail-closed skip/infra | **done** `94ac64e` |
-| 9 | **§7.2 honest release evidence (no mock PASS)** | **← next** |
+| 9 | §7.2 honest release evidence (no mock PASS) | **done** `25788ee` |
+| 10 | **§8.1 widget bootstrap security** | **← next** |
 | 9 | §4 residual (graph-only default / true SSE tokens) | residual |
 | 10 | §2/§3 residual if product needs | residual |
 | 11 | §1 + §10 | **opt-in live only** |
