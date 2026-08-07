@@ -1,8 +1,186 @@
 # Agent State
 
+## 2026-08-07 Update-86 — docs-only transparency after 4.3 / Update-85 ✅ START HERE
+
+> **Routing authority:** Update-86 is **docs-only / transparency-only** and
+> supersedes Update-85 **only for start-point routing**. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`,
+> are **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
+>
+> **No new implementation in this docs turn.** Code, tests, plans, backlog,
+> README, audit, settings, and API paths were **not** edited here. Project
+> tests were **not** re-run. Protected dirty files and untracked plan/temps
+> were not staged beyond handoff/pointer refresh.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `ad5e435`
+>   (`feat(escalation): idempotent durable ticket service with delivery state`)
+>   — slice **4.3**
+> - Latest impl docs before this turn: `82d9a17`
+>   (`docs: record 4.3 durable escalation service and next 4.4`) — Update-85
+> - §4 chain (impl only): `eaf41f3` 4.1 → `f1c846e` 4.2 → `ad5e435` 4.3
+> - §3 chain ends: `fe2f0aa` **3.1i** (after 3.1a–3.1h)
+> - §2 fault-injection last impl: `f347feb` (**2.6g**)
+> - Migrations on disk (not applied this session): **019–023**
+>   (023 = escalation idempotency / delivery columns)
+> - This Update-86 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 150]` before this docs commit.
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | index/job-object/fault-injection **local residual closed** at documented scopes |
+> | **3.1a–3.1i** | executor, deadlines, session serialize+process-local version, roles, budget **local** |
+> | **4.1–4.3** | stream terminal/history + graph-only parity path + durable escalation service **local** |
+> | Full plan §2 | **NOT** complete (live multi-service DoD open) |
+> | Full plan §3 | **NOT** complete (multi-replica durable session version residual) |
+> | Full plan §4 | **NOT** complete (auto human-route escalate; outbox retry; true graph tokens; parity default still off) |
+> | Plan §5+ | **not started** |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+>
+> ---
+>
+> ### Plan §2 map (honest — live DoD open)
+>
+> | Plan §2 bullet | Local | Residual |
+> |----------------|-------|----------|
+> | inventory / retention / operator / lifecycle | partial through 2.5b | live DoD; no job-object delete execute HTTP; no real FS delete |
+> | fault injection | **2.6a–2.6g** | **local residual closed** |
+> | live PG/Redis/Celery/Chroma + migrations | not started | **opt-in**; migrations **019–023** on disk |
+>
+> **Key ingestion invariant:** failed jobs with `source_path`-matched
+> job-objects → `retained_after_failed_transition`; `auto_delete_eligible`
+> always false.
+>
+> ---
+>
+> ### Plan §3 map (honest)
+>
+> | Bullet | Local | Residual |
+> |--------|-------|----------|
+> | shared executor + capacity hold | **3.1a**, **3.1f** | — documented |
+> | cooperative deadline (provider/retrieve/tool/rerank) | **3.1b**, **3.1f–h** | cooperative only |
+> | session serialize / version / sticky | **3.1c**, **3.1i** | multi-replica durable store; optional HTTP If-Match |
+> | role max_tokens/temperature | **3.1d** | — |
+> | per-request LLM budget | **3.1e**, **3.1f** | — |
+>
+> **§3 ledger:** 3.1a `a21f364` → 3.1b `76179d5` → 3.1c `d9ba87e` →
+> 3.1d `48c2381` → 3.1e `b98b917` → 3.1f `2581855` → 3.1g `ae13000` →
+> 3.1h `ab7b417` → 3.1i `fe2f0aa`.
+>
+> ---
+>
+> ### Plan §4 map (honest)
+>
+> | Bullet | Local | Residual |
+> |--------|-------|----------|
+> | LangGraph sole path; SSE transmits | partial **4.1–4.2** | true node/token events; legacy stream when parity **off** (default) |
+> | one terminal answer + one history mutation | **4.1–4.2** when parity **on** | dual path when parity off |
+> | idempotent ticket + inbox outbox | **4.3** + migration **023** | outbox **retry worker**; optional transactional outbox table |
+> | ticket_id + delivery_state; no false operator claim | **4.3** on wired paths | **← next 4.4:** auto-escalate normal ask `route=human` (not only exception/manual/handle_error) |
+>
+> **§4 ledger:** 4.1 `eaf41f3` → 4.2 `f1c846e` → 4.3 `ad5e435`.
+>
+> ---
+>
+> ### Module owners (high-signal; do not reopen without conflict)
+>
+> | Path | Slice | Role |
+> |------|-------|------|
+> | `services/escalation.py` | **4.3** | idempotent durable escalation |
+> | `api/routers/feedback.py` `/api/escalate` | 4.3 | manual escalate |
+> | `api/routers/conversation.py` | 3.1a/f, 4.1–4.3 | ask/stream + pipeline exception escalate |
+> | `agent/graph.py` session/retrieve/handle_error | 3.1*, 4.3 | version/deadline/escalate |
+> | `agent/tools.py` | 3.1g, 4.3 | tool deadline; create_ticket → service |
+> | `vectordb/_base_manager.py` `_rerank` | 3.1h | reranker deadline |
+> | job-object / index stack | 2.1–2.6g | do not re-select |
+>
+> ---
+>
+> ### Known verification (last impl 4.3; not re-run this docs turn)
+>
+> - **4.3:** 21 passed focused (escalation service + pipeline exception + graph
+>   error + agent tools); Ruff clean.
+> - Prior in arc: 4.2 stream suite 13; 4.1 stream 12; 3.1i session 34; 3.1h
+>   reranker 40; 3.1g deadline 45 — not re-run here.
+> - Full suite / live multi-service / migrate / push / deploy **not** run /
+>   **not** claimed.
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **4.4** auto-escalate terminal human/error on normal ask **or** outbox retry
+> - multi-replica durable session version
+> - true LangGraph token/node SSE (not chunked finished answer)
+> - flip default stream to graph-only / remove legacy parity-off path
+> - live multi-service + apply migrations **019–023** (**opt-in**)
+> - real FS deletion / age-budget auto-delete / retention execute HTTP
+> - plan **§5+** grounding / routing fail-closed
+> - full suite / release / production readiness
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **4.4 — auto-escalate terminal human/error on normal `/api/ask` path**
+> (tests-first):
+> - when pipeline returns `route=human` (or terminal error) **without**
+>   exception, call `services.escalation.create_escalation` with stable
+>   idempotency;
+> - response includes `ticket_id` + `delivery_state`;
+> - still no false “передан оператору” without durable ticket;
+> - still **no** live multi-service / push / deploy / migrate without opt-in.
+>
+> **Alternate:** outbox retry worker for `delivery_state=failed`, or begin
+> plan **§5** grounding if user prioritizes quality gates over §4 residual.
+>
+> **Do not re-select:** 2.1–2.6g, **3.1a–3.1i**, **4.1–4.3**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Do not touch/stage/remove without explicit request:
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+>   `_NEXT_SESSION.md` (**pointer only — not routing authority**),
+>   `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
+>   casually), architecture HTML, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live PostgreSQL/Redis/Celery/Chroma drills, `alembic upgrade`
+> (incl. **019–023**), destructive Git, production-readiness claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; Grok implements.
+>
+> **Git advisory:** refresh `git status --short --branch` and
+> `git log -8 --oneline` at session start — **actual Git wins**.
+
+
 ## 2026-08-07 Update-85 — record completed slice 4.3 @ `ad5e435` ✅ START HERE
 
-> **Routing authority:** Update-85 supersedes Update-84 **for start-point
+> **Historical handoff (superseded by Update-86 for start-point routing).**
+> Recorded **4.3** @ `ad5e435`; docs `82d9a17`. Transparency under Update-86.
+>
+> **Original routing note (archival):** Update-85 supersedes Update-84 **for start-point
 > routing**. Older `✅ START HERE` blocks are **archival**. Only topmost Update
 > is authoritative.
 >
