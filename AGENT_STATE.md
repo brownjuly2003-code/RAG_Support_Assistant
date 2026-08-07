@@ -1,23 +1,18 @@
 # Agent State
 
-## 2026-08-07 Update-94 — completed slice 6.2 pre-response safety @ `d0317e9` ✅ START HERE
+## 2026-08-07 Update-95 — completed slice 6.3 independent judge @ `d6e3a55` ✅ START HERE
 
-> **Routing authority:** Update-94 supersedes Update-93 **for start-point
-> routing**. All older Update blocks below, including headings that literally
-> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
-> block in this file is authoritative.** Never select work by grepping old
-> `START HERE` markers.
+> **Routing authority:** Update-95 supersedes Update-94 **for start-point
+> routing**. All older Update blocks below are **archival**. **Only the
+> first/topmost Update block is authoritative.**
 >
-> **Known lineage (actual Git wins over any embedded hash):**
-> - Latest implementation: `d0317e9`
->   (`feat(safety): pre-response PII and prompt-injection gate (6.2)`)
->   - slice **6.2**
-> - Previous: `b3494a0` — **6.1**; `1cdecb2` — **5.3**
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `d6e3a55`
+>   (`feat(judge): independent judge policy fail-closed (6.3)`)
+> - Previous: `d0317e9` **6.2**; `b3494a0` **6.1**; `1cdecb2` **5.3**
 > - Migrations on disk (not applied): **019-023**
 >
-> **Branch advisory (refresh mandatory):** was `master...origin/master
-> [ahead 165]` after 6.2 impl.
->
+> **Branch advisory:** was `master...origin/master [ahead 167]` after 6.3 impl.
 > **Active writer / WIP:** **none**.
 >
 > ---
@@ -26,83 +21,72 @@
 >
 > | Band | Status |
 > |------|--------|
-> | **2.1-2.6g** … **5.1-5.3** | local at documented scopes |
-> | **6.1** | unmeasured agentic fail-closed **local** @ `b3494a0` |
-> | **6.2** | pre-response PII + injection gate **local** @ `d0317e9` |
-> | Full plan §6 | **NOT** complete (independent judge / calibration open) |
-> | Project / release / production | **NOT** claimed |
+> | **2.1–5.3** | local at documented scopes |
+> | **6.1–6.3** | unmeasured agentic + pre-response safety + independent judge **local** |
+> | Full plan §6 | **NOT** complete (calibration / measured agentic evaluate open) |
+> | Production | **NOT** claimed |
 >
-> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
-> Checkboxes stay open until full DoD.
->
-> **Transparency maps:**
-> - [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md)
-> - [`docs/PLAN_CLOSURE_STATUS.md`](docs/PLAN_CLOSURE_STATUS.md)
-> - [`_NEXT_SESSION.md`](_NEXT_SESSION.md) — pointer only
+> **Maps:** SESSION_HANDOFF, PLAN_CLOSURE_STATUS, `_NEXT_SESSION.md` (pointer).
 >
 > ---
 >
-> ### Plan 6.2 contract (local)
+> ### Plan 6.3 contract (local)
 >
-> - Module: `agent/response_safety.py`
-> - Policy: `allow` | `redact` (PII via `utils.pii`) | `refuse` + `route=human`
->   (document/answer prompt-injection markers)
-> - Graph node `response_safety` after `route_or_retry` before suggest/log
-> - Agentic terminals via `_finalize_agentic_terminal`
-> - Confirmation UX: PII redact only (no injection refuse on confirm prompts)
-> - State: `safety_action`, `safety_reasons`
+> - Module: `agent/judge_policy.py` — resolve independent judge, fail-closed fields
+> - Setting: `judge_independence_required` (`JUDGE_INDEPENDENCE_REQUIRED`;
+>   default **true** when `RAG_ENV=production`, else false)
+> - Evaluate wires both fast/strong; prefers independent (fast when generator
+>   is strong)
+> - Judge unavailable / error / parse failure → quality 0, `unmeasured`,
+>   `not_verified`, `judge_status`; **no** silent default 50 + `llm`
+> - `route_or_retry`: non-ok `judge_status` → **human** (no Self-RAG retry)
 >
 > ---
 >
-> ### Known verification (6.2)
+> ### Known verification (6.3)
 >
-> - Focused: **50+15 passed** (response_safety + agent_tools + pii + graph error +
->   grounding + human-route + citation + provider graph + evaluate wiring);
->   Ruff clean on touched paths
-> - Full suite / live / migrate / push / deploy **not** run / **not** claimed
+> - Focused: **38 passed** (judge_policy + magic evaluate wiring + grounding +
+>   citation + graph error; plus response_safety/agent_tools/human-route band);
+>   Ruff clean
+> - Full suite / live / migrate / push **not** run / **not** claimed
 >
 > ---
 >
 > ### Open boundaries (honest)
 >
-> - **← next 6.3:** independent judge policy (or evaluator schema / monitoring
->   labeling per plan §6 remainder)
-> - calibration artifact / human-labelled thresholds
-> - agentic full evaluate when KB context exists
-> - 5 live metrics DoD; graph SSE tokens; outbox schedule; multi-replica
+> - **← next 6.4 / §7:** calibration thresholds **or** honest eval gate skip
+>   policy (plan remainder)
+> - measured agentic evaluate when KB context exists
+> - dual-model residual: judge vs fact-checker not always three-way independent
+> - 5 live metrics; graph SSE; outbox schedule; multi-replica
 > - live multi-service + migrations **019-023** (**opt-in**)
-> - plan 7-10
 >
 > ---
 >
 > ### Next candidate only (not started) - default
 >
-> named **6.3 - independent judge policy fail-closed**:
-> - production policy: judge independent of generator/fact-checker;
-> - judge unavailable → `not_verified` / human, not heuristic auto;
-> - still **no** live multi-service / push / deploy / migrate without opt-in.
+> named **7.1 - eval gate fail-closed on skip/infrastructure error**
+> (plan §7: no graceful skip as PASSED, no fake 1.0):
+> - tests-first; still no live/push/deploy/migrate without opt-in.
 >
-> **Do not re-select:** 2.1-2.6g, 3.1a-3.1i, 4.1-4.5, 5.1-5.3, **6.1**, **6.2**.
+> Alternate: **6.4** human-labelled calibration artifact scaffolding.
 >
-> ---
->
-> ### Protected dirty / untracked
->
-> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
->   `plan_sol_23_07_26`
-> - **Untracked:** plan file, pointer, pytest temps, presentations, etc.
+> **Do not re-select:** 2.x, 3.1*, 4.1–4.5, 5.1–5.3, **6.1–6.3**.
 >
 > ---
 >
-> ### External gates (not authorized without opt-in)
+> ### Protected / gates
 >
-> push, deploy, live drills, `alembic upgrade` 019-023, destructive Git,
-> production-readiness claims.
+> Dirty: BACKLOG, README, audit, plan_sol. No push/deploy/live/migrate without
+> opt-in. One atomic slice per turn; local commit only.
 >
-> **Standing preference:** one named atomic slice per user turn; local commit
-> only; quality > speed.
->
-> **Git advisory:** refresh `git status` + `git log -8` — **actual Git wins**.
+> **Git advisory:** refresh status + log — **actual Git wins**.
+
+
+## 2026-08-07 Update-94 — completed slice 6.2 pre-response safety @ `d0317e9` ✅ START HERE
+
+> **Historical handoff (superseded by Update-95 for start-point routing).**
+> Recorded **6.2** @ `d0317e9`. Next was 6.3 — now done @ `d6e3a55`.
 
 
 ## 2026-08-07 Update-93 — completed slice 6.1 unmeasured agentic gate @ `b3494a0` ✅ START HERE
