@@ -1,4 +1,5 @@
 """Admin operational endpoints: circuit breaker, audit log, and traces."""
+
 from __future__ import annotations
 
 import asyncio
@@ -94,7 +95,11 @@ async def admin_list_audit(
     action: str | None = None,
     _user: dict = Depends(require_role("agent", "admin")),
 ) -> JSONResponse:
-    limit = getattr(_app_module().get_settings(), "api_default_page_size", 50) if limit is None else limit
+    limit = (
+        getattr(_app_module().get_settings(), "api_default_page_size", 50)
+        if limit is None
+        else limit
+    )
     limit = max(1, min(500, limit))
     tenant = _user.get("tenant") or get_current_tenant() or "default"
 
@@ -147,7 +152,11 @@ async def admin_list_traces(
 ) -> JSONResponse:
     from tracing.sqlite_trace import list_recent_traces  # noqa: PLC0415
 
-    limit = getattr(_app_module().get_settings(), "api_default_page_size", 50) if limit is None else limit
+    limit = (
+        getattr(_app_module().get_settings(), "api_default_page_size", 50)
+        if limit is None
+        else limit
+    )
     tenant = _user.get("tenant") or get_current_tenant() or "default"
     trace_params = inspect.signature(list_recent_traces).parameters
     if "tenant_id" in trace_params or any(
@@ -224,11 +233,7 @@ async def admin_purge_traces(
         action="trace_purge",
         resource=f"traces/older_than={older_than_days}d",
         tenant_id=tenant,
-        detail=(
-            result
-            if tenant == "default"
-            else {**result, "tenant": tenant}
-        ),
+        detail=(result if tenant == "default" else {**result, "tenant": tenant}),
         ip_address=request.client.host if request.client else None,
     )
 
@@ -313,9 +318,7 @@ async def admin_index_retention_preview(
     tenant = _user.get("tenant") or get_current_tenant() or "default"
     settings = _app_module().get_settings()
     resolved_max_versions = (
-        settings.vectordb_retention_max_versions
-        if max_versions is None
-        else max_versions
+        settings.vectordb_retention_max_versions if max_versions is None else max_versions
     )
     chroma_directory = settings.vectordb_chroma_dir
 
@@ -403,6 +406,133 @@ async def admin_index_retention_preview(
             "deletion_candidates": list(preview.deletion_candidates),
         },
     )
+
+
+async def _audit_job_object_inventory_preview(
+    *,
+    request: Request,
+    user: dict[str, Any],
+    tenant_id: str,
+    detail: dict[str, Any],
+) -> None:
+    await _log_audit(
+        actor=user.get("sub", "anonymous"),
+        action="job_object_inventory_preview",
+        resource="job-objects/inventory",
+        tenant_id=tenant_id,
+        detail=detail,
+        ip_address=request.client.host if request.client else None,
+    )
+
+
+@router.get("/admin/job-objects/inventory")
+async def admin_job_object_inventory_preview(
+    request: Request,
+    _user: dict = Depends(require_role("admin")),
+) -> JSONResponse:
+    """Read-only job-object inventory + transition annotations for JWT tenant.
+
+    Plan 2.5a: operator surface only. Never executes retention or mutates
+    filesystem state. Tenant always comes from the authenticated principal;
+    foreign tenant query params are ignored by design (not accepted).
+    """
+    from pathlib import Path  # noqa: PLC0415
+
+    from ingestion.job_object_inventory import (  # noqa: PLC0415
+        JobObjectInventoryValidationError,
+    )
+    from ingestion.job_object_operator import (  # noqa: PLC0415
+        load_and_run_operator_preview,
+        report_to_jsonable,
+    )
+    from ingestion.job_object_orphans import (  # noqa: PLC0415
+        JobObjectOrphanValidationError,
+    )
+    from ingestion.job_object_retention import (  # noqa: PLC0415
+        JobObjectRetentionError,
+    )
+
+    tenant = _user.get("tenant") or get_current_tenant() or "default"
+    app = _app_module()
+    project_root = Path(getattr(app, "PROJECT_ROOT", None) or Path.cwd())
+    upload_root = project_root / "data" / "uploads"
+
+    try:
+        report = await asyncio.to_thread(
+            load_and_run_operator_preview,
+            tenant_id=tenant,
+            project_root=project_root,
+            upload_root=upload_root,
+            execute=False,
+        )
+    except ValueError as exc:
+        await _audit_job_object_inventory_preview(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "rejected",
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="invalid job-object inventory request",
+        ) from None
+    except (
+        JobObjectInventoryValidationError,
+        JobObjectRetentionError,
+        JobObjectOrphanValidationError,
+    ) as exc:
+        await _audit_job_object_inventory_preview(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "rejected",
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="invalid job-object inventory preview",
+        ) from None
+    except OSError as exc:
+        await _audit_job_object_inventory_preview(
+            request=request,
+            user=_user,
+            tenant_id=tenant,
+            detail={
+                "tenant": tenant,
+                "outcome": "unavailable",
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="job-object inventory preview is temporarily unavailable",
+        ) from None
+
+    payload = report_to_jsonable(report)
+    # Admin surface is read-only: never expose an execute/no-op block.
+    payload.pop("execution", None)
+
+    await _audit_job_object_inventory_preview(
+        request=request,
+        user=_user,
+        tenant_id=tenant,
+        detail={
+            "tenant": tenant,
+            "outcome": "success",
+            "known_job_count": report.known_job_count,
+            "inventory_count": len(report.inventory_entries),
+            "auto_delete_candidates": list(report.assessment.auto_delete_candidates),
+            "annotation_count": len(report.transition_annotations),
+        },
+    )
+    return JSONResponse(status_code=200, content=payload)
 
 
 async def _audit_index_rollback(

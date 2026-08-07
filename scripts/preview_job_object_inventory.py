@@ -1,11 +1,11 @@
 # ruff: noqa: E402
 #!/usr/bin/env python3
-"""Operator CLI for job-object inventory + retention policy (plan 2.4i/2.4k).
+"""Operator CLI for job-object inventory + retention policy (plan 2.4i/2.4k/2.5a).
 
-For one tenant: load known job refs (or accept injected refs in tests),
-preview/classify the job-objects tree, assess fail-closed retention policy,
-optionally run the guarded empty-candidate no-op command, and annotate
-failed-transition ownership from job statuses.
+Thin CLI over ``ingestion.job_object_operator``. For one tenant: load known job
+refs, preview/classify the job-objects tree, assess fail-closed retention
+policy, optionally run the guarded empty-candidate no-op command, and
+annotate failed-transition ownership from job statuses.
 
 Never invents auto-delete classes or age/budget thresholds. Under the current
 policy execution is always a no-op with deleted=() and no filesystem mutation.
@@ -17,7 +17,6 @@ import argparse
 import json
 import sys
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import asdict, dataclass
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -25,93 +24,21 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from ingestion.job_object_inventory import (
-    JobObjectInventoryEntry,
-    JobObjectInventoryPreview,
     JobObjectInventoryValidationError,
     KnownJobObjectRef,
-    preview_tenant_job_object_inventory,
 )
-from ingestion.job_object_orphans import (
-    JobObjectOrphanValidationError,
-    JobObjectTransitionAnnotation,
-    annotate_job_object_transition_context,
+from ingestion.job_object_operator import (
+    OperatorPreviewReport,
+    report_to_jsonable,
+    run_operator_preview,
+    upload_dir_for_tenant,
 )
-from ingestion.job_object_retention import (
-    JobObjectRetentionAssessment,
-    JobObjectRetentionError,
-    JobObjectRetentionExecutionResult,
-    assess_job_object_retention_policy,
-    execute_job_object_retention,
-)
-from utils.tenant_naming import physical_tenant_component
+from ingestion.job_object_orphans import JobObjectOrphanValidationError
+from ingestion.job_object_retention import JobObjectRetentionError
 
-
-def _upload_dir_for_tenant(upload_root: Path, tenant_id: str) -> Path:
-    tid = (tenant_id or "").strip() or "default"
-    if tid == "default":
-        return upload_root
-    return upload_root / physical_tenant_component(tid, max_length=63)
-
-
-@dataclass(frozen=True)
-class OperatorPreviewReport:
-    """Structured operator report for one tenant (read-only + optional no-op)."""
-
-    tenant_id: str
-    upload_dir: str
-    known_job_count: int
-    inventory_entries: tuple[JobObjectInventoryEntry, ...]
-    assessment: JobObjectRetentionAssessment
-    execution: JobObjectRetentionExecutionResult | None
-    transition_annotations: tuple[JobObjectTransitionAnnotation, ...]
-
-
-def run_operator_preview(
-    *,
-    tenant_id: str,
-    project_root: Path | str,
-    upload_root: Path | str,
-    known_jobs: Sequence[KnownJobObjectRef],
-    job_statuses: Mapping[str, str] | None = None,
-    execute: bool = False,
-) -> OperatorPreviewReport:
-    """Compose load→preview→policy→optional guarded no-op→annotations.
-
-    ``known_jobs`` and ``job_statuses`` are supplied by the caller (CLI loads
-    from DB; tests inject). This function never deletes or rewrites
-    filesystem state.
-    """
-    root = Path(project_root)
-    upload_base = Path(upload_root)
-    upload_dir = _upload_dir_for_tenant(upload_base, tenant_id)
-    preview: JobObjectInventoryPreview = preview_tenant_job_object_inventory(
-        upload_dir,
-        tenant_id=tenant_id,
-        known_jobs=known_jobs,
-        project_root=root,
-    )
-    assessment = assess_job_object_retention_policy(preview.entries)
-    execution: JobObjectRetentionExecutionResult | None = None
-    if execute:
-        execution = execute_job_object_retention(
-            tenant_id=preview.tenant_id,
-            entries=preview.entries,
-            expected_candidates=assessment.auto_delete_candidates,
-        )
-    statuses = dict(job_statuses or {})
-    annotations = annotate_job_object_transition_context(
-        preview.entries,
-        job_statuses=statuses,
-    )
-    return OperatorPreviewReport(
-        tenant_id=preview.tenant_id,
-        upload_dir=str(upload_dir),
-        known_job_count=preview.known_job_count,
-        inventory_entries=preview.entries,
-        assessment=assessment,
-        execution=execution,
-        transition_annotations=annotations,
-    )
+# Re-export for tests that import helpers from this module.
+_upload_dir_for_tenant = upload_dir_for_tenant
+_report_to_jsonable = report_to_jsonable
 
 
 def _default_load_known_jobs(tenant_id: str) -> tuple[KnownJobObjectRef, ...]:
@@ -124,38 +51,6 @@ def _default_load_job_statuses(tenant_id: str) -> dict[str, str]:
     from ingestion.jobs import sync_list_job_statuses_for_tenant
 
     return sync_list_job_statuses_for_tenant(tenant_id)
-
-
-def _report_to_jsonable(report: OperatorPreviewReport) -> dict:
-    entries = [
-        {
-            "relative_path": e.relative_path,
-            "kind": e.kind,
-            "classification": e.classification,
-            "job_id": e.job_id,
-        }
-        for e in report.inventory_entries
-    ]
-    dispositions = [asdict(d) for d in report.assessment.dispositions]
-    annotations = [asdict(a) for a in report.transition_annotations]
-    payload: dict = {
-        "tenant_id": report.tenant_id,
-        "upload_dir": report.upload_dir,
-        "known_job_count": report.known_job_count,
-        "inventory_entries": entries,
-        "auto_delete_candidates": list(report.assessment.auto_delete_candidates),
-        "dispositions": dispositions,
-        "transition_annotations": annotations,
-        "execution": None,
-    }
-    if report.execution is not None:
-        payload["execution"] = {
-            "tenant_id": report.execution.tenant_id,
-            "expected_candidates": list(report.execution.expected_candidates),
-            "deleted": list(report.execution.deleted),
-            "status": report.execution.status,
-        }
-    return payload
 
 
 def _print_human(report: OperatorPreviewReport) -> None:
@@ -272,7 +167,7 @@ def main(
         return 2
 
     if args.json:
-        print(json.dumps(_report_to_jsonable(report), ensure_ascii=False, indent=2))
+        print(json.dumps(report_to_jsonable(report), ensure_ascii=False, indent=2))
     else:
         _print_human(report)
     return 0
