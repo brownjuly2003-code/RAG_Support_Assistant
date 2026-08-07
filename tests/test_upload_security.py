@@ -253,11 +253,11 @@ def test_file_save_failure_response_is_generic(
 
     secret_path = r"D:\host\secret\uploads\leak.txt"
 
-    def _boom_write_bytes(path: Path, data: bytes) -> None:
+    def _boom_place(dest: Path, source: Path) -> None:
         raise OSError(f"[Errno 13] Permission denied: '{secret_path}'")
 
     _stub_async_publish(monkeypatch)
-    monkeypatch.setattr(upload_mod, "_write_bytes_exclusive", _boom_write_bytes)
+    monkeypatch.setattr(upload_mod, "_place_exclusive_from_path", _boom_place)
 
     resp = client_with_key.post(
         "/api/upload",

@@ -1922,28 +1922,57 @@ async def _request_id(request: Request, call_next: Any) -> Any:
 
 @app.middleware("http")
 async def _body_size_limit(request: Request, call_next: Any) -> Any:
+    # Upload enforces max_upload_bytes while streaming to disk (see upload router).
+    # Multipart framing is not the same as file bytes, so the general JSON/body
+    # limit must not apply to /api/upload.
     if request.url.path == "/api/upload":
         return await call_next(request)
 
-    settings = get_settings()
-    limit = getattr(settings, "max_request_body_bytes", 1024 * 1024)
-    content_length = request.headers.get("content-length")
-    if content_length is not None:
-        try:
-            size = int(content_length)
-        except ValueError:
-            size = -1
-        if size > limit:
-            try:
-                prometheus_metrics.record_body_size_rejection("content_length_too_large")
-            except Exception:
-                pass
-            return JSONResponse(
-                status_code=413,
-                content={"detail": f"Request body too large ({size} bytes, limit {limit})"},
-            )
+    from api.body_limit import (
+        BodySizeExceeded,
+        make_limited_receive,
+        parse_content_length,
+    )
 
-    return await call_next(request)
+    settings = get_settings()
+    limit = int(getattr(settings, "max_request_body_bytes", 1024 * 1024))
+
+    # Cheap fail-closed on advertised size when present and parseable.
+    advertised = parse_content_length(request.headers.get("content-length"))
+    if advertised is not None and advertised > limit:
+        try:
+            prometheus_metrics.record_body_size_rejection("content_length_too_large")
+        except Exception:
+            pass
+        return JSONResponse(
+            status_code=413,
+            content={
+                "detail": (
+                    f"Request body too large ({advertised} bytes, limit {limit})"
+                )
+            },
+        )
+
+    # Trust boundary: count *actually received* ASGI body bytes (chunked /
+    # missing / understated Content-Length cannot bypass the cap).
+    request._receive = make_limited_receive(request.receive, limit=limit)  # type: ignore[method-assign]
+
+    try:
+        return await call_next(request)
+    except BodySizeExceeded as exc:
+        try:
+            prometheus_metrics.record_body_size_rejection("received_bytes_too_large")
+        except Exception:
+            pass
+        return JSONResponse(
+            status_code=413,
+            content={
+                "detail": (
+                    f"Request body too large "
+                    f"({exc.received} bytes received, limit {exc.limit})"
+                )
+            },
+        )
 
 
 @app.middleware("http")

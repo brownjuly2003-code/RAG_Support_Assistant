@@ -909,10 +909,10 @@ def test_write_failure_marks_job_failed_and_never_publishes(
     _silence_audit(monkeypatch)
     captured = _patch_apply_async(monkeypatch)
 
-    def _boom_write(path: Path, data: bytes) -> None:
+    def _boom_place(dest: Path, source: Path) -> None:
         raise OSError("disk full")
 
-    monkeypatch.setattr(upload_mod, "_write_bytes_exclusive", _boom_write)
+    monkeypatch.setattr(upload_mod, "_place_exclusive_from_path", _boom_place)
 
     resp = client_with_key.post(
         "/api/upload",
@@ -1025,10 +1025,10 @@ def test_terminal_win_before_source_ready_fails_closed_no_publish(
 
     _silence_audit(monkeypatch)
     captured = _patch_apply_async(monkeypatch)
-    original_exclusive = upload_mod._write_bytes_exclusive
+    original_place = upload_mod._place_exclusive_from_path
 
-    def _write_then_reap(path: Path, data: bytes) -> None:
-        original_exclusive(path, data)
+    def _place_then_reap(dest: Path, source: Path) -> None:
+        original_place(dest, source)
 
         async def _terminal() -> None:
             from ingestion.jobs import mark_job_failed
@@ -1042,7 +1042,7 @@ def test_terminal_win_before_source_ready_fails_closed_no_publish(
 
         asyncio.run(_terminal())
 
-    monkeypatch.setattr(upload_mod, "_write_bytes_exclusive", _write_then_reap)
+    monkeypatch.setattr(upload_mod, "_place_exclusive_from_path", _place_then_reap)
 
     resp = client_with_key.post(
         "/api/upload",
@@ -1459,10 +1459,10 @@ def test_immutable_write_failure_marks_failed_without_flat_refresh(
     _silence_audit(monkeypatch)
     captured = _patch_apply_async(monkeypatch)
 
-    def _boom_exclusive(path: Path, data: bytes) -> None:
+    def _boom_exclusive(dest: Path, source: Path) -> None:
         raise OSError("disk full")
 
-    monkeypatch.setattr(upload_mod, "_write_bytes_exclusive", _boom_exclusive)
+    monkeypatch.setattr(upload_mod, "_place_exclusive_from_path", _boom_exclusive)
 
     resp = client_with_key.post(
         "/api/upload",
