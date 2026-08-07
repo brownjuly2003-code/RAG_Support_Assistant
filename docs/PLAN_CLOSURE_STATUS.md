@@ -16,7 +16,7 @@ Local code slices ≠ full plan section complete ≠ production release.
 | **2** index lifecycle | **2.1–2.6g local residual closed** | **OPEN** live PG/Redis/Celery/Chroma | yes for live index ops |
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.5 local** | **OPEN** true graph tokens; parity default off; schedule wiring | partial |
-| **5** grounding fail-closed | **5.1–5.2 local** (`7c53bdb`, `50bb220`); 5.3+ open | **OPEN** live metric thresholds / CI | **yes** quality |
+| **5** grounding fail-closed | **5.1–5.3 local** (`7c53bdb`, `50bb220`, `1cdecb2`); live metrics open | **OPEN** live metric thresholds / CI | **yes** quality |
 | **6** judge / safety / agentic parity | not started | OPEN | yes |
 | **7** eval gate fail-closed | partial historical | OPEN | yes |
 | **8** widget / edge security | partial historical | OPEN | yes |
@@ -64,7 +64,7 @@ Residual: Celery/cron for 4.5; true LangGraph token events; `STREAMING_RAG_PARIT
 |-------|--------|----------|
 | **5.1** | **done** @ `7c53bdb` | `grounding_status` verified/unsupported/not_verified; no fake factuality 100 on skip/none/no-context; auto blocked unless grounding allows |
 | **5.2** | **done** @ `50bb220` | claims bound to answer `[N]`; evidence only in cited docs; missing citations → not_verified; auto requires citation_bound |
-| 5.3 | not started | grader/top-1/all-rejected fail-closed (no silent context restore) |
+| **5.3** | **done** @ `1cdecb2` | grader error rejects doc; no forced top-1; all_rejected/grader_error → not_verified; no empty-graded→raw-context restore |
 | 5.4 | not started | claim budget / evidence truncation → not_verified whole answer |
 | Live DoD | opt-in | precision/recall/faithfulness thresholds × 3 runs |
 

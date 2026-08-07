@@ -1,9 +1,9 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 (Update-90 — **5.2** citation-bound claims @
-`50bb220`). Matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
+**Обновлено:** 2026-08-07 (Update-91 — **5.3** grader fail-closed @
+`1cdecb2`). Matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 
-**Routing:** top block [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-90**).
+**Routing:** top block [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-91**).
 
 ---
 
@@ -11,40 +11,41 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest impl | `50bb220` — **5.2** citation-bound claim support |
-| Previous | `7c53bdb` — **5.1** |
-| Local bands | **2.x + 3.1* + 4.1–4.5 + 5.1–5.2** |
+| Latest impl | `1cdecb2` — **5.3** grader fail-closed |
+| Previous | `50bb220` — **5.2**; `7c53bdb` — **5.1** |
+| Local bands | **2.x + 3.1* + 4.1–4.5 + 5.1–5.3** |
 | Full plan / production | **NOT** complete / **NOT** claimed |
-| Next (quality) | **5.3** grader / top-1 / all-rejected fail-closed |
+| Next (quality) | **§6 / 6.1** remove agentic fixed quality scores |
 | Gates | no push / deploy / live / migrate without **opt-in** |
 
-**Verification (5.2):** 54 focused tests passed; Ruff clean.
+**Verification (5.3):** 65 focused tests passed; Ruff clean.
 
 ---
 
-## 5.2 contract (COMPLETE)
+## 5.3 contract (COMPLETE)
 
-- Answer factual claims require `[N]` citations
-- Evidence/claim text must match **cited** docs only (not uncited hits)
-- Missing/invalid citations → `not_verified`; unbound claims block `auto`
-- Helpers: `apply_citation_bound_claims`, `parse_answer_citation_indices`
+- Grader error → reject doc (not accept)
+- No forced top-1 after rejection
+- `all_rejected` / `grader_error` → knowledge_gap + not_verified
+- Generate/verify: empty graded after grade does not restore raw context
+- Simple skipped-verify path → human (not auto)
 
 ```powershell
-python -m pytest tests/test_citation_bound_grounding.py tests/test_grounding_fail_closed.py tests/test_fact_verification.py tests/test_graph_helpers.py tests/test_graph_error_handling.py tests/test_agent_tools.py tests/test_human_route_escalation.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step5-2-<unique>
-python -m ruff check agent/grounding.py agent/graph.py
+python -m pytest tests/test_doc_grade_fail_closed.py tests/test_grade_docs.py tests/test_provider_graph_integration.py tests/test_model_routing.py tests/test_grounding_fail_closed.py tests/test_fact_verification.py tests/test_citation_bound_grounding.py tests/test_graph_error_handling.py tests/test_agent_tools.py tests/test_human_route_escalation.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step5-3-<unique>
+python -m ruff check agent/doc_grade.py agent/graph.py
 ```
 
 ---
 
-## Next: 5.3 only
+## Next: 6.1 only (default)
 
-Grader error, forced top-1, all-docs-rejected must not silently restore
-original context as success → controlled rewrite / `not_verified` / human.
+Remove agentic `quality_source="fixed"` and constants 80/85/90; tool paths
+must use real measurable quality/grounding gate (plan §6).
 
 ---
 
 ## Do not
 
-- Claim plan closed after 5.2  
-- Re-select 5.1–5.2 / 4.x / 3.x / 2.x  
+- Claim plan closed after 5.3  
+- Re-select 5.1–5.3 / 4.x / 3.x / 2.x  
 - Push / deploy / live without opt-in  

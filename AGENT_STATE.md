@@ -1,8 +1,87 @@
 # Agent State
 
+## 2026-08-07 Update-91 — record completed slice 5.3 @ `1cdecb2` ✅ START HERE
+
+> **Routing authority:** Update-91 supersedes Update-90 **for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `1cdecb2`
+>   (`feat(grade): fail-closed grader path without silent context restore (5.3)`)
+>   — slice **5.3**
+> - Previous: `50bb220` — **5.2**; `7c53bdb` — **5.1**
+> - Previous docs: Update-90 `b0dfd41`
+> - Closure matrix: `docs/PLAN_CLOSURE_STATUS.md`
+> - Migrations on disk (not applied): **019–023**
+>
+> **Branch advisory:** refresh (was ahead ~160 after impl).
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** | local documented scopes |
+> | **5.1–5.3** | grounding + citations + **grader fail-closed** local |
+> | Full plan §5 live metrics DoD | **NOT** complete |
+> | Full plan / production | **NOT** claimed |
+>
+> ---
+>
+> ### 5.3 contract (COMPLETE @ `1cdecb2`)
+>
+> - `agent/doc_grade.py`: `resolve_generation_context_docs`, `finalize_grade_state`
+> - Grader LLM error → document **rejected** (not accepted)
+> - No forced top-1 re-injection after rejection
+> - `all_rejected` / `grader_error` / `empty_retrieval` → `knowledge_gap` +
+>   `grounding_status=not_verified`
+> - After grade_docs: empty `graded_docs` does **not** fall back to raw
+>   `context_docs` in generate/verify
+> - Simple path that skips verify → human (not auto); Self-RAG retry still
+>   allowed for grade failures
+> - Residual §5: live precision/recall/faithfulness gate; relevance≠quality
+>   derivative optional
+>
+> **Verification:** focused **65 passed** (doc_grade + grade_docs + provider
+> graph + model routing + grounding/citation + graph error + tools + human-route);
+> Ruff clean. Full suite / live / push / deploy **not** run.
+>
+> ---
+>
+> ### Next candidate only (not started) — quality path
+>
+> named **§6 start / 6.1 — remove agentic fixed quality scores**
+> (tests-first) **or** **6.1b pre-response PII/injection gate**
+> **or** independent judge policy scaffolding.
+>
+> Prefer **6.1** remove `quality_source=fixed` / constants 80/85/90 so agentic
+> cannot auto on fake scores (plan §6).
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–i, 4.1–4.5, **5.1–5.3**.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live multi-service, alembic upgrade 019–023, production claims.
+>
+> **Standing preference:** one named atomic slice per turn; quality > speed;
+> local commit only. See `docs/PLAN_CLOSURE_STATUS.md`.
+>
+> **Git advisory:** refresh status/log — **actual Git wins**.
+
+
 ## 2026-08-07 Update-90 — record completed slice 5.2 @ `50bb220` ✅ START HERE
 
-> **Routing authority:** Update-90 supersedes Update-89 **for start-point
+> **Historical handoff (superseded by Update-91 for start-point routing).**
+> Recorded **5.2** @ `50bb220`. **5.3** complete under Update-91.
+>
+> **Original routing note (archival):** Update-90 supersedes Update-89 **for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old
