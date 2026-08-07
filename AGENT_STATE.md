@@ -1,8 +1,137 @@
 # Agent State
 
+## 2026-08-07 Update-88 — record completed slice 4.5 @ `6453530` ✅ START HERE
+
+> **Routing authority:** Update-88 supersedes Update-87 **for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `6453530`
+>   (`feat(escalation): outbox retry for failed inbox deliveries`)
+>   — slice **4.5**
+> - Previous implementation: `0371971` — **4.4**
+> - Previous docs: Update-87 `f2e7f9e`
+> - §4 chain (impl only): `eaf41f3` 4.1 → `f1c846e` 4.2 → `ad5e435` 4.3 →
+>   `0371971` 4.4 → `6453530` **4.5**
+> - §3 chain ends: `fe2f0aa` **3.1i**
+> - §2 fault-injection last impl: `f347feb` (**2.6g**)
+> - Migrations on disk (not applied this session): **019–023**
+> - This Update-88 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 154]` after impl commit.
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | local residual closed at documented scopes |
+> | **3.1a–3.1i** | local at documented scopes |
+> | **4.1–4.5** | stream parity + durable escalation + auto human-route + **outbox retry** local |
+> | Full plan §2 / §3 / §4 | **NOT** complete (true graph tokens; parity default off; live DoD) |
+> | Plan §5+ | **not started** |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+>
+> ---
+>
+> ### Plan §4 map (honest)
+>
+> | Bullet | Local | Residual |
+> |--------|-------|----------|
+> | LangGraph sole path; SSE transmits | partial **4.1–4.2** | true node/token events; legacy stream when parity **off** |
+> | one terminal answer + one history mutation | **4.1–4.2** when parity **on** | dual path when parity off |
+> | idempotent ticket + inbox outbox | **4.3** + **4.5** retry API | Celery/cron schedule; optional multi-row outbox table |
+> | ticket_id + delivery_state; no false operator claim | **4.3–4.4** | live PG migrate opt-in |
+> | auto-escalate terminal human/error on normal ask | **4.4** | stream-path parity if needed |
+>
+> **§4 ledger:** 4.1 `eaf41f3` → 4.2 `f1c846e` → 4.3 `ad5e435` → 4.4 `0371971`
+> → **4.5** `6453530`.
+>
+> ---
+>
+> ### 4.5 contract (COMPLETE @ `6453530`)
+>
+> - `services/escalation.py`: `retry_escalation_delivery` + `retry_failed_deliveries`
+>   (+ sync wrapper)
+> - Re-attempt inbox delivery for durable tickets with `delivery_state=failed`
+>   (optionally `pending`); **never** create a second ticket
+> - Update `delivery_state` / `delivery_error` only on the existing row
+> - Skip already `delivered` / `duplicate` / missing
+> - Batch returns counts (`attempted` / `delivered` / `failed` / `skipped`)
+> - **Not** wired: Celery beat schedule, admin HTTP endpoint (callable API only)
+>
+> **Verification:** focused **30 passed** (outbox retry + escalation service +
+> human-route + pipeline exception + graph error + agent tools); Ruff clean.
+> Full suite / live / migrate / push / deploy **not** run / **not** claimed.
+>
+> ---
+>
+> ### Module owners (high-signal)
+>
+> | Path | Slice | Role |
+> |------|-------|------|
+> | `services/escalation.py` | **4.3–4.5** | create + outbox retry |
+> | `api/routers/conversation.py` | 4.3–4.4 | ask escalate paths |
+> | job-object / index stack | 2.1–2.6g | do not re-select |
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - Celery/cron / operator HTTP to **invoke** 4.5 retry (optional thin wiring)
+> - true LangGraph token/node SSE; flip default stream to graph-only
+> - stream-path auto-escalate parity
+> - multi-replica durable session version
+> - live multi-service + migrations **019–023** (**opt-in**)
+> - plan **§5+** grounding / routing fail-closed
+> - full suite / release / production readiness
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **§5 start / 5.1 — grounding fail-closed foundations** (tests-first)
+> **or** **4.6** thin Celery/cron/operator wiring for outbox retry,
+> **or** stream graph-only default (parity flip).
+>
+> Prefer **§5** if quality gates matter next; prefer **4.6** if ops wants
+> scheduled retry; prefer stream default if unifying pipeline is next.
+>
+> **Do not re-select:** 2.1–2.6g, **3.1a–3.1i**, **4.1–4.5**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
+> Untracked: plan, `_NEXT_SESSION.md`, pytest temps, presentations, etc.
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live multi-service, `alembic upgrade` (019–023), production claims.
+>
+> **Standing preference:** one named atomic slice per user turn; local commit only.
+>
+> **Git advisory:** refresh status/log — **actual Git wins**.
+
+
 ## 2026-08-07 Update-87 — record completed slice 4.4 @ `0371971` ✅ START HERE
 
-> **Routing authority:** Update-87 supersedes Update-86 **for start-point
+> **Historical handoff (superseded by Update-88 for start-point routing).**
+> Recorded **4.4** @ `0371971`; docs `f2e7f9e`. **4.5** complete under Update-88.
+>
+> **Original routing note (archival):** Update-87 supersedes Update-86 **for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old
