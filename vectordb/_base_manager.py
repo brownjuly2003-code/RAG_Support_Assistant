@@ -508,12 +508,20 @@ class HybridRetriever:
         if not docs:
             return docs
 
+        # Cooperative deadline (plan §3.1h): refuse new reranker work after wall.
+        # Fail-closed: do not degrade to top-k as silent success after expiry.
+        from utils.request_deadline import RequestDeadlineExceeded, check_request_deadline
+
+        check_request_deadline("retriever.rerank")
+
         pairs = [(query, doc.page_content) for doc in docs]
         try:
             scores = self._reranker.predict(pairs)
             # strict=True: predict returns exactly one score per (query, doc) pair.
             scored_docs = sorted(zip(docs, scores, strict=True), key=lambda x: x[1], reverse=True)
             return [doc for doc, _ in scored_docs[:self._rerank_k]]
+        except RequestDeadlineExceeded:
+            raise
         except Exception as e:
             logger.warning("[HybridRetriever] Reranker error: %s", e)
             return docs[:self._rerank_k]
