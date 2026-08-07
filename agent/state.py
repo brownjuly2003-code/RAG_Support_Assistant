@@ -141,6 +141,10 @@ class GraphState(TypedDict, total=False):
     # Pre-response safety (plan §6.2): allow | redact | refuse | human.
     safety_action: Optional[Literal["allow", "redact", "refuse", "human"]]
     safety_reasons: list[str]
+    # Independent judge (plan §6.3).
+    judge_status: Optional[Literal["ok", "unavailable", "error", "parse_failure"]]
+    judge_reason: Optional[str]
+    judge_independent: bool
 
 
 def create_initial_state(

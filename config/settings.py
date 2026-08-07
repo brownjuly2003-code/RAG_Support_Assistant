@@ -388,6 +388,23 @@ class Settings:
     quality_threshold: int = field(
         default_factory=lambda: int(os.getenv("QUALITY_THRESHOLD", "80"))
     )
+    # Plan §6.3: when True, quality judge must not share provider/model identity
+    # with the answer generator. Missing independent judge → fail-closed
+    # (unmeasured / not_verified), never same-model self-approval auto.
+    # Default True in production; elsewhere opt-in via JUDGE_INDEPENDENCE_REQUIRED.
+    judge_independence_required: bool = field(
+        default_factory=lambda: (
+            os.getenv(
+                "JUDGE_INDEPENDENCE_REQUIRED",
+                "true"
+                if os.getenv("RAG_ENV", "development").strip().lower() == "production"
+                else "false",
+            )
+            .strip()
+            .lower()
+            in {"1", "true", "yes", "on"}
+        )
+    )
     # Plan §3.1d: optional JSON map of per-role {temperature, max_tokens} overrides.
     # Empty = built-in safe defaults only (see llm/role_params.py).
     llm_role_params_json: str = field(

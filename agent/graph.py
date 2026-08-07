@@ -77,6 +77,11 @@ def _online_eval_first_time(signature: str) -> bool:
 if TYPE_CHECKING:
     from utils.circuit_breaker import CircuitBreaker
 
+from agent.judge_policy import (  # noqa: E402
+    judge_fail_closed_fields,
+    parse_judge_score,
+    resolve_judge_llm,
+)
 from agent.prompts import (  # noqa: E402
     build_classify_complexity_prompt,
     build_conversational_qa_prompt,
@@ -1720,36 +1725,84 @@ def make_evaluate_node(
     llm_fast: SupportsInvoke,
     llm_strong: SupportsInvoke,
 ) -> Callable[[GraphState], GraphState]:
-    """Узел evaluate: самооценка качества ответа (1-100)."""
+    """Узел evaluate: quality judge (1-100), plan §6.3 independence policy.
+
+    Selects judge via ``resolve_judge_llm`` (must differ from generator when
+    ``judge_independence_required``). Judge error / parse failure / missing
+    independent judge → fail-closed unmeasured scores (never silent default 50
+    with ``quality_source=llm``).
+    """
 
     def node(state: GraphState) -> GraphState:
         if state.get("error"):
             return state
         trace_id = state.get("trace_id", "unknown-trace-id")
         complexity = state.get("complexity", "unknown")
-        llm = llm_fast if complexity == "simple" else llm_strong
-        model = _get_llm_model_name(llm) or ""
-        provider = _get_llm_provider_name(llm) or ""
+        # Same selection rule as generate: simple→fast, else→strong.
+        generator_llm = llm_fast if complexity == "simple" else llm_strong
+        require_independence = False
+        if get_settings is not None:
+            try:
+                require_independence = bool(
+                    getattr(get_settings(), "judge_independence_required", False)
+                )
+            except Exception:
+                require_independence = False
+        resolution = resolve_judge_llm(
+            candidate_fast=llm_fast,
+            candidate_strong=llm_strong,
+            generator_llm=generator_llm,
+            require_independence=require_independence,
+        )
+        model = resolution.judge_model or ""
+        provider = resolution.judge_provider or ""
         evaluate_started_at = time.monotonic()
         logger.info(
-            "[evaluate] boundary=start monotonic=%.6f provider=%s model=%s",
+            "[evaluate] boundary=start monotonic=%.6f provider=%s model=%s "
+            "independent=%s require=%s",
             evaluate_started_at,
             provider or "-",
             model or "-",
+            resolution.independent,
+            require_independence,
             extra={"trace_id": trace_id},
         )
         try:
+            if not resolution.ok or resolution.judge_llm is None:
+                new_state = cast(
+                    GraphState,
+                    {
+                        **state,
+                        **judge_fail_closed_fields(
+                            reason=resolution.reason,
+                            status="unavailable",
+                        ),
+                        "judge_independent": False,
+                    },
+                )
+                new_state["knowledge_gap"] = _is_knowledge_gap(new_state)
+                log_step(trace_id, "evaluate", new_state)
+                return new_state
+
+            llm = resolution.judge_llm
+            model = _get_llm_model_name(llm) or model
+            provider = _get_llm_provider_name(llm) or provider
             question = state.get("question", "")
             answer = state.get("answer") or ""
             docs = state.get("graded_docs") or state.get("context_docs", []) or []
             answer_for_eval = re.sub(r"\s*\[\d+\]", "", answer)
             answer_for_eval = re.sub(r"\s{2,}", " ", answer_for_eval).strip()
-            prompt = build_self_eval_prompt(question=question, answer=answer_for_eval, context_docs=docs)
+            prompt = build_self_eval_prompt(
+                question=question, answer=answer_for_eval, context_docs=docs
+            )
             usage = _new_llm_usage("evaluate")
             usage_recorded = False
+            raw = ""
+            judge_call_error: str | None = None
             tracer = get_otel_tracer()
             with tracer.start_as_current_span("rag.evaluate") as span:
                 span.set_attribute("rag.tenant_id", str(state.get("tenant_id", "default")))
+                span.set_attribute("rag.judge_independent", bool(resolution.independent))
                 try:
                     t0 = time.monotonic()
                     raw = _invoke_llm(llm, prompt, role="evaluate")
@@ -1765,16 +1818,64 @@ def make_evaluate_node(
                         tool_calls=state.get("tool_calls") or None,
                     )
                 except Exception as exc:
-                    logger.warning("[evaluate] LLM error: %s", exc, extra={"trace_id": trace_id})
+                    logger.warning(
+                        "[evaluate] judge LLM error: %s", exc, extra={"trace_id": trace_id}
+                    )
+                    judge_call_error = str(exc) or type(exc).__name__
                     raw = ""
-                score = _parse_int_score(raw, default=50)
+
+                if judge_call_error is not None:
+                    new_state = cast(
+                        GraphState,
+                        {
+                            **state,
+                            **judge_fail_closed_fields(
+                                reason=f"judge_error:{judge_call_error[:120]}",
+                                status="error",
+                            ),
+                            "judge_independent": bool(resolution.independent),
+                        },
+                    )
+                    if usage_recorded:
+                        new_state = _apply_llm_usage(new_state, usage)
+                    new_state["knowledge_gap"] = _is_knowledge_gap(new_state)
+                    span.set_attribute("rag.quality_score", 0)
+                    log_step(trace_id, "evaluate", new_state)
+                    return new_state
+
+                score = parse_judge_score(raw)
+                if score is None:
+                    new_state = cast(
+                        GraphState,
+                        {
+                            **state,
+                            **judge_fail_closed_fields(
+                                reason="judge_parse_failure",
+                                status="parse_failure",
+                            ),
+                            "judge_independent": bool(resolution.independent),
+                        },
+                    )
+                    if usage_recorded:
+                        new_state = _apply_llm_usage(new_state, usage)
+                    new_state["knowledge_gap"] = _is_knowledge_gap(new_state)
+                    span.set_attribute("rag.quality_score", 0)
+                    log_step(trace_id, "evaluate", new_state)
+                    return new_state
+
                 span.set_attribute("rag.quality_score", score)
-            new_state: GraphState = {
-                **state,
-                "quality_score": score,
-                "relevance_score": round(score / 100.0, 3),
-                "quality_source": "llm",
-            }
+            new_state = cast(
+                GraphState,
+                {
+                    **state,
+                    "quality_score": score,
+                    "relevance_score": round(score / 100.0, 3),
+                    "quality_source": "llm",
+                    "judge_status": "ok",
+                    "judge_reason": resolution.reason,
+                    "judge_independent": bool(resolution.independent),
+                },
+            )
             if usage_recorded:
                 new_state = _apply_llm_usage(new_state, usage)
             new_state["knowledge_gap"] = _is_knowledge_gap(new_state)
@@ -1919,9 +2020,18 @@ def make_route_or_retry_node(
                 and r >= min_relevance
             )
             grounded = grounding_allows_auto(state, min_factuality=min_fact)
+            # Plan §6.3: judge infrastructure failure is not Self-RAG material —
+            # do not retry hoping for measured auto without a working judge.
+            judge_broken = state.get("judge_status") in {
+                "unavailable",
+                "error",
+                "parse_failure",
+            }
 
             route: Literal["auto", "human", "retry"]
-            if q is None or r is None:
+            if judge_broken:
+                route = "human"
+            elif q is None or r is None:
                 route = "human"
             elif scores_ok and grounded:
                 route = "auto"
@@ -2178,12 +2288,11 @@ def build_support_graph(
     workflow.add_node("grade_docs", make_grade_docs_node(llm_fast))
     workflow.add_node("generate", make_generate_node(llm_fast, llm_strong))
     workflow.add_node("verify_facts", make_verify_facts_node(llm_fast))
-    # evaluate deliberately gets the fast model for BOTH branches: in the
-    # gracekelly-primary profile the strong model is a ~60s orchestrate call,
-    # and self-eval on it would double complex-request latency (commit 7e266af;
-    # pinned by test_build_support_graph_uses_fast_llm_for_evaluate_node).
+    # evaluate receives both LLMs: plan §6.3 resolves an independent judge
+    # (prefer fast when generator is strong — keeps complex-path latency low;
+    # when independence is required and generator is fast, uses strong).
     # suggest_questions is cosmetic follow-up text — fast is enough there too.
-    workflow.add_node("evaluate", make_evaluate_node(llm_fast, llm_fast))
+    workflow.add_node("evaluate", make_evaluate_node(llm_fast, llm_strong))
     workflow.add_node("route_or_retry", make_route_or_retry_node(min_quality=min_quality))
     workflow.add_node("response_safety", make_response_safety_node())
     workflow.add_node("suggest_questions", make_suggest_questions_node(llm_fast))
