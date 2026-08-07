@@ -1,20 +1,89 @@
 # Agent State
 
+## 2026-08-07 Update-54 — docs-only transparency after Update-53 @ `0de7889` ✅ START HERE
+
+> **Routing authority:** Update-54 is **docs-only / transparency-only** and
+> supersedes Update-53 **only for start-point routing**. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`, are
+> **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
+>
+> **No new implementation in this docs turn.** Code, tests, plans, backlog,
+> README, audit, settings, and API paths were **not** edited here. Project
+> tests were **not** rerun. No implementation, test, plan, backlog, or
+> user-WIP change. Protected dirty `BACKLOG.md`, `README.md`,
+> `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and existing untracked
+> artifacts (including the active plan, prompts, pytest temp dirs, and
+> presentation/explainer files) were not touched.
+>
+> **Known lineage (actual Git wins):**
+> - Latest completed docs commit before this turn: `0de7889`
+>   (`docs: record job-object inventory classification`) — that is the actual
+>   Update-53 docs commit.
+> - Latest implementation remains `13be7d9`
+>   (`feat(ingestion): classify immutable job-object inventory`) — slice
+>   **2.4e** (read-only classification scope only).
+> - Previous implementation: `dfbbca0` (slice **2.4d**).
+> - Previous transparency docs: `ac4f553` (Update-52).
+> - The future docs commit that records Update-54 **cannot** be known inside
+>   its own content; next session must obtain it from `git log -5 --oneline`.
+>
+> **Completion truth (unchanged):** slices **2.1 through 2.4e** remain
+> locally complete and verified **only at documented scopes**. Full plan
+> step 2 and full immutable-original lifecycle remain **incomplete**. Open
+> boundaries unchanged after 2.4e: **no** GC/retention executor for
+> `job-objects` or `legacy-previous`, **no** tenant-scoped operator/CLI
+> preview that loads jobs from DB, **no** failed-transition orphan cleanup
+> mutations, **no** age/budget delete policy, **no** DB model/migration
+> field, **no** full/live verification, **no** push/deploy or
+> production-readiness claim.
+>
+> **Active writer / WIP:** none. No unfinished next-candidate WIP. No active
+> Grok/delegated writer at this handoff.
+>
+> **Next candidate only (not started):** **2.4f tenant-scoped job-object
+> inventory preview** — load known job refs (`id` + `source_path`) for one
+> tenant and call
+> `ingestion.job_object_inventory.classify_job_object_tree` (still **no**
+> deletion). Do **not** invent age/budget delete rules, edit plan checkboxes,
+> or mark 2.4f started/complete from docs alone. Do **not** re-select
+> 2.1–2.4e. Details: [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+>
+> **Protected dirty / untracked state:** see handoff capsule; do not
+> touch/stage/remove without explicit request. Do **not** edit the active
+> untracked plan or its checkboxes. Note: untracked `_NEXT_SESSION.md` may
+> still contain **archival** pre-remediation text (old step 4.8d); do **not**
+> treat it as routing authority — use Update-54 + SESSION_HANDOFF only.
+>
+> **External gates (not authorized):** push, deploy, live services,
+> destructive Git, production-readiness claims. Live
+> PostgreSQL/Redis/Celery/Chroma drills require explicit opt-in and must
+> **not** be the default next slice.
+>
+> **Standing execution preference:** **Grok** implements/content-writes;
+> orchestrator protects files, verifies independently, commits scoped
+> results. One user turn = **one** named atomic slice. Explicit-path local
+> commit only. Do **not** re-select 2.1–2.4e.
+>
+> **Git advisory only:** branch observed as
+> `master...origin/master [ahead 90]` before this docs commit — refresh next
+> session.
+
 ## 2026-08-07 Update-53 — record completed slice 2.4e @ `13be7d9` ✅ START HERE
 
-> **Routing authority:** Update-53 supersedes Update-52 **for start-point
-> routing**. All older Update blocks below, including headings that literally
-> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
-> block in this file is authoritative.** Never select work by grepping old
-> `START HERE` markers.
+> **Historical handoff (superseded by Update-54 for start-point routing).**
+> Older `✅ START HERE` markers in this archive are **not** routing authority.
+> Refresh `git status` first. This Update-53 block previously superseded
+> Update-52 as the start point when recording completed **2.4e**. All older
+> Update blocks below remain **archival**. **Only the first/topmost Update
+> block in this file is authoritative.**
 >
 > **Implementation commit:** `13be7d9` (`feat(ingestion): classify immutable
 > job-object inventory`). Slice **2.4e is locally complete and verified** at
-> the bounded read-only classification scope. Previous docs commit before this
-> impl/docs turn: `ac4f553` (`docs: refresh transparent next-session handoff`
-> — Update-52). Previous implementation: `dfbbca0` (slice **2.4d**). The
-> future docs commit that records Update-53 **cannot** be known inside its
-> own content; next session must obtain it from `git log -5 --oneline`.
+> the bounded read-only classification scope. Previous docs commit before that
+> impl/docs turn: `ac4f553` (Update-52). Previous implementation: `dfbbca0`
+> (slice **2.4d**). Actual Update-53 docs commit is now known as `0de7889`
+> (`docs: record job-object inventory classification`).
 >
 > **Implementation paths changed in `13be7d9` only:**
 > - `ingestion/job_object_inventory.py` (new)
@@ -40,7 +109,7 @@
 > - no pre-existing GC/orphan cleanup modules found;
 > - index retention (`vectordb/index_retention.py`) is a separate subsystem.
 >
-> **Verification (this turn):** tests-first red 11 failed
+> **Verification (that turn):** tests-first red 11 failed
 > (`ModuleNotFoundError`); green focused 11 passed; adjacent upload/job gate
 > **91 passed** (inventory + upload_idempotency + upload_security +
 > ingestion_job_contract); scoped Ruff clean; `git diff --check` clean;
@@ -54,27 +123,8 @@
 > failed-transition orphan cleanup, **no** DB model/migration field, **no**
 > full/live verification, **no** push/deploy or production-readiness claim.
 >
-> **Active writer / WIP:** none. No unfinished next-candidate WIP.
->
 > **Next candidate only (not started):** **2.4f tenant-scoped job-object
-> inventory preview** — load known job refs for one tenant and call the
-> existing classifier (still **no** deletion). Do **not** invent age/budget
-> delete rules, reopen 2.1–2.4e, or edit plan checkboxes. Details:
-> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
->
-> **Protected dirty / untracked state:** see handoff capsule; do not
-> touch/stage/remove without explicit request. Do **not** edit the active
-> untracked plan or its checkboxes.
->
-> **External gates (not authorized):** push, deploy, live services,
-> destructive Git, production-readiness claims. Live
-> PostgreSQL/Redis/Celery/Chroma drills require explicit opt-in and must
-> **not** be the default next slice.
->
-> **Standing execution preference:** **Grok** implements/content-writes;
-> orchestrator protects files, verifies independently, commits scoped
-> results. One user turn = **one** named atomic slice. Explicit-path local
-> commit only. Do **not** re-select 2.1–2.4e.
+> inventory preview** — still **no** deletion. Do **not** re-select 2.1–2.4e.
 >
 > **Git advisory only:** branch observed as
 > `master...origin/master [ahead 89]` after impl — refresh next session.
