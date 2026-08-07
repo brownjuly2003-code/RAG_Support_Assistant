@@ -1,59 +1,71 @@
 # Agent State
 
-## 2026-08-07 Update-54 — docs-only transparency after Update-53 @ `0de7889` ✅ START HERE
+## 2026-08-07 Update-55 — record completed slice 2.4f @ `68cf045` ✅ START HERE
 
-> **Routing authority:** Update-54 is **docs-only / transparency-only** and
-> supersedes Update-53 **only for start-point routing**. All older Update
-> blocks below, including headings that literally contain `✅ START HERE`, are
-> **archival**. **Only the first/topmost Update block in this file is
-> authoritative.** Never select work by grepping old `START HERE` markers.
+> **Routing authority:** Update-55 supersedes Update-54 **only for
+> start-point routing**. All older Update blocks below, including headings
+> that literally contain `✅ START HERE`, are **archival**. **Only the
+> first/topmost Update block in this file is authoritative.** Never select
+> work by grepping old `START HERE` markers.
 >
-> **No new implementation in this docs turn.** Code, tests, plans, backlog,
-> README, audit, settings, and API paths were **not** edited here. Project
-> tests were **not** rerun. No implementation, test, plan, backlog, or
-> user-WIP change. Protected dirty `BACKLOG.md`, `README.md`,
-> `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and existing untracked
-> artifacts (including the active plan, prompts, pytest temp dirs, and
-> presentation/explainer files) were not touched.
+> **Implementation commit:** `68cf045` (`feat(ingestion): tenant-scoped
+> job-object inventory preview`). Slice **2.4f is locally complete and
+> verified** at the bounded read-only tenant preview scope. Previous docs
+> commit before this impl/docs turn: `af13b3f` (Update-54 handoff). Previous
+> implementation: `13be7d9` (slice **2.4e**). The future docs commit that
+> records Update-55 **cannot** be known inside its own content; next session
+> must obtain it from `git log -5 --oneline`.
 >
-> **Known lineage (actual Git wins):**
-> - Latest completed docs commit before this turn: `0de7889`
->   (`docs: record job-object inventory classification`) — that is the actual
->   Update-53 docs commit.
-> - Latest implementation remains `13be7d9`
->   (`feat(ingestion): classify immutable job-object inventory`) — slice
->   **2.4e** (read-only classification scope only).
-> - Previous implementation: `dfbbca0` (slice **2.4d**).
-> - Previous transparency docs: `ac4f553` (Update-52).
-> - The future docs commit that records Update-54 **cannot** be known inside
->   its own content; next session must obtain it from `git log -5 --oneline`.
+> **Implementation paths changed in `68cf045` only:**
+> - `ingestion/job_object_inventory.py` — `JobObjectInventoryPreview` +
+>   `preview_tenant_job_object_inventory`
+> - `ingestion/jobs.py` — `sync_list_known_job_object_refs`
+> - `tests/test_job_object_inventory.py`
+> - diff stat: 3 files changed, 295 insertions
 >
-> **Completion truth (unchanged):** slices **2.1 through 2.4e** remain
-> locally complete and verified **only at documented scopes**. Full plan
-> step 2 and full immutable-original lifecycle remain **incomplete**. Open
-> boundaries unchanged after 2.4e: **no** GC/retention executor for
-> `job-objects` or `legacy-previous`, **no** tenant-scoped operator/CLI
-> preview that loads jobs from DB, **no** failed-transition orphan cleanup
-> mutations, **no** age/budget delete policy, **no** DB model/migration
-> field, **no** full/live verification, **no** push/deploy or
-> production-readiness claim.
+> **2.4f behavior (landed):**
+> - sync read-only DB load of durable `job_id` + `source_path` for one
+>   tenant (`sync_list_known_job_object_refs`); blank `source_path` rows
+>   skipped; empty tenant_id fails closed; other tenants never leak;
+> - pure preview helper composes injected known refs with existing
+>   `classify_job_object_tree` and returns `JobObjectInventoryPreview`
+>   (`tenant_id`, `known_job_count`, `entries`); falsey tenant normalizes
+>   to `default`;
+> - end-to-end operator path: load refs → preview → protected/unrecorded
+>   classifications without filesystem mutation;
+> - **no** delete/rename/mutate, **no** age/budget policy, **no** admin API,
+>   **no** CLI script, **no** DB model/migration, **no** upload/create-path
+>   reopen, **no** classifier semantics change.
 >
-> **Active writer / WIP:** none. No unfinished next-candidate WIP. No active
-> Grok/delegated writer at this handoff.
+> **Verification (this turn):** tests-first red 7 failed (`AttributeError`
+> missing preview/loader); green focused **18 passed**; adjacent upload/job
+> gate **98 passed** (inventory + upload_idempotency + upload_security +
+> ingestion_job_contract); scoped Ruff clean; `git diff --check` clean;
+> mypy 1.19.x on Python 3.12 Success (2 files; host 3.13 hits known NumPy
+> stub syntax issue). Full suite / live services **not** run.
 >
-> **Next candidate only (not started):** **2.4f tenant-scoped job-object
-> inventory preview** — load known job refs (`id` + `source_path`) for one
-> tenant and call
-> `ingestion.job_object_inventory.classify_job_object_tree` (still **no**
-> deletion). Do **not** invent age/budget delete rules, edit plan checkboxes,
-> or mark 2.4f started/complete from docs alone. Do **not** re-select
-> 2.1–2.4e. Details: [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+> **Boundary (completion truth):** slices **2.1 through 2.4f** remain
+> locally complete **only at documented scopes**. Full plan step 2 and full
+> immutable lifecycle remain **incomplete**: **no** GC/retention executor for
+> job-objects or legacy-previous, **no** failed-transition orphan cleanup
+> mutations, **no** age/budget delete policy, **no** admin/CLI operator
+> surface, **no** DB model/migration field, **no** full/live verification,
+> **no** push/deploy or production-readiness claim.
+>
+> **Active writer / WIP:** none after this handoff.
+>
+> **Next candidate only (not started):** **2.4g job-object GC/retention
+> executor ownership/policy investigation** — read-only first; still **no**
+> deletion until owners and safety invariants are confirmed and a later
+> test-first contract is chosen. Do **not** invent age/budget delete rules,
+> edit the plan, or mark 2.4g started/complete from docs alone. Do **not**
+> re-select 2.1–2.4f. Details:
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
 >
 > **Protected dirty / untracked state:** see handoff capsule; do not
 > touch/stage/remove without explicit request. Do **not** edit the active
-> untracked plan or its checkboxes. Note: untracked `_NEXT_SESSION.md` may
-> still contain **archival** pre-remediation text (old step 4.8d); do **not**
-> treat it as routing authority — use Update-54 + SESSION_HANDOFF only.
+> untracked plan or its checkboxes. Untracked `_NEXT_SESSION.md` is
+> **archival** if stale — use Update-55 + SESSION_HANDOFF only.
 >
 > **External gates (not authorized):** push, deploy, live services,
 > destructive Git, production-readiness claims. Live
@@ -63,11 +75,23 @@
 > **Standing execution preference:** **Grok** implements/content-writes;
 > orchestrator protects files, verifies independently, commits scoped
 > results. One user turn = **one** named atomic slice. Explicit-path local
-> commit only. Do **not** re-select 2.1–2.4e.
+> commit only. Do **not** re-select 2.1–2.4f.
 >
 > **Git advisory only:** branch observed as
-> `master...origin/master [ahead 90]` before this docs commit — refresh next
-> session.
+> `master...origin/master [ahead 92]` after impl — refresh next session.
+
+## 2026-08-07 Update-54 — docs-only transparency after Update-53 @ `0de7889` ✅ START HERE
+
+> **Historical handoff (superseded by Update-55 for start-point routing).**
+> Older `✅ START HERE` markers in this archive are **not** routing authority.
+> Refresh `git status` first. This Update-54 block previously superseded
+> Update-53 as the start point (docs-only after 2.4e). All older Update
+> blocks below remain **archival**. **Only the first/topmost Update block
+> in this file is authoritative.**
+>
+> **No new implementation in that docs turn.** Implementation remained
+> `13be7d9` (**2.4e**). Later closed by Update-55 / `68cf045` at tenant
+> preview scope. Next-work pointer naming **2.4f** is **stale**.
 
 ## 2026-08-07 Update-53 — record completed slice 2.4e @ `13be7d9` ✅ START HERE
 
