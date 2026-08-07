@@ -1,10 +1,68 @@
 # Agent State
 
+## 2026-08-07 Update-78 — record completed slice 3.1f @ `2581855` ✅ START HERE
+
+> **Routing authority:** Update-78 records completed **3.1f** and supersedes
+> Update-77. Older `✅ START HERE` blocks are **archival**.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `2581855`
+>   (`feat(stream): hold pipeline capacity and bind budget/deadline on SSE`)
+>   — **3.1f**
+> - Previous: `b98b917` (**3.1e**), `48c2381` (**3.1d**), … **3.1a–3.1c**
+> - Previous docs: Update-77 `36d5b18`
+> - This Update-78 docs SHA unknown in-file — refresh `git log`
+>
+> **Completion truth:**
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | local fault-injection residual |
+> | **3.1a–3.1f** | executor, deadline, session, roles, budget, stream hold |
+> | Full plan §2 / §3 | **NOT** complete (retriever/tool deadline residual) |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan §3 map (honest):**
+> | Bullet | Local | Residual |
+> |--------|-------|----------|
+> | shared pool + capacity hold | **3.1a** + **3.1f** stream | — |
+> | cooperative deadline | **3.1b** provider + stream bind | retriever/reranker/tools |
+> | per-session serialize | **3.1c** | durable optimistic version |
+> | role max_tokens/temperature | **3.1d** | — |
+> | per-request LLM budget | **3.1e** + stream share **3.1f** | — |
+>
+> **3.1f contract (landed):**
+> - `/api/ask/stream` capacity hold until orphaned parity future completes
+> - shared request executor for parity/fallback ask
+> - stream binds deadline + LLM budget; parity worker reuses same budget object
+>   (thread-safe counters)
+> - `deadline_sec` + session/user/confirm passed into `session.ask`
+> - removed ineffective `graph_task.cancel()` on timeout
+>
+> **Verification:** focused **17 passed** (stream hold + chat stream + pipeline
+> concurrency + budget); Ruff clean. Full suite **not** run.
+>
+> **Next candidate only (not started):**
+> named **3.1g — cooperative deadline at retriever / tool boundaries**
+> (check request deadline before retriever/tool side effects; tests-first).
+> Still no push/live. Alternate: begin plan **§4** if user prioritizes
+> unified LangGraph stream path.
+>
+> **Do not re-select:** 2.1–2.6g, **3.1a–3.1f**.
+>
+> **Protected dirty / untracked:** do not touch without request.
+>
+> **External gates:** push, deploy, live, destructive Git, prod claims.
+>
+> **Standing preference:** one turn = one named slice; local commit only.
+>
+> **Git advisory:** refresh `git status` / `git log -5` next session.
+
 ## 2026-08-07 Update-77 — record completed slice 3.1e @ `b98b917` ✅ START HERE
 
-> **Routing authority:** Update-77 records completed **3.1e** and supersedes
-> Update-76 for start-point routing. Older `✅ START HERE` blocks are
-> **archival**. Only the first/topmost Update is authoritative.
+> **Historical handoff (superseded by Update-78 for start-point routing).**
+> Recorded **3.1e** @ `b98b917`. Next-work naming **3.1f** is **stale**.
+>
+> **Original routing note (archival):** Update-77 recorded completed **3.1e**.
 >
 > **Known lineage (actual Git wins):**
 > - Latest implementation: `b98b917`
