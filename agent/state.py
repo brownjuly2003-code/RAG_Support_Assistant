@@ -130,6 +130,9 @@ class GraphState(TypedDict, total=False):
     action_summary: str
     # Optimistic session CAS token (plan §3.1i); process-local until durable store.
     session_version: int
+    # Durable escalation (plan §4.3).
+    ticket_id: str | None
+    delivery_state: str
 
 
 def create_initial_state(

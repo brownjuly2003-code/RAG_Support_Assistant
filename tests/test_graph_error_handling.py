@@ -23,12 +23,18 @@ def test_handle_error_triggered_when_node_raises() -> None:
         trace_id="trace-error-1",
     )
 
+    esc_payload = {
+        "ticket_id": "t-1",
+        "delivery_state": "delivered",
+        "user_message": "Ваш вопрос передан оператору (тикет #t-1).",
+        "durable": "1",
+    }
     with (
         patch(
             "agent.graph.build_query_transform_prompt",
             side_effect=RuntimeError("Сбой трансформации запроса"),
         ),
-        patch("agent.graph._escalate_to_inbox") as escalate_to_inbox,
+        patch("agent.graph._escalate_to_inbox", return_value=esc_payload) as escalate_to_inbox,
         patch("agent.graph.log_step"),
     ):
         final_state = support_graph.invoke(initial_state)
@@ -36,8 +42,9 @@ def test_handle_error_triggered_when_node_raises() -> None:
     assert final_state["error"] is True
     assert final_state["error_node"] == "transform_query"
     assert "RuntimeError: Сбой трансформации запроса" in final_state["error_message"]
-    assert "Ваш вопрос передан оператору" in final_state["answer"]
+    assert "передан оператору" in final_state["answer"]
     assert final_state["route"] == "error_escalation"
+    assert final_state.get("ticket_id") == "t-1"
     escalate_to_inbox.assert_called_once()
     escalated_state = escalate_to_inbox.call_args.args[0]
     assert escalated_state["error"] is True
@@ -102,9 +109,15 @@ def test_handle_error_triggered_for_remaining_nodes(
         else nullcontext()
     )
 
+    esc_payload = {
+        "ticket_id": f"t-{node_name}",
+        "delivery_state": "delivered",
+        "user_message": "Ваш вопрос передан оператору.",
+        "durable": "1",
+    }
     with (
         failing_patch,
-        patch("agent.graph._escalate_to_inbox") as escalate_to_inbox,
+        patch("agent.graph._escalate_to_inbox", return_value=esc_payload) as escalate_to_inbox,
         patch("agent.graph.log_step", side_effect=log_step_side_effect),
     ):
         final_state = support_graph.invoke(initial_state)

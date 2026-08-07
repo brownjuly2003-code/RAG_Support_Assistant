@@ -1,9 +1,7 @@
 """Feedback and escalation endpoints."""
 from __future__ import annotations
 
-import json as _json
 import logging
-from datetime import datetime, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -77,52 +75,40 @@ async def escalate_to_human(
     body: EscalateRequest,
     _user: dict = Depends(get_current_user),
 ) -> dict:
-    """Ручная эскалация: пользователь хочет оператора."""
-    record = {
-        "entity_id": body.session_id,
-        "question": body.question,
-        "route": "human_request",
-        "reason": body.reason,
-        "ts": datetime.now(timezone.utc).isoformat(),
-    }
+    """Ручная эскалация: пользователь хочет оператора (plan §4.3 durable service)."""
+    from services.escalation import create_escalation  # noqa: PLC0415
 
-    try:
-        inbox_path = _app_module().PROJECT_ROOT / "data" / "inbox" / "support_inbox.jsonl"
-        inbox_path.parent.mkdir(parents=True, exist_ok=True)
-        with inbox_path.open("a", encoding="utf-8", newline="\n") as f:
-            f.write(_json.dumps(record, ensure_ascii=False) + "\n")
-    except Exception as exc:
-        logger.error("Failed to write escalation: %s", exc)
-        raise HTTPException(status_code=500, detail="Escalation failed") from exc
-
-    try:
-        from db.engine import async_session  # noqa: PLC0415
-        from db.models import EscalatedTicket  # noqa: PLC0415
-
-        draft = None
-        question_text = (body.question or "").strip()
-        if question_text:
-            draft = (
-                f"Запрос пользователя: {question_text}\n\n"
-                "Черновик ответа: Спасибо за обращение. Мы получили ваш запрос и передали его оператору. "
-                "Проверим детали и вернёмся с решением."
-            )
-
-        async with async_session() as db:
-            db.add(
-                EscalatedTicket(
-                    tenant_id=_user.get("tenant", "default"),
-                    session_id=body.session_id,
-                    user_question=question_text or "(пользователь запросил оператора)",
-                    ai_draft=draft,
-                    status="open",
-                )
-            )
-            await db.commit()
-    except Exception as exc:
-        logger.warning("Failed to persist escalated ticket: %s", exc)
-
+    app = _app_module()
     tenant = _user.get("tenant", "default") or "default"
+    question_text = (body.question or "").strip()
+    draft = None
+    if question_text:
+        draft = (
+            f"Запрос пользователя: {question_text}\n\n"
+            "Черновик ответа: Спасибо за обращение. Мы получили ваш запрос и передали его оператору. "
+            "Проверим детали и вернёмся с решением."
+        )
+
+    outcome = await create_escalation(
+        tenant_id=tenant,
+        session_id=body.session_id,
+        question=question_text or "(пользователь запросил оператора)",
+        source="manual",
+        ai_draft=draft,
+        reason=body.reason or "user_request",
+        project_root=getattr(app, "PROJECT_ROOT", None),
+    )
+
+    if not outcome.durable:
+        logger.error(
+            "Manual escalation failed durable insert: %s",
+            outcome.delivery_error or "unknown",
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Escalation failed: durable ticket was not created",
+        ) from None
+
     await _log_audit(
         actor=_user.get("sub", "anonymous"),
         action="escalate",
@@ -131,13 +117,19 @@ async def escalate_to_human(
         detail={
             "reason": body.reason,
             "tenant": tenant,
+            "ticket_id": outcome.ticket_id,
+            "delivery_state": outcome.delivery_state,
         },
         ip_address=request.client.host if request.client else None,
     )
 
     return {
-        "status": "ok",
-        "message": "Ваш запрос передан оператору. Мы ответим в ближайшее время.",
+        "status": "ok" if outcome.delivery_state in {"delivered", "duplicate", "pending"} else "partial",
+        "message": outcome.user_message,
+        "ticket_id": outcome.ticket_id,
+        "delivery_state": outcome.delivery_state,
+        "durable": outcome.durable,
+        "already_existed": outcome.already_existed,
     }
 
 

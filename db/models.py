@@ -202,6 +202,9 @@ class AuditLog(Base):
 
 class EscalatedTicket(Base):
     __tablename__ = "escalated_tickets"
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", name="uq_escalated_tickets_idempotency_key"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -219,6 +222,16 @@ class EscalatedTicket(Base):
     ai_draft: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     operator_response: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="open", index=True)
+    # Plan §4.3: durable escalation metadata (idempotent service + delivery state).
+    idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    source: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    trace_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    delivery_state: Mapped[str] = mapped_column(
+        String(20),
+        default="pending",
+        server_default="pending",
+    )
+    delivery_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

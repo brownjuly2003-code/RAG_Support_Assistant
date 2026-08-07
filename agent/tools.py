@@ -6,8 +6,6 @@ import uuid
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from db.engine import async_session
-from db.models import EscalatedTicket
 from vectordb.manager import get_retriever
 
 _ToolFunc = TypeVar("_ToolFunc", bound=Callable[..., Any])
@@ -76,17 +74,20 @@ async def _persist_ticket(
     user_id: str,
     session_id: str,
 ) -> str:
-    async with async_session() as db:
-        ticket = EscalatedTicket(
-            tenant_id=tenant_id,
-            session_id=session_id or user_id or str(uuid.uuid4()),
-            user_question=summary,
-            ai_draft=f"priority={priority}",
-            status="open",
-        )
-        db.add(ticket)
-        await db.commit()
-        return str(ticket.id)
+    """Legacy helper — prefers unified escalation service (plan §4.3)."""
+    from services.escalation import create_escalation
+
+    outcome = await create_escalation(
+        tenant_id=tenant_id,
+        session_id=session_id or user_id or str(uuid.uuid4()),
+        question=summary,
+        source="agentic",
+        ai_draft=f"priority={priority}",
+        reason=f"priority={priority}",
+    )
+    if not outcome.durable or not outcome.ticket_id:
+        raise RuntimeError(outcome.delivery_error or "ticket create failed")
+    return outcome.ticket_id
 
 
 @tool

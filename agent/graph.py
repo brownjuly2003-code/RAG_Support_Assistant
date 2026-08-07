@@ -127,41 +127,49 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 
-def _escalate_to_inbox(state: GraphState) -> None:
-    """Записывает ошибку в support inbox (mock или Bitrix)."""
-    import json as _json
-    import traceback as _tb  # noqa: F401 (used in format_exc)
-    from datetime import datetime, timezone
-    from pathlib import Path
+def _escalate_to_inbox(state: GraphState) -> dict[str, str | None]:
+    """Durable escalation via services.escalation (plan §4.3).
 
-    trace_id = state.get("trace_id", "unknown")
-    record = {
-        "entity_id": trace_id,
-        "question": state.get("question", ""),
-        "answer": state.get("answer"),
-        "route": "error_escalation",
-        "error_message": state.get("error_message", ""),
-        "error_node": state.get("error_node", ""),
-        "ts": datetime.now(timezone.utc).isoformat(),
-    }
+    Returns ticket_id / delivery_state for the caller. Never claims operator
+    handoff without a durable ticket (message comes from the service).
+    """
+    from services.escalation import create_escalation_sync
 
+    trace_id = str(state.get("trace_id", "unknown") or "unknown")
+    question = str(state.get("question", "") or "")
+    tenant_id = str(state.get("tenant_id", "default") or "default")
+    session_id = str(state.get("session_id") or trace_id)
+    draft = (
+        f"error_node={state.get('error_node', '')}\n"
+        f"error_message={str(state.get('error_message', ''))[:500]}"
+    )
     try:
-        from integrations.mock_inbox import get_support_sink
-        get_support_sink().send(trace_id, _json.dumps(record, ensure_ascii=False))
-        return
-    except ImportError:
-        logger.debug("mock_inbox not available, falling back to JSONL")
+        outcome = create_escalation_sync(
+            tenant_id=tenant_id,
+            session_id=session_id,
+            question=question or "(ошибка пайплайна)",
+            source="handle_error",
+            ai_draft=draft,
+            reason=str(state.get("error_node") or "pipeline_error"),
+            trace_id=trace_id,
+        )
+        return {
+            "ticket_id": outcome.ticket_id,
+            "delivery_state": outcome.delivery_state,
+            "user_message": outcome.user_message,
+            "durable": "1" if outcome.durable else "0",
+        }
     except Exception as exc:
-        logger.warning("Failed to send to support sink: %s", exc)
-
-    # Fallback: прямая запись в JSONL
-    try:
-        inbox_path = Path(__file__).resolve().parent.parent / "data" / "inbox" / "support_inbox.jsonl"
-        inbox_path.parent.mkdir(parents=True, exist_ok=True)
-        with inbox_path.open("a", encoding="utf-8") as f:
-            f.write(_json.dumps(record, ensure_ascii=False) + "\n")
-    except Exception as exc:
-        logger.error("Не удалось записать в inbox: %s", exc)
+        logger.error("Durable handle_error escalation failed: %s", exc, exc_info=True)
+        return {
+            "ticket_id": None,
+            "delivery_state": "failed",
+            "user_message": (
+                "Не удалось зарегистрировать обращение. "
+                "Повторите попытку или свяжитесь с поддержкой другим каналом."
+            ),
+            "durable": "0",
+        }
 
 
 def _make_error_state(state: GraphState, node_name: str, exc: Exception) -> GraphState:
@@ -185,7 +193,7 @@ def _make_error_state(state: GraphState, node_name: str, exc: Exception) -> Grap
 
 
 def make_handle_error_node() -> Callable[[GraphState], GraphState]:
-    """Узел handle_error: эскалирует ошибку и возвращает понятный ответ пользователю."""
+    """Узел handle_error: durable escalation + честный user message (plan §4.3)."""
 
     def node(state: GraphState) -> GraphState:
         trace_id = state.get("trace_id", "unknown")
@@ -196,7 +204,7 @@ def make_handle_error_node() -> Callable[[GraphState], GraphState]:
             extra={"trace_id": trace_id},
         )
 
-        _escalate_to_inbox(state)
+        esc = _escalate_to_inbox(state)
 
         try:
             log_step(trace_id, "handle_error", state)
@@ -205,11 +213,14 @@ def make_handle_error_node() -> Callable[[GraphState], GraphState]:
 
         return {
             **state,  # type: ignore[misc]
-            "answer": (
-                "Не удалось обработать запрос автоматически. "
-                "Ваш вопрос передан оператору — мы ответим в ближайшее время."
+            "answer": esc.get("user_message")
+            or (
+                "Не удалось зарегистрировать обращение. "
+                "Повторите попытку или свяжитесь с поддержкой другим каналом."
             ),
             "route": "error_escalation",
+            "ticket_id": esc.get("ticket_id"),
+            "delivery_state": esc.get("delivery_state"),
         }
 
     return node

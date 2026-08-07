@@ -8,6 +8,7 @@ import re
 import time
 import uuid
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -212,6 +213,9 @@ class AskResponse(BaseModel):
     requires_confirmation: bool = False
     action_summary: str = ""
     cached: bool = False
+    # Plan §4.3: durable escalation identity (only set on human/error handoff paths).
+    ticket_id: str | None = None
+    delivery_state: str | None = None
 
 
 async def _persist_ask_messages(
@@ -578,36 +582,27 @@ async def ask(
                     raise
                 except Exception as exc:
                     logger.error("Pipeline error in /ask: %s", exc, exc_info=True)
-                    answer = "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору."
-                    # Codex audit 2026-04-27 H2: до этого фикса при exception
-                    # пользователю обещали handoff, но реального escalated
-                    # ticket в БД не создавалось — оператор мог не увидеть.
-                    try:
-                        from db.engine import async_session
-                        from db.models import EscalatedTicket
+                    # Plan §4.3: single idempotent escalation service — claim
+                    # operator handoff only after durable ticket insert.
+                    from services.escalation import create_escalation
 
-                        draft = (
-                            f"Запрос пользователя: {question}\n\n"
-                            "Черновик ответа: Произошла техническая ошибка "
-                            "при обработке запроса. Пожалуйста, ответьте "
-                            "пользователю вручную."
-                        )
-                        async with async_session() as _esc_db:
-                            _esc_db.add(
-                                EscalatedTicket(
-                                    tenant_id=tenant or "default",
-                                    session_id=session_id,
-                                    user_question=question,
-                                    ai_draft=draft,
-                                    status="open",
-                                )
-                            )
-                            await _esc_db.commit()
-                    except Exception as ticket_exc:
-                        logger.warning(
-                            "Failed to persist pipeline-failure ticket: %s",
-                            ticket_exc,
-                        )
+                    draft = (
+                        f"Запрос пользователя: {question}\n\n"
+                        "Черновик ответа: Произошла техническая ошибка "
+                        "при обработке запроса. Пожалуйста, ответьте "
+                        "пользователю вручную."
+                    )
+                    esc = await create_escalation(
+                        tenant_id=tenant or "default",
+                        session_id=session_id,
+                        question=question,
+                        source="pipeline_error",
+                        ai_draft=draft,
+                        reason="pipeline_exception",
+                        trace_id=request_id or "",
+                        project_root=Path(getattr(_app, "PROJECT_ROOT", Path("."))),
+                    )
+                    answer = esc.user_message
                     if hasattr(session, "_history"):
                         session._history.append({"role": "user", "content": question})
                         session._history.append({"role": "assistant", "content": answer})
@@ -617,12 +612,14 @@ async def ask(
                     response = AskResponse(
                         answer=answer,
                         quality_score=0,
-                        route="human",
+                        route="human" if esc.durable else "error",
                         sources=[],
                         citations=[],
                         session_id=session_id,
-                        trace_id="",
+                        trace_id=request_id or "",
                         suggested_questions=[],
+                        ticket_id=esc.ticket_id,
+                        delivery_state=esc.delivery_state,
                     )
             finally:
                 # On outer timeout the done-callback owns release (capacity hold).

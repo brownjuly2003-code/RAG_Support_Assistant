@@ -47,17 +47,29 @@ def test_pipeline_exception_persists_escalated_ticket(
 
         def add(self, item):
             if item.__class__.__name__ == "EscalatedTicket":
+                if getattr(item, "id", None) is None:
+                    import uuid as _uuid
+
+                    item.id = _uuid.uuid4()
                 captured_tickets.append(
                     {
                         "tenant_id": getattr(item, "tenant_id", None),
                         "session_id": getattr(item, "session_id", None),
                         "user_question": getattr(item, "user_question", None),
                         "status": getattr(item, "status", None),
+                        "id": str(item.id),
                     }
                 )
 
         async def commit(self):
             return None
+
+        async def execute(self, stmt):  # noqa: ANN001
+            class _R:
+                def scalar_one_or_none(self):
+                    return None
+
+            return _R()
 
     async def _fake_log_audit(**kwargs):
         return None
@@ -65,6 +77,9 @@ def test_pipeline_exception_persists_escalated_ticket(
     monkeypatch.setattr(api_app, "_get_or_create_session", _fake_get_or_create_session)
     monkeypatch.setattr(api_app, "log_audit", _fake_log_audit)
     monkeypatch.setattr("db.engine.async_session", lambda: _FakeAsyncSession())
+    from pathlib import Path
+
+    monkeypatch.setattr(api_app, "PROJECT_ROOT", Path("."))
 
     response = client.post(
         "/api/ask",
@@ -75,7 +90,10 @@ def test_pipeline_exception_persists_escalated_ticket(
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["route"] == "human"
-    assert "оператор" in body["answer"].lower()
+    assert body.get("ticket_id")
+    assert body.get("delivery_state") in {"delivered", "pending", "failed"}
+    # Operator claim only when durable ticket exists (message may mention ticket).
+    assert "тикет" in body["answer"].lower() or "оператор" in body["answer"].lower()
 
     assert captured_tickets, (
         "pipeline exception must produce an EscalatedTicket — operator "
