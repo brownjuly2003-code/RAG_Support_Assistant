@@ -1,8 +1,103 @@
 # Agent State
 
+## 2026-08-07 Update-104 — completed slice 8.5 Playwright widget E2E @ `4d6be52` ✅ START HERE
+
+> **Routing authority:** Update-104 supersedes Update-103 **only for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `4d6be52`
+>   (`feat(widget): Playwright cross-origin bootstrap E2E and iframe Origin fix (8.5)`)
+>   - slice **8.5**
+> - Previous: `68a30b2` — **8.4**; docs Update-103 `48d47d6`
+> - 8 chain: `0bee13e` 8.1 · `756562e` 8.2 · `13a9a5b` 8.3 · `68a30b2` 8.4 ·
+>   **`4d6be52` 8.5**
+> - Migrations on disk (not applied): **019–023**
+> - This Update-104 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 183]` after impl (before this docs commit).
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** … **7.1–7.2** | local at documented scopes (unchanged) |
+> | **8.1–8.4** | local (bootstrap, body limits, OIDC, production secrets) |
+> | **8.5** | Playwright cross-origin widget E2E + iframe Origin fix **local** @ `4d6be52` |
+> | Full plan §1–§10 | **NOT** complete (live IdP / live multi-service / Gate A open) |
+> | Project / release / production | **NOT** claimed |
+>
+> ---
+>
+> ### 8.5 contract (local)
+>
+> - `api/routers/widget.py`: Origin header may be the **API service origin**
+>   (same-origin widget iframe POST) while `parent_origin` is the allowlisted
+>   parent; third-party Origin still must match `parent_origin` or fail 403.
+> - `tests/test_widget_e2e_playwright.py`: live uvicorn + second-origin parent
+>   host + Chromium: allowlisted handshake → JWT `type=widget` + session_id
+>   reuse; empty allowlist → CSP `frame-ancestors 'none'` + bootstrap 403;
+>   disallowed parent → 403 + no `rag-widget-bootstrapped`.
+> - Unit: service-Origin bootstrap + session reuse in `test_widget_bootstrap.py`.
+>
+> **Verification:** focused **16 passed** (widget bootstrap unit + Playwright
+> E2E); Ruff clean on touched files. Full suite / live IdP / migrate / push /
+> deploy **not** run / **not** claimed.
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next residual (default):** §7 merge-base baseline artifact **or**
+>   DEP-01 docs-site audit **or** §6 calibration / measured agentic
+> - §8 residual after 8.5: production must set `WIDGET_ALLOWED_ORIGINS`; live IdP
+> - 7 residual: merge-base; dataset; live provider gate
+> - 5 residual: live precision/recall/faithfulness ×3
+> - live multi-service + migrations **019–023** (**opt-in**)
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **§7 merge-base baseline artifact** (tests-first) **or** **DEP-01
+> docs-site dependency audit** **or** **§6 calibration residual** — pick one
+> atomic residual; do not combine with live drills without opt-in.
+>
+> **Do not re-select:** through **8.5**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked:** plan file, `_NEXT_SESSION.md` (pointer), pytest temps, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live drills, `alembic upgrade`, destructive Git, production claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; quality > speed. **Actual Git wins.**
+
+
 ## 2026-08-07 Update-103 — docs-only full transparency after 8.4 / Update-102 ✅ START HERE
 
-> **Routing authority:** Update-103 is **docs-only / transparency-only** and
+> **Historical handoff (superseded by Update-104 for start-point routing).**
+> Docs-only after **8.4** @ `68a30b2`; next was 8.5 — now done @ `4d6be52`.
+>
+> **Original routing note (archival):** Update-103 is **docs-only / transparency-only** and
 > supersedes Update-102 **only for start-point routing**. All older Update
 > blocks below, including headings that literally contain `✅ START HERE`,
 > are **archival**. **Only the first/topmost Update block in this file is

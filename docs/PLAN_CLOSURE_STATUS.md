@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-07 (Update-103 full transparency after 8.4)  
+**Date:** 2026-08-07 (Update-104 after 8.5 Playwright E2E)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-103**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-104**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -25,7 +25,7 @@
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.3 local** | OPEN (calibration / measured agentic) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.2 local** | OPEN (merge-base / dataset / live gate) | **yes** |
-| **8** widget / edge security | **8.1–8.4 local** | OPEN (**Playwright E2E** + live IdP) | yes |
+| **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | partial historical | OPEN (DEP-01 residual) | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
@@ -53,9 +53,9 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 10 | §8.2 ASGI body limits / upload stream | **done** `756562e` |
 | 11 | §8.3 OIDC email_verified / (issuer, subject) | **done** `13a9a5b` |
 | 12 | §8.4 production secrets / no dev-admin | **done** `68a30b2` |
-| 13 | **§8.5 Playwright widget E2E** | **← next** |
+| 13 | §8.5 Playwright widget E2E | **done** `4d6be52` |
 | 14 | §6.x calibration + measured agentic evaluate | residual |
-| 15 | §7.x merge-base baseline / live provider gate | residual |
+| 15 | **§7.x merge-base baseline / live provider gate** | **← next pick** |
 | 16 | §4 residual (graph tokens / parity default) | residual |
 | 17 | §2/§3 residual if product needs | residual |
 | 18 | DEP-01 docs-site dependency audit | residual |
@@ -153,22 +153,23 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **8.2** | **done local** | `756562e` | ASGI received-byte limits; upload stream + exclusive/atomic place |
 | **8.3** | **done local** | `13a9a5b` | email_verified; (issuer, subject); no rebind; shared tenant map |
 | **8.4** | **done local** | `68a30b2` | placeholders rejected; ALLOW_DEV_ADMIN_LOGIN banned in production |
-| **8.5** | **← next** | — | Playwright cross-origin widget E2E |
+| **8.5** | **done local** | `4d6be52` | Playwright cross-origin E2E; iframe Origin=API allowed; fail-closed empty/disallowed |
 
-### §8 last-known verification (not re-run in Update-103)
+### §8 last-known verification (8.5 this turn; older not re-run)
 
 | Slice | Gate | Result |
 |-------|------|--------|
+| **8.5** | `test_widget_bootstrap` + `test_widget_e2e_playwright` | **16 passed** |
 | 8.4 | `test_settings_production_secrets` + `test_cors_hardening` | **17 passed** |
 | 8.3 | `test_oidc_identity` + `test_oidc_flow` + `test_email_channel` | **19 + 9 passed** |
 | 8.2 | body limits + upload security/idempotency | **64 passed** |
-| 8.1 | widget bootstrap + security headers + assets | **12 passed** |
+| 8.1 | widget bootstrap + security headers + assets | **12 passed** (superseded unit count grows in 8.5) |
 
-**8.1 residual:** no Playwright cross-origin E2E yet; production must set `WIDGET_ALLOWED_ORIGINS`.  
+**8.1 residual:** production must set `WIDGET_ALLOWED_ORIGINS` (E2E local closed in 8.5).  
 **8.2 residual:** none local for body/upload stream scope.  
 **8.3 residual:** live IdP drill not run; legacy rows with short provider names need operator re-link if any.  
 **8.4 residual:** key rotation procedure docs optional; DEP-01 dependency audit separate.  
-**8.5 residual:** not started.
+**8.5 residual:** full browser matrix / live multi-service host not in scope; Chromium-only.
 
 ---
 
