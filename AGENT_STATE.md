@@ -1,8 +1,80 @@
 # Agent State
 
+## 2026-08-07 Update-90 — record completed slice 5.2 @ `50bb220` ✅ START HERE
+
+> **Routing authority:** Update-90 supersedes Update-89 **for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `50bb220`
+>   (`feat(grounding): bind claims to answer citations for auto (plan 5.2)`)
+>   — slice **5.2**
+> - Previous: `7c53bdb` — **5.1**; `6453530` — **4.5**
+> - Previous docs: Update-89 `249e0be`
+> - Closure matrix: `docs/PLAN_CLOSURE_STATUS.md`
+> - Migrations on disk (not applied): **019–023**
+>
+> **Branch advisory:** refresh (was ahead ~158 after impl).
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** | local documented scopes |
+> | **5.1–5.2** | fail-closed grounding + **citation-bound claims** local |
+> | Full plan §5 DoD (live metrics) | **NOT** complete |
+> | Full plan / production | **NOT** claimed |
+>
+> ---
+>
+> ### 5.2 contract (COMPLETE @ `50bb220`)
+>
+> - `apply_citation_bound_claims`: parse answer `[N]`; bind claim evidence/text
+>   only to **cited** docs (not uncited retrieval hits)
+> - Missing / invalid citations with non-empty claims → `grounding_status=not_verified`
+> - Factuality / auto count only `supported` **and** `citation_bound`
+> - `grounding_allows_auto` rejects unbound claims even if status looks verified
+> - Residual §5: grader fail-closed restore (5.3); live metric thresholds
+>
+> **Verification:** focused **54 passed** (citation-bound + grounding + fact
+> verification + graph helpers/error + agent tools + human-route); Ruff clean.
+> Full suite / live / push / deploy **not** run.
+>
+> ---
+>
+> ### Next candidate only (not started) — quality path
+>
+> named **5.3 — grader / top-1 / all-docs-rejected fail-closed**
+> (tests-first): grader error, forced top-1, all-docs-rejected must not silently
+> restore original context as success; outcome = controlled rewrite,
+> `not_verified`, or human.
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–i, 4.1–4.5, **5.1–5.2**.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live multi-service, alembic upgrade 019–023, production claims.
+>
+> **Standing preference:** one named atomic slice per turn; quality > speed;
+> local commit only. See `docs/PLAN_CLOSURE_STATUS.md`.
+>
+> **Git advisory:** refresh status/log — **actual Git wins**.
+
+
 ## 2026-08-07 Update-89 — record completed slice 5.1 @ `7c53bdb` ✅ START HERE
 
-> **Routing authority:** Update-89 supersedes Update-88 **for start-point
+> **Historical handoff (superseded by Update-90 for start-point routing).**
+> Recorded **5.1** @ `7c53bdb`. **5.2** complete under Update-90.
+>
+> **Original routing note (archival):** Update-89 supersedes Update-88 **for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old
