@@ -11,6 +11,7 @@ from typing import Any
 from config.settings import get_settings
 from utils.tenant_naming import physical_tenant_component
 from vectordb.index_lifecycle_faults import (
+    CLEANUP,
     EMBEDDINGS,
     KNOWN_QUERY,
     IndexLifecycleFaultError,
@@ -153,6 +154,9 @@ def _cleanup_candidate(
     collection_name: str,
 ) -> None:
     try:
+        # Inject before delete so a failed discard cannot be mistaken for a
+        # successful cleanup, and cannot advance inventory/publish.
+        maybe_inject(CLEANUP)
         target = store
         if target is None:
             target = chroma_cls(
@@ -164,6 +168,9 @@ def _cleanup_candidate(
         if not callable(delete_collection):
             raise RuntimeError("delete_collection is unavailable")
         delete_collection()
+    except IndexLifecycleFaultError:
+        # Named lifecycle faults surface as-is (not wrapped as cleanup errors).
+        raise
     except Exception as exc:
         raise IndexStagingCleanupError(
             "Unpublished staged collection cleanup failed"

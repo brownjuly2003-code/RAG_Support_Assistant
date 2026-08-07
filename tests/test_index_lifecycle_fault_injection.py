@@ -1,4 +1,4 @@
-"""2.6a/2.6b/2.6c — index lifecycle fail-closed fault injection.
+"""2.6a–2.6d — index lifecycle fail-closed fault injection.
 
 Proves named lifecycle fault points:
 1. Inventory-write failure does not change the active manifest and discards the
@@ -9,6 +9,8 @@ Proves named lifecycle fault points:
    and discards the unpublished candidate with the active manifest unchanged.
 4. Embeddings dimension validation failure (2.6c) cleans the partial candidate
    during build, never reaches inventory/publish, and keeps the active manifest.
+5. Cleanup discard-path failure (2.6d) surfaces without publishing; active
+   manifest stays unchanged even when the unpublished candidate cannot be deleted.
 """
 from __future__ import annotations
 
@@ -212,7 +214,7 @@ def _clear_lifecycle_faults() -> Iterator[None]:
         clear_faults()
 
 
-def test_known_fault_points_include_inventory_manifest_known_query_embeddings() -> None:
+def test_known_fault_points_include_inventory_through_cleanup() -> None:
     from vectordb import index_lifecycle_faults as faults
 
     assert faults.known_fault_points() == frozenset(
@@ -221,10 +223,11 @@ def test_known_fault_points_include_inventory_manifest_known_query_embeddings() 
             faults.MANIFEST_PUBLISH,
             faults.KNOWN_QUERY,
             faults.EMBEDDINGS,
+            faults.CLEANUP,
         }
     )
     with pytest.raises(ValueError, match="Unknown index lifecycle fault point"):
-        faults.arm_fault("cleanup", RuntimeError("nope"))
+        faults.arm_fault("concurrency", RuntimeError("nope"))
 
 
 def test_inventory_write_fault_keeps_active_manifest_and_discards_candidate(
@@ -589,6 +592,180 @@ def test_embeddings_fault_cleans_candidate_before_inventory_or_publish(
     )
 
 
+def test_cleanup_fault_after_known_query_failure_does_not_publish(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """2.6d: cleanup fault on discard surfaces; active stays put; no publish."""
+    from vectordb.index_lifecycle_faults import (
+        CLEANUP,
+        KNOWN_QUERY,
+        IndexLifecycleFaultError,
+        arm_fault,
+        clear_faults,
+        is_armed,
+    )
+    from vectordb.index_manifest import index_manifest_path, read_index_manifest
+    from vectordb.index_retention import read_retention_inventory
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    active_name = "rag_docs-v-acme-1111111111111111"
+    state.documents[active_name] = [
+        manager.Document(page_content="still active", metadata={"chunk_index": 0})
+    ]
+    _publish(monkeypatch, chroma_directory, active_name)
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    manifest_before = manifest_path.read_bytes()
+    retention_calls: list[str] = []
+    inventory_calls: list[str] = []
+    publish_calls: list[str] = []
+
+    real_record = manager.record_retention_collection
+    real_publish = manager.publish_active_collection
+
+    def _spy_record(*args: Any, **kwargs: Any) -> Any:
+        inventory_calls.append(str(args[1]))
+        return real_record(*args, **kwargs)
+
+    def _spy_publish(*args: Any, **kwargs: Any) -> Any:
+        publish_calls.append(str(args[1]))
+        return real_publish(*args, **kwargs)
+
+    def _spy_retention(*args: Any, **kwargs: Any) -> tuple[str, ...]:
+        retention_calls.append("called")
+        return ()
+
+    monkeypatch.setattr(manager, "record_retention_collection", _spy_record)
+    monkeypatch.setattr(manager, "publish_active_collection", _spy_publish)
+    monkeypatch.setattr(
+        manager,
+        "execute_chroma_retention",
+        _spy_retention,
+        raising=False,
+    )
+
+    arm_fault(
+        KNOWN_QUERY,
+        IndexLifecycleFaultError("known-query validation injected failure"),
+    )
+    arm_fault(
+        CLEANUP,
+        IndexLifecycleFaultError("cleanup discard injected failure"),
+    )
+    try:
+        assert is_armed(KNOWN_QUERY)
+        assert is_armed(CLEANUP)
+        with pytest.raises(
+            IndexLifecycleFaultError,
+            match="cleanup discard injected failure",
+        ):
+            manager.build_vector_store(
+                [
+                    manager.Document(
+                        page_content="candidate body",
+                        metadata={"source": "new.md"},
+                    )
+                ],
+                {"chunk_size": 100, "chunk_overlap": 0},
+                embeddings=_Embeddings(),
+                tenant_id="acme",
+            )
+    finally:
+        clear_faults()
+
+    assert not is_armed(KNOWN_QUERY)
+    assert not is_armed(CLEANUP)
+    candidate_name = state.built_names[-1]
+    assert candidate_name != active_name
+    # Cleanup inject fires before delete_collection, so discard did not complete.
+    assert candidate_name not in state.deleted_names
+    assert candidate_name in state.documents
+    assert active_name in state.documents
+    assert inventory_calls == []
+    assert publish_calls == []
+    assert retention_calls == []
+    assert manifest_path.read_bytes() == manifest_before
+    active = read_index_manifest("acme", chroma_directory=chroma_directory)
+    assert active is not None
+    assert active.active_collection == active_name
+    # Failed discard must not promote the orphan candidate to active.
+    assert active.active_collection != candidate_name
+    assert (
+        read_retention_inventory("acme", chroma_directory=chroma_directory) is None
+    )
+
+
+def test_cleanup_fault_during_embeddings_failure_does_not_publish(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """2.6d: cleanup fault during staging self-cleanup also stays fail-closed."""
+    from vectordb.index_lifecycle_faults import (
+        CLEANUP,
+        EMBEDDINGS,
+        IndexLifecycleFaultError,
+        arm_fault,
+        clear_faults,
+    )
+    from vectordb.index_manifest import index_manifest_path, read_index_manifest
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    state = _FakeChromaState()
+    manager = _configure_manager(monkeypatch, chroma_directory, state)
+    active_name = "rag_docs-v-acme-1111111111111111"
+    state.documents[active_name] = [
+        manager.Document(page_content="still active", metadata={"chunk_index": 0})
+    ]
+    _publish(monkeypatch, chroma_directory, active_name)
+    manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
+    manifest_before = manifest_path.read_bytes()
+
+    monkeypatch.setattr(
+        manager,
+        "execute_chroma_retention",
+        lambda *args, **kwargs: (),
+        raising=False,
+    )
+
+    arm_fault(
+        EMBEDDINGS,
+        IndexLifecycleFaultError("embeddings validation injected failure"),
+    )
+    arm_fault(
+        CLEANUP,
+        IndexLifecycleFaultError("cleanup discard injected failure"),
+    )
+    try:
+        with pytest.raises(
+            IndexLifecycleFaultError,
+            match="cleanup discard injected failure",
+        ):
+            manager.build_vector_store(
+                [
+                    manager.Document(
+                        page_content="candidate body",
+                        metadata={"source": "new.md"},
+                    )
+                ],
+                {"chunk_size": 100, "chunk_overlap": 0},
+                embeddings=_Embeddings(),
+                tenant_id="acme",
+            )
+    finally:
+        clear_faults()
+
+    candidate_name = state.built_names[-1]
+    assert candidate_name not in state.deleted_names
+    assert candidate_name in state.documents
+    assert active_name in state.documents
+    assert manifest_path.read_bytes() == manifest_before
+    active = read_index_manifest("acme", chroma_directory=chroma_directory)
+    assert active is not None
+    assert active.active_collection == active_name
+
+
 def test_unarmed_build_still_publishes_and_records_inventory(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -618,6 +795,7 @@ def test_unarmed_build_still_publishes_and_records_inventory(
     assert not is_armed("manifest_publish")
     assert not is_armed("known_query")
     assert not is_armed("embeddings")
+    assert not is_armed("cleanup")
 
     store, chunks = manager.build_vector_store(
         [
