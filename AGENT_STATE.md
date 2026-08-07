@@ -1,8 +1,89 @@
 # Agent State
 
+## 2026-08-07 Update-89 — record completed slice 5.1 @ `7c53bdb` ✅ START HERE
+
+> **Routing authority:** Update-89 supersedes Update-88 **for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `7c53bdb`
+>   (`feat(grounding): fail-closed status and auto-route gate (plan 5.1)`)
+>   — slice **5.1**
+> - Previous: `6453530` — **4.5**; `0371971` — **4.4**
+> - Previous docs: Update-88 `1c5143c`
+> - Closure matrix: `docs/PLAN_CLOSURE_STATUS.md` (honest residual; plan ACTIVE)
+> - Migrations on disk (not applied): **019–023**
+> - This Update-89 docs SHA unknown in-file → `git log -5 --oneline`
+>
+> **Branch advisory:** refresh `master...origin/master` (was ahead ~156).
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** | local documented scopes |
+> | **5.1** | grounding_status + fail-closed auto gate **local** |
+> | Full plan §1–§10 | **NOT** complete |
+> | Full plan §5 DoD (live metrics) | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
+>
+> Plan checkboxes remain open until behavioral DoD + evidence.
+>
+> ---
+>
+> ### 5.1 contract (COMPLETE @ `7c53bdb`)
+>
+> - `agent/grounding.py`: status helpers + `grounding_allows_auto`
+> - `grounding_status`: `verified` | `unsupported` | `not_verified`
+> - Never factuality **100** on: disabled verify, no context, short answer,
+>   skip (simple path), claim-budget truncation
+> - Extractor `NONE` → vacuous `verified` with factuality **0** (not 100)
+> - `route_or_retry`: `auto` only if quality+relevance **and** grounding allows
+>   (context, `knowledge_gap=false`, verified, factuality floor when claims)
+> - Residual §5: citation-bound claim support, grader fail-closed restore,
+>   live precision/recall/faithfulness gate
+>
+> **Verification:** focused **45 passed** (grounding + fact verification +
+> graph helpers/error + agent tools + human-route); Ruff clean.
+> Full suite / live / push / deploy **not** run.
+>
+> ---
+>
+> ### Next candidate only (not started) — quality path
+>
+> named **5.2 — citation-bound claim support for auto**
+> (tests-first): substantial claims must be supported by cited `[N]` docs;
+> unsupported citation mapping → not_verified/human; still no live benchmarks
+> as sole gate.
+>
+> **Alternates:** 5.3 grader fail-closed; §6 judge independence; 4.6 outbox schedule.
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–i, 4.1–4.5, **5.1**.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live multi-service, alembic upgrade 019–023, production claims.
+>
+> **Standing preference:** one named atomic slice per turn; quality > speed;
+> local commit only. See `docs/PLAN_CLOSURE_STATUS.md` for full residual matrix.
+>
+> **Git advisory:** refresh status/log — **actual Git wins**.
+
+
 ## 2026-08-07 Update-88 — record completed slice 4.5 @ `6453530` ✅ START HERE
 
-> **Routing authority:** Update-88 supersedes Update-87 **for start-point
+> **Historical handoff (superseded by Update-89 for start-point routing).**
+> Recorded **4.5** @ `6453530`. **5.1** complete under Update-89.
+>
+> **Original routing note (archival):** Update-88 supersedes Update-87 **for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old
