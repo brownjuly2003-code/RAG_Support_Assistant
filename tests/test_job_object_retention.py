@@ -1,9 +1,10 @@
-"""Job-object retention policy (plan 2.4g).
+"""Job-object retention policy + guarded command (plan 2.4g / 2.4h).
 
-Fail-closed eligibility assessment for immutable upload originals.
-This contract never deletes, renames, or mutates files and never invents
-age/budget auto-delete thresholds. Under current policy every known
-classification is never auto-deletable.
+Fail-closed eligibility assessment and guarded no-op execution for
+immutable upload originals. This contract never deletes, renames, or
+mutates files and never invents age/budget auto-delete thresholds.
+Under current policy every known classification is never auto-deletable
+and only an empty expected_candidates tuple may execute (as a no-op).
 """
 from __future__ import annotations
 
@@ -205,3 +206,149 @@ def test_compose_preview_then_policy_is_fail_closed(
     assert all(d.disposition == "never_auto_delete" for d in assessment.dispositions)
     assert absolute.is_file() and absolute.read_bytes() == b"v1"
     assert orphan.is_file() and orphan.read_bytes() == b"orphan"
+
+
+# ---------------------------------------------------------------------------
+# 2.4h — guarded retention command (empty expected only; no-op; no FS mutate)
+# ---------------------------------------------------------------------------
+
+
+def test_execute_empty_expected_candidates_is_noop_complete() -> None:
+    pol = _retention()
+    job_id = str(uuid.uuid4())
+    entries = (
+        _entry(
+            relative_path=f"job-objects/{job_id}/a.md",
+            kind="job_object",
+            classification="protected",
+            job_id=job_id,
+        ),
+        _entry(
+            relative_path=f"job-objects/{uuid.uuid4()}/orphan.md",
+            kind="job_object",
+            classification="unrecorded",
+            job_id=str(uuid.uuid4()),
+        ),
+    )
+
+    result = pol.execute_job_object_retention(
+        tenant_id="acme",
+        entries=entries,
+        expected_candidates=(),
+    )
+
+    assert result.tenant_id == "acme"
+    assert result.expected_candidates == ()
+    assert result.deleted == ()
+    assert result.status == "complete"
+
+
+def test_execute_falsey_tenant_normalizes_to_default() -> None:
+    pol = _retention()
+    result = pol.execute_job_object_retention(
+        tenant_id="  ",
+        entries=(),
+        expected_candidates=(),
+    )
+    assert result.tenant_id == "default"
+    assert result.deleted == ()
+    assert result.status == "complete"
+
+
+def test_execute_non_empty_expected_candidates_conflicts() -> None:
+    pol = _retention()
+    with pytest.raises(pol.JobObjectRetentionExecutionConflict):
+        pol.execute_job_object_retention(
+            tenant_id="t1",
+            entries=(),
+            expected_candidates=("job-objects/x/y.md",),
+        )
+
+
+def test_execute_rejects_non_tuple_or_invalid_candidates() -> None:
+    pol = _retention()
+    with pytest.raises(pol.JobObjectRetentionValidationError):
+        pol.execute_job_object_retention(
+            tenant_id="t1",
+            entries=(),
+            expected_candidates=["not", "a", "tuple"],  # type: ignore[arg-type]
+        )
+    with pytest.raises(pol.JobObjectRetentionValidationError):
+        pol.execute_job_object_retention(
+            tenant_id="t1",
+            entries=(),
+            expected_candidates=("",),
+        )
+    with pytest.raises(pol.JobObjectRetentionValidationError):
+        pol.execute_job_object_retention(
+            tenant_id="t1",
+            entries=(),
+            expected_candidates=("a", "a"),
+        )
+
+
+def test_execute_unknown_classification_fails_closed() -> None:
+    pol = _retention()
+    bad = _entry(
+        relative_path="job-objects/x/y.md",
+        kind="job_object",
+        classification="deletable",
+        job_id=str(uuid.uuid4()),
+    )
+    with pytest.raises(pol.JobObjectRetentionValidationError):
+        pol.execute_job_object_retention(
+            tenant_id="t1",
+            entries=(bad,),
+            expected_candidates=(),
+        )
+
+
+def test_execute_never_mutates_filesystem(tmp_path: Path) -> None:
+    pol = _retention()
+    inv = _inventory()
+    project_root = tmp_path / "project"
+    upload_dir = project_root / "data" / "uploads"
+    job_id = uuid.uuid4()
+    path = upload_dir / "job-objects" / str(job_id) / "doc.md"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"keep-me")
+    entries = inv.classify_job_object_tree(
+        upload_dir,
+        known_jobs=(),
+        project_root=project_root,
+    )
+
+    result = pol.execute_job_object_retention(
+        tenant_id="fs-tenant",
+        entries=entries,
+        expected_candidates=(),
+    )
+
+    assert result.deleted == ()
+    assert result.status == "complete"
+    assert path.is_file()
+    assert path.read_bytes() == b"keep-me"
+
+
+def test_execute_matches_policy_candidates_only() -> None:
+    """Recomputed policy candidates must equal expected (always empty today)."""
+    pol = _retention()
+    job_id = str(uuid.uuid4())
+    entries = (
+        _entry(
+            relative_path=f"job-objects/{job_id}/a.md",
+            kind="job_object",
+            classification="untrusted",
+            job_id=job_id,
+        ),
+    )
+    assessment = pol.assess_job_object_retention_policy(entries)
+    assert assessment.auto_delete_candidates == ()
+
+    result = pol.execute_job_object_retention(
+        tenant_id="match",
+        entries=entries,
+        expected_candidates=assessment.auto_delete_candidates,
+    )
+    assert result.deleted == ()
+    assert result.expected_candidates == assessment.auto_delete_candidates
