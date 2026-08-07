@@ -1,12 +1,11 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 (Update-64 docs-only / transparency after
-completed **2.5b** @ `6dbabef` + Update-63 docs `770c4bd`; next ordered
-candidate **2.6a fault injection — inventory/publish fail-closed**)
+**Обновлено:** 2026-08-07 (Update-65 records completed **2.6a** @ `3f3c699`;
+next ordered candidate **2.6b** residual fault injection)
 
 **Назначение:** самодостаточный next-session handoff после compacted context.
 Routing: **только** верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md)
-(**Update-64**). Older blocks with literal `✅ START HERE` are **archival**.
+(**Update-65**). Older blocks with literal `✅ START HERE` are **archival**.
 Plan source (untracked/protected):
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
 
@@ -18,25 +17,22 @@ Plan source (untracked/protected):
 
 | Факт | Значение |
 |------|----------|
-| Latest implementation | `6dbabef` — **2.5b** durable job↔index lifecycle bind |
-| Latest impl docs (Update-63) | `770c4bd` |
-| This Update-64 docs commit | **unknown in-file**; next session: `git log -5 --oneline` |
-| Previous implementation | `0855528` — **2.5a** admin job-object inventory GET |
-| Branch advisory | was `ahead 108` before Update-64 — **refresh mandatory** |
+| Latest implementation | `3f3c699` — **2.6a** inventory/publish fail-closed fault injection |
+| Latest impl docs before Update-65 | Update-64 @ `5ff8cef` (transparency after 2.5b) |
+| This Update-65 docs commit | **unknown in-file**; next session: `git log -5 --oneline` |
+| Previous implementation | `6dbabef` — **2.5b** durable job↔index lifecycle bind |
+| Branch advisory | was `ahead 110` after 2.6a impl — **refresh mandatory** |
 | Active writer / unfinished WIP | **none** |
-| Locally complete (documented scopes only) | **2.1–2.4k + 2.5a + 2.5b** |
+| Locally complete (documented scopes only) | **2.1–2.4k + 2.5a + 2.5b + 2.6a** |
 | Full plan §2 / project / release / prod | **NOT** complete / **NOT** claimed |
-| Next ordered candidate | **2.6a** fault injection @ inventory/publish fail-closed (**not started**) |
+| Next ordered candidate | **2.6b** residual fault injection (**not started**) |
 | Gates | no push / deploy / live services / destructive Git / prod claims |
 
-**Transparency-only Update-64:** no implementation/test/plan-checkbox/backlog
-change; project tests **not** rerun here. Implementation state unchanged after
-`6dbabef` / **2.5b**.
-
-**Known verification (2.5b; last impl gate):** focused **51 passed**
-(`tests/test_ingestion_job_contract.py` + `tests/test_ingest_task.py` +
-`tests/test_admin_job_object_inventory.py`); Ruff clean on scoped paths.
-Full suite / live Postgres migration of **022** **not** run.
+**Known verification (2.6a):** focused **6 passed**
+(`tests/test_index_lifecycle_fault_injection.py` + adjacent inventory/publish
+fail paths); Ruff clean on scoped paths. Pre-existing unrelated red:
+`test_runtime_retention_signature_source_boundary_and_no_production_callers`
+(admin_ops retention caller). Full suite / live drills **not** run.
 
 **Key invariant:** failed jobs with `source_path`-matched job-objects →
 `retained_after_failed_transition` (intentional retention, **not** GC).
@@ -50,13 +46,15 @@ Full suite / live Postgres migration of **022** **not** run.
 | 2.2 bounded retention | 2.2, 2.3f–2.3i | live DoD open |
 | operator surface rollback/retention | index 2.3b–2.3i; job-objects 2.4i–2.5a | no job-object delete HTTP |
 | immutable originals + lifecycle bind | 2.4a–2.5b | no real FS delete / age-budget |
-| **fault injection expand** | **not started** | **← next (2.6a first)** |
-| live PG/Redis/Celery/Chroma + migrations | not started | **opt-in only**; migrations now **019–022** |
+| **fault injection expand** | **2.6a** inventory/publish | **← next 2.6b+** |
+| live PG/Redis/Celery/Chroma + migrations | not started | **opt-in only**; migrations **019–022** |
 
 ### Module owners (do not reopen without proven conflict)
 
 | Module / path | Slice | Role |
 |---------------|-------|------|
+| `vectordb/index_lifecycle_faults.py` | **2.6a** | named inventory_write / manifest_publish fault points |
+| `vectordb/index_retention.py` + `index_manifest.py` | 2.1 + **2.6a** hooks | durable inventory + publish commit boundaries |
 | `vectordb/*` index inventory/retention/rollback | 2.1–2.3i | Chroma subsystem — must **not** delete job-objects |
 | `api/routers/upload.py` | 2.4a + receipts | create path: job → immutable → legacy-previous → flat |
 | `tasks/ingest_task.py` | 2.4c | async receipt + complete |
@@ -88,11 +86,10 @@ historical `START HERE`. Never treating dirty backlog/legacy plan as queue.
 1. Cycle-guard preflight on the latest user message.
 2. `cd D:\RAG_Support_Assistant`
 3. `git status --short --branch` and `git log -5 --oneline` (**actual Git wins**
-   over hashes below; known impl `6dbabef` / **2.5b**; known Update-63
-   `770c4bd`; Update-64 SHA from fresh log).
-4. Read **only** top **Update-64** in `AGENT_STATE.md` + this capsule.
-   Do **not** reselect **2.1–2.5b**.
-5. Execute **one** named slice: default **2.6a** (below). Announce
+   over hashes below; known impl `3f3c699` / **2.6a**).
+4. Read **only** top **Update-65** in `AGENT_STATE.md` + this capsule.
+   Do **not** reselect **2.1–2.6a**.
+5. Execute **one** named slice: default **2.6b** (below). Announce
    `slice 1/1`, `delegated run N/3`, `QA follow-up N/1`.
 6. Tests-first → proportional gate → explicit-path local commit only (no push).
 7. Optional handoff refresh; **stop/yield** after one slice.
@@ -105,15 +102,15 @@ PostgreSQL/Redis/Celery/Chroma drills, destructive Git, production claims.
 ## Назначение и приоритет источников
 
 1. Fresh `git status` / `git log` — filesystem/Git truth.
-2. Top `AGENT_STATE.md` (**Update-64**) + this capsule.
+2. Top `AGENT_STATE.md` (**Update-65**) + this capsule.
 3. Dirty `BACKLOG.md` / `README.md` / `audit_gpt_*` / `plan_sol_23_07_26` —
-   protected user state; **stale**; do not override Update-64.
+   protected user state; **stale**; do not override Update-65.
 4. `_NEXT_SESSION.md` — pointer only.
 5. `rag-remediation-plan-2026-08-03.md` — active plan direction; **do not**
    edit checkboxes casually.
 6. One user turn = one named atomic slice.
 
-**Authoritative implementation:** `6dbabef` (**2.5b**). Do not invent future
+**Authoritative implementation:** `3f3c699` (**2.6a**). Do not invent future
 docs SHAs inside content.
 
 ---
@@ -137,9 +134,10 @@ docs SHAs inside content.
 | **2.4j** | failed-transition ownership annotations | `ea3f59e` | Update-59/60 |
 | **2.4k** | job status load + CLI annotations | `9e358f1` | Update-61 |
 | **2.5a** | admin GET job-object inventory | `0855528` | Update-62 |
-| **2.5b** | durable job↔index publication bind | `6dbabef` | Update-63 + **Update-64** |
+| **2.5b** | durable job↔index publication bind | `6dbabef` | Update-63 + Update-64 |
+| **2.6a** | inventory/publish fail-closed fault injection | `3f3c699` | **Update-65** |
 
-**Do not re-select 2.1–2.5b.**
+**Do not re-select 2.1–2.6a.**
 
 ---
 
@@ -190,65 +188,83 @@ At `0855528`:
 
 ---
 
-## Следующий named candidate: 2.6a fault injection (не начат)
+## 2.6a (inventory/publish fail-closed fault injection) — COMPLETE
 
-**Plan order:** next §2 bullet after lifecycle bind.
-**Name:** **2.6a — inventory/publish fail-closed injection** (first atomic
-sub-slice of broader fault-injection bullet).
+At `3f3c699`:
 
-### Intent
+- `vectordb/index_lifecycle_faults.py` — points `inventory_write`,
+  `manifest_publish`; `arm_fault` / `fault_armed` / `maybe_inject`; no-op
+  default; no env/settings switch
+- hooks immediately before durable `os.replace` in
+  `index_retention._write_inventory` and
+  `index_manifest.publish_active_collection`
+- `tests/test_index_lifecycle_fault_injection.py` — inventory-write fault
+  keeps active manifest + discards candidate; publish fault discards
+  candidate without live switch; unarmed happy path still publishes
 
-Prove fail-closed index lifecycle under injected faults at the
-inventory/publish boundary (language from plan 2.1 DoD + fault-injection
-bullet):
+**Boundary:** inventory/publish commit-boundary injection only. No deletion,
+age/budget, embeddings/validation/cleanup matrix, concurrency matrix, or
+live drills.
 
-1. Inventory-write failure must **not** change the active manifest.
-2. Publish failure must **not** leave a dangerous live candidate.
-3. Preferred shape: tests-first injectable fault points (or existing hooks)
-   around inventory write / publish switch — **not** a live multi-service
-   drill.
+**Verification:** 6 passed focused; Ruff clean. Pre-existing unrelated red
+in `test_runtime_retention_signature_source_boundary_and_no_production_callers`.
 
-### Suggested acceptance (tests-first)
-
-1. Focused tests that force failure at inventory write **and/or** publish
-   boundary; assert manifest/active collection unchanged where required.
-2. No new auto-delete classes; no job-object FS deletion; no age/budget.
-3. Scoped Ruff + proportional adjacent tests green.
-4. Local commit only; optional handoff Update after slice.
-5. **Do not** start concurrent-upload / worker-recovery matrix in the same
-   turn (those are later 2.6b+).
-
-### Candidate ownership (confirm before edits)
-
-| Surface | Likely modules | Notes |
-|---------|----------------|-------|
-| Inventory / publish | `vectordb/*` (inventory, manifest, manager) | primary |
-| Upload/worker paths | `api/routers/upload.py`, `tasks/ingest_task.py` | only if required for inject |
-| Job bind columns | `ingestion/jobs.py` 2.5b | **do not** reopen unless conflict |
-| Job-object GC | job_object_* | **do not** invent deletion |
-
-### Explicitly out of 2.6a
-
-- real FS job-object deletion / age-budget
-- live PG/Redis/Celery/Chroma (opt-in separate)
-- full embeddings→cleanup fault matrix (later sub-slices)
-- plan checkbox bulk-edit
-- push / deploy
-
-### Reference commands (2.6a — after work lands)
+### Reference commands (2.6a)
 
 ```powershell
-# Adjust modules once 2.6a lands; keep scoped:
-python -m pytest tests/<new_or_targeted> -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-6a-<unique>
+python -m pytest tests/test_index_lifecycle_fault_injection.py tests/test_index_runtime_switch.py::test_inventory_record_failure_does_not_publish_and_discards_candidate tests/test_index_runtime_switch.py::test_publish_failure_removes_unpublished_candidate_and_preserves_manifest -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-6a-<unique>
+python -m ruff check vectordb/index_lifecycle_faults.py vectordb/index_retention.py vectordb/index_manifest.py tests/test_index_lifecycle_fault_injection.py
 ```
 
 ---
 
-## Что остаётся открытым (после 2.5b / Update-64)
+## Следующий named candidate: 2.6b residual fault injection (не начат)
 
-- **2.6a+** fault injection expansion (next ordered)
+**Plan order:** residual of §2 fault-injection bullet after **2.6a**.
+**Name:** **2.6b — validation/known-query (or embeddings) fail-closed
+injection** (preferred first residual), **or** a single concurrency /
+lock-contention atomic if product priority shifts — **one** per turn.
+
+### Intent
+
+Extend named lifecycle fault points beyond inventory/publish, still
+tests-first and fail-closed:
+
+1. Prefer next point on known-query/validation (or embeddings) before
+   inventory, proving active manifest unchanged and candidate discarded.
+2. Reuse `vectordb/index_lifecycle_faults.py` pattern — add a **known** point
+   name; keep no-op default; no env arming switch unless later opt-in.
+3. Do **not** start full concurrency + worker-recovery matrix in the same
+   turn as a new validation fault point.
+
+### Suggested acceptance (tests-first)
+
+1. One new named fault point + focused tests on the build path.
+2. No auto-delete / age-budget / plan checkbox edits.
+3. Scoped Ruff + proportional adjacent green.
+4. Local commit only; optional handoff Update after slice.
+
+### Explicitly out of 2.6b
+
+- real FS job-object deletion / age-budget
+- live PG/Redis/Celery/Chroma (opt-in separate)
+- full concurrent + worker-recovery matrix as a multi-slice dump
+- plan checkbox bulk-edit
+- push / deploy
+
+### Reference commands (2.6b — after work lands)
+
+```powershell
+python -m pytest tests/<new_or_targeted> -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-6b-<unique>
+```
+
+---
+
+## Что остаётся открытым (после 2.6a / Update-65)
+
+- **2.6b+** residual fault injection (next ordered)
 - concurrent same-tenant uploads, duplicate job, worker outage/recovery,
-  lock contention (later sub-slices under fault injection)
+  lock contention (later sub-slices)
 - live migrations **019–022** + worker recovery + advisory-lock drills
   (**opt-in**)
 - real job-object / legacy-previous **FS deletion** (needs product opt-in;
@@ -258,8 +274,8 @@ python -m pytest tests/<new_or_targeted> -q -p no:cacheprovider -p no:schemathes
 - job-object retention **execute** HTTP
 - full suite, release gates, project/production readiness
 
-**Superseded next-work text:** any handoff still saying next is 2.4k, 2.5a,
-2.5b, or vague “re-scope only” without naming **2.6a** is **stale**.
+**Superseded next-work text:** any handoff still saying next is 2.5b, 2.6a,
+or vague “re-scope only” without naming **2.6b** is **stale**.
 
 ---
 
@@ -274,7 +290,7 @@ python -m pytest tests/<new_or_targeted> -q -p no:cacheprovider -p no:schemathes
 
 ## Do not
 
-- Re-select **2.1–2.5b**
+- Re-select **2.1–2.6a**
 - Treat failed job-objects as deletable orphans
 - Invent auto-delete classes or age/budget thresholds without opt-in
 - Edit plan checkboxes from casual docs turns
