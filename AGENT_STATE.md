@@ -1,65 +1,119 @@
 # Agent State
 
-## 2026-08-07 Update-70 — record completed slice 2.6f @ `53a398f` ✅ START HERE
+## 2026-08-07 Update-71 — docs-only transparency after Update-70 / 2.6f ✅ START HERE
 
-> **Routing authority:** Update-70 records completed **2.6f** and supersedes
-> Update-69 **only for start-point routing**. All older Update blocks below,
-> including headings that literally contain `✅ START HERE`, are **archival**.
-> **Only the first/topmost Update block in this file is authoritative.**
+> **Routing authority:** Update-71 is **docs-only / transparency-only** and
+> supersedes Update-70 **only for start-point routing**. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`,
+> are **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
+>
+> **No new implementation in this docs turn.** Code, tests, plans, backlog,
+> README, audit, settings, and API paths were **not** edited here. Project
+> tests were **not** rerun. Protected dirty `BACKLOG.md`, `README.md`,
+> `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and untracked artifacts
+> (active plan, pytest temps, presentations, `_NEXT_SESSION.md`) were not
+> touched beyond pointer refresh where listed.
 >
 > **Known lineage (actual Git wins over any embedded hash):**
 > - Latest implementation: `53a398f`
 >   (`feat(ingestion): prove duplicate job fail-closed without double publish`) —
 >   slice **2.6f**
-> - Previous docs: `71488c2` (Update-69)
+> - Latest impl docs before this turn: `767d283`
+>   (`docs: record 2.6f duplicate job fail-closed`) — Update-70
 > - Previous implementation: `fbc2293` (**2.6e** lock contention)
+> - Previous docs: `71488c2` (Update-69)
+> - This Update-71 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
 >
-> **Completion truth:**
+> **Completion truth (unchanged by this docs turn):**
 > | Band | Status |
 > |------|--------|
-> | **2.1–2.5b** | locally complete at documented scopes |
-> | **2.6a–2.6e** | lifecycle faults + lock contention |
+> | **2.1–2.3i** | index inventory / retention / rollback / admin (documented scopes) |
+> | **2.4a–2.4k** | job-object stack (immutable → receipts → classify → policy → CLI → annotations) |
+> | **2.5a** | read-only admin job-object inventory HTTP |
+> | **2.5b** | durable job↔index publication bind (`022`) |
+> | **2.6a** | inventory/publish lifecycle fault injection |
+> | **2.6b** | known-query fault injection |
+> | **2.6c** | embeddings fault injection |
+> | **2.6d** | cleanup discard-path fault injection |
+> | **2.6e** | same-tenant rebuild lock contention fail-closed |
 > | **2.6f** | duplicate job fail-closed (no double publish) |
 > | Full plan §2 | **NOT** complete |
 > | Project / release / production | **NOT** claimed |
 >
-> **Plan §2 residual map:**
-> | Item | Local |
-> |------|-------|
-> | inventory/publish/validation/embeddings/cleanup faults | 2.6a–2.6d |
-> | concurrent lock contention | 2.6e |
-> | duplicate job | **2.6f** |
-> | worker outage/recovery | **← next 2.6g** |
-> | live PG/Redis/Celery/Chroma drills | opt-in only |
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md` §2.
+> Checkboxes stay open until full DoD — **do not** edit them from docs.
 >
-> **2.6f contract:**
-> - `tests/test_duplicate_job_fail_closed.py`
-> - terminal completed/failed redelivery → `JobOwnershipError` before load/build
-> - concurrent claim → exactly one winner; loser fail-closed
-> - idempotent create reuse → one row
-> - no production path change required (claim already `status==queued` CAS)
+> **Plan §2 → local progress map (honest):**
+> | Plan §2 bullet (order) | Local slices | Residual |
+> |------------------------|--------------|----------|
+> | 2.1 inventory under lock | 2.1 + related | live DoD open |
+> | 2.2 bounded retention | 2.2, 2.3f–2.3i | live DoD open |
+> | operator surface | index 2.3b–2.3i; job-objects 2.4i–2.5a | no job-object delete execute HTTP |
+> | immutable originals + lifecycle bind | 2.4a–2.5b | no real FS delete / age-budget |
+> | **fault injection expand** | **2.6a–2.6f** | **← next: 2.6g worker outage/recovery** |
+> | live PG/Redis/Celery/Chroma + migrations | not started | **opt-in only**; migrations **019–022** |
 >
-> **Verification:** 8 passed (new module + adjacent liveness/upload idempotency);
-> Ruff clean. Full suite / live drills **not** run.
+> **Fault-injection inventory (local, complete through 2.6f):**
+> | Point / contract | Slice | Impl SHA | Surface |
+> |------------------|-------|----------|---------|
+> | `inventory_write` / `manifest_publish` | 2.6a | `3f3c699` | `vectordb/index_lifecycle_faults.py` + retention/manifest hooks |
+> | `known_query` | 2.6b | `0e4451e` | `validate_staged_known_query` |
+> | `embeddings` | 2.6c | `3ba7986` | `_validate_candidate` |
+> | `cleanup` | 2.6d | `5b9e384` | `_cleanup_candidate` |
+> | tenant lock contention (build path) | 2.6e | `fbc2293` | `tests/test_index_lock_contention.py` |
+> | duplicate job (no double publish) | 2.6f | `53a398f` | `tests/test_duplicate_job_fail_closed.py` |
 >
-> **Next candidate only (not started):** **2.6g — worker outage/recovery
-> fail-closed** (tests-first, no live multi-service without opt-in).
+> **Key invariant (unchanged):** failed jobs with `source_path`-matched
+> job-objects → `retained_after_failed_transition`; `auto_delete_eligible`
+> always false.
+>
+> **Open boundaries (honest):**
+> - **2.6g** worker outage/recovery fail-closed (**not started**)
+> - live multi-service drills / migrations **019–022** on real Postgres (**opt-in**)
+> - no real FS deletion for job-objects / legacy-previous
+> - no age/budget auto-delete thresholds
+> - no orphan cleanup **mutations**
+> - no job-object retention **execute** HTTP (read-only inventory only)
+> - full suite / push / deploy / production-readiness **not** claimed
+>
+> **Active writer / WIP:** none.
+>
+> **Next candidate only (not started) — plan §2 residual fault injection:**
+> named **2.6g — worker outage/recovery fail-closed** (tests-first):
+> - stale lease / reaper / lost-ownership without double-complete;
+> - no silent index publish after outage;
+> - prefer existing liveness/reaper contracts (`tests/test_ingestion_liveness.py`,
+>   `ingestion/liveness.py`, claim CAS);
+> - still **no** live Celery/Redis multi-service without explicit opt-in;
+> - still **no** deletion, age/budget, plan checkbox edits, push/deploy.
 > Details: [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
 >
 > **Do not re-select:** 2.1–2.6f.
 >
-> **Protected dirty / untracked:** do not touch without request.
+> **Protected dirty / untracked:** do not touch/stage/remove without
+> explicit request. `_NEXT_SESSION.md` is pointer only — **not** routing
+> authority.
 >
 > **External gates (not authorized):** push, deploy, live services,
 > destructive Git, production-readiness claims.
 >
 > **Standing preference:** Grok implements; one user turn = one named
 > atomic slice; local commit only.
+>
+> **Git advisory:** branch observed `master...origin/master [ahead 121]`
+> before this docs commit — **refresh next session**.
+
+## 2026-08-07 Update-70 — record completed slice 2.6f @ `53a398f` ✅ START HERE
+
+> **Historical handoff (superseded by Update-71 for start-point routing).**
+> Recorded **2.6f** @ `53a398f`; docs `767d283`. Next-work naming **2.6g**
+> remains current under Update-71.
 
 ## 2026-08-07 Update-69 — record completed slice 2.6e @ `fbc2293` ✅ START HERE
 
-> **Historical handoff (superseded by Update-70).** Recorded **2.6e** @
-> `fbc2293`. Next-work naming **2.6f** is **stale**.
+> **Historical (superseded by Update-70/71).** **2.6e** @ `fbc2293` complete.
 
 ## 2026-08-07 Update-68 — record completed slice 2.6d @ `5b9e384` ✅ START HERE
 
