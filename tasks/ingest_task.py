@@ -60,6 +60,28 @@ def _safe_terminal_failed(
         )
 
 
+def _require_live_lease(
+    heartbeat: Any,
+    *,
+    job_id: str,
+    phase: str,
+    ownership_error_cls: type[Exception],
+) -> None:
+    """Fail closed on lost ownership before unsafe load/index/complete work.
+
+    Background heartbeats can lag behind an independent reaper. Phase boundaries
+    therefore probe ownership synchronously (``tick_once`` → CAS extend) so a
+    zombie worker cannot silently publish after outage recovery cleared the lease.
+    """
+    if heartbeat.ownership_lost or not heartbeat.tick_once():
+        logger.warning(
+            "Ingestion lease lost job_id=%s phase=%s",
+            job_id,
+            phase,
+        )
+        raise ownership_error_cls(_MSG_LEASE_LOST)
+
+
 @celery_app.task(bind=True, name="tasks.ingest_document")
 def ingest_document(self: Task, file_path: str, job_id: str, tenant_id: str) -> dict:
     """Load and index documents; durable DB row is the source of truth."""
@@ -114,12 +136,13 @@ def ingest_document(self: Task, file_path: str, job_id: str, tenant_id: str) -> 
             meta={"step": "loading", "job_id": str(job_uuid)},
         )
 
-        if heartbeat.ownership_lost:
-            logger.warning(
-                "Ingestion lease lost job_id=%s phase=pre_load",
-                job_id,
-            )
-            raise JobOwnershipError(_MSG_LEASE_LOST)
+        # Synchronous ownership probe (reaper may have cleared lease mid-flight).
+        _require_live_lease(
+            heartbeat,
+            job_id=job_id,
+            phase="pre_load",
+            ownership_error_cls=JobOwnershipError,
+        )
 
         path = Path(file_path)
         if not path.exists():
@@ -164,12 +187,13 @@ def ingest_document(self: Task, file_path: str, job_id: str, tenant_id: str) -> 
             )
             raise RuntimeError(_MSG_NO_CONTENT)
 
-        if heartbeat.ownership_lost:
-            logger.warning(
-                "Ingestion lease lost job_id=%s phase=pre_index",
-                job_id,
-            )
-            raise JobOwnershipError(_MSG_LEASE_LOST)
+        # Critical: refuse index publish when reaper/outage cleared ownership.
+        _require_live_lease(
+            heartbeat,
+            job_id=job_id,
+            phase="pre_index",
+            ownership_error_cls=JobOwnershipError,
+        )
 
         _best_effort_progress(
             self,
@@ -223,13 +247,13 @@ def ingest_document(self: Task, file_path: str, job_id: str, tenant_id: str) -> 
         else:
             index_publication = None
 
-        if heartbeat.ownership_lost:
-            logger.warning(
-                "Ingestion lease lost job_id=%s phase=pre_complete",
-                job_id,
-            )
-            # Do not overwrite reaper terminal state.
-            raise JobOwnershipError(_MSG_LEASE_LOST)
+        # Do not overwrite reaper terminal state after a late zombie build.
+        _require_live_lease(
+            heartbeat,
+            job_id=job_id,
+            phase="pre_complete",
+            ownership_error_cls=JobOwnershipError,
+        )
 
         result = {
             "status": "ok",
