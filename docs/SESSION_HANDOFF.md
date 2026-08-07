@@ -1,11 +1,11 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 (Update-68 records completed **2.6d** @ `5b9e384`;
-next ordered candidate **2.6e** residual fault injection — concurrency/lock)
+**Обновлено:** 2026-08-07 (Update-69 records completed **2.6e** @ `fbc2293`;
+next ordered candidate **2.6f** residual — duplicate job / worker recovery)
 
 **Назначение:** самодостаточный next-session handoff после compacted context.
 Routing: **только** верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md)
-(**Update-68**). Older blocks with literal `✅ START HERE` are **archival**.
+(**Update-69**). Older blocks with literal `✅ START HERE` are **archival**.
 Plan source (untracked/protected):
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
 
@@ -17,47 +17,43 @@ Plan source (untracked/protected):
 
 | Факт | Значение |
 |------|----------|
-| Latest implementation | `5b9e384` — **2.6d** cleanup discard-path fault injection |
-| Previous implementation | `3ba7986` — **2.6c** embeddings fault |
-| Previous docs | `6cbb97c` — Update-67 |
-| This Update-68 docs commit | **unknown in-file**; next session: `git log -5 --oneline` |
+| Latest implementation | `fbc2293` — **2.6e** same-tenant lock contention fail-closed |
+| Previous implementation | `5b9e384` — **2.6d** cleanup discard-path |
+| Previous docs | `08bad89` — Update-68 |
+| This Update-69 docs commit | **unknown in-file**; next session: `git log -5 --oneline` |
 | Active writer / unfinished WIP | **none** |
-| Locally complete (documented scopes only) | **2.1–2.4k + 2.5a + 2.5b + 2.6a–2.6d** |
+| Locally complete (documented scopes only) | **2.1–2.5b + 2.6a–2.6e** |
 | Full plan §2 / project / release / prod | **NOT** complete / **NOT** claimed |
-| Next ordered candidate | **2.6e** concurrency/lock residual (**not started**) |
+| Next ordered candidate | **2.6f** duplicate job / worker recovery (**not started**) |
 | Gates | no push / deploy / live services / destructive Git / prod claims |
 
-**Known verification (2.6d):** focused lifecycle + staging green; Ruff clean.
-Full suite / live drills **not** run.
+**Known verification (2.6e):** 11 passed (lock contention + tenant lock);
+Ruff clean. Full suite / live drills **not** run.
 
 **Key invariant:** failed jobs with `source_path`-matched job-objects →
-`retained_after_failed_transition` (intentional retention, **not** GC).
-`auto_delete_eligible` is always `False`.
+`retained_after_failed_transition`. `auto_delete_eligible` always `False`.
 
-### Plan §2 map (honest — plan checkboxes stay open)
+### Plan §2 map (honest)
 
-| Plan §2 bullet (order) | Local work | Residual |
-|------------------------|------------|----------|
-| 2.1–2.5b | as prior ledger | live DoD open |
-| **fault injection expand** | **2.6a–2.6d** | **← next 2.6e+** concurrency |
-| live multi-service drills | not started | **opt-in only**; migrations **019–022** |
+| Plan §2 bullet | Local work | Residual |
+|----------------|------------|----------|
+| fault injection expand | **2.6a–2.6e** | **← next 2.6f+** |
+| live multi-service drills | not started | **opt-in**; migrations **019–022** |
 
-### Named fault points (local)
+### Named fault / contention contracts
 
-| Point | Slice | Boundary |
-|-------|-------|----------|
-| `inventory_write` | 2.6a | inventory durable commit |
-| `manifest_publish` | 2.6a | manifest durable commit |
-| `known_query` | 2.6b | staged known-query validation |
-| `embeddings` | 2.6c | staged embedding dimension validation |
-| `cleanup` | 2.6d | unpublished candidate discard |
+| Contract | Slice |
+|----------|-------|
+| `inventory_write` / `manifest_publish` | 2.6a |
+| `known_query` | 2.6b |
+| `embeddings` | 2.6c |
+| `cleanup` | 2.6d |
+| tenant lock contention (build path) | 2.6e |
 
-### Protected state (do not touch/stage/remove without request)
+### Protected state
 
-- **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
-  `plan_sol_23_07_26`
-- **Untracked (incl.):** pytest temps, presentations, `_NEXT_SESSION.md`
-  (pointer only), `rag-remediation-plan-2026-08-03.md` (no checkbox edits)
+Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`  
+Untracked plan/temps/presentations/`_NEXT_SESSION.md` — do not stage casually.
 
 **Routing rule:** first/topmost Update in `AGENT_STATE.md` only.
 
@@ -65,30 +61,25 @@ Full suite / live drills **not** run.
 
 ## Быстрый старт следующей сессии
 
-1. Cycle-guard preflight on the latest user message.
+1. Cycle-guard preflight.
 2. `cd D:\RAG_Support_Assistant`
-3. `git status --short --branch` and `git log -5 --oneline` (**actual Git wins**).
-4. Read **only** top **Update-68** in `AGENT_STATE.md` + this capsule.
-   Do **not** reselect **2.1–2.6d**.
-5. Execute **one** named slice: default **2.6e** (below).
-6. Tests-first → proportional gate → local commit only (no push).
-7. Optional handoff refresh; **stop/yield** after one slice.
+3. `git status --short --branch` and `git log -5 --oneline`
+4. Read **only** top **Update-69** + this capsule. Do **not** reselect **2.1–2.6e**.
+5. Default **2.6f** (below). One slice per turn. Local commit only.
+6. Stop/yield after one slice.
 
-**Not authorized without explicit opt-in:** push, deploy, live multi-service
-drills, destructive Git, production claims.
+**Not authorized without opt-in:** push, deploy, live multi-service drills.
 
 ---
 
 ## Назначение и приоритет источников
 
-1. Fresh `git status` / `git log`.
-2. Top `AGENT_STATE.md` (**Update-68**) + this capsule.
-3. Dirty backlog/README/audit/plan_sol — protected; **stale**.
-4. `_NEXT_SESSION.md` — pointer only.
-5. Active plan — **do not** edit checkboxes casually.
-6. One user turn = one named atomic slice.
+1. Fresh git status/log.
+2. Top `AGENT_STATE.md` (**Update-69**) + this capsule.
+3. Dirty backlog/README/audit — protected stale.
+4. One user turn = one named atomic slice.
 
-**Authoritative implementation:** `5b9e384` (**2.6d**).
+**Authoritative implementation:** `fbc2293` (**2.6e**).
 
 ---
 
@@ -115,9 +106,10 @@ drills, destructive Git, production claims.
 | **2.6a** | inventory/publish fail-closed fault injection | `3f3c699` | Update-65 |
 | **2.6b** | known-query fail-closed fault injection | `0e4451e` | Update-66 |
 | **2.6c** | embeddings fail-closed fault injection | `3ba7986` | Update-67 |
-| **2.6d** | cleanup discard-path fault injection | `5b9e384` | **Update-68** |
+| **2.6d** | cleanup discard-path fault injection | `5b9e384` | Update-68 |
+| **2.6e** | same-tenant lock contention fail-closed | `fbc2293` | **Update-69** |
 
-**Do not re-select 2.1–2.6d.**
+**Do not re-select 2.1–2.6e.**
 
 ---
 
@@ -270,71 +262,89 @@ python -m ruff check vectordb/index_lifecycle_faults.py vectordb/index_staging.p
 
 ---
 
-## Следующий named candidate: 2.6e residual fault injection (не начат)
+## 2.6e (same-tenant lock contention fail-closed) — COMPLETE
 
-**Plan order:** residual of section 2 fault-injection after **2.6d**.
-**Name:** **2.6e — concurrency / lock contention fail-closed** (preferred),
-**or** worker-recovery atomic — **one** per turn.
+At `fbc2293`:
 
-### Intent
+- `tests/test_index_lock_contention.py` — in-process advisory lock registry
+- held lock + short wait → `TenantIndexLockTimeout`, no staging, active unchanged
+- serialized concurrent rebuilds → monotonic generation, valid active
+- adjacent: `test_tenant_index_lock` publish mock includes `previous_collection`
 
-1. Prove same-tenant concurrent rebuild / lock contention stays fail-closed
-   (no double-publish, no torn active, no dangerous live candidate).
-2. Prefer tests-first with existing tenant lock + fault hooks; no live services.
-3. Do not also invent age-budget deletion in the same turn.
+**Boundary:** concurrency/lock contention on rebuild path only. No live PG,
+no worker-recovery matrix, no deletion/age-budget.
 
-### Suggested acceptance (tests-first)
+**Verification:** 11 passed; Ruff clean.
 
-1. One focused concurrency or lock-contention scenario + proportional gate.
-2. No auto-delete / age-budget / plan checkbox edits.
-3. Scoped Ruff + green tests.
-4. Local commit only; optional handoff Update after slice.
-
-### Explicitly out of 2.6e
-
-- real FS job-object deletion / age-budget
-- live PG/Redis/Celery/Chroma (opt-in separate)
-- plan checkbox bulk-edit
-- push / deploy
-
-### Reference commands (2.6e — after work lands)
+### Reference commands (2.6e)
 
 ```powershell
-python -m pytest tests/<new_or_targeted> -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-6e-<unique>
+python -m pytest tests/test_index_lock_contention.py tests/test_tenant_index_lock.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-6e-<unique>
+python -m ruff check tests/test_index_lock_contention.py tests/test_tenant_index_lock.py
 ```
 
 ---
 
-## Что остаётся открытым (после 2.6d / Update-68)
+## Следующий named candidate: 2.6f residual fault injection (не начат)
 
-- **2.6e+** concurrency / lock / worker recovery (next ordered)
-- live migrations **019–022** + worker recovery + advisory-lock drills
-  (**opt-in**)
-- real job-object / legacy-previous **FS deletion** (needs product opt-in)
-- age/budget thresholds
-- orphan cleanup **mutations**
-- job-object retention **execute** HTTP
+**Plan order:** residual of section 2 fault-injection after **2.6e**.
+**Name:** **2.6f — duplicate job fail-closed** (preferred), **or**
+worker-recovery atomic — **one** per turn.
+
+### Intent
+
+1. Prove duplicate same-payload / same-idempotency job handling stays
+   fail-closed (no double index publish, durable job contract intact).
+2. Tests-first; reuse existing ingestion job paths; no live multi-service.
+3. Do not invent age-budget deletion in the same turn.
+
+### Suggested acceptance (tests-first)
+
+1. One focused duplicate-job scenario + proportional gate.
+2. No auto-delete / age-budget / plan checkbox edits.
+3. Scoped Ruff + green tests.
+4. Local commit only; optional handoff Update after slice.
+
+### Explicitly out of 2.6f
+
+- live PG/Redis/Celery recovery drills (opt-in separate)
+- real FS job-object deletion / age-budget
+- plan checkbox bulk-edit
+- push / deploy
+
+### Reference commands (2.6f — after work lands)
+
+```powershell
+python -m pytest tests/<new_or_targeted> -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-6f-<unique>
+```
+
+---
+
+## Что остаётся открытым (после 2.6e / Update-69)
+
+- **2.6f+** duplicate job / worker outage-recovery (next ordered)
+- live migrations **019–022** + advisory-lock drills (**opt-in**)
+- real job-object FS deletion / age-budget
+- orphan cleanup mutations / job-object retention execute HTTP
 - full suite, release gates, project/production readiness
 
-**Superseded next-work text:** any handoff still saying next is 2.6c, 2.6d,
-or vague residual without naming **2.6e** is **stale**.
+**Superseded next-work text:** any handoff still saying next is 2.6d, 2.6e,
+or vague residual without naming **2.6f** is **stale**.
 
 ---
 
 ## Windows / tooling notes
 
 - Unique ignored basetemp: `--basetemp=.tmp/pytest-<slice>`
-- Full `requirements-dev.lock` may hit Linux-only wheel issues — do not
-  blind-retry install without portability task
 - One atomic slice per user turn; stop after commit + optional docs
 
 ---
 
 ## Do not
 
-- Re-select **2.1–2.6d**
+- Re-select **2.1–2.6e**
 - Treat failed job-objects as deletable orphans
-- Invent auto-delete classes or age/budget thresholds without opt-in
-- Edit plan checkboxes from casual docs turns
+- Invent auto-delete / age-budget without opt-in
+- Edit plan checkboxes casually
 - Push / deploy / live multi-service without explicit user opt-in
 - Use grepped historical `✅ START HERE` as work queue
