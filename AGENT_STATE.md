@@ -1,8 +1,184 @@
 # Agent State
 
+## 2026-08-07 Update-81 — record completed slice 3.1h @ `ab7b417` ✅ START HERE
+
+> **Routing authority:** Update-81 supersedes Update-80 **for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `ab7b417`
+>   (`feat(retrieval): cooperative deadline at hybrid reranker boundary`)
+>   — slice **3.1h**
+> - Previous implementation: `ae13000` — **3.1g** retrieve/tool deadline
+> - Previous docs: Update-80 `1259417`
+> - §3 chain (impl only): `a21f364` 3.1a → `76179d5` 3.1b → `d9ba87e` 3.1c →
+>   `48c2381` 3.1d → `b98b917` 3.1e → `2581855` 3.1f → `ae13000` 3.1g →
+>   `ab7b417` 3.1h
+> - §2 fault-injection last impl: `f347feb` (**2.6g**)
+> - This Update-81 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 141]` before this docs commit.
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | index/job-object/fault-injection **local residual closed** at documented scopes |
+> | **3.1a–3.1h** | executor, provider/stream/retrieve/tool/**reranker** deadlines, session, roles, budget **local** at documented scopes |
+> | Full plan §2 | **NOT** complete (live multi-service DoD open) |
+> | Full plan §3 | **NOT** complete (durable session version residual) |
+> | Plan §4+ | **not started** |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+>
+> ---
+>
+> ### Plan §2 map (honest — live DoD open)
+>
+> | Plan §2 bullet (order) | Local slices | Residual |
+> |------------------------|--------------|----------|
+> | 2.1 inventory under lock | 2.1 + related | live DoD open |
+> | 2.2 bounded retention | 2.2, 2.3f–2.3i | live DoD open |
+> | operator surface | index 2.3b–2.3i; job-objects 2.4i–2.5a | no job-object delete execute HTTP |
+> | immutable originals + lifecycle bind | 2.4a–2.5b | no real FS delete / age-budget |
+> | fault injection expand | **2.6a–2.6g** | **local residual closed** |
+> | live PG/Redis/Celery/Chroma + migrations | not started | **opt-in only**; migrations **019–022** |
+>
+> **Key ingestion invariant (unchanged):** failed jobs with `source_path`-matched
+> job-objects → `retained_after_failed_transition`; `auto_delete_eligible`
+> always false.
+>
+> ---
+>
+> ### Plan §3 map (honest)
+>
+> | Plan §3 bullet (order) | Local slices | Residual |
+> |------------------------|--------------|----------|
+> | remove nested per-request executor; one deadline + bounded pool; capacity until work done | **3.1a** + **3.1f** | — at documented scopes |
+> | cooperative cancellation / deadline through provider, retriever, reranker, tools | **3.1b** + **3.1f** + **3.1g** + **3.1h** | — at documented scopes (cooperative only) |
+> | per-session serialize / optimistic version + sticky experiment ids | **3.1c** (lock + epoch) | **← next 3.1i:** durable optimistic version / multi-replica sticky |
+> | configurable max_tokens / temperature per LLM role | **3.1d** | — |
+> | shared per-request LLM call/token budget (exhaustion ≠ `auto`) | **3.1e** + **3.1f** | — |
+>
+> ---
+>
+> ### §3 implementation ledger (quick)
+>
+> | Slice | Impl SHA | Surface |
+> |-------|----------|---------|
+> | 3.1a | `a21f364` | `utils/request_executor.py`; `/api/ask` capacity hold |
+> | 3.1b | `76179d5` | `utils/request_deadline.py`; `ProviderBackedLLM` entry checks |
+> | 3.1c | `d9ba87e` | `ConversationSession` turn lock + epoch |
+> | 3.1d | `48c2381` | `llm/role_params.py`; `graph._invoke_llm` |
+> | 3.1e | `b98b917` | `llm/request_budget.py`; budget → `route=human` |
+> | 3.1f | `2581855` | stream capacity hold + shared budget/deadline bind |
+> | 3.1g | `ae13000` | retrieve node + tools + stream.retrieve deadline |
+> | **3.1h** | `ab7b417` | `HybridRetriever._rerank` deadline fail-closed |
+>
+> ---
+>
+> ### Module owners (do not reopen without proven conflict)
+>
+> | Path | Slice | Role |
+> |------|-------|------|
+> | `utils/request_executor.py` | 3.1a | process-wide bounded ask/pipeline pool |
+> | `utils/request_deadline.py` | 3.1b | ContextVar wall deadline |
+> | `llm/request_budget.py` | 3.1e–f | ContextVar + **thread-safe** call/token budget |
+> | `llm/role_params.py` | 3.1d | per-role temperature / max_tokens |
+> | `llm/providers/base.py` `ProviderBackedLLM` | 3.1b–e | deadline + budget on generate/tools/stream |
+> | `agent/graph.py` `ConversationSession` | 3.1a–e | ask wall budget, deadline/budget bind, session turn |
+> | `agent/graph.py` `make_retrieve_node` | 3.1g | retrieve deadline; re-raise |
+> | `agent/tools.py` | 3.1g | tool deadline |
+> | `vectordb/_base_manager.py` `HybridRetriever._rerank` | **3.1h** | deadline before predict; re-raise |
+> | `api/routers/conversation.py` `/api/ask` | 3.1a–b | shared executor + capacity hold |
+> | `api/routers/conversation.py` `/api/ask/stream` | 3.1f + 3.1g | capacity hold + stream.retrieve |
+> | job-object / index stack | 2.1–2.6g | do not re-select |
+>
+> ---
+>
+> ### 3.1h contract (COMPLETE @ `ab7b417`)
+>
+> - `HybridRetriever._rerank`: `check_request_deadline("retriever.rerank")`
+>   before cross-encoder `predict`
+> - `RequestDeadlineExceeded` **re-raised** (not degraded to top-k silent success
+>   the way ordinary reranker errors still fall back)
+> - Propagates through `get_relevant_documents` → retrieve node / ask →
+>   `route=timeout` when wall bound
+> - Vector fast path (`get_vector_documents`) still skips rerank
+> - Still cooperative: no mid-call kill of blocking I/O
+>
+> **Verification (3.1h):** focused **40 passed**
+> (`test_reranker_deadline` + `test_request_deadline` + `test_retriever_tool_deadline`
+> + `test_base_manager`); Ruff clean. Full suite / live drills **not** run.
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **3.1i** durable optimistic session version / multi-replica sticky (**not started**)
+> - live multi-service drills / migrations **019–022** on real Postgres (**opt-in**)
+> - no real FS deletion for job-objects / legacy-previous; no age/budget auto-delete
+> - no orphan cleanup **mutations**; no job-object retention **execute** HTTP
+> - plan **§4+** (LangGraph-only sync/SSE pipeline, durable escalation) not started
+> - full suite / push / deploy / production-readiness **not** claimed
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **3.1i — durable optimistic session version / multi-replica sticky**
+> (residual of plan §3 per-session serialize bullet after in-process 3.1c):
+> - read plan residual + existing `ConversationSession` epoch before design;
+> - tests-first; still **no** live multi-service without opt-in;
+> - still **no** plan checkbox bulk-edit, push, deploy.
+>
+> **Alternate (only if user prioritizes):** begin plan **§4** unified
+> LangGraph sync/SSE path as a **new named slice**.
+>
+> **Do not re-select:** 2.1–2.6g, **3.1a–3.1h**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Do not touch/stage/remove without explicit request:
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+>   `_NEXT_SESSION.md` (**pointer only — not routing authority**),
+>   `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
+>   casually), architecture HTML, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live PostgreSQL/Redis/Celery/Chroma drills, destructive Git,
+> production-readiness claims.
+>
+> **Standing preference:** Grok implements; one user turn = one named atomic
+> slice; local commit only.
+>
+> **Git advisory:** refresh `git status --short --branch` and
+> `git log -5 --oneline` at session start — **actual Git wins**.
+
 ## 2026-08-07 Update-80 — record completed slice 3.1g @ `ae13000` ✅ START HERE
 
-> **Routing authority:** Update-80 supersedes Update-79 **for start-point
+> **Historical handoff (superseded by Update-81 for start-point routing).**
+> Recorded **3.1g** @ `ae13000`; docs `1259417`. **3.1h** complete under Update-81.
+>
+> **Original routing note (archival):** Update-80 supersedes Update-79 **for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old
