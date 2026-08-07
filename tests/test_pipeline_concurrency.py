@@ -168,23 +168,93 @@ def test_inflight_gauge_decrements_after_timeout(
     client: TestClient,
     settings_factory,
 ) -> None:
+    """3.1a: capacity is held past 504 until the orphaned worker finishes."""
     from monitoring.prometheus import PROMETHEUS_AVAILABLE
+    from utils import request_executor as re
 
     if not PROMETHEUS_AVAILABLE:
         pytest.skip("prometheus_client not installed")
 
+    re.reset_request_executor_for_tests()
     monkeypatch.setattr(
         api_app,
         "get_settings",
-        lambda: settings_factory(request_timeout_sec=0.3),
+        lambda: settings_factory(
+            request_timeout_sec=0.3,
+            max_concurrent_pipelines=1,
+            request_executor_max_workers=1,
+        ),
     )
     api_app._db_retry_after = time.monotonic() + 60.0
     assert _get_inflight_gauge_value() == 0.0
 
-    fake_session = _fake_slow_session_factory(1.0)
+    fake_session = _fake_slow_session_factory(0.8)
     _install_fake_session(monkeypatch, fake_session)
 
     response = client.post("/api/ask", json={"question": "q"})
 
     assert response.status_code == 504
+    # Immediately after 504 the orphaned worker may still hold the slot.
+    # Capacity must drop once the slow ask completes (REL-01 / §3.1a).
+    deadline = time.monotonic() + 3.0
+    while time.monotonic() < deadline:
+        if _get_inflight_gauge_value() == 0.0:
+            break
+        time.sleep(0.05)
     assert _get_inflight_gauge_value() == 0.0
+
+
+def test_timeout_holds_capacity_until_worker_done(
+    monkeypatch: pytest.MonkeyPatch,
+    client: TestClient,
+    settings_factory,
+) -> None:
+    """While an orphaned ask is still running, a second ask is rejected busy."""
+    from utils import request_executor as re
+
+    re.reset_request_executor_for_tests()
+    api_app._pipeline_semaphore = None
+
+    monkeypatch.setattr(
+        api_app,
+        "get_settings",
+        lambda: settings_factory(
+            request_timeout_sec=0.25,
+            max_concurrent_pipelines=1,
+            pipeline_acquire_timeout_sec=0.1,
+            request_executor_max_workers=1,
+        ),
+    )
+    api_app._db_retry_after = time.monotonic() + 60.0
+
+    fake_session = _fake_slow_session_factory(1.2)
+    _install_fake_session(monkeypatch, fake_session)
+
+    first = client.post("/api/ask", json={"question": "slow"})
+    assert first.status_code == 504
+
+    # Orphan still running; second request must not steal the slot.
+    second = client.post("/api/ask", json={"question": "now"})
+    assert second.status_code == 503
+
+    # After orphan finishes, capacity frees (busy rejections stop).
+    deadline = time.monotonic() + 4.0
+    while time.monotonic() < deadline:
+        # Lengthen acquire wait so we only care about free capacity.
+        monkeypatch.setattr(
+            api_app,
+            "get_settings",
+            lambda: settings_factory(
+                request_timeout_sec=5.0,
+                max_concurrent_pipelines=1,
+                pipeline_acquire_timeout_sec=0.5,
+                request_executor_max_workers=1,
+            ),
+        )
+        # Keep existing semaphore (size 1); do not recreate mid-flight.
+        third = client.post("/api/ask", json={"question": "after"})
+        if third.status_code == 200:
+            break
+        time.sleep(0.05)
+    else:
+        pytest.fail("pipeline capacity never recovered after orphaned ask finished")

@@ -312,13 +312,60 @@ async def ask(
                     status_code=503,
                     detail="Server is busy processing other requests - retry in a moment",
                 ) from None
+            # Hold pipeline capacity until the underlying worker finishes.
+            # asyncio.wait_for only cancels the wait — not the thread (REL-01 / §3.1a).
+            capacity_held_for_orphan = False
             try:
                 prometheus_metrics.INFLIGHT_PIPELINES.inc()
                 try:
-                    result = await asyncio.wait_for(
-                        asyncio.to_thread(session.ask, question, **ask_kwargs),
-                        timeout=timeout,
+                    from utils.request_executor import get_request_executor
+
+                    loop = asyncio.get_running_loop()
+                    ask_future = loop.run_in_executor(
+                        get_request_executor(),
+                        lambda: session.ask(question, **ask_kwargs),
                     )
+                    try:
+                        result = await asyncio.wait_for(
+                            asyncio.shield(ask_future),
+                            timeout=timeout,
+                        )
+                    except asyncio.TimeoutError:
+                        # Keep semaphore + inflight until the orphaned worker ends.
+                        capacity_held_for_orphan = True
+
+                        def _release_pipeline_capacity(_fut: Any) -> None:
+                            try:
+                                prometheus_metrics.INFLIGHT_PIPELINES.dec()
+                            except Exception:
+                                pass
+                            try:
+                                semaphore.release()
+                            except Exception:
+                                pass
+
+                        ask_future.add_done_callback(
+                            lambda fut: loop.call_soon_threadsafe(
+                                _release_pipeline_capacity, fut
+                            )
+                        )
+                        try:
+                            prometheus_metrics.record_request_timeout("/api/ask")
+                        except Exception:
+                            pass
+                        outer_timeout_at = time.monotonic()
+                        logger.warning(
+                            "req_id=%s /api/ask exceeded timeout=%.1fs "
+                            "outer_timeout_monotonic=%.6f capacity_held_until_done=1",
+                            request_id or "-",
+                            timeout,
+                            outer_timeout_at,
+                            extra={"trace_id": request_id},
+                        )
+                        raise HTTPException(
+                            status_code=504,
+                            detail=f"Request exceeded {timeout:.0f}s wall-time limit",
+                        ) from None
 
                     answer = result.get("answer") or ""
                     quality = result.get("quality_score") or 50
@@ -398,24 +445,8 @@ async def ask(
                             },
                             ttl_seconds=int(getattr(settings, "llm_cache_ttl_seconds", 3600)),
                         )
-                except asyncio.TimeoutError:
-                    try:
-                        prometheus_metrics.record_request_timeout("/api/ask")
-                    except Exception:
-                        pass
-                    outer_timeout_at = time.monotonic()
-                    logger.warning(
-                        "req_id=%s /api/ask exceeded timeout=%.1fs "
-                        "outer_timeout_monotonic=%.6f",
-                        request_id or "-",
-                        timeout,
-                        outer_timeout_at,
-                        extra={"trace_id": request_id},
-                    )
-                    raise HTTPException(
-                        status_code=504,
-                        detail=f"Request exceeded {timeout:.0f}s wall-time limit",
-                    ) from None
+                except HTTPException:
+                    raise
                 except Exception as exc:
                     logger.error("Pipeline error in /ask: %s", exc, exc_info=True)
                     answer = "Не удалось обработать запрос автоматически. Ваш вопрос передан оператору."
@@ -465,11 +496,13 @@ async def ask(
                         suggested_questions=[],
                     )
             finally:
-                try:
-                    prometheus_metrics.INFLIGHT_PIPELINES.dec()
-                except Exception:
-                    pass
-                semaphore.release()
+                # On outer timeout the done-callback owns release (capacity hold).
+                if not capacity_held_for_orphan:
+                    try:
+                        prometheus_metrics.INFLIGHT_PIPELINES.dec()
+                    except Exception:
+                        pass
+                    semaphore.release()
     else:
         session["history"].append({"role": "user", "content": question})
         fallback_answer = f"[DEMO] Pipeline not available. Question received: {question}"

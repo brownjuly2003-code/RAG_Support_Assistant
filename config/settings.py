@@ -915,6 +915,11 @@ class Settings:
     max_concurrent_pipelines: int = field(
         default_factory=lambda: int(os.getenv("MAX_CONCURRENT_PIPELINES", "8"))
     )
+    # Shared ThreadPool for sync ask/pipeline work (plan §3 / REL-01).
+    # 0 = mirror max_concurrent_pipelines so pool size matches the semaphore.
+    request_executor_max_workers: int = field(
+        default_factory=lambda: int(os.getenv("REQUEST_EXECUTOR_MAX_WORKERS", "0") or 0)
+    )
     pipeline_acquire_timeout_sec: float = field(
         default_factory=lambda: float(os.getenv("PIPELINE_ACQUIRE_TIMEOUT_SEC", "0.5"))
     )

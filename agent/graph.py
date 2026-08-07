@@ -2652,19 +2652,18 @@ class ConversationSession:
     ) -> GraphState:
         """Run ``fn`` under a wall-clock budget (dogfood finding #3).
 
-        The graph runs synchronously and cannot be interrupted mid-flight, so on
-        timeout we mirror the HTTP path (``asyncio.wait_for`` over a worker
-        thread): return a degraded result and let the background run finish on its
-        own. ``RAG_ASK_BUDGET_SEC=0`` (default) keeps the original blocking call.
+        Uses the process-wide request executor (plan §3 / REL-01) — never a
+        per-call ``ThreadPoolExecutor``. The graph is still not cooperatively
+        cancellable: on timeout we return a degraded result while the worker
+        may continue. Nested calls already on a request-executor thread run
+        inline so HTTP ``wait_for`` remains the single outer deadline.
+        ``RAG_ASK_BUDGET_SEC=0`` (default) keeps the original blocking call.
         """
-        from concurrent.futures import ThreadPoolExecutor
-        from concurrent.futures import TimeoutError as FuturesTimeout
+        from utils.request_executor import run_on_request_executor
 
-        executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="ask-budget")
-        future = executor.submit(fn)
         try:
-            return future.result(timeout=budget_sec)
-        except FuturesTimeout:
+            return run_on_request_executor(fn, timeout_sec=budget_sec)
+        except TimeoutError:
             logger.warning(
                 "ConversationSession.ask exceeded wall-budget of %.1fs; returning a "
                 "degraded result (the background run is not cancellable)",
@@ -2672,8 +2671,6 @@ class ConversationSession:
                 extra={"trace_id": trace_id},
             )
             return self._timed_out_state(question, budget_sec, trace_id, tenant_id)
-        finally:
-            executor.shutdown(wait=False)
 
     def ask(
         self,
