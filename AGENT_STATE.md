@@ -1,12 +1,95 @@
 # Agent State
 
-## 2026-08-07 Update-73 — record completed slice 3.1a @ `a21f364` ✅ START HERE
+## 2026-08-07 Update-74 — record completed slice 3.1b @ `76179d5` ✅ START HERE
 
-> **Routing authority:** Update-73 records completed **3.1a** and supersedes
-> Update-72 for start-point routing. All older Update blocks below, including
+> **Routing authority:** Update-74 records completed **3.1b** and supersedes
+> Update-73 for start-point routing. All older Update blocks below, including
 > headings that literally contain `✅ START HERE`, are **archival**. **Only
 > the first/topmost Update block in this file is authoritative.** Never
 > select work by grepping old `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `76179d5`
+>   (`feat(runtime): cooperative request deadline at provider boundary`)
+>   — slice **3.1b**
+> - Previous implementation: `a21f364` (**3.1a** shared executor + capacity hold)
+> - Previous docs: Update-73 `4583047`
+> - This Update-74 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Completion truth:**
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | index/job-object/fault-injection local residual (documented scopes) |
+> | **3.1a** | shared request executor + capacity held past outer `/api/ask` timeout |
+> | **3.1b** | cooperative request deadline at provider boundary |
+> | Full plan §2 | **NOT** complete (live multi-service DoD open) |
+> | Full plan §3 | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually.
+>
+> **Plan §3 → local progress map (honest):**
+> | Plan §3 bullet (order) | Local slices | Residual |
+> |------------------------|--------------|----------|
+> | nested executor → shared pool; capacity until work done | **3.1a** | stream capacity-hold |
+> | cooperative cancel / deadline through boundaries | **3.1b** (provider entry) | retriever/reranker/tools not fully wired; no mid-call kill |
+> | per-session serialize / optimistic version + sticky experiment ids | not started | **← next 3.1c** |
+> | configurable max_tokens/temperature per LLM role | not started | |
+> | shared per-request LLM call/token budget | not started | |
+>
+> **3.1b contract (landed):**
+> - `utils/request_deadline.py` — ContextVar deadline, `RequestDeadlineExceeded`
+> - `ProviderBackedLLM` checks before generate / tools / schema / stream / batch;
+>   **no failover** after deadline
+> - `ConversationSession.ask` binds tighter of `ask_budget_sec` + `deadline_sec`
+>   on the worker thread; maps exceed → `route=timeout`
+> - `/api/ask` passes `deadline_sec=request_timeout_sec`
+> - Honest: in-flight provider HTTP not preempted
+>
+> **Verification (3.1b):** focused **8 passed** (`test_request_deadline`) +
+> adjacent wall-budget/executor/pipeline/timeout/provider (**18+10+9**);
+> Ruff clean. Full suite / live drills **not** run.
+>
+> **Open boundaries (honest):**
+> - live multi-service drills / migrations **019–022** (**opt-in**)
+> - §3 residual: session serialize, LLM role limits, token budget;
+>   deadline at retriever/reranker/tool boundaries
+> - streaming capacity-hold
+> - job-object FS delete / age-budget / execute HTTP
+> - full suite / push / deploy / production-readiness **not** claimed
+>
+> **Active writer / WIP:** none.
+>
+> **Next candidate only (not started):**
+> named **3.1c — per-session serialize / optimistic version** (tests-first):
+> prevent concurrent same-session history/`_pending_action` races; pass
+> `user_id`/`session_id` already present on ask — add lock or sequence guard;
+> still **no** live services / push.
+>
+> **Do not re-select:** 2.1–2.6g, **3.1a**, **3.1b**.
+>
+> **Protected dirty / untracked:** do not touch/stage/remove without
+> explicit request. `_NEXT_SESSION.md` is pointer only — **not** routing
+> authority.
+>
+> **External gates (not authorized):** push, deploy, live services,
+> destructive Git, production-readiness claims.
+>
+> **Standing preference:** Grok implements; one user turn = one named
+> atomic slice; local commit only.
+>
+> **Git advisory:** branch observed `master...origin/master [ahead 127]`
+> after 3.1b impl — **refresh next session**.
+
+## 2026-08-07 Update-73 — record completed slice 3.1a @ `a21f364` ✅ START HERE
+
+> **Historical handoff (superseded by Update-74 for start-point routing).**
+> Recorded **3.1a** @ `a21f364`. Next-work naming **3.1b** is **stale**.
+>
+> **Original routing note (archival):** Update-73 recorded completed **3.1a** and superseded
+> Update-72 for start-point routing.
 >
 > **Known lineage (actual Git wins over any embedded hash):**
 > - Latest implementation: `a21f364`
