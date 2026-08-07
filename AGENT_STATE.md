@@ -1,54 +1,119 @@
 # Agent State
 
-## 2026-08-07 Update-63 — record completed slice 2.5b @ `6dbabef` ✅ START HERE
+## 2026-08-07 Update-64 — docs-only transparency after Update-63 / 2.5b ✅ START HERE
 
-> **Routing authority:** Update-63 supersedes Update-62 **only for
-> start-point routing**. Older Update blocks (including literal
-> `✅ START HERE`) are **archival**. **Only the first/topmost Update block
-> is authoritative.**
+> **Routing authority:** Update-64 is **docs-only / transparency-only** and
+> supersedes Update-63 **only for start-point routing**. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`,
+> are **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
 >
-> **Latest implementation:** `6dbabef`
-> (`feat(ingestion): durable job-to-index publication lifecycle bind`) —
-> slice **2.5b** (plan §2 ordered next after operator surface; **no**
-> deletion).
+> **No new implementation in this docs turn.** Code, tests, plans, backlog,
+> README, audit, settings, and API paths were **not** edited here. Project
+> tests were **not** rerun. Protected dirty `BACKLOG.md`, `README.md`,
+> `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and untracked artifacts
+> (active plan, pytest temps, presentations, `_NEXT_SESSION.md`) were not
+> touched beyond pointer refresh where listed.
 >
-> **Previous:** **2.5a** `0855528`; docs Update-62 `8dceeab`.
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `6dbabef`
+>   (`feat(ingestion): durable job-to-index publication lifecycle bind`) —
+>   slice **2.5b**
+> - Latest implementation docs before this turn: `770c4bd`
+>   (`docs: record 2.5b job-to-index lifecycle bind`) — Update-63
+> - Previous implementation: `0855528` (**2.5a** admin job-object inventory)
+> - Previous docs: `8dceeab` (Update-62)
+> - This Update-64 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
 >
-> **Completion truth:** **2.1–2.4k + 2.5a + 2.5b** at documented scopes.
-> Full plan step 2 still **incomplete** (fault injection, live drills,
-> real job-object FS deletion, age/budget).
+> **Completion truth (unchanged by this docs turn):**
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.3i** | locally complete at documented scopes (index inventory / retention / rollback / admin) |
+> | **2.4a–2.4k** | job-object stack: immutable originals → receipts → classify → policy → CLI → annotations → status load |
+> | **2.5a** | read-only admin HTTP job-object inventory |
+> | **2.5b** | durable job↔index publication bind columns + public field |
+> | Full plan §2 | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
 >
-> **2.5b contract:**
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md` §2.
+> Checkboxes there stay open until full DoD — **do not** edit them from
+> docs. Local slices below map to plan bullets (honest partials).
+>
+> **Plan §2 → local progress map:**
+> | Plan §2 bullet | Local slices | Honest residual |
+> |----------------|--------------|-----------------|
+> | 2.1 inventory write under lock | 2.1 + related | live drills / full DoD open |
+> | 2.2 bounded retention executor | 2.2 + 2.3f–2.3i | live drills open |
+> | operator surface rollback + retention | 2.3b–2.3i index; 2.4i–2.5a job-objects | no job-object delete execute HTTP |
+> | immutable originals + lifecycle bind | 2.4a–2.5b | no real FS deletion / age-budget |
+> | **fault injection expand** | **not started** | **← next ordered** |
+> | live PG/Redis/Celery/Chroma + migrations | not started | needs **explicit opt-in**; now includes **022** |
+>
+> **2.5b contract (latest impl, still current):**
 > - migration `022_ingestion_job_index_bind`
 > - columns: `index_active_collection`, `index_previous_collection`,
 >   `index_manifest_generation`
-> - filled from `result.index_publication` on async/sync complete
-> - `job_public_dict` → `index_publication_bind` (or null if unbound)
+> - written on complete from `result.index_publication`
+> - `job_public_dict["index_publication_bind"]` or `null`
 >
-> **Verification:** focused **51 passed** (job contract + ingest task +
-> admin job-objects); Ruff clean. Full suite / live migrations **not** run.
+> **Key invariant:** failed jobs with `source_path`-matched job-objects →
+> `retained_after_failed_transition`; `auto_delete_eligible` always false.
 >
-> **Next in plan §2 order:** expand **fault injection** (embeddings /
-> validation / inventory / manifest switch / cleanup + concurrent upload
-> coverage). Still **no** deletion by default; live PG/Redis/Celery/Chroma
-> drills require explicit opt-in. Do **not** re-select 2.1–2.5b.
+> **Open boundaries (honest):**
+> - no real FS deletion for job-objects / legacy-previous
+> - no age/budget auto-delete thresholds
+> - no orphan cleanup **mutations**
+> - no job-object retention **execute** HTTP (read-only inventory only)
+> - fault injection expansion **not started**
+> - live services / migration drills on real Postgres **not** run (022 not
+>   live-applied in this workstream)
+> - full suite / push / deploy / production-readiness **not** claimed
 >
-> **Gates:** no push/deploy/live without opt-in. Protected dirty/untracked
-> untouched. No plan checkbox edits.
+> **Active writer / WIP:** none.
 >
-> **Git advisory:** refresh `git log` / status next session.
+> **Next candidate only (not started) — plan §2 order: fault injection:**
+> named first atomic sub-slice **2.6a — inventory/publish fail-closed
+> injection** (tests-first):
+> - inject failure **after** successful publish candidate / **at** inventory
+>   write (or equivalent boundary already used by 2.1);
+> - prove active manifest unchanged on inventory-write failure;
+> - prove no dangerous live candidate left on publish failure;
+> - one focused pytest module + proportional adjacent gate;
+> - still **no** deletion, age/budget invention, plan checkbox edits,
+>   push/deploy, or live multi-service drills.
+> Later 2.6b+ may cover embeddings/validation/manifest switch/cleanup and
+> concurrent same-tenant / duplicate job / lock contention — **one slice
+> per turn**. Details: [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+>
+> **Do not re-select:** 2.1–2.5b.
+>
+> **Protected dirty / untracked:** do not touch/stage/remove without
+> explicit request. `_NEXT_SESSION.md` is pointer only — **not** routing
+> authority.
+>
+> **External gates (not authorized):** push, deploy, live services,
+> destructive Git, production-readiness claims.
+>
+> **Standing preference:** Grok implements; one user turn = one named
+> atomic slice; local commit only.
+>
+> **Git advisory:** branch observed `master...origin/master [ahead 108]`
+> before this docs commit — **refresh next session**.
+
+## 2026-08-07 Update-63 — record completed slice 2.5b @ `6dbabef` ✅ START HERE
+
+> **Historical handoff (superseded by Update-64 for start-point routing).**
+> Recorded completed **2.5b** @ `6dbabef`; docs commit `770c4bd`. Next-work
+> naming **fault injection** remains current under Update-64 (as **2.6a**).
 
 ## 2026-08-07 Update-62 — record completed slice 2.5a @ `0855528` ✅ START HERE
 
-> **Historical (superseded by Update-63).** **2.5a** @ `0855528` complete.
-> Later closed by **2.5b** @ `6dbabef`.
+> **Historical (superseded by Update-63/64).** **2.5a** @ `0855528` complete.
 
 ## 2026-08-07 Update-61 — record completed slice 2.4k @ `9e358f1` ✅ START HERE
 
-> **Historical handoff (superseded by Update-62 for start-point routing).**
-> Completed **2.4k** @ `9e358f1`. Later closed by Update-62 / **2.5a**
-> @ `0855528`. Next-work pointer naming re-scope-after-2.4k only is **stale**
-> for start routing (re-scope still required after 2.5a).
+> **Historical (superseded).** **2.4k** @ `9e358f1` complete.
 
 ## 2026-08-07 Update-60 — docs-only transparency after Update-59 @ `a077f0d` ✅ START HERE
 

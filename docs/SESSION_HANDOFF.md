@@ -1,1305 +1,282 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 (Update-63 after completed **2.5b** @ `6dbabef`;
-previous **2.5a** `0855528`; next in plan §2 order: **fault injection**)
+**Обновлено:** 2026-08-07 (Update-64 docs-only / transparency after
+completed **2.5b** @ `6dbabef` + Update-63 docs `770c4bd`; next ordered
+candidate **2.6a fault injection — inventory/publish fail-closed**)
 
-**Назначение:** самодостаточный next-session handoff для coding agent после
-compacted context. История срезов — в [`AGENT_STATE.md`](../AGENT_STATE.md)
-(**только верхний блок Update-63** — routing authority). Plan source —
-untracked/protected
+**Назначение:** самодостаточный next-session handoff после compacted context.
+Routing: **только** верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md)
+(**Update-64**). Older blocks with literal `✅ START HERE` are **archival**.
+Plan source (untracked/protected):
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
+
+---
 
 ## Нулевая неоднозначность: состояние на входе
 
-Сканируй эту капсулу **первой**. Детали и ledger — в секциях ниже; не
-дублируй длинную историю в новых edits.
+Сканируй эту капсулу **первой**.
 
 | Факт | Значение |
 |------|----------|
-| Latest implementation | `6dbabef` (`feat(ingestion): durable job-to-index publication lifecycle bind`) — **2.5b** |
-| Previous implementation | `0855528` (slice **2.5a**) |
-| Latest pre-2.5b docs | Update-62 `8dceeab` |
-| This Update-63 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
-| Branch advisory | refresh mandatory |
-| Active writer | **none** |
-| Locally complete (documented scopes) | **2.1–2.4k + 2.5a + 2.5b** |
-| Not complete / not claimed | full plan step 2; real FS deletion; age/budget; fault injection expansion; live drills; project/release readiness |
-| Next allowed candidate | **fault injection** (plan §2 next ordered item) — still **no** deletion by default; live drills need opt-in |
-| Gates | no push / deploy / live services / destructive Git / production claims |
+| Latest implementation | `6dbabef` — **2.5b** durable job↔index lifecycle bind |
+| Latest impl docs (Update-63) | `770c4bd` |
+| This Update-64 docs commit | **unknown in-file**; next session: `git log -5 --oneline` |
+| Previous implementation | `0855528` — **2.5a** admin job-object inventory GET |
+| Branch advisory | was `ahead 108` before Update-64 — **refresh mandatory** |
+| Active writer / unfinished WIP | **none** |
+| Locally complete (documented scopes only) | **2.1–2.4k + 2.5a + 2.5b** |
+| Full plan §2 / project / release / prod | **NOT** complete / **NOT** claimed |
+| Next ordered candidate | **2.6a** fault injection @ inventory/publish fail-closed (**not started**) |
+| Gates | no push / deploy / live services / destructive Git / prod claims |
 
-**Known verification (2.5b):** focused green **51 passed** (job contract +
-ingest task + admin job-objects); Ruff clean. Full suite / live migration
-on real Postgres **not** run.
+**Transparency-only Update-64:** no implementation/test/plan-checkbox/backlog
+change; project tests **not** rerun here. Implementation state unchanged after
+`6dbabef` / **2.5b**.
 
-**Key invariant (do not violate):** failed jobs with `source_path`-matched
-job-objects are `retained_after_failed_transition` — intentional retention,
-**not** GC candidates. `auto_delete_eligible` is always `False`.
+**Known verification (2.5b; last impl gate):** focused **51 passed**
+(`tests/test_ingestion_job_contract.py` + `tests/test_ingest_task.py` +
+`tests/test_admin_job_object_inventory.py`); Ruff clean on scoped paths.
+Full suite / live Postgres migration of **022** **not** run.
 
-### Job-object modules (current owners — do not reopen without conflict)
+**Key invariant:** failed jobs with `source_path`-matched job-objects →
+`retained_after_failed_transition` (intentional retention, **not** GC).
+`auto_delete_eligible` is always `False`.
+
+### Plan §2 map (honest — plan checkboxes stay open)
+
+| Plan §2 bullet (order) | Local work | Residual |
+|------------------------|------------|----------|
+| 2.1 inventory under lock | 2.1 (+ related) | live DoD open |
+| 2.2 bounded retention | 2.2, 2.3f–2.3i | live DoD open |
+| operator surface rollback/retention | index 2.3b–2.3i; job-objects 2.4i–2.5a | no job-object delete HTTP |
+| immutable originals + lifecycle bind | 2.4a–2.5b | no real FS delete / age-budget |
+| **fault injection expand** | **not started** | **← next (2.6a first)** |
+| live PG/Redis/Celery/Chroma + migrations | not started | **opt-in only**; migrations now **019–022** |
+
+### Module owners (do not reopen without proven conflict)
 
 | Module / path | Slice | Role |
 |---------------|-------|------|
-| `api/routers/upload.py` | 2.4a | create path: job row → immutable → legacy-previous → flat |
-| `ingestion/jobs.py` | 2.4f/2.4k | `sync_list_known_job_object_refs` + `sync_list_job_statuses_for_tenant` |
+| `vectordb/*` index inventory/retention/rollback | 2.1–2.3i | Chroma subsystem — must **not** delete job-objects |
+| `api/routers/upload.py` | 2.4a + receipts | create path: job → immutable → legacy-previous → flat |
+| `tasks/ingest_task.py` | 2.4c | async receipt + complete |
+| `ingestion/jobs.py` | 2.4f/2.4k/**2.5b** | known refs, statuses, **index bind columns**, public dict |
+| `db/models.py` + `alembic/versions/022_*` | **2.5b** | bind columns + migration |
 | `ingestion/job_object_inventory.py` | 2.4e/2.4f | classify + tenant preview |
-| `ingestion/job_object_retention.py` | 2.4g/2.4h | fail-closed policy + guarded no-op command |
+| `ingestion/job_object_retention.py` | 2.4g/2.4h | fail-closed policy + guarded no-op |
 | `ingestion/job_object_orphans.py` | 2.4j | transition ownership annotations |
-| `ingestion/job_object_operator.py` | 2.4i–2.5a | shared composition + load_and_run + JSON |
-| `scripts/preview_job_object_inventory.py` | 2.4i/2.4k | operator CLI (thin; uses operator module) |
-| `api/routers/admin_ops.py` | 2.5a | `GET /admin/job-objects/inventory` (read-only) |
-| `vectordb/*` index retention | 2.1–2.3i | **separate** Chroma subsystem — must not delete job-objects |
+| `ingestion/job_object_operator.py` | 2.4i–2.5a | shared composition + load_and_run |
+| `scripts/preview_job_object_inventory.py` | 2.4i/2.4k | thin operator CLI |
+| `api/routers/admin_ops.py` | 2.5a (+ index admin) | `GET /admin/job-objects/inventory` read-only |
 
-### Protected state (do not touch/stage/remove without explicit request)
+### Protected state (do not touch/stage/remove without request)
 
-- Dirty tracked: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+- **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
   `plan_sol_23_07_26`
-- Untracked (incl.): `.grok-prompts/`, `.pytest_tmp*/`, presentation/explainer
-  artifacts, `_NEXT_SESSION.md` (**pointer only — not routing authority**),
-  `FLANT_DOGFOOD_FINDINGS.md`, active plan
-  `rag-remediation-plan-2026-08-03.md`, `docs/architecture-data-flow.html`,
-  `scripts/check_architecture_diagram.py`
+- **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+  `_NEXT_SESSION.md` (**pointer only — not routing authority**),
+  `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
+  from docs/impl turns without explicit request), architecture HTML, etc.
 
-**Routing rule:** only the **first/topmost** Update block in
-[`AGENT_STATE.md`](../AGENT_STATE.md) is authoritative. Never select work by
-grepping historical `START HERE` markers. Never use untracked
-`_NEXT_SESSION.md` or dirty `BACKLOG.md` / `plan_sol_23_07_26` as the work
-queue.
+**Routing rule:** first/topmost Update in `AGENT_STATE.md` only. Never grepping
+historical `START HERE`. Never treating dirty backlog/legacy plan as queue.
+
+---
 
 ## Быстрый старт следующей сессии
 
-Executable checklist **in order**. **Нет** active writer и **нет** unfinished
-next-candidate WIP на момент этого handoff.
+1. Cycle-guard preflight on the latest user message.
+2. `cd D:\RAG_Support_Assistant`
+3. `git status --short --branch` and `git log -5 --oneline` (**actual Git wins**
+   over hashes below; known impl `6dbabef` / **2.5b**; known Update-63
+   `770c4bd`; Update-64 SHA from fresh log).
+4. Read **only** top **Update-64** in `AGENT_STATE.md` + this capsule.
+   Do **not** reselect **2.1–2.5b**.
+5. Execute **one** named slice: default **2.6a** (below). Announce
+   `slice 1/1`, `delegated run N/3`, `QA follow-up N/1`.
+6. Tests-first → proportional gate → explicit-path local commit only (no push).
+7. Optional handoff refresh; **stop/yield** after one slice.
 
-1. **Cycle-guard preflight** on the latest user message.
-2. `cd D:\RAG_Support_Assistant`; run fresh `git status --short --branch` and
-   `git log -5 --oneline` as **separate** commands; **actual Git wins** over
-   embedded hashes/counts (known implementation `9e358f1` / **2.4k**; known
-   Update-60 docs `3c96a03`; this Update-61 docs SHA from fresh `git log`).
-3. Read **only** top **Update-63** in `AGENT_STATE.md` + this
-   **Нулевая неоднозначность** capsule first; treat older Update blocks
-   as archive. Do **not** reselect 2.1–2.5b.
-4. **Next ordered plan §2 item:** expand **fault injection** (before/after
-   embeddings, validation, inventory, manifest switch, cleanup; concurrent
-   same-tenant uploads / duplicate job / worker recovery / lock contention
-   as sub-slices). Still **no** deletion/age-budget by default. Live
-   PG/Redis/Celery/Chroma drills require explicit opt-in. Re-check protected
-   dirty/untracked list.
-5. Use **Grok** via the local verified route; announce counters
-   `slice 1/1`, `delegated run N/3`, `QA follow-up N/1`. Execute **at most
-   one** named atomic next candidate.
-6. **Tests-first**, independent proportional gate, explicit-path staging,
-   local commit only (no push). Optional scoped handoff refresh after the
-   slice.
-7. **Stop/yield** after one named slice.
+**Not authorized without explicit opt-in:** push, deploy, live
+PostgreSQL/Redis/Celery/Chroma drills, destructive Git, production claims.
 
-Push / deploy / live services — **not authorized**. One user turn = one named
-atomic slice. Live PostgreSQL/Redis/Celery/Chroma drills require explicit
-opt-in and must **not** be selected as the default next slice.
+---
 
 ## Назначение и приоритет источников
 
-1. `git status --short --branch` и `git log -5 --oneline` — авторитетный
-   источник текущего filesystem/Git state.
-2. Далее: верхний блок `AGENT_STATE.md` (**Update-61**) и эта капсула
-   (**Нулевая неоднозначность**).
-3. `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26` и их
-   dirty working-tree contents — protected user state; могут быть stale. Они
-   **не** переопределяют Update-61 и **не** дают права повторять уже
-   завершённые срезы 2.1–2.4k.
-4. Untracked `_NEXT_SESSION.md` — **pointer only**; **not** routing authority.
-5. `rag-remediation-plan-2026-08-03.md` — активный plan source
-   (untracked/protected). Do **not** edit its checkboxes from docs turns.
-   Старый `plan_sol_23_07_26` — protected legacy.
-6. Один user turn = максимум один named atomic slice.
+1. Fresh `git status` / `git log` — filesystem/Git truth.
+2. Top `AGENT_STATE.md` (**Update-64**) + this capsule.
+3. Dirty `BACKLOG.md` / `README.md` / `audit_gpt_*` / `plan_sol_23_07_26` —
+   protected user state; **stale**; do not override Update-64.
+4. `_NEXT_SESSION.md` — pointer only.
+5. `rag-remediation-plan-2026-08-03.md` — active plan direction; **do not**
+   edit checkboxes casually.
+6. One user turn = one named atomic slice.
 
-**Authoritative implementation state:** latest implementation is `9e358f1`
-(**2.4k** status load + CLI annotations). Do **not** embed a guessed future
-Update-61 docs commit hash; next session reads actual `git log`.
-Push/deploy not authorized.
+**Authoritative implementation:** `6dbabef` (**2.5b**). Do not invent future
+docs SHAs inside content.
 
-## Карта реализации
+---
+
+## Карта реализации (ledger)
 
 | Slice | Что | Implementation | Status docs |
 |-------|-----|----------------|-------------|
 | **2.1** | publication inventory wiring | `e8da185` | `3cc939b` |
 | **2.2** | post-publish bounded retention | `f0cb6ee` | `30a8404` |
-| **2.3a** | lock-consistent read-only retention preview primitive | `5bbc329` | `3976366` |
-| **2.3b** | tenant-scoped admin retention preview endpoint | `32748d9` | `37987df` |
-| **2.3c** | unwired idempotent rollback command contract | `dda4bb2` | `5487445` |
-| **2.3d** | idempotent validated runtime rollback | `7b8d14c` | `7591c22` |
-| **2.3e** | tenant-scoped admin idempotent rollback endpoint | `457cbf0` | (docs after 2.3e) |
-| **2.3f** | unwired guarded retention execution command | `f5f3f6e` | (docs after 2.3f) |
-| **2.3g** | guarded Chroma retention adapter bridge | `f966fac` | `1f40a57` |
-| **2.3h** | runtime manager retention action (guarded) | `bd01f23` | `e348929` / Update-45 |
-| **2.3i** | retention API / admin audit | `ac4b317` | Update-46 |
-| **2.4a** | immutable upload originals (job-objects + flat current view) | `a1dcd5c` | Update-48 |
-| **2.4b** | build publication receipt (manager opt-in, unwired) | `29be31a` | Update-49 |
-| **2.4c** | async-worker index publication receipt persistence | `999c90f` | Update-50 |
-| **2.4d** | sync non-default upload index publication receipt persistence | `dfbbca0` | Update-51 `ecf73fe` + Update-52 handoff |
-| **2.4e** | job-object inventory classification (read-only; no deletion) | `13be7d9` | Update-53 `0de7889` + Update-54 handoff |
-| **2.4f** | tenant-scoped job-object inventory preview (load refs + classify; no deletion) | `68cf045` | Update-55 |
-| **2.4g** | fail-closed job-object retention policy (never_auto_delete; empty candidates) | `1ccb39b` | Update-56 |
-| **2.4h** | guarded job-object retention command (empty expected only; no-op; no FS mutation) | `9761caf` | Update-57 |
-| **2.4i** | operator CLI for inventory + policy + optional guarded no-op | `f0f79b9` | Update-58 |
-| **2.4j** | failed-transition ownership annotations (no deletion) | `ea3f59e` | Update-59 `a077f0d` + Update-60 handoff |
-| **2.4k** | job status load + CLI transition annotations (no deletion) | `9e358f1` | Update-61 |
-| **2.5a** | read-only admin job-object inventory HTTP preview + audit | `0855528` | Update-62 |
-| **2.5b** | durable job↔index publication lifecycle bind columns | `6dbabef` | Update-63 |
+| **2.3a–2.3i** | index preview/rollback/retention operator | see prior ledger | Updates 40–46 |
+| **2.4a** | immutable upload originals | `a1dcd5c` | Update-48 |
+| **2.4b** | build publication receipt | `29be31a` | Update-49 |
+| **2.4c** | async worker receipt | `999c90f` | Update-50 |
+| **2.4d** | sync non-default upload receipt | `dfbbca0` | Update-51/52 |
+| **2.4e** | job-object classify | `13be7d9` | Update-53/54 |
+| **2.4f** | tenant load + preview | `68cf045` | Update-55 |
+| **2.4g** | fail-closed retention policy | `1ccb39b` | Update-56 |
+| **2.4h** | guarded no-op retention command | `9761caf` | Update-57 |
+| **2.4i** | operator CLI | `f0f79b9` | Update-58 |
+| **2.4j** | failed-transition ownership annotations | `ea3f59e` | Update-59/60 |
+| **2.4k** | job status load + CLI annotations | `9e358f1` | Update-61 |
+| **2.5a** | admin GET job-object inventory | `0855528` | Update-62 |
+| **2.5b** | durable job↔index publication bind | `6dbabef` | Update-63 + **Update-64** |
 
-Срезы **2.1–2.4k + 2.5a + 2.5b** локально complete at documented scopes.
-Lifecycle bind: first-class columns + public `index_publication_bind`.
-Полный plan step 2, real FS deletion, age/budget, fault injection, live
-drills — **не** complete. **Do not re-select 2.1–2.5b.** Next ordered:
-**fault injection** (still **no** deletion by default). Plan:
-`rag-remediation-plan-2026-08-03.md` §2.
+**Do not re-select 2.1–2.5b.**
+
+---
 
 ## Контракт 2.5b (job↔index lifecycle bind) — COMPLETE
 
-Durable bind at `6dbabef`:
+At `6dbabef`:
 
-- migration `022_ingestion_job_index_bind`
-- columns on `IngestionJob`: `index_active_collection`,
-  `index_previous_collection`, `index_manifest_generation`
-- `index_publication_bind_values(result)` + write on
-  `mark_job_completed` / `sync_mark_completed`
-- `job_public_dict` → `index_publication_bind` (null when unbound)
-- result JSON `index_publication` unchanged (2.4c/2.4d)
+- migration `alembic/versions/022_ingestion_job_index_bind.py`
+- model columns on `IngestionJob`:
+  - `index_active_collection`
+  - `index_previous_collection`
+  - `index_manifest_generation`
+- `ingestion.jobs.index_publication_bind_values(result)`
+- written in `mark_job_completed` + `sync_mark_completed`
+- `job_public_dict` → `index_publication_bind` (`null` when unbound)
+- existing `result.index_publication` JSON (2.4c/2.4d) unchanged
 
-**Paths:** `alembic/versions/022_*.py`, `db/models.py`, `ingestion/jobs.py`,
-`tests/test_ingestion_job_contract.py`
-
-**Boundary:** bind only. **Нет** deletion, age/budget, fault injection,
-live migration drill, plan checkbox edits.
+**Boundary:** bind/persist/surface only. No deletion, age/budget, fault
+injection, live migration drill.
 
 **Verification:** 51 passed focused; Ruff clean.
 
-## Контракт 2.5a (admin job-object inventory preview) — COMPLETE
-
-Read-only admin HTTP at `0855528`:
-
-- `GET /api/admin/job-objects/inventory` — `require_role("admin")`
-- JWT tenant only; foreign `tenant_id` query ignored by design
-- `load_and_run_operator_preview(..., execute=False)` via `asyncio.to_thread`
-- response: inventory_entries, dispositions, transition_annotations,
-  auto_delete_candidates; **no** execution block
-- audit: `job_object_inventory_preview` / `job-objects/inventory`
-- shared composition: `ingestion/job_object_operator.py` (CLI reuses)
-
-**Paths changed in `0855528`:**
-
-- `ingestion/job_object_operator.py` (new)
-- `scripts/preview_job_object_inventory.py` (thin CLI)
-- `api/routers/admin_ops.py`
-- `tests/test_admin_job_object_inventory.py` (new)
-
-**Boundary:** read-only HTTP only. **Нет** deletion, execute endpoint,
-age/budget, plan checkbox edits, push/deploy.
-
-**Verification:** 61 passed focused; Ruff clean.
-
-## Контракт 2.4k (status load + CLI transition annotations) — COMPLETE
-
-Status load + operator CLI annotation wiring at `9e358f1`:
-
-**API / surface:**
-
-- `ingestion.jobs.sync_list_job_statuses_for_tenant(tenant_id) ->
-  dict[str, str]` — read-only, tenant-scoped; blank tenant fails closed;
-  blank status values skipped; status lowercased
-- `scripts/preview_job_object_inventory.py`:
-  - `run_operator_preview(..., job_statuses=…)` always produces
-    `transition_annotations` via `annotate_job_object_transition_context`
-  - CLI injects `load_job_statuses` (default DB loader) like known-job refs
-  - human + JSON include `transition_annotations`
-- failed+protected → `retained_after_failed_transition` with
-  `auto_delete_eligible=false`
-
-**Implementation paths changed in `9e358f1` only:**
-
-- `ingestion/jobs.py`
-- `scripts/preview_job_object_inventory.py`
-- `tests/test_job_object_inventory.py`
-- `tests/test_preview_job_object_inventory_cli.py`
-
-**Boundary:** status load + report wiring only. **Нет** deletion,
-age/budget thresholds, admin HTTP, upload-path edits, plan checkbox edits,
-live-service, push, or deploy.
-
-**Verification (2.4k):** focused 53 passed; Ruff clean; diff-check clean on
-scoped paths. Full suite / live services **not** run.
-
-## Контракт 2.4j (failed-transition ownership annotations) — COMPLETE
-
-Ownership investigation + pure annotations at `ea3f59e`:
-
-**Findings encoded:**
-
-- create order: job row → exclusive immutable write → legacy-previous
-  preserve → flat refresh (flat only after both writes succeed)
-- after successful immutable write, indexing/publish failure leaves object
-  on disk; job `failed` + `source_path` → classifier `protected` =
-  **intentional retention**, not a GC candidate
-- partial create failures terminal-fail without publish; referenced objects
-  stay protected
-- unrecorded / untrusted / legacy recovery never auto-deletable (2.4g)
-
-**API:**
-
-- `annotate_job_object_transition_context(entries, job_statuses=…)` →
-  `JobObjectTransitionAnnotation` tuples
-- ownership labels: `retained_after_failed_transition`,
-  `retained_durable_original`, `retained_in_flight`,
-  `retained_unknown_job_status`, `unrecorded_identity`, `untrusted_layout`,
-  `legacy_recovery_object`
-- **every** annotation: `auto_delete_eligible=False`
-
-**Implementation paths changed in `ea3f59e` only:**
-
-- `ingestion/job_object_orphans.py`
-- `tests/test_job_object_orphans.py`
-
-**Boundary:** annotation only. **Нет** deletion, status DB loader, CLI
-wiring, age/budget, admin HTTP, upload-path edits, plan checkbox edits,
-live-service, push, or deploy.
-
-**Verification (2.4j):** focused 47 passed; adjacent 127 passed; Ruff clean;
-diff-check clean; mypy Python 3.12 Success (1 file).
-
-## Контракт 2.4i (operator CLI) — COMPLETE
-
-Operator CLI at `f0f79b9`:
-
-- `scripts/preview_job_object_inventory.py`
-- `run_operator_preview(tenant_id, project_root, upload_root, known_jobs,
-  execute=False)` composes preview → policy → optional guarded no-op
-- CLI: `--tenant`, `--project-root`, `--upload-root`, `--execute`, `--json`
-- DB load: `sync_list_known_job_object_refs` (injectable for tests)
-- non-default tenant uses `physical_tenant_component` upload dir
-- under current policy `--execute` → `deleted=()`; **no** FS mutation
-
-**Implementation paths changed in `f0f79b9` only:**
-
-- `scripts/preview_job_object_inventory.py`
-- `tests/test_preview_job_object_inventory_cli.py`
-
-**Boundary:** CLI wiring only. **Нет** real deletion, age/budget thresholds,
-admin HTTP, upload-path edits, index retention coupling, settings, UI, plan
-checkbox edits, live-service, push, or deploy.
-
-**Verification (2.4i):** focused 39 passed; adjacent 119 passed; Ruff clean;
-diff-check clean; mypy Python 3.12 Success (1 file).
-
-## Контракт 2.4h (guarded job-object retention command) — COMPLETE
-
-Guarded domain command at `9761caf`:
-
-- `execute_job_object_retention(*, tenant_id, entries, expected_candidates)`
-- `expected_candidates` must be a tuple of unique non-empty str (empty OK)
-- recomputes `assess_job_object_retention_policy(entries).auto_delete_candidates`
-- conflict when expected ≠ current (non-empty expected fails today)
-- on match: `JobObjectRetentionExecutionResult(status=complete, deleted=())`
-- falsey tenant → `default`; **never** mutates filesystem
-
-**Implementation paths changed in `9761caf` only:**
-
-- `ingestion/job_object_retention.py`
-- `tests/test_job_object_retention.py`
-
-**Boundary:** guarded no-op command only. **Нет** real deletion, age/budget
-thresholds, admin/CLI, upload-path edits, index retention coupling, settings,
-UI, plan checkbox edits, live-service, push, or deploy.
-
-**Verification (2.4h):** focused 32 passed; adjacent 112 passed; Ruff clean;
-diff-check clean; mypy Python 3.12 Success (1 file).
-
-## Контракт 2.4g (fail-closed job-object retention policy) — COMPLETE
-
-Ownership investigation + fail-closed policy assessment at `1ccb39b`:
-
-**Ownership findings (encoded in module docstring + behavior):**
-
-- create path: `api/routers/upload.py` (2.4a) — not GC
-- durable ref: `IngestionJob.source_path`
-- classify/preview: `ingestion.job_object_inventory` (2.4e/2.4f)
-- index retention (`vectordb/*`) is a **separate** Chroma subsystem — must
-  not delete `job-objects/**` / `legacy-previous/**`
-- no pre-existing job-object GC/executor module
-
-**Policy contract:**
-
-- `assess_job_object_retention_policy(entries)` →
-  `JobObjectRetentionAssessment`
-- every known classification (`protected`, `unrecorded`, `untrusted`) →
-  disposition `never_auto_delete` with distinct reasons
-- `auto_delete_candidates` always `()`
-- unknown classification → `JobObjectRetentionValidationError`
-- no age/budget fields; no filesystem mutation
-
-**Implementation paths changed in `1ccb39b` only:**
-
-- `ingestion/job_object_retention.py`
-- `tests/test_job_object_retention.py`
-
-**Boundary:** policy assessment only. **Нет** delete executor, FS mutation,
-age/budget thresholds, admin/CLI, upload-path edits, index retention changes,
-settings, UI, plan checkbox edits, live-service, push, or deploy.
-
-**Verification (2.4g):** red 7 failed → green focused 25 passed; adjacent 105
-passed; Ruff clean; diff-check clean; mypy Python 3.12 Success (1 file).
-
-## Контракт 2.4d (sync non-default upload index publication receipt) — COMPLETE
-
-Sync non-default upload receipt wiring in `api/app.py` +
-`api/routers/upload.py` + contracts in `tests/test_ingestion_job_contract.py`
-at `dfbbca0`:
-
-- `api.app` binds the existing manager
-  `build_vector_store_with_publication` alongside the ordinary compatibility
-  binding
-- `_rebuild_vector_store_from_docs` performs exactly one opt-in build under
-  the existing runtime lock, activates returned store/chunks/retriever and
-  same-tenant session retrievers, then returns that exact
-  `BuildVectorStoreResult`; unavailable/build/activation exception paths
-  return `None` with existing failure behavior
-- no second build/lock, later manifest reread, callback, store-private
-  receipt, or global/thread-local receipt channel
-- non-default sync upload consumes only returned `publication` and persists
-  exact JSON under existing durable `IngestionJob.result.index_publication`:
-  `tenant_id`, `active_collection`, `previous_collection`,
-  `manifest_generation`
-- Qdrant/no-publication and legacy truthy test stubs persist
-  `index_publication: null`; falsey failures remain failures
-- public `UploadResponse` shape/status is unchanged; cache invalidation,
-  idempotency/replay, categorization, event-loop offload, durable
-  transitions, redaction/error boundaries, and DB schema remain preserved
-- default async/Celery path was already wired by 2.4c and was not reopened
-
-**Implementation paths changed in `dfbbca0` only:**
-
-- `api/app.py`
-- `api/routers/upload.py`
-- `tests/test_ingestion_job_contract.py`
-- diff stat: 3 files changed, 190 insertions, 13 deletions
-
-**Boundary:** bounded sync non-default upload scope. Both accepted upload
-execution paths now durably record the exact available publication receipt
-in existing job result JSON (default async via 2.4c, non-default sync via
-2.4d). Full immutable-original lifecycle is still **not** complete: **no**
-GC/retention policy/executor for `job-objects` or `legacy-previous`, **no**
-orphan cleanup on failed transitions, **no** DB model/migration field, live
-fault injection/full suite, push/deploy, or production-readiness claim. Do
-**not** claim full plan step 2, full immutable lifecycle, project, release,
-production readiness, or live drills complete.
-
-## Контракт 2.4c (async-worker index publication receipt) — COMPLETE
-
-Async-worker receipt wiring in `tasks/ingest_task.py` + contracts in
-`tests/test_ingest_task.py`, `tests/test_ingestion_job_contract.py`, and
-`tests/test_ingestion_liveness.py` at `999c90f`:
-
-- async worker now calls existing
-  `build_vector_store_with_publication` exactly once
-- it consumes only that invocation's returned `publication`, with no later
-  manifest reread or second build/lock
-- exact Chroma receipt is placed in existing durable `IngestionJob.result`
-  under `index_publication` as a JSON dict with exactly `tenant_id`,
-  `active_collection`, `previous_collection`, and `manifest_generation`
-- Qdrant/no-publication path persists `index_publication: null`, inventing
-  no collection/generation
-- the same dict is passed through existing lease/CAS `sync_mark_completed`
-  and returned by the Celery task
-- existing progress, load/index redaction/error boundaries, heartbeat/lease
-  checks, terminal failure behavior, and DB schema remain unchanged
-- adjacent broad-test edits are only mechanical worker stub compatibility
-
-**Implementation paths changed in `999c90f` only:**
-
-- `tasks/ingest_task.py`
-- `tests/test_ingest_task.py`
-- `tests/test_ingestion_job_contract.py`
-- `tests/test_ingestion_liveness.py`
-- diff stat: 4 files changed, 187 insertions, 20 deletions
-
-**Boundary:** bounded async-worker scope only. Full durable cross-path
-job↔index lifecycle binding is still **not** complete. The non-default
-synchronous upload path remains bool-only and unwired. **Нет** DB
-migration/model field, sync path/API/UI, GC/retention for job/recovery
-objects, orphan cleanup, live drills, full suite, push/deploy, or
-production-readiness claim. Do **not** claim full plan step 2, full
-immutable lifecycle, full cross-path job↔published index binding,
-project, release, production readiness, or live drills complete.
-
-## Контракт 2.4b (build publication receipt) — COMPLETE
-
-Manager-only opt-in publication receipt in `vectordb/manager.py` + contracts
-in `tests/test_index_runtime_switch.py` at `29be31a`:
-
-- frozen `IndexPublicationReceipt` exposes normalized `tenant_id`, exact
-  `active_collection`, `previous_collection`, and positive
-  `manifest_generation`
-- frozen `BuildVectorStoreResult` exposes `store`, `chunks`, and optional
-  `publication`
-- opt-in `build_vector_store_with_publication` runs the single shared build
-  path and returns the exact Chroma receipt captured from the
-  `IndexVersionManifest` returned by that invocation's
-  `publish_active_collection`
-- existing `build_vector_store` still returns a real two-element
-  `(store, chunks)` tuple to all ordinary callers
-- shared `_build_vector_store_result` avoids duplicate builds, second tenant
-  locks, post-build/current-manifest rereads, callbacks, global/thread-local
-  state, or store-private receipt attributes
-- receipt is returned only after the existing full build path succeeds,
-  including automatic post-publish retention and cache updates;
-  validation/inventory/publish/retention failures still propagate without a
-  successful opt-in result
-- first/second Chroma builds report generation 1→2 and exact previous/active
-  collections
-- Qdrant returns a typed successful result with `publication is None`; no
-  version metadata is invented
-- existing automatic `execute_chroma_retention` routing, guarded
-  retention/rollback/operator surfaces, manifest/inventory semantics, and
-  caches remain preserved
-
-**Implementation paths changed in `29be31a` only:**
-
-- `vectordb/manager.py`
-- `tests/test_index_runtime_switch.py`
-
-**Boundary:** manager-only and **unwired**. **Нет** ingestion
-job/result/model/migration, worker, upload/API, loader/reindex, settings, UI,
-plan, dependency, live-service, push, or deploy changes. Do **not** claim
-full plan step 2, full immutable lifecycle, durable job↔published index
-linkage, GC/retention for job/legacy objects, orphan cleanup, fault
-injection, project, release, production readiness, or live drills complete.
-
-## Контракт 2.4f (tenant-scoped job-object inventory preview) — COMPLETE
-
-Tenant-scoped read-only preview wiring at `68cf045`:
-
-- `ingestion.jobs.sync_list_known_job_object_refs(tenant_id)` loads durable
-  `job_id` + `source_path` for one tenant (sync session); blank
-  `source_path` skipped; empty tenant fails closed; other tenants never leak
-- `ingestion.job_object_inventory.preview_tenant_job_object_inventory(
-  upload_dir, tenant_id=…, known_jobs=…, project_root=…)` composes injected
-  known refs with existing `classify_job_object_tree` and returns frozen
-  `JobObjectInventoryPreview` (`tenant_id`, `known_job_count`, `entries`)
-- falsey tenant normalizes to `default`; upload_dir outside project_root
-  still fails closed via classifier
-- end-to-end path: DB load → preview → protected/unrecorded classifications
-  without filesystem mutation
-- **never** deletes, renames, or mutates filesystem; no age/budget vocabulary;
-  no admin API; no CLI script in this slice
-
-**Implementation paths changed in `68cf045` only:**
-
-- `ingestion/job_object_inventory.py`
-- `ingestion/jobs.py`
-- `tests/test_job_object_inventory.py`
-
-**Boundary:** preview/load/classify only. **Нет** GC executor, orphan cleanup
-mutations, age/budget policy, admin/CLI operator surface, upload-path edits,
-index retention changes, settings, UI, plan checkbox edits, live-service,
-push, or deploy. Do **not** claim full plan step 2, full immutable lifecycle,
-GC/retention executor, project, release, production readiness, or live drills
-complete.
-
-**Verification (2.4f):** red 7 failed → green focused 18 passed; adjacent 98
-passed; Ruff clean; diff-check clean; mypy Python 3.12 Success (2 files).
-
-## Контракт 2.4e (job-object inventory classification) — COMPLETE
-
-Read-only job-object tree classifier in
-`ingestion/job_object_inventory.py` + contracts in
-`tests/test_job_object_inventory.py` at `13be7d9`:
-
-- `classify_job_object_tree(upload_dir, known_jobs=…, project_root=…)` scans
-  only `upload_dir/job-objects/**` files
-- known job `source_path` match → `kind=job_object`, `classification=protected`
-- `legacy-previous/<64-hex>/…` → `kind=legacy_previous`, always `protected`
-- valid `<uuid>/<name>` without known job → `unrecorded` (never auto-deletable
-  in this slice)
-- path mismatch / malformed layout → `untrusted` (never auto-deletable)
-- flat corpus files outside `job-objects/` never listed
-- duplicate known job ids and upload_dir outside project_root fail closed
-- **never** deletes, renames, or mutates filesystem; no age/budget vocabulary
-
-**Implementation paths changed in `13be7d9` only:**
-
-- `ingestion/job_object_inventory.py`
-- `tests/test_job_object_inventory.py`
-
-**Ownership confirmed read-only before the slice:** create path remains
-`api/routers/upload.py` (2.4a); durable reference remains
-`IngestionJob.source_path`; no pre-existing GC modules; index retention is a
-separate subsystem.
-
-**Boundary:** classification module + tests only at 2.4e time (later 2.4f
-adds tenant load/preview without reopening classifier labels). **Нет** GC
-executor at 2.4e. Do **not** claim full plan step 2 or full immutable
-lifecycle complete.
-
-## Контракт 2.4a (immutable upload originals) — COMPLETE
-
-Upload-path immutable originals in `api/routers/upload.py` + contracts in
-`tests/test_upload_idempotency.py` and `tests/test_upload_security.py` at
-`a1dcd5c`:
-
-- each created job gets
-  `data/uploads[/<tenant>]/job-objects/<job_id>/<safe_name>` written with
-  exclusive/create-new semantics
-- the project-relative immutable path is persisted in existing
-  `IngestionJob.source_path`
-- same-key replay writes neither immutable object nor flat current view;
-  fingerprint conflict remains 409 before mutation
-- the flat `upload_dir/<safe_name>` current corpus view remains for existing
-  non-recursive loaders, reindex assumptions, synchronous indexing,
-  categorization, and default Celery publication
-- flat refresh uses same-directory atomic replace only after the new
-  immutable write succeeds
-- pre-2.4a flat-only prior bytes are preserved first under content-addressed
-  nested `job-objects/legacy-previous/<sha256>/<safe_name>`; preservation
-  failure leaves flat bytes unchanged, terminal-fails the new job, and does
-  not publish
-- nested job/recovery objects remain outside current `recursive=False`
-  corpus scanning
-
-**Implementation paths changed in `a1dcd5c` only:**
-
-- `api/routers/upload.py`
-- `tests/test_upload_idempotency.py`
-- `tests/test_upload_security.py`
-
-**Boundary:** upload write path only. **Нет** DB/model/migration, jobs helper,
-worker, loader, reindex, index/retention, settings, UI, plan, dependency,
-live-service, push, or deploy changes. Do **not** claim full plan step 2,
-full immutable lifecycle, job↔index generation/collection binding,
-GC/retention for job/legacy objects, orphan cleanup, fault injection,
-project, release, production readiness, or live drills complete.
-
-## Контракт 2.3i (retention API / admin audit) — COMPLETE
-
-Tenant-scoped admin retention execution surface in
-`api/routers/admin_ops.py` + contracts in `tests/test_admin_index_operator.py`
-at `ac4b317`:
-
-- `POST /admin/index/retention` requires the existing admin role
-- tenant is derived only from authenticated user/context/default
-- extra-forbid strict `IndexRetentionExecutionRequest` with strict
-  `expected_generation` and ordered strict-string `expected_candidates`
-- calls only `vectordb.manager.execute_vector_store_retention` through
-  `asyncio.to_thread`, passing the exact command key
-- returns safe `status: complete`, tenant, configured budget, expected
-  command key, and exact deleted collection list from
-  `IndexRetentionExecutionResult`
-- maps typed validation/conflict/corrupt/Qdrant-unavailable/lock/deletion/
-  metadata-update failures to safe 400/409/503 responses
-- audits success and each mapped failure exactly once using
-  `action=index_retention`, `resource=index/retention`, with safe structured
-  partial-progress fields for deletion/prune failures
-- auth/422/unrelated failures skip runtime/audit as applicable
-- does not call settings, Chroma, manifest, inventory, locks, embeddings,
-  caches, or lower domain adapters directly and does not alter preview,
-  rollback, or automatic post-publish retention
-
-**Implementation paths changed in `ac4b317` only:**
-
-- `api/routers/admin_ops.py`
-- `tests/test_admin_index_operator.py`
-
-**Boundary:** API/admin-audit only over the already-landed runtime guarded
-retention action. **Нет** settings/policy rewrite, UI, live
-Chroma/PostgreSQL/Redis, deploy, or push. Do **not** claim full plan step 2,
-immutable uploads, fault injection, project, release, production readiness,
-or live drills complete.
-
-## Контракт 2.3h (runtime manager retention action) — COMPLETE
-
-Runtime-only manager action in `vectordb/manager.py` + contracts in
-`tests/test_index_runtime_switch.py` at `bd01f23`:
-
-- `execute_vector_store_retention` requires keyword-only
-  `expected_generation` and exact `expected_candidates` tuple
-- falsey tenant normalizes to `default`
-- reads `get_settings()` and uses configured `vectordb_chroma_dir` plus
-  `vectordb_retention_max_versions`; callers cannot override deletion policy
-- fails closed for Qdrant with `IndexStagingValidationError` before guarded
-  adapter work
-- delegates to `execute_guarded_chroma_retention` and returns its
-  `IndexRetentionExecutionResult` unchanged
-- does not load embeddings, touch runtime caches, open Chroma directly,
-  acquire another lock, directly mutate manifest/inventory, or add
-  API/audit/retry
-- automatic post-publish `execute_chroma_retention` path remains preserved
-
-**Implementation paths changed in `bd01f23` only:**
-
-- `vectordb/manager.py`
-- `tests/test_index_runtime_switch.py`
-
-**Boundary:** runtime-only. **Нет** HTTP/API/admin audit in 2.3h itself
-(later landed as 2.3i @ `ac4b317`). **Нет** settings/policy change, UI, live
-Chroma/PostgreSQL/Redis, deploy, or push. Do **not** re-select 2.3h.
-
-## Контракт 2.3g (guarded Chroma retention adapter bridge)
-
-Adapter-only bridge in `vectordb/chroma_retention.py` + contracts in
-`tests/test_chroma_retention.py`:
-
-- new adapter-only `execute_guarded_chroma_retention` requires explicit
-  expected generation and exact candidate tuple, accepts no caller lock token,
-  supplies the shared Chroma direct-delete callback to
-  `execute_index_retention`, and returns its domain result
-- both guarded and automatic paths share one lazy direct-delete helper: one
-  client per invocation, client created only on first deletion, only direct
-  `delete_collection`, `NotFoundError` idempotent, other failures propagate
-- existing `execute_chroma_retention` signature/held-lock/tuple-return and
-  automatic post-publish behavior remain preserved
-- validation/conflict/corrupt/lock/empty pre-delete paths do not instantiate a
-  client
-
-**Preserved foundations (not re-implemented here):** domain guarded retention
-command (2.3f), existing automatic post-publish Chroma retention path, and
-preview/rollback surfaces remain as before; 2.3g only adds the adapter bridge.
-
-**Boundary:** adapter-only. **Нет** manager/runtime public action,
-HTTP/API/admin audit, settings/policy change, UI, live Chroma/PostgreSQL/Redis,
-deploy, or push. Do **not** claim full operator surface, plan step 2, project,
-release, production readiness, live drills, or retention API complete.
-
-## Уже существующее durable lifecycle-поведение
-
-- Validated Chroma rebuild под tenant lock: record new version в trusted
-  inventory → publish manifest → configured bounded retention.
-- Active/previous и unrecorded collections защищены existing policy.
-- Partial retention delete/prune failures остаются observable/repeatable
-  (existing executor semantics).
-- Domain preview (`preview_index_retention`) читает candidate policy, manifest
-  и inventory под одним tenant lock **без** mutation.
-- Admin retention preview API (2.3b): `GET /api/admin/index/retention-preview`
-  — read-only, tenant from auth context only, no deletion/rollback/publish.
-- Idempotent rollback command (2.3c): domain contract with explicit expected
-  generation/target and exact-retry no-op.
-- Runtime rollback (2.3d): manager requires the same expected generation/target,
-  validates the explicit target under the operator lock, and updates cache from
-  the rollback result without oscillation on exact retry.
-- Admin rollback API (2.3e): existing-admin POST endpoint with strict body,
-  tenant-from-auth only, safe typed mapping, `asyncio.to_thread`, and
-  tenant-scoped `index_rollback` audit.
-- Guarded retention execution (2.3f): unwired domain command requiring expected
-  generation + exact candidate tuple before invoking bounded retention under
-  one tenant lock.
-- Guarded Chroma retention bridge (2.3g): adapter-only
-  `execute_guarded_chroma_retention` requiring expected generation + exact
-  candidate tuple, sharing the lazy direct-delete helper with automatic
-  post-publish retention, without manager/runtime/HTTP wiring.
-- Runtime manager retention action (2.3h):
-  `execute_vector_store_retention` requires expected generation + exact
-  candidate tuple, derives configured Chroma directory/budget via settings,
-  fails closed for Qdrant before adapter work, and returns the guarded adapter
-  result unchanged, without HTTP/API/admin audit.
-- Admin retention execution API (2.3i): `POST /admin/index/retention` —
-  existing-admin role, tenant-from-auth only, strict expected generation +
-  exact candidates body, `asyncio.to_thread` to
-  `execute_vector_store_retention`, safe complete response, typed 400/409/503
-  mapping, and exactly-once `index_retention` audit with safe partial-progress
-  fields; does not alter preview, rollback, or automatic post-publish
-  retention.
-- Immutable upload originals (2.4a): each created job writes exclusive
-  job-scoped object under `job-objects/<job_id>/`, persists path on
-  `IngestionJob.source_path`, keeps flat current corpus view via atomic
-  replace after immutable write, preserves pre-2.4a flat-only prior bytes
-  under `job-objects/legacy-previous/<sha256>/`, and leaves nested objects
-  outside `recursive=False` scanning; replay/fingerprint rules unchanged.
-- Build publication receipt (2.4b): manager opt-in
-  `build_vector_store_with_publication` returns frozen
-  `BuildVectorStoreResult` with optional `IndexPublicationReceipt` captured
-  from the exact publish manifest of that build; ordinary
-  `build_vector_store` remains a two-element `(store, chunks)` tuple; Qdrant
-  success keeps `publication is None`.
-- Async-worker receipt persistence (2.4c): async worker calls
-  `build_vector_store_with_publication` exactly once, places exact Chroma
-  receipt under durable `IngestionJob.result.index_publication` (or `null`
-  for Qdrant/no-publication), and passes the same dict through
-  lease/CAS `sync_mark_completed` / Celery return.
-- Sync non-default upload receipt persistence (2.4d): `api.app` binds
-  opt-in manager entrypoint; `_rebuild_vector_store_from_docs` performs one
-  opt-in build under the existing runtime lock and returns exact
-  `BuildVectorStoreResult`; non-default sync upload persists exact available
-  `publication` under durable `IngestionJob.result.index_publication` (or
-  `null` for Qdrant/no-publication and legacy truthy stubs); public
-  `UploadResponse` unchanged.
-
-**Не утверждать:** Qdrant operator support, live services, production
-readiness, full immutable lifecycle, GC/retention for job/legacy objects,
-orphan cleanup, complete fault injection, complete plan step 2,
-project/release readiness. Local retention preview + guarded execution +
-validated rollback operator surface is present after 2.3i. Immutable upload
-originals + flat current view are present after 2.4a. Manager opt-in
-publication receipt is present after 2.4b. Async-worker receipt persistence
-is present after 2.4c. Sync non-default upload receipt persistence is
-present after 2.4d; both accepted upload paths now record exact available
-publication receipt in existing job result JSON.
-
-## Доказательства верификации (не перезапускать без new code/failure)
-
-### 2.4d (latest)
-
-- Grok implementation run `rag-step2-4d-20260803-a1`, local Grok CLI,
-  requested `grok-4.5`, actual `grok-4.5-build`, normal `end_turn`, 18 turns,
-  stderr empty.
-- Tests-first red: **3 failed** — missing
-  `_build_vector_store_with_publication` binding, missing durable
-  `index_publication` for exact receipt, and missing durable null key.
-- One allowed green diagnostic correction changed only the helper test's
-  monkeypatch target from `config.settings.get_settings` to module-local
-  `api.app.get_settings`.
-- Grok focused green aggregate: **33 passed**; scoped Ruff clean;
-  `mypy --follow-imports=skip` clean for app+upload; diff-check clean.
-- Codex review found one concrete test-isolation defect only: direct global
-  assignments and unisolated `_sessions` in the new helper test.
-- Grok QA/fix run `rag-step2-4d-20260803-qa1`, same route/requested/actual
-  model, 7 turns, stderr empty, ended `cancelled` after applying only the
-  test-isolation fix and after pytest/Ruff/diff-check had passed. The stored
-  output does **not** expose the exact pytest count; **do not invent one**
-  and do **not** call this an unqualified normal completion. Production
-  hashes remained unchanged.
-- Independent Codex final proportional gate: **8 passed**; two known warnings
-  (Starlette TestClient/httpx deprecation and LangChain Ollama deprecation);
-  scoped Ruff clean; `python -m mypy --follow-imports=skip api/app.py
-  api/routers/upload.py` clean; scoped diff-check clean.
-- All nine protected hashes matched: manager, async worker, jobs, model,
-  upload idempotency/security tests, categorizer test, integration ingestion
-  flow test, and active protected plan.
-- Full suite and live services were **not** run. Push/deploy not authorized;
-  production readiness and full plan step 2 **not** claimed.
-- Этот docs-only Update-51 **не** перезапускал project tests.
-
-### 2.4c (summary)
-
-- Tests-first red by Codex after prior Grok tests-only WIP: with local
-  basetemp, **3 failed** because the unchanged worker still called ordinary
-  `build_vector_store`, bypassed opt-in stubs, attempted a real Chroma build,
-  and raised `Vector indexing failed`. An initial attempted run did not reach
-  tests because global pytest temp root returned `WinError 5`; the narrowed
-  local-basetemp rerun produced the valid behavioral red.
-- Grok run `rag-step2-4c-20260803-a1`, route local Grok CLI, requested
-  `grok-4.5`, actual `grok-4.5-build`, 8 turns, stderr empty, ended
-  `cancelled` while locating a nonexistent `.venv`; it had written only the
-  tests-first WIP, not production. Do **not** call this an unqualified normal
-  completion.
-- Grok follow-up `rag-step2-4c-20260803-a2`, same route/model request, actual
-  `grok-4.5-build`, 10 turns, stderr empty, ended `cancelled` after production
-  implementation and focused QA. Its focused aggregate: **16 passed**; Ruff
-  and diff-check clean. Default Mypy hit an external installed
-  NumPy-stub/project Python-version mismatch; narrowed
-  `--follow-imports=skip` passed. Do **not** call this cancelled run an
-  unqualified normal completion either.
-- Independent Codex proportional gate after final diff: **6 passed**, one
-  known Starlette deprecation warning; scoped Ruff clean;
-  `python -m mypy --follow-imports=skip tasks/ingest_task.py` clean; scoped
-  diff-check clean.
-- Protected hashes matched for `vectordb/manager.py`, `ingestion/jobs.py`,
-  `db/models.py`, `api/routers/upload.py`, `api/app.py`,
-  `ingestion/pipeline.py`, and active untracked plan.
-- Full default Mypy is **not** claimed clean in this environment. Full suite
-  and live services were **not** run. Push/deploy not authorized. Production
-  readiness **not** claimed.
-- Docs-only Update-50 recorded 2.4c without re-running project tests.
-
-### 2.4b (summary)
-
-- Grok implementation: run `rag-step2-4b-20260803-a1`, route `local_grok_cli`,
-  requested model `grok-4.5`, actual model `grok-4.5-build`; 20 turns;
-  stderr empty; tests-first red `4 failed, 1 passed` for the missing opt-in
-  receipt contract; focused green `8 passed`; Ruff clean; Mypy clean; scoped
-  diff-check clean. The process ended `cancelled` only at its final
-  disallowed multi-line `python -c` protected-hash probe, after code/static
-  verification and status. Do **not** describe it as an unqualified normal
-  completion; do **not** rerun that probe.
-- Independent Codex proportional gate: `8 passed`, one known Starlette
-  deprecation warning; Ruff clean; Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4
-  clean for `vectordb/manager.py`; scoped diff-check clean.
-- All twelve protected SHA-256 baselines matched before commit, including
-  manifest, worker/jobs/model, upload/API, pipeline, adjacent tests, and the
-  active untracked plan.
-- Full test suite and live services were **not** run. Push/deploy not
-  authorized. Production readiness **not** claimed.
-- Docs-only Update-49 recorded 2.4b without re-running project tests.
-
-### 2.4a (summary)
-
-- Grok implementation: run `rag-step2-4a-20260803-a1`, route `local_grok_cli`,
-  requested model `grok-4.5`, actual model `grok-4.5-build`; 16 turns, normal
-  `end_turn`, stderr empty; tests-first red `6 failed`, then focused green
-  `76 passed`; Ruff clean.
-- Independent Codex gate before QA: `12 passed`, one known Starlette
-  deprecation warning; Ruff clean; Mypy clean for `api/routers/upload.py`;
-  scoped diff-check clean.
-- Grok QA/fix follow-up: run `rag-step2-4a-20260803-qa1`, same route/model;
-  13 turns, normal `end_turn`, stderr empty; added legacy previous-original
-  regression/fix; red evidence: two focused failures (missing recovery
-  object and missing preservation helper); focused final `9 passed`; Ruff
-  clean.
-- Final independent Codex gate after QA: `16 passed`, one known Starlette
-  deprecation warning; Ruff clean; Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4
-  clean for `api/routers/upload.py`; scoped diff-check clean.
-- All protected hashes documented for 2.4a matched before commit, including
-  `ingestion/jobs.py`, `tasks/ingest_task.py`, `db/models.py`,
-  `ingestion/loader.py`, `scripts/reindex.py`, completed retention surfaces,
-  and the active untracked plan.
-- Full test suite and live services were **not** run. Push/deploy not
-  authorized. Production readiness **not** claimed.
-- Docs-only Update-48 recorded 2.4a without re-running project tests.
-
-### 2.3i (summary)
-
-- Grok: route `local_grok_cli`; requested model `grok-4.5`, actual model
-  `grok-4.5-build`; first run `rag-step2-3i-20260803-a1` was cancelled before
-  edits at a denied multi-line exploratory Pydantic `python -c` probe (target
-  hashes remained unchanged); one cause-specific retry
-  `rag-step2-3i-20260803-a2` forbade interpreter/hash probes, completed
-  normally in 14 turns, and made the implementation; tests-first red:
-  `32 failed, 40 deselected` for expected 404/missing route and missing source
-  marker; focused final full admin operator file: `72 passed`, one known
-  Starlette deprecation warning; Ruff clean; direct Mypy reported exactly one
-  known pre-existing unchanged `dict-item` issue in trace-purge logic;
-  narrowed `--disable-error-code=dict-item` passed; scoped diff-check clean.
-  Do **not** claim unconditional full-file Mypy cleanliness and do **not**
-  hide the first cancelled no-edit run.
-- Codex independent: full scoped diff review found only the two allowed
-  implementation files; independent proportional pytest gate:
-  `14 passed, 58 deselected`, one known Starlette deprecation warning; scoped
-  Ruff clean; Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4 narrowed only for the
-  known pre-existing `dict-item`: no issues in the changed contract; scoped
-  diff-check clean; all eight protected hashes matched:
-  `vectordb/manager.py`, `vectordb/chroma_retention.py`,
-  `vectordb/index_operator.py`, `vectordb/index_retention.py`,
-  `config/settings.py`, `api/app.py`, `auth/dependencies.py`, and
-  `tests/test_index_runtime_switch.py`.
-- Real Chroma/PostgreSQL/Redis, full suite, push, deploy, production
-  readiness — **не** было и **не** утверждается.
-
-### 2.3h (summary)
-
-- Grok: route `local_grok_cli`; requested model `grok-4.5`, actual model
-  `grok-4.5-build`; tests-first red failed for the expected missing
-  `execute_vector_store_retention` entrypoint (the unrelated automatic rebuild
-  routing test passed in the red selection); focused green `25 passed`; Ruff
-  clean; Mypy clean. The 16-turn run ended `cancelled` only at the final
-  disallowed compound `python -c` protected-hash request — do **not** describe
-  that run as an unqualified clean completion, and do **not** invent a red
-  failure count.
-- Codex independent: scoped review found only the two allowed implementation
-  files changed; independent proportional pytest gate:
-  `12 passed, 24 deselected`, one known Starlette deprecation warning; scoped
-  Ruff clean; Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4: no issues in
-  `vectordb/manager.py`; scoped diff-check clean before commit; all six
-  protected file hashes matched (`vectordb/chroma_retention.py`,
-  `tests/test_chroma_retention.py`, `vectordb/index_operator.py`,
-  `vectordb/index_retention.py`, `config/settings.py`,
-  `api/routers/admin_ops.py`).
-
-### 2.3g (summary)
-
-- Grok: route `local_grok_cli`; CLI-selected model `grok-4.5`, actual reported
-  `grok-4.5-build`; tests-first red: `7` guarded tests failed because
-  bridge/operator import was absent; focused final: `66 passed`; Ruff and
-  scoped diff-check clean.
-- Codex independent: adapter/runtime-retention compatibility gate:
-  `13 passed, 23 deselected`, one known Starlette warning; scoped Ruff clean;
-  Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4: no issues in
-  `vectordb/chroma_retention.py`; scoped diff-check clean; protected
-  operator/policy/manager/API/runtime-test hashes unchanged before commit.
-
-### 2.3f (summary)
-
-- Grok: route `local_grok_cli`; CLI-selected model `grok-4.5`, actual reported
-  `grok-4.5-build`; first attempt cancelled before edits at a denied redundant
-  `python -c` hash command; one cause-specific follow-up completed in 11 turns;
-  tests-first red: `26 failed` due missing execution contract; final focused
-  aggregate: `76 passed`, one known Starlette warning; Grok Ruff and scoped
-  diff-check clean.
-- Codex independent: new execution/boundary gate: `26 passed, 28 deselected`,
-  one known Starlette warning; scoped Ruff clean; Python 3.11 / Mypy 1.19.1 /
-  NumPy 2.4.4: no issues in `vectordb/index_operator.py`; scoped
-  `git diff --check` clean; protected implementation/dependency/runtime/API
-  hashes unchanged before commit.
-
-### 2.3e (summary)
-
-- Grok: route `local_grok_cli`; CLI-selected model `grok-4.5`, actual reported
-  `grok-4.5-build`; red `26 failed, 14 deselected`; focused final `128 passed`
-  with one known Starlette warning; Ruff/diff clean.
-- Codex independent: `40 passed` with one known warning; scoped Ruff clean;
-  narrowed Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4 passed with only existing
-  `dict-item` disabled; protected hashes/route search/diff clean; final
-  key-contract gate `19 passed`, Ruff/diff clean.
-- Direct Mypy на весь `admin_ops.py`: pre-existing `dict-item` на **unchanged**
-  logic at line **223** (commit `3c1e7b7d`, line shifted by inserted rollback
-  code). **Никогда** не называть весь файл unconditionally Mypy-clean.
-
-### 2.3d (summary)
-
-- Grok: route `local_grok_cli`; CLI-selected model `grok-4.5`, actual reported
-  `grok-4.5-build`; initial red `18 failed, 18 passed`; final focused gate
-  `90 passed` with two pre-existing warnings; Ruff/diff clean.
-- Codex independent: `53 passed` with one known FastAPI/Starlette warning;
-  scoped Ruff clean; Python 3.11 / Mypy 1.19.1 / NumPy 2.4.4 clean; caller
-  search found no production call sites; protected hashes/diff clean. One Grok
-  QA follow-up corrected only the stale module word `unwired`; final
-  key-contract gate `9 passed`, Ruff/diff clean.
-
-### 2.3c (summary)
-
-- Grok: route `local_grok_cli`; CLI-selected model `grok-4.5`, result-reported
-  actual model `grok-4.5-build`; initial red `18 failed, 9 passed`; focused
-  final `60 passed` after one allowed narrowed correction to a false-positive
-  source-boundary assertion; Ruff and scoped diff check clean.
-- Codex independent: `27 passed` with the already known FastAPI/Starlette
-  TestClient deprecation warning; scoped Ruff clean; Python 3.11 /
-  Mypy 1.19.1 / NumPy 2.4.4 clean; protected hashes and diff check clean.
-
-### 2.3b (summary)
-
-- Grok TDD: **14** expected failures (route absent) → **48** focused passes;
-  scoped Ruff/diff clean; route/model `local_grok_cli` / `grok-4.5-build`.
-- Codex independent closure: **103** passed, 1 known FastAPI TestClient
-  deprecation warning; scoped Ruff clean; protected hashes + cached diff check
-  clean.
-- Direct Mypy caveat originally reported at unchanged line **215**; later
-  shifted by inserted lines (see 2.3e caveat at **223**).
-
-### 2.3a (summary)
-
-- Grok: **46** focused passes; Codex: **79**-pass closure.
-
-### Reference commands (2.4e) — только при regression / new classifier code
+### Reference commands (2.5b)
 
 ```powershell
-python -m pytest tests/test_job_object_inventory.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-4e-<unique>
-# adjacent (as run for 2.4e):
-python -m pytest tests/test_job_object_inventory.py tests/test_upload_idempotency.py tests/test_upload_security.py tests/test_ingestion_job_contract.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-4e-adj-<unique>
-python -m ruff check ingestion/job_object_inventory.py tests/test_job_object_inventory.py
-# mypy: prefer py3.12+ host with mypy 1.19.1; host 3.13 may hit NumPy stub syntax noise
-python -m mypy ingestion/job_object_inventory.py --config-file pyproject.toml
-git diff --check -- ingestion/job_object_inventory.py tests/test_job_object_inventory.py
+python -m pytest tests/test_ingestion_job_contract.py tests/test_ingest_task.py tests/test_admin_job_object_inventory.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-5b-<unique>
+python -m ruff check alembic/versions/022_ingestion_job_index_bind.py db/models.py ingestion/jobs.py tests/test_ingestion_job_contract.py
 ```
 
-### Reference commands (2.4f — landed)
+---
+
+## Контракт 2.5a (admin job-object inventory) — COMPLETE
+
+At `0855528`:
+
+- `GET /api/admin/job-objects/inventory` — admin, JWT tenant
+- `load_and_run_operator_preview(..., execute=False)`
+- audit `job_object_inventory_preview`
+- no `execution` in response
+- composition: `ingestion/job_object_operator.py`
+
+---
+
+## Контракт 2.4k / 2.4j (status + annotations) — COMPLETE
+
+- `sync_list_job_statuses_for_tenant` + CLI/admin annotations path
+- failed+protected → `retained_after_failed_transition`
+
+---
+
+## Следующий named candidate: 2.6a fault injection (не начат)
+
+**Plan order:** next §2 bullet after lifecycle bind.
+**Name:** **2.6a — inventory/publish fail-closed injection** (first atomic
+sub-slice of broader fault-injection bullet).
+
+### Intent
+
+Prove fail-closed index lifecycle under injected faults at the
+inventory/publish boundary (language from plan 2.1 DoD + fault-injection
+bullet):
+
+1. Inventory-write failure must **not** change the active manifest.
+2. Publish failure must **not** leave a dangerous live candidate.
+3. Preferred shape: tests-first injectable fault points (or existing hooks)
+   around inventory write / publish switch — **not** a live multi-service
+   drill.
+
+### Suggested acceptance (tests-first)
+
+1. Focused tests that force failure at inventory write **and/or** publish
+   boundary; assert manifest/active collection unchanged where required.
+2. No new auto-delete classes; no job-object FS deletion; no age/budget.
+3. Scoped Ruff + proportional adjacent tests green.
+4. Local commit only; optional handoff Update after slice.
+5. **Do not** start concurrent-upload / worker-recovery matrix in the same
+   turn (those are later 2.6b+).
+
+### Candidate ownership (confirm before edits)
+
+| Surface | Likely modules | Notes |
+|---------|----------------|-------|
+| Inventory / publish | `vectordb/*` (inventory, manifest, manager) | primary |
+| Upload/worker paths | `api/routers/upload.py`, `tasks/ingest_task.py` | only if required for inject |
+| Job bind columns | `ingestion/jobs.py` 2.5b | **do not** reopen unless conflict |
+| Job-object GC | job_object_* | **do not** invent deletion |
+
+### Explicitly out of 2.6a
+
+- real FS job-object deletion / age-budget
+- live PG/Redis/Celery/Chroma (opt-in separate)
+- full embeddings→cleanup fault matrix (later sub-slices)
+- plan checkbox bulk-edit
+- push / deploy
+
+### Reference commands (2.6a — after work lands)
 
 ```powershell
-python -m pytest tests/test_job_object_inventory.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4f-<unique>
-python -m pytest tests/test_job_object_inventory.py tests/test_upload_idempotency.py tests/test_upload_security.py tests/test_ingestion_job_contract.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4f-adj-<unique>
-python -m ruff check ingestion/job_object_inventory.py ingestion/jobs.py tests/test_job_object_inventory.py
-python -m mypy ingestion/job_object_inventory.py ingestion/jobs.py --config-file pyproject.toml
-git diff --check -- ingestion/job_object_inventory.py ingestion/jobs.py tests/test_job_object_inventory.py
+# Adjust modules once 2.6a lands; keep scoped:
+python -m pytest tests/<new_or_targeted> -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-6a-<unique>
 ```
 
-### Reference commands (2.4g — landed)
+---
 
-```powershell
-python -m pytest tests/test_job_object_retention.py tests/test_job_object_inventory.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4g-<unique>
-python -m pytest tests/test_job_object_retention.py tests/test_job_object_inventory.py tests/test_upload_idempotency.py tests/test_upload_security.py tests/test_ingestion_job_contract.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4g-adj-<unique>
-python -m ruff check ingestion/job_object_retention.py tests/test_job_object_retention.py
-python -m mypy ingestion/job_object_retention.py --config-file pyproject.toml
-git diff --check -- ingestion/job_object_retention.py tests/test_job_object_retention.py
-```
+## Что остаётся открытым (после 2.5b / Update-64)
 
-### Reference commands (2.4h — landed)
+- **2.6a+** fault injection expansion (next ordered)
+- concurrent same-tenant uploads, duplicate job, worker outage/recovery,
+  lock contention (later sub-slices under fault injection)
+- live migrations **019–022** + worker recovery + advisory-lock drills
+  (**opt-in**)
+- real job-object / legacy-previous **FS deletion** (needs product opt-in;
+  policy currently fail-closed empty)
+- age/budget thresholds
+- orphan cleanup **mutations**
+- job-object retention **execute** HTTP
+- full suite, release gates, project/production readiness
 
-```powershell
-python -m pytest tests/test_job_object_retention.py tests/test_job_object_inventory.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4h-<unique>
-python -m pytest tests/test_job_object_retention.py tests/test_job_object_inventory.py tests/test_upload_idempotency.py tests/test_upload_security.py tests/test_ingestion_job_contract.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4h-adj-<unique>
-python -m ruff check ingestion/job_object_retention.py tests/test_job_object_retention.py
-python -m mypy ingestion/job_object_retention.py --config-file pyproject.toml
-git diff --check -- ingestion/job_object_retention.py tests/test_job_object_retention.py
-```
+**Superseded next-work text:** any handoff still saying next is 2.4k, 2.5a,
+2.5b, or vague “re-scope only” without naming **2.6a** is **stale**.
 
-### Reference commands (2.4i — landed)
+---
 
-```powershell
-python -m pytest tests/test_preview_job_object_inventory_cli.py tests/test_job_object_retention.py tests/test_job_object_inventory.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4i-<unique>
-python -m ruff check scripts/preview_job_object_inventory.py tests/test_preview_job_object_inventory_cli.py
-python -m mypy scripts/preview_job_object_inventory.py --config-file pyproject.toml
-# operator smoke (no DB load if using injected tests; live needs DATABASE_URL):
-python scripts/preview_job_object_inventory.py --tenant default --json
-```
+## Windows / tooling notes
 
-### Reference commands (2.4j — landed)
+- Unique ignored basetemp: `--basetemp=.tmp/pytest-<slice>`
+- Full `requirements-dev.lock` may hit Linux-only wheel issues — do not
+  blind-retry install without portability task
+- One atomic slice per user turn; stop after commit + optional docs
 
-```powershell
-python -m pytest tests/test_job_object_orphans.py tests/test_preview_job_object_inventory_cli.py tests/test_job_object_retention.py tests/test_job_object_inventory.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4j-<unique>
-python -m ruff check ingestion/job_object_orphans.py tests/test_job_object_orphans.py
-python -m mypy ingestion/job_object_orphans.py --config-file pyproject.toml
-```
+---
 
-### Reference commands (2.4k — landed)
+## Do not
 
-```powershell
-python -m pytest tests/test_job_object_orphans.py tests/test_preview_job_object_inventory_cli.py tests/test_job_object_retention.py tests/test_job_object_inventory.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4k-<unique>
-```
-
-### Reference commands (2.4d) — только при new code/failure
-
-```powershell
-python -m pytest tests/test_ingestion_job_contract.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-4d-<unique>
-python -m ruff check api/app.py api/routers/upload.py tests/test_ingestion_job_contract.py
-python -m mypy --follow-imports=skip api/app.py api/routers/upload.py
-git diff --check -- api/app.py api/routers/upload.py tests/test_ingestion_job_contract.py
-```
-
-### Reference commands (2.4c) — только при new code/failure
-
-```powershell
-python -m pytest tests/test_ingest_task.py tests/test_ingestion_job_contract.py tests/test_ingestion_liveness.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-4c-<unique>
-python -m ruff check tasks/ingest_task.py tests/test_ingest_task.py tests/test_ingestion_job_contract.py tests/test_ingestion_liveness.py
-python -m mypy --follow-imports=skip tasks/ingest_task.py
-git diff --check -- tasks/ingest_task.py tests/test_ingest_task.py tests/test_ingestion_job_contract.py tests/test_ingestion_liveness.py
-```
-
-### Reference commands (2.4b) — только при new code/failure
-
-```powershell
-python -m pytest tests/test_index_runtime_switch.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-4b-<unique>
-python -m ruff check vectordb/manager.py tests/test_index_runtime_switch.py
-uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy vectordb/manager.py --no-incremental --show-error-codes
-git diff --check -- vectordb/manager.py tests/test_index_runtime_switch.py
-```
-
-### Reference commands (2.4a) — только при new code/failure
-
-```powershell
-python -m pytest tests/test_upload_idempotency.py tests/test_upload_security.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-4a-<unique>
-python -m ruff check api/routers/upload.py tests/test_upload_idempotency.py tests/test_upload_security.py
-uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy api/routers/upload.py --no-incremental --show-error-codes
-git diff --check -- api/routers/upload.py tests/test_upload_idempotency.py tests/test_upload_security.py
-```
-
-### Reference commands (2.3i) — только при new code/failure
-
-```powershell
-python -m pytest tests/test_admin_index_operator.py -q -p no:cacheprovider --basetemp=.tmp/pytest-step2-3i-<unique>
-python -m ruff check api/routers/admin_ops.py tests/test_admin_index_operator.py
-uv run --isolated --python 3.11 --with mypy==1.19.1 --with numpy==2.4.4 python -m mypy api/routers/admin_ops.py --no-incremental --show-error-codes --disable-error-code=dict-item
-git diff --check -- api/routers/admin_ops.py tests/test_admin_index_operator.py
-```
-
-На этом Windows host обязателен unique ignored basetemp
-(`--basetemp=.tmp/pytest-<slice>`). Полный `requirements-dev.lock` resolution
-blocked unmarked Linux-only `nvidia-cufile` wheel; не retry install без
-отдельной portability-задачи. Direct full-file Mypy on `admin_ops.py` still
-has the known pre-existing unchanged `dict-item` issue in trace-purge logic;
-never claim unconditional full-file Mypy cleanliness without evidence.
-
-## Что остаётся открытым / следующий safe slice
-
-**Не начато (вне next candidate):**
-
-- broader fault injection, live PostgreSQL/Redis/Celery/Chroma drills
-  (explicit opt-in only — do **not** select as default next slice),
-  release gates, project completion.
-- full immutable lifecycle beyond 2.4a–2.4e: GC/retention **executor** for
-  job-objects and legacy-previous recovery objects; orphan cleanup
-  **mutations** after failed transition; live concurrency/fault-injection
-  for upload originals; age/budget delete policy.
-- DB migration/model fields for index version/collection; API/UI surfaces
-  (out of 2.4f preview scope unless proven required).
-
-**Remaining honest limitations after 2.4k:**
-
-- both accepted upload paths still record publication receipts (2.4c/2.4d)
-- job-object inventory / policy / guarded no-op / operator CLI + status
-  annotations stack present through 2.4k
-- full immutable-original lifecycle is still **not** complete
-- no real filesystem **deletion** path for job-objects / legacy
-- no orphan cleanup **mutations** (annotations only; failed jobs retained)
-- no age/budget delete thresholds
-- no admin HTTP operator surface
-- no migration/model field for index version/collection on the job
-- no live concurrency/fault-injection; full suite not run
-- full plan step 2 / project / release / production readiness **not** complete
-
-**Next candidate (re-scope required — not started):** job-object
-operator-visibility track is complete through **2.4k**. Do **not** re-select
-2.1–2.4k. Do **not** invent auto-delete classes or age/budget rules, edit the
-plan checkboxes, or start real FS deletion without explicit product opt-in.
-Next session re-reads plan §2 and picks **one** remaining non-deletion gap
-(or gets explicit opt-in before any deletion design).
-
-**Superseded / do not re-select:** 2.1–2.4k are complete. Historical
-next-work text that still names **2.4a**–**2.4k** as the next candidate is
-stale. Historical headings containing `✅ START HERE` are archival.
-
-### Следующий шаг: re-scope (не начат; deletion не default)
-
-Job-object observability is done through 2.4k. Safe default for next session:
-pick a **non-deletion** remaining plan §2 item, or stop and ask the owner
-before designing real deletion/age/budget.
-
-**Do not:**
-
-- invent auto-delete classes or age/budget thresholds
-- treat failed jobs as deletable orphans
-- reopen 2.4a–2.4k domain semantics without proven conflict
-- edit plan checkboxes from docs turns
-- push / deploy / live services without explicit opt-in
-
-**Plan source (direction only):** active untracked plan
-[`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)
-§2 still carries the broader immutable/versioned originals + lifecycle bind
-item (do **not** edit plan checkboxes here).
-
-### Historical 2.4d ownership notes (archive; 2.4d COMPLETE @ `dfbbca0`)
-
-Landed sync non-default upload receipt wiring is in §Контракт 2.4d above.
-**Do not treat as next-work instruction.**
-
-| Surface | Module / symbols | Focused tests |
-|---------|------------------|---------------|
-| Sync rebuild helper | `api/app.py` — `_rebuild_vector_store_from_docs` + opt-in binding | `tests/test_ingestion_job_contract.py` |
-| Non-default sync upload | `api/routers/upload.py` | `tests/test_ingestion_job_contract.py` |
-| Opt-in manager entrypoint (consumed; not re-opened) | `vectordb.manager.build_vector_store_with_publication` | already covered by 2.4b |
-| Async worker receipt (not re-opened) | `tasks/ingest_task.py` | already covered by 2.4c |
-
-**Gap closed by 2.4d:** non-default sync upload now persists exact available
-publication receipt under durable `IngestionJob.result.index_publication`
-(or `null`). Together with 2.4c, both accepted upload execution paths record
-the exact available receipt in existing job result JSON. **Later closed by
-2.4e (classification only):** read-only inventory classifier for
-job-objects / legacy-previous. **Gap still open after 2.4e:** GC/retention
-executor, tenant-scoped preview wiring (**2.4f**), orphan cleanup mutations —
-not a claim that full plan step 2 is complete.
-
-### Historical 2.4c ownership notes (archive; 2.4c COMPLETE @ `999c90f`)
-
-Landed async-worker receipt wiring is in §Контракт 2.4c above. **Do not
-treat as next-work instruction.**
-
-| Surface | Module / symbols | Focused tests |
-|---------|------------------|---------------|
-| Async worker completion | `tasks/ingest_task.py` | `tests/test_ingest_task.py`, `tests/test_ingestion_job_contract.py`, `tests/test_ingestion_liveness.py` |
-| Opt-in manager entrypoint (consumed; not re-opened) | `vectordb.manager.build_vector_store_with_publication` | already covered by 2.4b |
-
-**Gap closed by 2.4c (async-worker only):** durable `IngestionJob.result`
-now carries `index_publication` from the exact opt-in manager invocation via
-lease/CAS completion. **Later closed by 2.4d:** non-default sync upload path
-receipt persistence.
-
-### Historical 2.4a ownership notes (archive; 2.4a COMPLETE @ `a1dcd5c`)
-
-The following Update-47 ownership evidence guided 2.4a and is retained as
-archive. **Do not treat as next-work instruction.** Landed behavior is in
-§Контракт 2.4a above.
-
-| Surface | Module / symbols | Focused tests |
-|---------|------------------|---------------|
-| HTTP upload write path | `api/routers/upload.py` | `tests/test_upload_security.py`, `tests/test_upload_idempotency.py` |
-| Durable job identity | `ingestion/jobs.py` (unchanged in 2.4a) | job-contract / upload idempotency tests |
-| Job ORM | `db/models.py` — still **no** index-version / collection fields | same |
-| Async worker | `tasks/ingest_task.py` — after 2.4c, completion `result` includes `index_publication` (async path only) | `tests/test_ingest_task.py` |
-| Corpus load / reindex | `ingestion/loader.py`; `scripts/reindex.py` — flat tenant upload dir, `recursive=False` (unchanged; flat current view preserved by 2.4a) | loader / reindex-adjacent gates |
-
-**Historical pre-2.4a overwrite gap (closed by `a1dcd5c`):** flat
-`write_bytes` overwrite of prior working original is no longer the creator
-path; job-scoped immutable objects + legacy-previous preservation + atomic
-flat refresh landed. Nested job/recovery objects stay outside non-recursive
-corpus scanning.
-
-### Explicit non-goals (next candidate and standing)
-
-- Re-opening completed 2.4j annotations, 2.4i CLI, 2.4h–2.4e domain,
-  2.4d–2.4a upload/receipt surfaces, or index retention operator surfaces
-  without proven conflict
-- Settings/policy rewrite, UI, Helm/PVC/object-storage migration
-- Inventing auto-delete classifications or age/budget thresholds in the 2.4k
-  CLI wiring slice without explicit later policy expansion
-- Treating failed jobs with source_path originals as deletable orphans
-- Filesystem mutation under current empty-candidate policy
-- Editing plan checkboxes from docs turns
-- DB migration / model field for index version/collection without proven need
-- Full fault-injection matrix; concurrent multi-tenant load drills
-- Live PostgreSQL/Redis/Celery/Chroma; push; deploy; production readiness
-- Claiming full plan step 2 or full immutable lifecycle “done” from
-  classification, preview, policy, guarded no-op, CLI, annotations, or
-  receipt wiring alone
-
-### Stop / re-scope conditions
-
-- Protected completed-slice surfaces change without an explicit conflict plan
-- Target files become unexpectedly dirty / foreign WIP appears
-- Scope requires multi-subsystem expansion (manifest + retention + upload +
-  reindex + migration) in one turn
-- Second independent verification fails after one allowed narrow correction
-- Any push/deploy/live/destructive Git pressure without user authorization
-- Exact owners cannot be confirmed read-only without inventing APIs or
-  deletion rules — stop and report rather than guess
-
-## Definition of done / stop conditions
-
-- **2.4j is complete** at implementation commit `ea3f59e` with the
-  verification ledger above, **only at the bounded ownership-annotation
-  scope**. **Do not re-select 2.4j.**
-- **2.4i is complete** at implementation commit `f0f79b9` with the
-  verification ledger above, **only at the bounded operator-CLI scope**.
-  **Do not re-select 2.4i.**
-- **2.4h is complete** at implementation commit `9761caf` with the
-  verification ledger above, **only at the bounded guarded no-op command
-  scope**. **Do not re-select 2.4h.**
-- **2.4g is complete** at implementation commit `1ccb39b` with the
-  verification ledger above, **only at the bounded fail-closed policy
-  assessment scope**. **Do not re-select 2.4g.**
-- **2.4f is complete** at implementation commit `68cf045` with the
-  verification ledger above, **only at the bounded read-only tenant preview
-  scope**. **Do not re-select 2.4f.**
-- **2.4e is complete** at implementation commit `13be7d9` with the
-  verification ledger above, **only at the bounded read-only classification
-  scope**. **Do not re-select 2.4e.**
-- **2.4d is complete** at implementation commit `dfbbca0` with the
-  verification ledger above, **only at the bounded sync non-default upload
-  scope**. **Do not re-select 2.4d.**
-- **2.4c is complete** at implementation commit `999c90f` with the
-  verification ledger above, **only at the bounded async-worker scope**.
-  **Do not re-select 2.4c.**
-- **2.4b is complete** at implementation commit `29be31a`. **Do not
-  re-select 2.4b.**
-- **2.4a is complete** at implementation commit `a1dcd5c`. **Do not
-  re-select 2.4a.**
-- **Do not re-select 2.3i** (`ac4b317`) or **2.1–2.3h.**
-- Next candidate **2.4k** is **done only after** tests-first evidence for
-  tenant status load + CLI annotation wiring (still no deletion), one
-  independent proportional gate, protected-surface checks, scoped
-  diff-check, and local explicit-path commit. Do **not** mark 2.4k
-  started/complete from docs alone. Do **not** treat failed jobs with
-  durable originals as deletable.
-- **No** full-suite / live / deploy / push / production-readiness claims.
-- **Stop/yield after one named slice** because one user turn equals one
-  slice.
-- **Stop and report** if a target file becomes unexpectedly dirty, a second
-  verification fails, or scope needs expansion.
-- **Actual Git wins** over any embedded hashes/counts in this handoff
-  (including the future Update-60 docs commit SHA).
-
-## Защищённое локальное состояние
-
-Dirty tracked (не трогать без explicit request):
-
-- `BACKLOG.md`
-- `README.md`
-- `audit_gpt_23_07_26.md`
-- `plan_sol_23_07_26`
-
-Protected untracked categories (summarized; do not remove/stage without
-specific request):
-
-- `.grok-prompts/`, `.pytest_tmp*/`
-- presentation/explainer artifacts (`pres.html`, `presentation.html`,
-  `RAG Explainer.html`, `_ref_presentation3.html`, `plan_for_pres.md`,
-  `rag_new_explanation.md`)
-- `_NEXT_SESSION.md`, `FLANT_DOGFOOD_FINDINGS.md`
-- active untracked remediation plan `rag-remediation-plan-2026-08-03.md`
-- architecture HTML/check script (`docs/architecture-data-flow.html`,
-  `scripts/check_architecture_diagram.py`)
-
-Не читать `.env`. Не обращаться к live services без explicit opt-in.
-Никогда не stage/remove/touch listed protected artifacts without explicit
-scope.
+- Re-select **2.1–2.5b**
+- Treat failed job-objects as deletable orphans
+- Invent auto-delete classes or age/budget thresholds without opt-in
+- Edit plan checkboxes from casual docs turns
+- Push / deploy / live multi-service without explicit user opt-in
+- Use grepped historical `✅ START HERE` as work queue
