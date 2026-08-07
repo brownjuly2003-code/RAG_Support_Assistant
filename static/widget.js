@@ -27,14 +27,17 @@
 
     var position = script.getAttribute('data-position') === 'bottom-left' ? 'bottom-left' : 'bottom-right';
     var title = script.getAttribute('data-title') || 'Поддержка';
+    var tenantId = script.getAttribute('data-tenant') || 'default';
     var side = position === 'bottom-left' ? 'left' : 'right';
     var iframeSrc = apiBase + '/static/widget.html';
     var iframeOrigin;
+    var handshakeNonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    var sessionId = '';
 
     try {
         iframeOrigin = new URL(iframeSrc, window.location.href).origin;
     } catch (err) {
-        iframeOrigin = '*';
+        iframeOrigin = '';
     }
 
     var btn;
@@ -43,7 +46,7 @@
     var isOpen = false;
 
     function sendInit() {
-        if (!iframe || !iframe.contentWindow) {
+        if (!iframe || !iframe.contentWindow || !iframeOrigin) {
             return;
         }
 
@@ -52,7 +55,10 @@
                 type: 'rag-widget-init',
                 apiBase: apiBase,
                 title: title,
-                isEmbedded: true
+                isEmbedded: true,
+                tenantId: tenantId,
+                sessionId: sessionId || null,
+                handshake_nonce: handshakeNonce
             },
             iframeOrigin
         );
@@ -169,9 +175,28 @@
             if (!iframe || event.source !== iframe.contentWindow || !event.data) {
                 return;
             }
+            // Strict postMessage: only messages from the widget iframe origin.
+            if (!iframeOrigin || event.origin !== iframeOrigin) {
+                return;
+            }
+            if (typeof event.data !== 'object') {
+                return;
+            }
 
             if (event.data.type === 'rag-widget-ready') {
                 sendInit();
+                return;
+            }
+
+            if (event.data.type === 'rag-widget-ack') {
+                // Handshake complete (nonce echo is optional telemetry).
+                return;
+            }
+
+            if (event.data.type === 'rag-widget-bootstrapped') {
+                if (event.data.sessionId) {
+                    sessionId = String(event.data.sessionId);
+                }
                 return;
             }
 

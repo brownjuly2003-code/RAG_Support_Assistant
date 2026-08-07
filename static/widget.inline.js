@@ -4,7 +4,13 @@
             var apiBase = window.location.origin.replace(/\/+$/, '');
             var widgetTitle = 'Поддержка';
             var embedded = window.parent !== window;
-            var parentOrigin = '*';
+            var parentOrigin = '';
+            var handshakeComplete = false;
+            var expectedNonce = '';
+            var tenantId = 'default';
+            var sessionId = '';
+            var accessToken = '';
+            var bootstrapPromise = null;
             var messages = document.getElementById('messages');
             var input = document.getElementById('input');
             var sendBtn = document.getElementById('sendBtn');
@@ -14,20 +20,31 @@
             var typingNode = null;
             var isSending = false;
 
-            function resolveParentOrigin(value) {
-                return value && value !== 'null' ? value : '*';
+            function isValidOrigin(value) {
+                if (!value || value === 'null' || value === '*') {
+                    return false;
+                }
+                try {
+                    var parsed = new URL(value);
+                    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+                } catch (err) {
+                    return false;
+                }
             }
 
             try {
                 if (document.referrer) {
-                    parentOrigin = resolveParentOrigin(new URL(document.referrer).origin);
+                    var refOrigin = new URL(document.referrer).origin;
+                    if (isValidOrigin(refOrigin)) {
+                        parentOrigin = refOrigin;
+                    }
                 }
             } catch (err) {
-                parentOrigin = '*';
+                parentOrigin = '';
             }
 
             function postToParent(message) {
-                if (!embedded) {
+                if (!embedded || !isValidOrigin(parentOrigin)) {
                     return;
                 }
                 window.parent.postMessage(message, parentOrigin);
@@ -92,6 +109,59 @@
                 }
             }
 
+            async function ensureBootstrap() {
+                if (accessToken && sessionId) {
+                    return;
+                }
+                if (bootstrapPromise) {
+                    return bootstrapPromise;
+                }
+                if (!isValidOrigin(parentOrigin) && embedded) {
+                    throw new Error('Parent origin not established for widget bootstrap.');
+                }
+                var originForBootstrap = isValidOrigin(parentOrigin)
+                    ? parentOrigin
+                    : window.location.origin;
+
+                bootstrapPromise = fetch(apiBase + '/api/widget/bootstrap', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        parent_origin: originForBootstrap,
+                        tenant_id: tenantId,
+                        session_id: sessionId || null,
+                        handshake_nonce: expectedNonce || null
+                    })
+                }).then(function(response) {
+                    return response.json().catch(function() {
+                        return {};
+                    }).then(function(data) {
+                        if (!response.ok) {
+                            var detail = data.detail || 'Widget bootstrap failed.';
+                            throw new Error(typeof detail === 'string' ? detail : 'Widget bootstrap failed.');
+                        }
+                        accessToken = data.token || '';
+                        sessionId = data.session_id || sessionId || '';
+                        if (data.tenant_id) {
+                            tenantId = String(data.tenant_id);
+                        }
+                        if (!accessToken) {
+                            throw new Error('Widget token missing from bootstrap.');
+                        }
+                        postToParent({
+                            type: 'rag-widget-bootstrapped',
+                            sessionId: sessionId,
+                            handshake_nonce: data.handshake_nonce || expectedNonce || null
+                        });
+                    });
+                }).finally(function() {
+                    bootstrapPromise = null;
+                });
+                return bootstrapPromise;
+            }
+
             async function send() {
                 var question = input.value.trim();
                 if (!question || isSending) {
@@ -107,12 +177,18 @@
                 setTyping(true);
 
                 try {
+                    await ensureBootstrap();
+                    var headers = {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + accessToken
+                    };
                     var response = await fetch(apiBase + '/api/ask', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ question: question })
+                        headers: headers,
+                        body: JSON.stringify({
+                            question: question,
+                            session_id: sessionId || null
+                        })
                     });
 
                     var data = await response.json().catch(function() {
@@ -121,6 +197,10 @@
 
                     if (!response.ok) {
                         throw new Error(data.detail || 'Не удалось получить ответ.');
+                    }
+
+                    if (data.session_id) {
+                        sessionId = String(data.session_id);
                     }
 
                     addMessage('assistant', data.answer || 'Нет ответа');
@@ -150,27 +230,54 @@
             });
 
             window.addEventListener('message', function(event) {
-                if (!event.data) {
+                if (!event.data || typeof event.data !== 'object') {
+                    return;
+                }
+                // Strict handshake: only known message types; origin must be http(s).
+                if (!isValidOrigin(event.origin)) {
+                    return;
+                }
+                if (handshakeComplete && parentOrigin && event.origin !== parentOrigin) {
                     return;
                 }
 
                 if (event.data.type === 'rag-widget-init') {
-                    parentOrigin = resolveParentOrigin(event.origin) || parentOrigin;
+                    parentOrigin = event.origin;
+                    handshakeComplete = true;
                     if (event.data.apiBase) {
                         apiBase = String(event.data.apiBase).replace(/\/+$/, '');
                     }
                     if (event.data.title) {
                         updateTitle(String(event.data.title));
                     }
+                    if (event.data.tenantId || event.data.tenant_id) {
+                        tenantId = String(event.data.tenantId || event.data.tenant_id);
+                    }
+                    if (event.data.sessionId || event.data.session_id) {
+                        sessionId = String(event.data.sessionId || event.data.session_id);
+                    }
+                    if (event.data.handshake_nonce || event.data.nonce) {
+                        expectedNonce = String(event.data.handshake_nonce || event.data.nonce);
+                    }
                     if (event.data.isEmbedded) {
                         embedded = true;
                         closeBtn.hidden = false;
                     }
+                    postToParent({
+                        type: 'rag-widget-ack',
+                        handshake_nonce: expectedNonce || null
+                    });
                     scheduleResize();
+                    ensureBootstrap().catch(function(err) {
+                        setStatus(err && err.message ? err.message : 'Bootstrap failed', true);
+                    });
                     return;
                 }
 
                 if (event.data.type === 'rag-widget-focus') {
+                    if (!handshakeComplete && embedded) {
+                        return;
+                    }
                     input.focus();
                 }
             });

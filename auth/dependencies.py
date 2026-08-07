@@ -21,7 +21,17 @@ def get_current_user(request: Request, settings: object | None = None) -> dict:
         token = auth_header[7:]
         payload = verify_token(token, expected_type="access")
         if payload is None:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+            # Plan §8.1: short-lived audience-scoped widget tokens.
+            payload = verify_token(token, expected_type="widget")
+            if payload is None:
+                raise HTTPException(status_code=401, detail="Invalid or expired token")
+            return {
+                "sub": payload["sub"],
+                "role": "widget",
+                "tenant": payload.get("tenant", "default"),
+                "origin": payload.get("origin", ""),
+                "session_id": payload.get("sid", ""),
+            }
         return {
             "sub": payload["sub"],
             "role": payload.get("role", "viewer"),

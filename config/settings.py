@@ -1005,6 +1005,19 @@ class Settings:
     cors_max_age_sec: int = field(
         default_factory=lambda: int(os.getenv("CORS_MAX_AGE_SEC", "600"))
     )
+    # Plan §8.1: embeddable widget allowlist (comma-separated origins).
+    # Empty = bootstrap disabled / frame-ancestors 'none' (fail-closed).
+    # Example: "https://shop.example.com,https://help.example.com"
+    widget_allowed_origins: list[str] = field(
+        default_factory=lambda: [
+            o.strip()
+            for o in os.getenv("WIDGET_ALLOWED_ORIGINS", "").split(",")
+            if o.strip()
+        ]
+    )
+    widget_token_ttl_sec: int = field(
+        default_factory=lambda: int(os.getenv("WIDGET_TOKEN_TTL_SEC", "900") or 900)
+    )
     max_request_body_bytes: int = field(
         default_factory=lambda: int(os.getenv("MAX_REQUEST_BODY_BYTES", str(1 * 1024 * 1024)))
     )

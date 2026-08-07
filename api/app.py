@@ -1655,6 +1655,9 @@ router.include_router(_feedback_router)
 router.include_router(_misc_router)
 router.include_router(_session_auth_router)
 router.include_router(_upload_router)
+from api.routers import widget as _widget_router_module  # noqa: E402
+
+router.include_router(_widget_router_module.router)
 
 
 # /ask, /ask/stream, /chat, and /chat/stream moved to api.routers.conversation
@@ -1767,7 +1770,43 @@ _SECURITY_HEADERS = {
 @app.middleware("http")
 async def _security_headers(request: Request, call_next: Any) -> Any:
     response = await call_next(request)
+    path = request.url.path
+    # Plan §8.1: widget HTML must be embeddable under allowlisted frame-ancestors
+    # (global X-Frame-Options: DENY would block the iframe contract).
+    try:
+        from api.routers.widget import frame_ancestors_csp, is_widget_static_path
+    except Exception:
+        frame_ancestors_csp = None  # type: ignore[assignment]
+        is_widget_static_path = None  # type: ignore[assignment]
+
+    widget_path = bool(is_widget_static_path and is_widget_static_path(path))
     for name, value in _SECURITY_HEADERS.items():
+        if widget_path and name == "X-Frame-Options":
+            # Framing controlled by path-specific CSP frame-ancestors only.
+            continue
+        if widget_path and name == "Content-Security-Policy":
+            settings = get_settings()
+            allowed = list(getattr(settings, "widget_allowed_origins", None) or [])
+            ancestors = (
+                frame_ancestors_csp(allowed)
+                if frame_ancestors_csp is not None
+                else "frame-ancestors 'none'"
+            )
+            # Keep restrictive defaults; only override framing for widget surface.
+            value = (
+                "default-src 'self'; "
+                "script-src 'self'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data:; "
+                "font-src 'self'; "
+                "connect-src 'self'; "
+                "object-src 'none'; "
+                "base-uri 'self'; "
+                "form-action 'self'; "
+                f"{ancestors}"
+            )
+            response.headers[name] = value
+            continue
         response.headers.setdefault(name, value)
     if getattr(get_settings(), "rag_env", "development") == "production":
         response.headers.setdefault(
