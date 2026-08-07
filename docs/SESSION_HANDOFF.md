@@ -1,12 +1,12 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 (Update-71 docs-only / transparency after completed
-**2.6f** @ `53a398f` + Update-70 docs `767d283`; next ordered candidate
-**2.6g worker outage/recovery fail-closed**)
+**Обновлено:** 2026-08-07 (Update-72 records completed **2.6g** @ `f347feb`;
+previous docs Update-71 `0fda397` / Update-70 `767d283`; next is opt-in live
+§2 multi-service **or** plan §3 without live opt-in)
 
 **Назначение:** самодостаточный next-session handoff после compacted context.
 Routing: **только** верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md)
-(**Update-71**). Older blocks with literal `✅ START HERE` are **archival**.
+(**Update-72**). Older blocks with literal `✅ START HERE` are **archival**.
 Plan source (untracked/protected):
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
 
@@ -18,25 +18,21 @@ Plan source (untracked/protected):
 
 | Факт | Значение |
 |------|----------|
-| Latest implementation | `53a398f` — **2.6f** duplicate job fail-closed |
-| Latest impl docs (Update-70) | `767d283` |
-| This Update-71 docs commit | **unknown in-file**; next session: `git log -5 --oneline` |
-| Previous implementation | `fbc2293` — **2.6e** lock contention |
-| Branch advisory | was `ahead 121` before Update-71 — **refresh mandatory** |
+| Latest implementation | `f347feb` — **2.6g** worker outage/recovery fail-closed |
+| Previous implementation | `53a398f` — **2.6f** duplicate job |
+| Latest known docs before this Update | Update-71 `0fda397` |
+| This Update-72 docs commit | **unknown in-file**; next session: `git log -5 --oneline` |
+| Branch advisory | was `ahead 123` after 2.6g impl — **refresh mandatory** |
 | Active writer / unfinished WIP | **none** |
-| Locally complete (documented scopes only) | **2.1–2.4k + 2.5a + 2.5b + 2.6a–2.6f** |
+| Locally complete (documented scopes only) | **2.1–2.4k + 2.5a + 2.5b + 2.6a–2.6g** |
 | Full plan §2 / project / release / prod | **NOT** complete / **NOT** claimed |
-| Next ordered candidate | **2.6g** worker outage/recovery fail-closed (**not started**) |
+| Next ordered candidate | **opt-in live §2 multi-service** **or** plan **§3** |
 | Gates | no push / deploy / live services / destructive Git / prod claims |
 
-**Transparency-only Update-71:** no implementation/test/plan-checkbox/backlog
-change; project tests **not** rerun here. Implementation state unchanged after
-`53a398f` / **2.6f**.
-
-**Known verification (2.6f; last impl gate):** focused **8 passed**
-(`tests/test_duplicate_job_fail_closed.py` + adjacent
-`test_worker_refuses_duplicate_claim_before_load` + upload idempotency
-samples); Ruff clean on scoped paths. Full suite / live drills **not** run.
+**Known verification (2.6g):** focused **14 passed**
+(`tests/test_worker_outage_fail_closed.py` + adjacent liveness/duplicate);
+full liveness **55 passed**; Ruff clean on scoped paths. Full suite / live
+drills **not** run.
 
 **Key invariant:** failed jobs with `source_path`-matched job-objects →
 `retained_after_failed_transition` (intentional retention, **not** GC).
@@ -50,10 +46,10 @@ samples); Ruff clean on scoped paths. Full suite / live drills **not** run.
 | 2.2 bounded retention | 2.2, 2.3f–2.3i | live DoD open |
 | operator surface rollback/retention | index 2.3b–2.3i; job-objects 2.4i–2.5a | no job-object delete HTTP |
 | immutable originals + lifecycle bind | 2.4a–2.5b | no real FS delete / age-budget |
-| **fault injection expand** | **2.6a–2.6f** | **← next 2.6g** (worker outage/recovery) |
+| **fault injection expand** | **2.6a–2.6g** | **local residual closed** |
 | live PG/Redis/Celery/Chroma + migrations | not started | **opt-in only**; migrations **019–022** |
 
-### Fault-injection inventory (local)
+### Fault-injection inventory (local, complete)
 
 | Contract | Slice | Impl | Primary tests / modules |
 |----------|-------|------|-------------------------|
@@ -63,6 +59,7 @@ samples); Ruff clean on scoped paths. Full suite / live drills **not** run.
 | `cleanup` | 2.6d | `5b9e384` | `_cleanup_candidate` |
 | tenant lock contention | 2.6e | `fbc2293` | `tests/test_index_lock_contention.py` |
 | duplicate job / no double publish | 2.6f | `53a398f` | `tests/test_duplicate_job_fail_closed.py` |
+| worker outage/recovery / no silent publish | 2.6g | `f347feb` | `tasks/ingest_task.py` + `tests/test_worker_outage_fail_closed.py` |
 
 ### Module owners (do not reopen without proven conflict)
 
@@ -73,7 +70,8 @@ samples); Ruff clean on scoped paths. Full suite / live drills **not** run.
 | `vectordb/index_staging.py` | staging + 2.6b–2.6d | known_query / embeddings / cleanup |
 | `vectordb/tenant_lock.py` + manager build path | 2.6e | same-tenant rebuild serialization |
 | `ingestion/jobs.py` claim CAS | 2.4k/2.5b + 2.6f | queued→running; terminal refuse redelivery |
-| `tasks/ingest_task.py` | 2.4c + 2.6f | worker claim before load/build |
+| `tasks/ingest_task.py` | 2.4c + 2.6f + **2.6g** | claim + phase lease probes before load/index/complete |
+| `ingestion/liveness.py` | 4.3 + 2.6g | lease heartbeat + independent reaper |
 | job-object stack | 2.4e–2.5a | classify / policy / CLI / admin GET |
 
 ### Protected state (do not touch/stage/remove without request)
@@ -95,11 +93,11 @@ historical `START HERE`. Never treating dirty backlog/legacy plan as queue.
 1. Cycle-guard preflight on the latest user message.
 2. `cd D:\RAG_Support_Assistant`
 3. `git status --short --branch` and `git log -5 --oneline` (**actual Git wins**
-   over hashes below; known impl `53a398f` / **2.6f**; known Update-70
-   `767d283`; Update-71 SHA from fresh log).
-4. Read **only** top **Update-71** in `AGENT_STATE.md` + this capsule.
-   Do **not** reselect **2.1–2.6f**.
-5. Execute **one** named slice: default **2.6g** (below). Announce
+   over hashes below; known impl `f347feb` / **2.6g**).
+4. Read **only** top **Update-72** in `AGENT_STATE.md` + this capsule.
+   Do **not** reselect **2.1–2.6g**.
+5. Execute **one** named slice: **opt-in live §2 multi-service** **or**
+   plan **§3** start (after reading §3 DoD). Announce
    `slice 1/1`, `delegated run N/3`, `QA follow-up N/1`.
 6. Tests-first → proportional gate → explicit-path local commit only (no push).
 7. Optional handoff refresh; **stop/yield** after one slice.
@@ -112,15 +110,15 @@ PostgreSQL/Redis/Celery/Chroma drills, destructive Git, production claims.
 ## Назначение и приоритет источников
 
 1. Fresh `git status` / `git log` — filesystem/Git truth.
-2. Top `AGENT_STATE.md` (**Update-71**) + this capsule.
+2. Top `AGENT_STATE.md` (**Update-72**) + this capsule.
 3. Dirty `BACKLOG.md` / `README.md` / `audit_gpt_*` / `plan_sol_23_07_26` —
-   protected user state; **stale**; do not override Update-71.
+   protected user state; **stale**; do not override Update-72.
 4. `_NEXT_SESSION.md` — pointer only.
 5. `rag-remediation-plan-2026-08-03.md` — active plan direction; **do not**
    edit checkboxes casually.
 6. One user turn = one named atomic slice.
 
-**Authoritative implementation:** `53a398f` (**2.6f**). Do not invent future
+**Authoritative implementation:** `f347feb` (**2.6g**). Do not invent future
 docs SHAs inside content.
 
 ---
@@ -150,13 +148,14 @@ docs SHAs inside content.
 | **2.6c** | embeddings fail-closed fault injection | `3ba7986` | Update-67 |
 | **2.6d** | cleanup discard-path fault injection | `5b9e384` | Update-68 |
 | **2.6e** | same-tenant lock contention fail-closed | `fbc2293` | Update-69 |
-| **2.6f** | duplicate job fail-closed (no double publish) | `53a398f` | Update-70 + **Update-71** |
+| **2.6f** | duplicate job fail-closed (no double publish) | 53a398f | Update-70 + Update-71 |
+| **2.6g** | worker outage/recovery fail-closed (no silent publish) | 347feb | **Update-72** |
 
-**Do not re-select 2.1–2.6f.**
+**Do not re-select 2.1–2.6g.**
 
 ---
 
-## Контракт 2.6f (duplicate job) — COMPLETE (latest impl)
+## Контракт 2.6f (duplicate job) — COMPLETE
 
 At `53a398f`:
 
@@ -166,7 +165,7 @@ At `53a398f`:
 - idempotent create reuse → single durable row
 - production claim already requires `status == "queued"` CAS (no code change)
 
-**Boundary:** duplicate job delivery only. Worker outage/recovery is **2.6g**.
+**Boundary:** duplicate job delivery only. Worker outage/recovery closed in **2.6g**.
 
 **Verification:** 8 passed focused/adjacent; Ruff clean.
 
@@ -222,68 +221,52 @@ At `6dbabef`: migration `022_ingestion_job_index_bind`; columns
 
 ---
 
-## Следующий named candidate: 2.6g worker outage/recovery (не начат)
+## Контракт 2.6g (worker outage/recovery) — COMPLETE (latest impl)
 
-**Plan order:** last major residual of §2 fault-injection bullet after
-duplicate job.
-**Name:** **2.6g — worker outage/recovery fail-closed**.
+At `f347feb`:
 
-### Intent
+- `tasks/ingest_task.py`: `_require_live_lease` probes ownership via
+  `heartbeat.tick_once()` at `pre_load` / `pre_index` / `pre_complete`
+- `tests/test_worker_outage_fail_closed.py` proves:
+  - reaper → late complete/fail CAS fail-closed (no `index_*` bind)
+  - reaped terminal cannot be reclaimed
+  - reaper after claim → no load/build/publish
+  - ownership lost after load → no publish (pre_index)
+  - healthy path still completes + binds publication
+- Complements existing `tests/test_ingestion_liveness.py` reaper matrix
 
-Prove stale lease / reaper / lost-ownership paths stay fail-closed:
+**Boundary:** local worker/reaper/lease only. Live multi-service recovery is
+opt-in residual of plan §2 (not a free follow-on).
 
-1. No double-complete after reaper or lost lease.
-2. No silent index publish after ownership loss.
-3. Prefer tests-first against existing liveness/reaper contracts
-   (`ingestion/liveness.py`, `tests/test_ingestion_liveness.py`, claim CAS) —
-   **not** a live multi-service Celery/Redis drill unless user opt-in.
+**Verification:** 14 scoped (+ adjacent) passed; 55 full liveness passed;
+Ruff clean on scoped paths.
 
-### Suggested acceptance (tests-first)
-
-1. Focused tests for stale lease / reaper / lost-ownership (extend existing
-   liveness suite if gaps remain; avoid reinventing closed paths).
-2. No auto-delete / age-budget / plan checkbox edits.
-3. Scoped Ruff + proportional adjacent green.
-4. Local commit only; optional handoff Update after slice.
-
-### Candidate ownership (confirm before edits)
-
-| Surface | Likely modules | Notes |
-|---------|----------------|-------|
-| Lease / reaper | `ingestion/liveness.py`, `ingestion/jobs.py` | primary |
-| Worker task | `tasks/ingest_task.py` | only if required |
-| Job bind / index | 2.5b / vectordb | **do not** reopen unless conflict |
-| Job-object GC | job_object_* | **do not** invent deletion |
-
-### Explicitly out of 2.6g
-
-- live Redis/Postgres/Celery multi-service recovery drill (opt-in separate)
-- real FS job-object deletion / age-budget
-- plan checkbox bulk-edit
-- push / deploy
-- re-selecting 2.6a–2.6f
-
-### Reference commands (2.6g — after work lands)
+### Reference commands (2.6g)
 
 ```powershell
-python -m pytest tests/<new_or_targeted> tests/test_ingestion_liveness.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-6g-<unique>
+python -m pytest tests/test_worker_outage_fail_closed.py tests/test_ingestion_liveness.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-6g-<unique>
+python -m ruff check tasks/ingest_task.py tests/test_worker_outage_fail_closed.py
 ```
 
 ---
 
-## Что остаётся открытым (после 2.6f / Update-71)
+## Что остаётся открытым (после 2.6g / Update-72)
 
-- **2.6g** worker outage/recovery (next ordered)
-- live migrations **019–022** + worker recovery + advisory-lock drills
-  (**opt-in**)
+- plan §2 **live** multi-service drills (PG/Redis/Celery/Chroma + migrations
+  **019–022**) — **opt-in only**
 - real job-object / legacy-previous **FS deletion** (needs product opt-in)
 - age/budget thresholds
 - orphan cleanup **mutations**
 - job-object retention **execute** HTTP
 - full suite, release gates, project/production readiness
+- plan **§3+** not started
+
+**Next routing (choose one):**
+1. Opt-in live §2 multi-service drills
+2. Default without live opt-in: begin plan **§3** as a new named slice
 
 **Superseded next-work text:** any handoff still saying next is 2.6e, 2.6f,
-or vague residual without naming **2.6g** is **stale**.
+or **2.6g** is **stale**.
 
 ---
 
@@ -300,9 +283,8 @@ or vague residual without naming **2.6g** is **stale**.
 
 ## Do not
 
-- Re-select **2.1–2.6f**
+- Re-select **2.1–2.6g**
 - Treat failed job-objects as deletable orphans
-- Invent auto-delete classes or age-budget thresholds without opt-in
-- Edit plan checkboxes from casual docs turns
-- Push / deploy / live multi-service without explicit user opt-in
-- Use grepped historical `✅ START HERE` as work queue
+- Invent auto-delete / age-budget without opt-in
+- Push / deploy / live services without explicit opt-in
+- Grep old `✅ START HERE` for work selection

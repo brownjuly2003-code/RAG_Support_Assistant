@@ -1,9 +1,114 @@
 # Agent State
 
+## 2026-08-07 Update-72 — record completed slice 2.6g @ `f347feb` ✅ START HERE
+
+> **Routing authority:** Update-72 records completed **2.6g** and supersedes
+> Update-71 for start-point routing. All older Update blocks below, including
+> headings that literally contain `✅ START HERE`, are **archival**. **Only
+> the first/topmost Update block in this file is authoritative.** Never
+> select work by grepping old `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `f347feb`
+>   (`feat(ingestion): worker outage/recovery fail-closed before silent publish`)
+>   — slice **2.6g**
+> - Previous implementation: `53a398f` (**2.6f** duplicate job)
+> - Previous docs chain: Update-70 `767d283` + Update-71 `0fda397`
+> - This Update-72 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Completion truth:**
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.3i** | index inventory / retention / rollback / admin (documented scopes) |
+> | **2.4a–2.4k** | job-object stack (immutable → receipts → classify → policy → CLI → annotations) |
+> | **2.5a** | read-only admin job-object inventory HTTP |
+> | **2.5b** | durable job↔index publication bind (`022`) |
+> | **2.6a–2.6g** | fault injection / concurrency / outage fail-closed (**local residual closed**) |
+> | Full plan §2 | **NOT** complete (live multi-service DoD open) |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md` §2.
+> Checkboxes stay open until full DoD — **do not** edit them casually.
+>
+> **Plan §2 → local progress map (honest):**
+> | Plan §2 bullet (order) | Local slices | Residual |
+> |------------------------|--------------|----------|
+> | 2.1 inventory under lock | 2.1 + related | live DoD open |
+> | 2.2 bounded retention | 2.2, 2.3f–2.3i | live DoD open |
+> | operator surface | index 2.3b–2.3i; job-objects 2.4i–2.5a | no job-object delete execute HTTP |
+> | immutable originals + lifecycle bind | 2.4a–2.5b | no real FS delete / age-budget |
+> | **fault injection expand** | **2.6a–2.6g** | **local residual closed** |
+> | live PG/Redis/Celery/Chroma + migrations | not started | **opt-in only**; migrations **019–022** |
+>
+> **Fault-injection inventory (local, complete through 2.6g):**
+> | Point / contract | Slice | Impl SHA | Surface |
+> |------------------|-------|----------|---------|
+> | `inventory_write` / `manifest_publish` | 2.6a | `3f3c699` | `vectordb/index_lifecycle_faults.py` + retention/manifest hooks |
+> | `known_query` | 2.6b | `0e4451e` | `validate_staged_known_query` |
+> | `embeddings` | 2.6c | `3ba7986` | `_validate_candidate` |
+> | `cleanup` | 2.6d | `5b9e384` | `_cleanup_candidate` |
+> | tenant lock contention (build path) | 2.6e | `fbc2293` | `tests/test_index_lock_contention.py` |
+> | duplicate job (no double publish) | 2.6f | `53a398f` | `tests/test_duplicate_job_fail_closed.py` |
+> | worker outage/recovery (no silent publish) | 2.6g | `f347feb` | `tasks/ingest_task.py` phase probes + `tests/test_worker_outage_fail_closed.py` |
+>
+> **2.6g contract (landed):**
+> - Phase-boundary live lease probe (`_require_live_lease` → `tick_once`) at
+>   `pre_load` / `pre_index` / `pre_complete` so reaper-cleared ownership is
+>   detected even when the background heartbeat has not ticked yet.
+> - Zombie complete/fail CAS cannot overwrite reaper terminal state or write
+>   `index_*` publication bind columns.
+> - Reaped terminal jobs stay non-queued (no auto reclaim).
+> - Healthy ownership path still completes and binds publication.
+>
+> **Verification (2.6g):** focused `tests/test_worker_outage_fail_closed.py`
+> + adjacent liveness/duplicate gates — **14** scoped + **55** full liveness
+> passed; Ruff clean on `tasks/ingest_task.py` and new tests. Full suite /
+> live drills **not** run.
+>
+> **Key invariant (unchanged):** failed jobs with `source_path`-matched
+> job-objects → `retained_after_failed_transition`; `auto_delete_eligible`
+> always false.
+>
+> **Open boundaries (honest):**
+> - live multi-service drills / migrations **019–022** on real Postgres (**opt-in**)
+> - no real FS deletion for job-objects / legacy-previous
+> - no age/budget auto-delete thresholds
+> - no orphan cleanup **mutations**
+> - no job-object retention **execute** HTTP (read-only inventory only)
+> - full suite / push / deploy / production-readiness **not** claimed
+>
+> **Active writer / WIP:** none.
+>
+> **Next candidate (choose; do not invent parallel tracks):**
+> 1. **Opt-in only:** plan §2 live PG/Redis/Celery/Chroma + migrations
+>    **019–022** + worker recovery / advisory-lock drills.
+> 2. **Default without live opt-in:** begin plan **§3** (execution deadline /
+>    bounded executor / LLM resource budget) as a **new named slice** after
+>    reading §3 DoD — do not start inside this Update text.
+>
+> **Do not re-select:** 2.1–2.6g.
+>
+> **Protected dirty / untracked:** do not touch/stage/remove without
+> explicit request. `_NEXT_SESSION.md` is pointer only — **not** routing
+> authority.
+>
+> **External gates (not authorized):** push, deploy, live services,
+> destructive Git, production-readiness claims.
+>
+> **Standing preference:** Grok implements; one user turn = one named
+> atomic slice; local commit only.
+>
+> **Git advisory:** branch observed `master...origin/master [ahead 123]`
+> after 2.6g impl — **refresh next session**.
+
 ## 2026-08-07 Update-71 — docs-only transparency after Update-70 / 2.6f ✅ START HERE
 
-> **Routing authority:** Update-71 is **docs-only / transparency-only** and
-> supersedes Update-70 **only for start-point routing**. All older Update
+> **Historical handoff (superseded by Update-72 for start-point routing).**
+> Transparency-only after **2.6f**. Next-work naming **2.6g** is **stale**.
+>
+> **Original routing note (archival):** Update-71 was **docs-only / transparency-only** and
+> superseded Update-70 **only for start-point routing**. All older Update
 > blocks below, including headings that literally contain `✅ START HERE`,
 > are **archival**. **Only the first/topmost Update block in this file is
 > authoritative.** Never select work by grepping old `START HERE` markers.
