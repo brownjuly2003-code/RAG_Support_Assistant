@@ -1,17 +1,17 @@
 # Agent State
 
-## 2026-08-07 Update-97 — completed slice 7.2 mock not release PASS @ `25788ee` ✅ START HERE
+## 2026-08-07 Update-98 — completed slice 8.1 widget bootstrap @ `0bee13e` ✅ START HERE
 
-> **Routing authority:** Update-97 supersedes Update-96. Only topmost Update
+> **Routing authority:** Update-98 supersedes Update-97. Only topmost Update
 > is authoritative.
 >
 > **Known lineage (actual Git wins):**
-> - Latest implementation: `25788ee`
->   (`feat(eval): mock expected-copy cannot claim release PASS (7.2)`)
-> - Previous: `94ac64e` **7.1**; `d6e3a55` **6.3**
+> - Latest implementation: `0bee13e`
+>   (`feat(widget): bootstrap token, origin allowlist, frame-ancestors (8.1)`)
+> - Previous: `25788ee` **7.2**; `94ac64e` **7.1**; `d6e3a55` **6.3**
 > - Migrations on disk (not applied): **019-023**
 >
-> **Branch advisory:** was `master...origin/master [ahead 171]` after 7.2.
+> **Branch advisory:** was `master...origin/master [ahead 173]` after 8.1.
 > **WIP:** none.
 >
 > ---
@@ -20,42 +20,49 @@
 >
 > | Band | Status |
 > |------|--------|
-> | **2.1–6.3** + **7.1–7.2** | local at documented scopes |
-> | Full plan §7 | **NOT** complete (merge-base baseline, dataset expansion, live gate) |
+> | **2.1–7.2** + **8.1** | local at documented scopes |
+> | Full plan §8 | **NOT** complete (ASGI bytes, OIDC, secrets/advisories, Playwright E2E) |
 > | Production | **NOT** claimed |
 >
 > ---
 >
-> ### Plan 7.2 contract (local)
+> ### Plan 8.1 contract (local)
 >
-> - `apply_evidence_policy()` in `scripts/regression_eval.py`
-> - Mock modes → `verdict=SMOKE_PASS|SMOKE_FAIL`, never release `PASS`
-> - `gate.passed` / `release_passed` false without `evidence_valid`
-> - Smoke exit: metrics; `--release-gate` exit: requires evidence
-> - CI: mock smoke job renamed; **no** `--release-gate`
+> - `POST /api/widget/bootstrap` — short-lived `aud=widget` JWT
+> - `WIDGET_ALLOWED_ORIGINS` fail-closed (empty deny); Origin header match
+> - Path-specific CSP `frame-ancestors` for `/static/widget.html`; no DENY there
+> - Widget JS: handshake ack, Bearer token, session_id reuse, origin checks
+> - Settings: `widget_allowed_origins`, `widget_token_ttl_sec`
 >
 > ---
 >
-> ### Known verification (7.2)
+> ### Known verification (8.1)
 >
-> - Focused: **35 passed** (evidence policy + gate fail-closed + runner +
->   provider benchmark); Ruff clean
+> - Focused: **12 passed** (widget bootstrap + security headers + widget assets);
+>   Ruff clean
+> - Playwright cross-origin E2E **not** run
 >
 > ---
 >
 > ### Open / next
 >
-> - **← next 8.1:** widget bootstrap security (plan §8) **or**
->   residual §7 merge-base baseline / live provider gate
-> - Prefer **8.1** unless user prioritizes more eval infrastructure
+> - **← next 8.2:** ASGI body byte limit / upload stream atomic rename **or**
+>   OIDC email_verified / identity binding
+> - Prefer **8.2** request body limits if security-first; else residual §7/§1
 >
-> **Do not re-select:** through **7.2**.
+> **Do not re-select:** through **8.1**.
 >
 > ---
 >
 > ### Gates
 >
 > No push/deploy/live/migrate without opt-in. One atomic slice per turn.
+
+
+## 2026-08-07 Update-97 — completed slice 7.2 mock not release PASS @ `25788ee` ✅ START HERE
+
+> **Historical handoff (superseded by Update-98 for start-point routing).**
+> Recorded **7.2** @ `25788ee`. Next was 8.1 — now done @ `0bee13e`.
 
 
 ## 2026-08-07 Update-96 — completed slice 7.1 eval gate fail-closed @ `94ac64e` ✅ START HERE

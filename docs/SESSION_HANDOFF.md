@@ -1,13 +1,13 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 — **Update-97** after **7.2** @ `25788ee`.
+**Обновлено:** 2026-08-07 — **Update-98** after **8.1** @ `0bee13e`.
 
 ---
 
 ## 0. Routing
 
 1. Actual Git  
-2. `AGENT_STATE.md` **Update-97**  
+2. `AGENT_STATE.md` **Update-98**  
 3. This file + `PLAN_CLOSURE_STATUS.md`
 
 ---
@@ -16,38 +16,36 @@
 
 | | |
 |--|--|
-| Latest impl | `25788ee` — **7.2** mock not release PASS |
-| Prior | `94ac64e` 7.1; `d6e3a55` 6.3 |
-| Local complete | … + **7.1–7.2** |
+| Latest impl | `0bee13e` — **8.1** widget bootstrap |
+| Prior | `25788ee` 7.2; `94ac64e` 7.1 |
+| Local complete | … + **7.1–7.2** + **8.1** |
 | Production | NOT claimed |
-| Next | **8.1** widget bootstrap (default) |
+| Next | **8.2** ASGI body / upload stream |
 | WIP | none |
 
-**Verify 7.2:** 35 focused passed; Ruff clean.
+**Verify 8.1:** 12 focused passed; Ruff clean. Playwright E2E not run.
 
 ---
 
-## 2. Contract 7.2 @ `25788ee`
+## 2. Contract 8.1 @ `0bee13e`
 
-- `apply_evidence_policy(report, release_gate=…)`
-- Mock modes: `SMOKE_PASS` / `SMOKE_FAIL` — **never** release `PASS`
-- `gate.passed` == release eligibility (needs evidence_valid)
-- `metrics_passed` separate; smoke exit uses metrics
-- `--release-gate`: exit 1 without valid evidence even if smoke green
-- CI: smoke only, no `--release-gate`
+- `POST /api/widget/bootstrap` → short-lived JWT `type=widget`, `aud=widget`
+- Env: `WIDGET_ALLOWED_ORIGINS`, `WIDGET_TOKEN_TTL_SEC` (default 900)
+- Empty allowlist → 403 (fail-closed)
+- `/static/widget.html`: CSP `frame-ancestors` from allowlist; no `X-Frame-Options: DENY`
+- Widget JS: origin handshake, Bearer token, `session_id` reuse
+- Auth accepts widget Bearer for `/api/ask`
 
 ---
 
-## 3. Next: 8.1
+## 3. Next: 8.2
 
-**Widget bootstrap security** (plan §8): short-lived audience-scoped token,
-`WIDGET_ALLOWED_ORIGINS`, path-specific `frame-ancestors`, strict postMessage
-handshake, session_id reuse.
+ASGI received-byte limits; upload stream to temp + atomic rename.
 
-Alternates: §7 merge-base baseline; live provider/judge scheduled gate.
+Alternates: OIDC `email_verified`; production secret guards; Playwright widget E2E.
 
 ---
 
 ## 4. Do not
 
-Re-select through **7.2**. No push/live/migrate without opt-in. One slice/turn.
+Re-select through **8.1**. No push/live/migrate without opt-in. One slice/turn.
