@@ -1,72 +1,76 @@
 # Agent State
 
-## 2026-08-07 Update-59 — record completed slice 2.4j @ `ea3f59e` ✅ START HERE
+## 2026-08-07 Update-60 — docs-only transparency after Update-59 @ `a077f0d` ✅ START HERE
 
-> **Routing authority:** Update-59 supersedes Update-58 **only for
-> start-point routing**. All older Update blocks below, including headings
-> that literally contain `✅ START HERE`, are **archival**. **Only the
-> first/topmost Update block in this file is authoritative.** Never select
-> work by grepping old `START HERE` markers.
+> **Routing authority:** Update-60 is **docs-only / transparency-only** and
+> supersedes Update-59 **only for start-point routing**. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`,
+> are **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
 >
-> **Implementation commit:** `ea3f59e` (`feat(ingestion): annotate
-> failed-transition job-object ownership`). Slice **2.4j is locally
-> complete and verified** at the bounded ownership-annotation scope (**no**
-> deletion). Previous docs commit: `887fbb3` (Update-58). Previous
-> implementation: `f0f79b9` (slice **2.4i**). The future docs commit that
-> records Update-59 **cannot** be known inside its own content; next session
-> must obtain it from `git log -5 --oneline`.
+> **No new implementation in this docs turn.** Code, tests, plans, backlog,
+> README, audit, settings, and API paths were **not** edited here. Project
+> tests were **not** rerun. Protected dirty `BACKLOG.md`, `README.md`,
+> `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`, and existing untracked
+> artifacts (including the active plan, prompts, pytest temp dirs, and
+> presentation/explainer files) were not touched.
 >
-> **Implementation paths changed in `ea3f59e` only:**
-> - `ingestion/job_object_orphans.py` (new)
-> - `tests/test_job_object_orphans.py` (new)
-> - diff stat: 2 files changed, 372 insertions
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `ea3f59e`
+>   (`feat(ingestion): annotate failed-transition job-object ownership`) —
+>   slice **2.4j** (ownership-annotation scope; **no** deletion).
+> - Latest completed docs before this turn: `a077f0d`
+>   (`docs: record failed-transition job-object ownership annotations`) —
+>   actual Update-59 docs commit.
+> - Previous implementation: `f0f79b9` (slice **2.4i** operator CLI).
+> - Previous docs: `887fbb3` (Update-58).
+> - The future docs commit that records Update-60 **cannot** be known inside
+>   its own content; next session must obtain it from `git log -5 --oneline`.
 >
-> **2.4j ownership findings (encoded):**
-> - upload create order: job row → exclusive immutable write →
->   legacy-previous preserve → flat refresh (flat only after both writes);
-> - after successful immutable write, indexing/publish failure leaves the
->   object on disk with failed job status; classifier still
->   ``protected`` — **intentional retention**, not a GC candidate;
-> - partial create failures terminal-fail without publishing; referenced
->   objects remain protected;
-> - ``unrecorded`` / ``untrusted`` / legacy recovery stay never
->   auto-deletable (aligns with 2.4g).
+> **Completion truth (unchanged):** slices **2.1 through 2.4j** remain
+> locally complete and verified **only at documented scopes**. Full plan
+> step 2 and full immutable-original lifecycle remain **incomplete**.
 >
-> **2.4j behavior (landed):**
-> - pure `annotate_job_object_transition_context(entries, job_statuses=…)`;
-> - protected+failed → `retained_after_failed_transition`;
-> - protected+completed → `retained_durable_original`;
-> - protected+queued/running → `retained_in_flight`;
-> - protected without status → `retained_unknown_job_status`;
-> - unrecorded / untrusted / legacy_previous → distinct ownership labels;
-> - **every** annotation has `auto_delete_eligible=False`;
-> - unknown classification fails closed; **no** FS mutation / age-budget.
+> **Job-object stack already landed (do not re-select):**
+> | Slice | Commit | Role |
+> |-------|--------|------|
+> | 2.4a | `a1dcd5c` | immutable upload originals + flat current view |
+> | 2.4b | `29be31a` | manager build publication receipt |
+> | 2.4c | `999c90f` | async worker receipt persistence |
+> | 2.4d | `dfbbca0` | sync non-default upload receipt |
+> | 2.4e | `13be7d9` | read-only job-object tree classifier |
+> | 2.4f | `68cf045` | tenant load + preview composition |
+> | 2.4g | `1ccb39b` | fail-closed retention policy (empty candidates) |
+> | 2.4h | `9761caf` | guarded retention command (empty → no-op) |
+> | 2.4i | `f0f79b9` | operator CLI inventory + policy + optional no-op |
+> | 2.4j | `ea3f59e` | failed-transition ownership annotations |
 >
-> **Verification (this turn):** focused green **47 passed** (orphans +
-> CLI + retention + inventory); adjacent gate **127 passed**; scoped Ruff
-> clean; `git diff --check` clean; mypy Python 3.12 Success (1 file). Full
-> suite / live services **not** run.
+> **Key invariant (2.4j):** failed jobs with `source_path`-matched originals
+> are `retained_after_failed_transition` — intentional retention, **not**
+> GC candidates. `auto_delete_eligible` is always `False`. Do **not** treat
+> failed jobs as deletable orphans.
 >
-> **Boundary (completion truth):** slices **2.1 through 2.4j** remain
-> locally complete **only at documented scopes**. Full plan step 2 and full
-> immutable lifecycle remain **incomplete**: **no** real filesystem
-> deletion path, **no** age/budget thresholds, **no** orphan **cleanup
-> mutations**, **no** status-load wiring into CLI yet, **no** admin HTTP
-> surface, **no** DB model/migration field, **no** full/live verification,
-> **no** push/deploy or production-readiness claim.
+> **Open boundaries (honest):** **no** real FS deletion path; **no**
+> age/budget thresholds; **no** orphan cleanup mutations; **no** job-status
+> load wired into CLI yet; **no** admin HTTP surface; **no** DB
+> model/migration field for index version/collection; **no** full suite /
+> live drills; **no** push/deploy / production-readiness claim.
 >
-> **Active writer / WIP:** none after this handoff.
+> **Active writer / WIP:** none. No unfinished next-candidate WIP.
 >
 > **Next candidate only (not started):** **2.4k load tenant job statuses +
 > wire transition annotations into operator CLI** — still **no** deletion.
-> Do **not** invent auto-delete classes, edit the plan, or mark 2.4k
+> Suggested shape: narrow `job_id→status` loader (likely `ingestion/jobs.py`)
+> + include `annotate_job_object_transition_context` results in
+> `scripts/preview_job_object_inventory.py` human/JSON output. Do **not**
+> invent auto-delete classes, edit plan checkboxes, or mark 2.4k
 > started/complete from docs alone. Do **not** re-select 2.1–2.4j. Details:
 > [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
 >
 > **Protected dirty / untracked state:** see handoff capsule; do not
 > touch/stage/remove without explicit request. Do **not** edit the active
-> untracked plan or its checkboxes. Untracked `_NEXT_SESSION.md` is
-> **archival** if stale — use Update-59 + SESSION_HANDOFF only.
+> untracked plan or its checkboxes. Untracked `_NEXT_SESSION.md` is a
+> pointer only — **not** routing authority; use Update-60 + SESSION_HANDOFF.
 >
 > **External gates (not authorized):** push, deploy, live services,
 > destructive Git, production-readiness claims. Live
@@ -79,7 +83,18 @@
 > commit only. Do **not** re-select 2.1–2.4j.
 >
 > **Git advisory only:** branch observed as
-> `master...origin/master [ahead 100]` after impl — refresh next session.
+> `master...origin/master [ahead 101]` before this docs commit — refresh
+> next session.
+
+## 2026-08-07 Update-59 — record completed slice 2.4j @ `ea3f59e` ✅ START HERE
+
+> **Historical handoff (superseded by Update-60 for start-point routing).**
+> Older `✅ START HERE` markers in this archive are **not** routing authority.
+> Refresh `git status` first. This Update-59 block previously recorded
+> completed **2.4j** @ `ea3f59e`. Actual Update-59 docs commit is now known
+> as `a077f0d`. Implementation state is unchanged after Update-60
+> (docs-only). Next-work pointer naming **2.4k** remains current under
+> Update-60.
 
 ## 2026-08-07 Update-58 — record completed slice 2.4i @ `f0f79b9` ✅ START HERE
 
