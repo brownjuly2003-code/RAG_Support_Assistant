@@ -69,6 +69,17 @@ def test_search_kb_reports_empty_result() -> None:
     assert result == "По базе знаний ничего не найдено."
 
 
+def _assert_agentic_unmeasured_fail_closed(result: dict) -> None:
+    """Plan §6.1: unmeasured agentic terminals never unlock auto or fake scores."""
+    assert result.get("route") != "auto"
+    assert result.get("quality_source") == "unmeasured"
+    assert result.get("quality_score") == 0
+    assert float(result.get("relevance_score") or 0) == 0.0
+    assert result.get("grounding_status") == "not_verified"
+    assert result.get("quality_source") != "fixed"
+    assert result.get("quality_score") not in {80, 85, 90}
+
+
 def test_agentic_multi_step_flow_combines_kb_and_order_status(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -100,6 +111,8 @@ def test_agentic_multi_step_flow_combines_kb_and_order_status(
     assert result["tool_calls"] == ["search_kb", "check_order_status"]
     assert "500" in result["answer"]
     assert "в пути" in result["answer"]
+    _assert_agentic_unmeasured_fail_closed(result)
+    assert result["route"] == "agentic"
 
 
 def test_agentic_ticket_flow_requires_confirmation(
@@ -134,6 +147,7 @@ def test_agentic_ticket_flow_requires_confirmation(
 
     assert pending["requires_confirmation"] is True
     assert "Подтвердите" in pending["answer"]
+    _assert_agentic_unmeasured_fail_closed(pending)
 
     confirmed = session.ask(
         "Подтверждаю",
@@ -147,6 +161,123 @@ def test_agentic_ticket_flow_requires_confirmation(
     assert "Создан тикет" in confirmed["answer"]
     assert created["tenant_id"] == "acme"
     assert created["session_id"] == "session-107"
+    _assert_agentic_unmeasured_fail_closed(confirmed)
+    assert confirmed["route"] == "agentic"
+
+
+def test_agentic_ticket_cancel_is_unmeasured_not_auto(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "config.settings.get_settings",
+        lambda: SimpleNamespace(agentic_mode=True),
+    )
+    monkeypatch.setattr(agent_graph, "build_provider_runtime", None)
+
+    session = agent_graph.ConversationSession(retriever=object(), llm=None)
+    pending = session.ask(
+        "Создай тикет: сбой оплаты",
+        tenant_id="acme",
+        user_id="agent-1",
+        session_id="session-cancel",
+    )
+    assert pending["requires_confirmation"] is True
+
+    cancelled = session.ask(
+        "Отмена",
+        tenant_id="acme",
+        user_id="agent-1",
+        session_id="session-cancel",
+        confirm=False,
+    )
+    assert "отменено" in cancelled["answer"].lower()
+    _assert_agentic_unmeasured_fail_closed(cancelled)
+    assert cancelled["route"] == "agentic"
+
+
+def test_agentic_provider_answer_is_unmeasured_not_fixed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _FakeToolLLM:
+        provider_id = "gracekelly"
+        model_name = "claude-sonnet-4-6-api"
+        supports_tool_use = True
+
+        def __init__(self) -> None:
+            self.last_response = None
+
+        def generate_with_tools(self, messages, tools, **kwargs):
+            _ = messages, tools, kwargs
+            response = LLMResponse(
+                text="Синтезированный ответ от LLM.",
+                provider=self.provider_id,
+                model=self.model_name,
+            )
+            self.last_response = response
+            return response
+
+    monkeypatch.setattr(
+        "config.settings.get_settings",
+        lambda: SimpleNamespace(agentic_mode=True, agent_max_tool_loops=3),
+    )
+    llm = _FakeToolLLM()
+    session = agent_graph.ConversationSession(retriever=object(), llm=llm)
+    result = session.ask(
+        "Нужен статус заказа #42",
+        tenant_id="acme",
+        user_id="agent-1",
+        session_id="session-unmeasured",
+    )
+    assert result["answer"] == "Синтезированный ответ от LLM."
+    _assert_agentic_unmeasured_fail_closed(result)
+
+
+def test_agentic_graph_has_no_fixed_quality_constants() -> None:
+    """Static guard: agentic paths must not hardcode quality 80/85/90 + fixed."""
+    import ast
+    from pathlib import Path
+
+    source = Path(agent_graph.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    forbidden_scores = {80, 85, 90}
+    hits: list[str] = []
+
+    class _Visitor(ast.NodeVisitor):
+        def visit_Dict(self, node: ast.Dict) -> None:
+            keys: dict[str, ast.AST] = {}
+            for key, value in zip(node.keys, node.values, strict=True):
+                if isinstance(key, ast.Constant) and isinstance(key.value, str):
+                    keys[key.value] = value
+            source_node = keys.get("quality_source")
+            score_node = keys.get("quality_score")
+            if (
+                isinstance(source_node, ast.Constant)
+                and source_node.value == "fixed"
+                and isinstance(score_node, ast.Constant)
+                and score_node.value in forbidden_scores
+            ):
+                hits.append(f"fixed+{score_node.value}@L{node.lineno}")
+            if (
+                isinstance(score_node, ast.Constant)
+                and score_node.value in forbidden_scores
+                and "quality_source" in keys
+            ):
+                src_val = (
+                    score_node.value
+                    if not isinstance(source_node, ast.Constant)
+                    else source_node.value
+                )
+                if src_val == "fixed" or (
+                    isinstance(source_node, ast.Constant) and source_node.value == "fixed"
+                ):
+                    hits.append(f"score{score_node.value}@L{node.lineno}")
+            self.generic_visit(node)
+
+    _Visitor().visit(tree)
+    # Also ban literal quality_source="fixed" anywhere in graph after 6.1.
+    if 'quality_source": "fixed"' in source or "quality_source': 'fixed'" in source:
+        hits.append("literal quality_source=fixed remains in graph.py")
+    assert hits == [], f"forbidden fixed quality constants remain: {hits}"
 
 
 def test_agentic_provider_tool_loop_uses_unified_generate_with_tools(

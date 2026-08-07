@@ -356,7 +356,7 @@ async def ask(
     llm_cache_key = _app._cache_key(tenant, question)
     cache_hit = False
     # Provenance for the QUALITY_SCORE metric; cached replays keep their
-    # original "llm" provenance, agentic answers report "fixed".
+    # original "llm" provenance, agentic unmeasured paths report "unmeasured".
     quality_source = "llm"
 
     if hasattr(session, "ask"):

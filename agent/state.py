@@ -85,9 +85,10 @@ class GraphState(TypedDict, total=False):
     relevance_score: Optional[float]
     quality_score: Optional[int]
     # Provenance of quality_score: "llm" — real self-evaluation; "fixed" —
-    # hardcoded agentic-flow constants; "heuristic" — streaming length check.
-    # Keeps dashboards honest about which scores were actually measured.
-    quality_source: Optional[Literal["llm", "fixed", "heuristic"]]
+    # legacy hardcoded constants (must not unlock auto after plan §6.1);
+    # "heuristic" — streaming length check; "unmeasured" — agentic/tool path
+    # without evaluate/grounding (fail-closed, never auto).
+    quality_source: Optional[Literal["llm", "fixed", "heuristic", "unmeasured"]]
     claims: list[dict]
     factuality_score: int
     # Plan §5.1: verified | unsupported | not_verified (never fake-perfect on skip).

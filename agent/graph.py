@@ -789,6 +789,27 @@ def _normalize_tool_call(tool_call: dict[str, Any]) -> tuple[str | None, dict[st
     return (str(name).strip() if isinstance(name, str) and name.strip() else None), arguments
 
 
+def _agentic_unmeasured_gate(
+    *,
+    route: Literal["agentic", "human"] = "agentic",
+) -> dict[str, Any]:
+    """Fail-closed quality fields for agentic terminals without evaluate/grounding.
+
+    Plan §6.1: never invent quality 80/85/90 or ``quality_source="fixed"``, and
+    never claim ``route=auto`` until a real measured gate runs. Tool results and
+    confirmation UX stay deliverable as ``route=agentic`` with honest provenance.
+    """
+    return {
+        "route": route,
+        "quality_score": 0,
+        "relevance_score": 0.0,
+        "quality_source": "unmeasured",
+        "grounding_status": "not_verified",
+        "fact_verification_skipped": True,
+        "factuality_score": 0,
+    }
+
+
 def _agentic_tool_definitions() -> list[dict[str, Any]]:
     return [
         {
@@ -2727,10 +2748,7 @@ class ConversationSession:
                 final_state: GraphState = {
                     **state,
                     "answer": answer,
-                    "route": "agentic",
-                    "quality_score": 85,
-                    "relevance_score": 0.85,
-                    "quality_source": "fixed",
+                    **_agentic_unmeasured_gate(),
                     "tool_calls": tool_calls,
                     "requires_confirmation": False,
                     "action_summary": "",
@@ -2775,10 +2793,7 @@ class ConversationSession:
                     confirmation_state: GraphState = {
                         **state,
                         "answer": f"Подтвердите: {action_summary}",
-                        "route": "agentic",
-                        "quality_score": 80,
-                        "relevance_score": 0.8,
-                        "quality_source": "fixed",
+                        **_agentic_unmeasured_gate(),
                         "tool_calls": tool_calls + [tool_name],
                         "requires_confirmation": True,
                         "action_summary": action_summary,
@@ -2804,10 +2819,7 @@ class ConversationSession:
         fallback_state: GraphState = {
             **state,
             "answer": "\n\n".join(answer_parts),
-            "route": "agentic",
-            "quality_score": 80,
-            "relevance_score": 0.8,
-            "quality_source": "fixed",
+            **_agentic_unmeasured_gate(),
             "tool_calls": tool_calls,
             "requires_confirmation": False,
             "action_summary": "",
@@ -2856,10 +2868,7 @@ class ConversationSession:
                 state.update(
                     {
                         "answer": ticket_result,
-                        "route": "auto",
-                        "quality_score": 90,
-                        "relevance_score": 0.9,
-                        "quality_source": "fixed",
+                        **_agentic_unmeasured_gate(),
                         "tool_calls": ["create_ticket"],
                         "requires_confirmation": False,
                         "action_summary": "",
@@ -2873,10 +2882,7 @@ class ConversationSession:
                 state.update(
                     {
                         "answer": "Действие отменено.",
-                        "route": "auto",
-                        "quality_score": 80,
-                        "relevance_score": 0.8,
-                        "quality_source": "fixed",
+                        **_agentic_unmeasured_gate(),
                         "tool_calls": [],
                         "requires_confirmation": False,
                         "action_summary": "",
@@ -2889,10 +2895,7 @@ class ConversationSession:
             state.update(
                 {
                     "answer": f"Подтвердите: {pending_snapshot['action_summary']}",
-                    "route": "agentic",
-                    "quality_score": 80,
-                    "relevance_score": 0.8,
-                    "quality_source": "fixed",
+                    **_agentic_unmeasured_gate(),
                     "tool_calls": [],
                     "requires_confirmation": True,
                     "action_summary": pending_snapshot["action_summary"],
@@ -2927,10 +2930,7 @@ class ConversationSession:
             state.update(
                 {
                     "answer": f"Подтвердите: {action_summary}",
-                    "route": "agentic",
-                    "quality_score": 80,
-                    "relevance_score": 0.8,
-                    "quality_source": "fixed",
+                    **_agentic_unmeasured_gate(),
                     "tool_calls": ["create_ticket"],
                     "requires_confirmation": True,
                     "action_summary": action_summary,
@@ -2976,10 +2976,7 @@ class ConversationSession:
         state.update(
             {
                 "answer": "\n\n".join(part for part in answer_parts if part),
-                "route": "auto",
-                "quality_score": 85,
-                "relevance_score": 0.85,
-                "quality_source": "fixed",
+                **_agentic_unmeasured_gate(),
                 "tool_calls": tool_calls,
                 "requires_confirmation": False,
                 "action_summary": "",
