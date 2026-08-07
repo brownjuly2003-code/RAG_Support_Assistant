@@ -1,8 +1,103 @@
 # Agent State
 
+## 2026-08-07 Update-105 — completed slice 7.3 merge-base baseline artifact @ `0d34be2` ✅ START HERE
+
+> **Routing authority:** Update-105 supersedes Update-104 **only for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `0d34be2`
+>   (`feat(eval): merge-base baseline artifact for regression gate (7.3)`)
+>   - slice **7.3**
+> - Previous: `4d6be52` — **8.5**; docs Update-104 `ad8be2b`
+> - 7 chain: `94ac64e` 7.1 · `25788ee` 7.2 · **`0d34be2` 7.3**
+> - 8 chain ends: `4d6be52` **8.5**
+> - Migrations on disk (not applied): **019–023**
+> - This Update-105 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 185]` after impl (before this docs commit).
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** … **6.1–6.3** | local at documented scopes |
+> | **7.1–7.3** | fail-closed + mock≠PASS + **merge-base baseline artifact** local |
+> | **8.1–8.5** | widget/edge band local |
+> | Full plan §1–§10 | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
+>
+> ---
+>
+> ### 7.3 contract (local)
+>
+> - Versioned baseline artifact (`kind=regression-baseline`, schema v1)
+> - `build_baseline_artifact` / `write_baseline_artifact` / `load_baseline_artifact`
+> - `baseline_artifact_from_report` extracts baseline side of a full report
+> - `run_regression_cases(..., baseline_case_results=)` skips baseline re-exec
+> - Missing case in artifact → infrastructure failure (fail-closed)
+> - CLI: `--baseline-artifact`, `--write-baseline-artifact`,
+>   `--require-baseline-artifact`
+> - `require_baseline_artifact` without path → empty FAIL report (no executor)
+>
+> **Verification:** focused **37 passed** (baseline artifact + evidence + gate
+> fail-closed + regression_runner); Ruff clean. Full suite / live providers /
+> migrate / push / deploy **not** run / **not** claimed.
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next residual (default):** DEP-01 docs-site audit **or** §7 dataset
+>   expansion **or** §6 calibration / measured agentic **or** CI wire of
+>   baseline artifact in release path
+> - 7 residual after 7.3: dataset expansion; scheduled live provider gate;
+>   CI still smoke mock by default
+> - 5 residual: live precision/recall/faithfulness ×3
+> - live multi-service + migrations **019–023** (**opt-in**)
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **DEP-01 docs-site dependency audit** **or** **§7 dataset expansion**
+> **or** **§6 calibration residual** — one atomic residual only.
+>
+> **Do not re-select:** through **8.5**, **7.1–7.3**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked:** plan file, `_NEXT_SESSION.md` (pointer), pytest temps, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live drills, `alembic upgrade`, destructive Git, production claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; quality > speed. **Actual Git wins.**
+
+
 ## 2026-08-07 Update-104 — completed slice 8.5 Playwright widget E2E @ `4d6be52` ✅ START HERE
 
-> **Routing authority:** Update-104 supersedes Update-103 **only for start-point
+> **Historical handoff (superseded by Update-105 for start-point routing).**
+> Recorded **8.5** @ `4d6be52`. Next was 7.3 — now done @ `0d34be2`.
+>
+> **Original routing note (archival):** Update-104 supersedes Update-103 **only for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old

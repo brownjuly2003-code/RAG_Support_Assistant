@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 — **Update-104** (completed **8.5** @ `4d6be52`).  
+**Обновлено:** 2026-08-07 — **Update-105** (completed **7.3** @ `0d34be2`).  
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей  
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-104**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-105**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-104; dirty  
+**Не использовать:** старые `✅ START HERE` ниже Update-105; dirty  
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` как единственный SoT  
 (это pointer only).
 
@@ -27,19 +27,19 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **implementation** | `4d6be52` — **8.5** Playwright widget E2E + iframe Origin fix |
-| Latest **docs before this Update** | `48d47d6` — Update-103 |
-| This Update-104 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | `master...origin/master [ahead 183]` after impl — **refresh mandatory** |
+| Latest **implementation** | `0d34be2` — **7.3** merge-base baseline artifact |
+| Latest **docs before this Update** | `ad8be2b` — Update-104 |
+| This Update-105 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | `master...origin/master [ahead 185]` after impl — **refresh mandatory** |
 | Active writer / WIP | **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.2** + **8.1–8.5** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.3** + **8.1–8.5** |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered (default) | §7 merge-base baseline **or** DEP-01 **or** §6 calibration residual |
+| Next ordered (default) | DEP-01 **or** §7 dataset expansion **or** §6 calibration residual |
 | Gates | **no** push / deploy / live multi-service / migrate 019–023 without **explicit opt-in** |
 
-**Last known verification (8.5 this turn):** focused **16 passed**  
-(`test_widget_bootstrap` + `test_widget_e2e_playwright`); Ruff clean. Full  
+**Last known verification (7.3 this turn):** focused **37 passed**  
+(baseline artifact + evidence + gate + regression_runner); Ruff clean. Full  
 suite / live **not** claimed.
 
 ---
@@ -51,8 +51,8 @@ suite / live **not** claimed.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-104 in AGENT_STATE.md + this file §1–§11
-6. Default work: §7 merge-base baseline OR DEP-01 OR §6 calibration. Announce: slice 1/1
+5. Read ONLY top Update-105 in AGENT_STATE.md + this file §1–§11
+6. Default work: DEP-01 OR §7 dataset OR §6 calibration. Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
 ```
@@ -73,7 +73,7 @@ claims, bulk plan checkbox edits.
 | **4** pipeline + escalation | **4.1–4.5** local | true graph tokens; parity default **off**; outbox Celery/cron |
 | **5** grounding fail-closed | **5.1–5.3** local | live metrics DoD ×3; relevance≠quality residual |
 | **6** judge / safety / agentic | **6.1–6.3** local | calibration; measured agentic evaluate when KB context |
-| **7** eval gate | **7.1–7.2** local | **← merge-base baseline**; dataset; live provider gate |
+| **7** eval gate | **7.1–7.3** local | dataset expansion; live provider gate; CI wire artifact |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
 | **9** cache / architecture / SLO | partial historical | as plan; DEP-01 docs-site audit residual |
 | **10** final verification | not started | after 1–9 + opt-in evidence |
@@ -103,6 +103,7 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 |-------|-----|---------|
 | **7.1** | `94ac64e` | infra/skip/empty → FAIL |
 | **7.2** | `25788ee` | mock → `SMOKE_PASS` only; `--release-gate` needs evidence |
+| **7.3** | **`0d34be2`** | merge-base baseline artifact load/write/require |
 
 ### §6 / §5 / §4 / §3 (summary)
 
@@ -117,6 +118,15 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 ---
 
 ## 5. Contracts (recent complete slices)
+
+### 7.3 @ `0d34be2`
+
+- Artifact schema: `kind=regression-baseline`, `schema_version=1`, per-case map
+- API: `build_baseline_artifact`, `write_baseline_artifact`, `load_baseline_artifact`,
+  `baseline_artifact_from_report`, optional `resolve_git_merge_base`
+- Runner: `baseline_case_results` skips baseline executor; missing case → infra FAIL
+- CLI: `--baseline-artifact`, `--write-baseline-artifact`, `--require-baseline-artifact`
+- Files: `scripts/regression_eval.py`, `tests/test_regression_baseline_artifact.py`
 
 ### 8.5 @ `4d6be52`
 
@@ -196,7 +206,8 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | `auth/jwt_handler.py` | **8.1** | `create_widget_token` / widget verify |
 | `auth/dependencies.py` | **8.1** | accept widget Bearer |
 | `static/widget*.js` / `widget.html` | **8.1** | handshake, token, session, CSP |
-| `scripts/regression_eval.py` | **7.1–7.2** | gate + evidence policy |
+| `scripts/regression_eval.py` | **7.1–7.3** | gate + evidence policy + baseline artifact |
+| `tests/test_regression_baseline_artifact.py` | **7.3** | merge-base artifact contract |
 | job-object / index stack | 2.1–2.6g | **do not re-select** |
 
 ---
@@ -222,10 +233,18 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 17. OIDC: no create/link without verified email; identity is (issuer, subject); no silent rebind  
 18. Production: no placeholder secrets; no `ALLOW_DEV_ADMIN_LOGIN`; admin hash required  
 19. Widget iframe bootstrap: API Origin allowed; empty/disallowed parent fail-closed (E2E)  
+20. Regression release-honest compare: baseline from artifact, not identical live re-run only  
 
 ---
 
 ## 8. Verification recipes (last known green; re-run when coding)
+
+### §7.3 band
+
+```powershell
+python -m pytest tests/test_regression_baseline_artifact.py tests/test_regression_evidence_policy.py tests/test_regression_gate_fail_closed.py tests/test_regression_runner.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step7-3-<unique>
+python -m ruff check scripts/regression_eval.py tests/test_regression_baseline_artifact.py
+```
 
 ### §8.5 band
 
@@ -275,14 +294,15 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 **Default picks (one only):**
 
-1. **§7 merge-base baseline artifact** — durable baseline for regression gate  
-2. **DEP-01 docs-site dependency audit**  
+1. **DEP-01 docs-site dependency audit**  
+2. **§7 dataset expansion** (multi-tenant / grounding / adversarial slices)  
 3. **§6 calibration / measured agentic residual** when KB context exists  
+4. **CI wire** of `--baseline-artifact` / `--require-baseline-artifact` on release path  
 
 ### Out without opt-in
 
 - live multi-service / migrate / push / deploy  
-- re-select through **8.5**  
+- re-select through **8.5** / **7.3**  
 - OIDC live IdP drill; full browser matrix expansion  
 
 ### Alternates (only if user prioritizes)
@@ -307,7 +327,8 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 - Grep old `✅ START HERE` for work selection  
 - Re-select **2.1–2.6g**, **3.1a–3.1i**, **4.1–4.5**, **5.1–5.3**, **6.1–6.3**,  
-  **7.1–7.2**, **8.1–8.5**  
+  **7.1–7.3**, **8.1–8.5**  
+ 
  
 - Claim full plan sections or production readiness  
 - Edit plan checkboxes casually  
