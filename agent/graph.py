@@ -2680,35 +2680,66 @@ class ConversationSession:
         confirm: bool | None = None,
         user_id: str = "anonymous",
         session_id: str | None = None,
+        deadline_sec: float | None = None,
     ) -> GraphState:
-        """Задаёт вопрос с учётом истории диалога."""
+        """Задаёт вопрос с учётом истории диалога.
+
+        ``deadline_sec`` (optional) is the outer wall budget from the HTTP path
+        (or other callers). Combined with ``RAG_ASK_BUDGET_SEC`` via the tighter
+        positive timeout and bound as a cooperative request deadline so provider
+        entry points refuse new work after the wall elapses (plan §3.1b).
+        """
         from config.settings import get_settings
+        from utils.request_deadline import (
+            RequestDeadlineExceeded,
+            bind_request_deadline,
+            clear_request_deadline,
+            tighter_timeout_sec,
+        )
 
         settings = get_settings()
         budget_sec = float(getattr(settings, "ask_budget_sec", 0.0) or 0.0)
+        wall_sec = tighter_timeout_sec(budget_sec, deadline_sec)
 
         def _run() -> GraphState:
-            if getattr(settings, "agentic_mode", False):
-                agentic_result = self._run_agentic_flow(
-                    question=question,
-                    trace_id=trace_id,
-                    tenant_id=tenant_id,
-                    user_id=user_id,
-                    session_id=session_id,
-                    confirm=confirm,
-                )
-                if agentic_result is not None:
-                    return agentic_result
+            # Bind on the worker thread (ContextVar does not cross executors).
+            if wall_sec > 0:
+                bind_request_deadline(wall_sec, source="ask")
+            try:
+                try:
+                    if getattr(settings, "agentic_mode", False):
+                        agentic_result = self._run_agentic_flow(
+                            question=question,
+                            trace_id=trace_id,
+                            tenant_id=tenant_id,
+                            user_id=user_id,
+                            session_id=session_id,
+                            confirm=confirm,
+                        )
+                        if agentic_result is not None:
+                            return agentic_result
 
-            return run_qa_pipeline(
-                question=question,
-                retriever=self._retriever,
-                llm=self._llm,
-                max_iterations=self._max_iterations,
-                chat_history=self._history,
-                trace_id=trace_id,
-                tenant_id=tenant_id,
-            )
+                    return run_qa_pipeline(
+                        question=question,
+                        retriever=self._retriever,
+                        llm=self._llm,
+                        max_iterations=self._max_iterations,
+                        chat_history=self._history,
+                        trace_id=trace_id,
+                        tenant_id=tenant_id,
+                    )
+                except RequestDeadlineExceeded:
+                    logger.warning(
+                        "ConversationSession.ask hit cooperative deadline "
+                        "wall_sec=%.1fs",
+                        wall_sec,
+                        extra={"trace_id": trace_id},
+                    )
+                    return self._timed_out_state(
+                        question, wall_sec, trace_id, tenant_id
+                    )
+            finally:
+                clear_request_deadline()
 
         if budget_sec > 0:
             result = self._run_within_budget(

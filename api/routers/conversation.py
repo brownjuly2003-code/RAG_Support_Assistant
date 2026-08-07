@@ -295,6 +295,8 @@ async def ask(
                 "confirm": body.confirm,
                 "user_id": _user.get("sub", "anonymous"),
                 "session_id": session_id,
+                # Cooperative provider deadline matches outer wait_for wall (§3.1b).
+                "deadline_sec": float(timeout),
             }
             semaphore = _app._get_pipeline_semaphore()
             try:

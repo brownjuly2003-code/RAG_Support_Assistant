@@ -310,11 +310,17 @@ class ProviderBackedLLM:
         tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> LLMResponse:
+        # Cooperative deadline (plan §3.1b): refuse new provider work after wall.
+        # Do not failover after deadline — fail closed on this request.
+        from utils.request_deadline import check_request_deadline
+
+        check_request_deadline("provider.generate")
         if (
             self._fallback_provider is not None
             and self._fallback_cache_is_active is not None
             and self._fallback_cache_is_active()
         ):
+            check_request_deadline("provider.generate.fallback_cache")
             response = self._fallback_provider.generate(messages, tools=tools, **kwargs)
             self.last_response = response
             return response
@@ -324,6 +330,7 @@ class ProviderBackedLLM:
         except ProviderUnavailable as exc:
             if self._fallback_provider is None:
                 raise
+            check_request_deadline("provider.generate.fallback")
             if self._fallback_cache_activate is not None and self._fallback_cache_ttl_sec > 0:
                 self._fallback_cache_activate(self._fallback_cache_ttl_sec)
             if self._on_fallback is not None:
@@ -342,11 +349,15 @@ class ProviderBackedLLM:
         *args: Any,
         **kwargs: Any,
     ) -> LLMResponse:
+        from utils.request_deadline import check_request_deadline
+
+        check_request_deadline(f"provider.{method_name}")
         if (
             self._fallback_provider is not None
             and self._fallback_cache_is_active is not None
             and self._fallback_cache_is_active()
         ):
+            check_request_deadline(f"provider.{method_name}.fallback_cache")
             method = getattr(self, f"_call_{method_name}")
             response = method(self._fallback_provider, *args, **kwargs)
             self.last_response = response
@@ -358,6 +369,7 @@ class ProviderBackedLLM:
         except ProviderUnavailable as exc:
             if self._fallback_provider is None:
                 raise
+            check_request_deadline(f"provider.{method_name}.fallback")
             if self._fallback_cache_activate is not None and self._fallback_cache_ttl_sec > 0:
                 self._fallback_cache_activate(self._fallback_cache_ttl_sec)
             if self._on_fallback is not None:
@@ -434,6 +446,9 @@ class ProviderBackedLLM:
         messages: list[Message],
         **kwargs: Any,
     ) -> AsyncIterator[str]:
+        from utils.request_deadline import check_request_deadline
+
+        check_request_deadline("provider.generate_stream")
         provider = self._provider
         method = getattr(provider, "generate_stream", None)
         if not _provider_implements_method(provider, "generate_stream") or not callable(method):
@@ -441,6 +456,7 @@ class ProviderBackedLLM:
                 f"Provider '{provider.provider_id}' does not support streaming"
             )
         async for chunk in method(messages, **kwargs):
+            check_request_deadline("provider.generate_stream.chunk")
             yield chunk
 
     def generate_batch(
@@ -448,6 +464,9 @@ class ProviderBackedLLM:
         batches: list[list[Message]],
         **kwargs: Any,
     ) -> list[LLMResponse]:
+        from utils.request_deadline import check_request_deadline
+
+        check_request_deadline("provider.generate_batch")
         method = getattr(self._provider, "generate_batch", None)
         if _provider_implements_method(self._provider, "generate_batch") and callable(method):
             responses = method(batches, **kwargs)
