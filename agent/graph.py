@@ -2890,10 +2890,19 @@ class ConversationSession:
         try:
 
             def _run() -> GraphState:
-                # Bind on the worker thread (ContextVar does not cross executors).
-                if wall_sec > 0:
+                # Bind on the worker thread when the caller did not pre-bind
+                # a shared deadline/budget (stream path may share one object).
+                from llm.request_budget import get_llm_request_budget
+                from utils.request_deadline import get_request_deadline
+
+                bound_deadline_here = False
+                bound_budget_here = False
+                if wall_sec > 0 and get_request_deadline() is None:
                     bind_request_deadline(wall_sec, source="ask")
-                bind_llm_request_budget_from_settings(settings, source="ask")
+                    bound_deadline_here = True
+                if get_llm_request_budget() is None:
+                    bind_llm_request_budget_from_settings(settings, source="ask")
+                    bound_budget_here = True
                 try:
                     try:
                         if getattr(settings, "agentic_mode", False):
@@ -2940,8 +2949,10 @@ class ConversationSession:
                             reason=str(getattr(exc, "reason", "exhausted") or "exhausted"),
                         )
                 finally:
-                    clear_request_deadline()
-                    clear_llm_request_budget()
+                    if bound_deadline_here:
+                        clear_request_deadline()
+                    if bound_budget_here:
+                        clear_llm_request_budget()
 
             if budget_sec > 0:
                 result = self._run_within_budget(

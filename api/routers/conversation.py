@@ -25,6 +25,34 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def _release_pipeline_capacity(semaphore: Any) -> None:
+    """Drop inflight gauge + release the pipeline semaphore (best-effort)."""
+    try:
+        prometheus_metrics.INFLIGHT_PIPELINES.dec()
+    except Exception:
+        pass
+    try:
+        semaphore.release()
+    except Exception:
+        pass
+
+
+def _hold_capacity_until_future_done(
+    *,
+    loop: asyncio.AbstractEventLoop,
+    fut: Any,
+    semaphore: Any,
+) -> None:
+    """Keep pipeline capacity until a thread-pool future finishes (3.1a / 3.1f)."""
+
+    def _on_done(_fut: Any) -> None:
+        _release_pipeline_capacity(semaphore)
+
+    fut.add_done_callback(
+        lambda done: loop.call_soon_threadsafe(_on_done, done)
+    )
+
+
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     session_id: Optional[str] = Field(default=None, max_length=100)
@@ -335,21 +363,10 @@ async def ask(
                     except asyncio.TimeoutError:
                         # Keep semaphore + inflight until the orphaned worker ends.
                         capacity_held_for_orphan = True
-
-                        def _release_pipeline_capacity(_fut: Any) -> None:
-                            try:
-                                prometheus_metrics.INFLIGHT_PIPELINES.dec()
-                            except Exception:
-                                pass
-                            try:
-                                semaphore.release()
-                            except Exception:
-                                pass
-
-                        ask_future.add_done_callback(
-                            lambda fut: loop.call_soon_threadsafe(
-                                _release_pipeline_capacity, fut
-                            )
+                        _hold_capacity_until_future_done(
+                            loop=loop,
+                            fut=ask_future,
+                            semaphore=semaphore,
                         )
                         try:
                             prometheus_metrics.record_request_timeout("/api/ask")
@@ -500,11 +517,7 @@ async def ask(
             finally:
                 # On outer timeout the done-callback owns release (capacity hold).
                 if not capacity_held_for_orphan:
-                    try:
-                        prometheus_metrics.INFLIGHT_PIPELINES.dec()
-                    except Exception:
-                        pass
-                    semaphore.release()
+                    _release_pipeline_capacity(semaphore)
     else:
         session["history"].append({"role": "user", "content": question})
         fallback_answer = f"[DEMO] Pipeline not available. Question received: {question}"
@@ -605,19 +618,35 @@ async def ask_stream(
             ip_address=request.client.host if request.client else None,
         )
 
-        # The except-branch below reuses graph_task/ask_args; they must exist
+        # The except-branch below reuses graph_task/_session_ask; they must exist
         # even when the failure happens before their full initialization,
         # otherwise the fallback itself dies with NameError and the SSE stream
         # ends without a result event.
         graph_task: asyncio.Future | None = None
-        ask_args: tuple[Any, ...] = (question, get_request_id(), tenant)
+        request_id = get_request_id()
+        settings_pre = _app.get_settings()
+        request_timeout = float(getattr(settings_pre, "request_timeout_sec", 60.0))
+        capacity_held_for_orphan = False
+        loop = asyncio.get_running_loop()
+
+        def _session_ask() -> Any:
+            """Parity/fallback full-graph ask with cooperative deadline kwargs."""
+            return session.ask(
+                question,
+                trace_id=request_id,
+                tenant_id=tenant,
+                confirm=body.confirm,
+                user_id=_user.get("sub", "anonymous"),
+                session_id=session_id,
+                deadline_sec=request_timeout,
+            )
 
         # Streaming consumes the same retriever/LLM resources as /api/ask —
         # it must respect the same bounded-concurrency pool instead of
         # bypassing it (fable_com.md F-3).
         semaphore = _app._get_pipeline_semaphore()
         acquire_timeout = float(
-            getattr(_app.get_settings(), "pipeline_acquire_timeout_sec", 0.5)
+            getattr(settings_pre, "pipeline_acquire_timeout_sec", 0.5)
         )
         try:
             await asyncio.wait_for(semaphore.acquire(), timeout=acquire_timeout)
@@ -635,6 +664,36 @@ async def ask_stream(
             prometheus_metrics.INFLIGHT_PIPELINES.inc()
         except Exception:
             pass
+
+        # Bind deadline + LLM budget for stream-side provider work (3.1f).
+        # Parity worker reuses the same budget object via ContextVar install.
+        from llm.request_budget import (
+            bind_llm_request_budget_from_settings,
+            clear_llm_request_budget,
+            get_llm_request_budget,
+            set_llm_request_budget,
+        )
+        from utils.request_deadline import (
+            bind_request_deadline,
+            clear_request_deadline,
+            set_request_deadline,
+        )
+        from utils.request_executor import get_request_executor
+
+        stream_deadline_obj = bind_request_deadline(
+            request_timeout, source="ask_stream"
+        )
+        stream_budget_obj = bind_llm_request_budget_from_settings(
+            settings_pre, source="ask_stream"
+        )
+
+        def _session_ask_with_shared_limits() -> Any:
+            if stream_deadline_obj is not None:
+                set_request_deadline(stream_deadline_obj)
+            if stream_budget_obj is not None:
+                set_llm_request_budget(stream_budget_obj)
+            return _session_ask()
+
         try:
             prompt = ""
             docs: list[Any] = []
@@ -647,7 +706,6 @@ async def ask_stream(
             # — only the metadata is corrected. Opt-in via
             # STREAMING_RAG_PARITY=true; off by default so operators don't
             # silently pay for a second graph pass.
-            settings_pre = _app.get_settings()
             graph_parity_enabled = bool(
                 getattr(settings_pre, "streaming_rag_parity", False)
             )
@@ -663,9 +721,9 @@ async def ask_stream(
                 else None
             )
             if graph_parity_enabled and hasattr(session, "ask"):
-                loop = asyncio.get_running_loop()
                 graph_task = loop.run_in_executor(
-                    None, lambda: session.ask(*ask_args)
+                    get_request_executor(),
+                    _session_ask_with_shared_limits,
                 )
 
             if hasattr(session, "_retriever") and session._retriever is not None:
@@ -900,14 +958,23 @@ async def ask_stream(
             if graph_task is not None:
                 try:
                     graph_result = await asyncio.wait_for(
-                        graph_task, timeout=graph_parity_timeout
+                        asyncio.shield(graph_task),
+                        timeout=graph_parity_timeout,
                     )
                 except asyncio.TimeoutError:
                     logger.warning(
-                        "Streaming RAG parity task exceeded %.1fs timeout",
+                        "Streaming RAG parity task exceeded %.1fs timeout; "
+                        "holding pipeline capacity until orphan completes",
                         graph_parity_timeout,
                     )
-                    graph_task.cancel()
+                    # Thread work is not cancellable; hold capacity until done (3.1f).
+                    if not capacity_held_for_orphan:
+                        capacity_held_for_orphan = True
+                        _hold_capacity_until_future_done(
+                            loop=loop,
+                            fut=graph_task,
+                            semaphore=semaphore,
+                        )
                     graph_result = None
                 except Exception as graph_exc:
                     logger.warning("Streaming RAG parity task failed: %s", graph_exc)
@@ -1006,8 +1073,9 @@ async def ask_stream(
                         logger.warning("Streaming parity task failed in fallback: %s", parity_exc)
                         result = None
                 if result is None and hasattr(session, "ask"):
-                    result = await asyncio.get_running_loop().run_in_executor(
-                        None, session.ask, *ask_args
+                    result = await loop.run_in_executor(
+                        get_request_executor(),
+                        _session_ask_with_shared_limits,
                     )
                 if result is not None:
                     answer = result.get("answer") or "Не удалось получить ответ."
@@ -1101,13 +1169,32 @@ async def ask_stream(
                     "suggested_questions": [],
                 }) + "\n\n"
         finally:
-            # Runs on normal completion, errors, and client disconnect
-            # (GeneratorExit) — the pipeline slot must never leak.
+            # Clear stream-side ContextVars. Do not clear a shared budget object
+            # mid-orphan: worker may still charge against it until done.
             try:
-                prometheus_metrics.INFLIGHT_PIPELINES.dec()
+                clear_request_deadline()
             except Exception:
                 pass
-            semaphore.release()
+            try:
+                # Only clear if we still own the stream context binding.
+                if get_llm_request_budget() is stream_budget_obj:
+                    clear_llm_request_budget()
+            except Exception:
+                pass
+            # Runs on normal completion, errors, and client disconnect
+            # (GeneratorExit) — the pipeline slot must never leak.
+            if capacity_held_for_orphan:
+                pass  # done-callback owns release
+            elif graph_task is not None and not graph_task.done():
+                # Disconnect / early exit while parity still running.
+                capacity_held_for_orphan = True
+                _hold_capacity_until_future_done(
+                    loop=loop,
+                    fut=graph_task,
+                    semaphore=semaphore,
+                )
+            else:
+                _release_pipeline_capacity(semaphore)
 
     return StreamingResponse(
         event_generator(),
