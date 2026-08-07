@@ -1,20 +1,20 @@
 # Agent State
 
-## 2026-08-07 Update-66 — record completed slice 2.6b @ `0e4451e` ✅ START HERE
+## 2026-08-07 Update-67 — record completed slice 2.6c @ `3ba7986` ✅ START HERE
 
-> **Routing authority:** Update-66 records completed **2.6b** and supersedes
-> Update-65 **only for start-point routing**. All older Update blocks below,
+> **Routing authority:** Update-67 records completed **2.6c** and supersedes
+> Update-66 **only for start-point routing**. All older Update blocks below,
 > including headings that literally contain `✅ START HERE`, are **archival**.
 > **Only the first/topmost Update block in this file is authoritative.**
 > Never select work by grepping old `START HERE` markers.
 >
 > **Known lineage (actual Git wins over any embedded hash):**
-> - Latest implementation: `0e4451e`
->   (`feat(index): known-query fail-closed lifecycle fault injection`) —
->   slice **2.6b**
-> - Previous docs: `78b0e8a` (Update-65)
-> - Previous implementation: `3f3c699` (**2.6a** inventory/publish faults)
-> - This Update-66 docs commit SHA is **unknown inside its own content**;
+> - Latest implementation: `3ba7986`
+>   (`feat(index): embeddings fail-closed lifecycle fault injection`) —
+>   slice **2.6c**
+> - Previous docs: `f43d3f5` (Update-66)
+> - Previous implementation: `0e4451e` (**2.6b** known-query fault)
+> - This Update-67 docs commit SHA is **unknown inside its own content**;
 >   next session: `git log -5 --oneline`
 >
 > **Completion truth:**
@@ -22,10 +22,10 @@
 > |------|--------|
 > | **2.1–2.3i** | locally complete at documented scopes |
 > | **2.4a–2.4k** | job-object stack at documented scopes |
-> | **2.5a** | read-only admin HTTP job-object inventory |
-> | **2.5b** | durable job↔index publication bind |
+> | **2.5a / 2.5b** | admin job-object inventory / job↔index bind |
 > | **2.6a** | inventory/publish fail-closed fault injection |
 > | **2.6b** | known-query fail-closed fault injection |
+> | **2.6c** | embeddings fail-closed fault injection |
 > | Full plan §2 | **NOT** complete |
 > | Project / release / production | **NOT** claimed |
 >
@@ -35,47 +35,42 @@
 > **Plan §2 → local progress map:**
 > | Plan §2 bullet | Local slices | Honest residual |
 > |----------------|--------------|-----------------|
-> | 2.1 inventory write under lock | 2.1 + related | live drills / full DoD open |
-> | 2.2 bounded retention executor | 2.2 + 2.3f–2.3i | live drills open |
-> | operator surface rollback + retention | 2.3b–2.3i index; 2.4i–2.5a job-objects | no job-object delete execute HTTP |
-> | immutable originals + lifecycle bind | 2.4a–2.5b | no real FS deletion / age-budget |
-> | **fault injection expand** | **2.6a + 2.6b** | **← next 2.6c+** (embeddings/cleanup; concurrency) |
-> | live PG/Redis/Celery/Chroma + migrations | not started | needs **explicit opt-in**; migrations **019–022** |
+> | 2.1–2.5b bands | as prior | live drills open |
+> | **fault injection expand** | **2.6a + 2.6b + 2.6c** | **← next 2.6d+** (cleanup; concurrency) |
+> | live PG/Redis/Celery/Chroma + migrations | not started | **opt-in only**; migrations **019–022** |
 >
-> **2.6b contract (latest impl):**
-> - point `known_query` in `vectordb/index_lifecycle_faults.py`
-> - hook at start of `validate_staged_known_query` (after lock, before smoke)
-> - known-query fault → no inventory record, no publish, candidate discarded,
->   active manifest unchanged
+> **2.6c contract (latest impl):**
+> - point `embeddings` in `vectordb/index_lifecycle_faults.py`
+> - hook in `_validate_candidate` after count checks, before dimension probe
+> - `IndexLifecycleFaultError` re-raised unwrapped from `build_staged_collection`
+> - embeddings fault → staging cleans partial candidate; no known-query /
+>   inventory / publish; active manifest unchanged
 >
-> **Verification (2.6b):** focused **14 passed**
-> (`tests/test_index_lifecycle_fault_injection.py` + known-query/inventory/
-> publish adjacent + `tests/test_index_staging.py`); Ruff clean on scoped
-> paths. Full suite / live drills **not** run.
+> **Verification (2.6c):** focused **15 passed** (lifecycle faults module +
+> staging + adjacent fail paths); Ruff clean. Full suite / live drills **not**
+> run.
 >
 > **Key invariant (unchanged):** failed jobs with `source_path`-matched
 > job-objects → `retained_after_failed_transition`; `auto_delete_eligible`
 > always false.
 >
 > **Open boundaries (honest):**
-> - fault injection **remainder** (embeddings/cleanup; concurrent same-tenant
->   / duplicate job / lock contention / worker recovery)
+> - fault injection **remainder** (cleanup discard-path; concurrent
+>   same-tenant / duplicate job / lock contention / worker recovery)
 > - no real FS deletion for job-objects / legacy-previous
 > - no age/budget auto-delete thresholds
-> - no orphan cleanup **mutations**
-> - no job-object retention **execute** HTTP
-> - live services / migration drills on real Postgres **not** run
-> - full suite / push / deploy / production-readiness **not** claimed
+> - no orphan cleanup **mutations** / job-object retention **execute** HTTP
+> - live services / full suite / push / deploy / prod claims **not** done
 >
 > **Active writer / WIP:** none.
 >
-> **Next candidate only (not started):** **2.6c — embeddings (or cleanup)
+> **Next candidate only (not started):** **2.6d — cleanup discard-path
 > fail-closed injection**, **or** a single concurrency / lock-contention
 > atomic — **one** per turn. Still **no** deletion, age/budget, plan
 > checkbox edits, push/deploy, or live multi-service drills without opt-in.
 > Details: [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
 >
-> **Do not re-select:** 2.1–2.6b.
+> **Do not re-select:** 2.1–2.6c.
 >
 > **Protected dirty / untracked:** do not touch/stage/remove without
 > explicit request. `_NEXT_SESSION.md` is pointer only — **not** routing
@@ -87,8 +82,13 @@
 > **Standing preference:** Grok implements; one user turn = one named
 > atomic slice; local commit only.
 >
-> **Git advisory:** branch observed `master...origin/master [ahead 112]`
-> after 2.6b impl — **refresh next session**.
+> **Git advisory:** branch observed `master...origin/master [ahead 114]`
+> after 2.6c impl — **refresh next session**.
+
+## 2026-08-07 Update-66 — record completed slice 2.6b @ `0e4451e` ✅ START HERE
+
+> **Historical handoff (superseded by Update-67 for start-point routing).**
+> Recorded **2.6b** @ `0e4451e`. Next-work naming **2.6c** is **stale**.
 
 ## 2026-08-07 Update-65 — record completed slice 2.6a @ `3f3c699` ✅ START HERE
 
