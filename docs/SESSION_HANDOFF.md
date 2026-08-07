@@ -1,15 +1,14 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 (Update-60 docs-only / transparency-only after
-completed Update-59 docs `a077f0d`; latest implementation remains `ea3f59e`
-/ **2.4j**; previous implementation `f0f79b9` / **2.4i**; next candidate
-**2.4k status load + CLI transition annotations** not started)
+**Обновлено:** 2026-08-07 (Update-61 after completed **2.4k** @ `9e358f1`;
+previous implementation `ea3f59e` / **2.4j**; next requires re-scope —
+job-object operator-visibility track complete through 2.4k)
 
 **Назначение:** самодостаточный next-session handoff для coding agent после
 compacted context. История срезов — в [`AGENT_STATE.md`](../AGENT_STATE.md)
-(**только верхний блок Update-60** — routing authority; older blocks including
-literal `✅ START HERE` headings are archival). Evidence 2.4j — ниже +
-Update-59 / `a077f0d`; 2.4i — Update-58 / `887fbb3`. Активный plan source —
+(**только верхний блок Update-61** — routing authority; older blocks including
+literal `✅ START HERE` headings are archival). Evidence 2.4k — ниже;
+2.4j — Update-59 / `a077f0d` + Update-60 / `3c96a03`. Активный plan source —
 untracked/protected
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
 
@@ -20,26 +19,21 @@ untracked/protected
 
 | Факт | Значение |
 |------|----------|
-| Latest implementation | `ea3f59e` (`feat(ingestion): annotate failed-transition job-object ownership`) — **2.4j** |
-| Latest completed docs (before this turn) | `a077f0d` (`docs: record failed-transition job-object ownership annotations`) — actual Update-59 |
-| Previous implementation | `f0f79b9` (slice **2.4i**) |
-| This Update-60 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
-| Branch advisory | `master...origin/master [ahead 101]` before this docs commit — **refresh mandatory** |
+| Latest implementation | `9e358f1` (`feat(ingestion): load job statuses and wire CLI transition annotations`) — **2.4k** |
+| Previous implementation | `ea3f59e` (slice **2.4j**) |
+| Latest pre-2.4k docs | Update-60 `3c96a03`; Update-59 `a077f0d` |
+| This Update-61 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
+| Branch advisory | `master...origin/master [ahead 103]` after 2.4k impl — **refresh mandatory** |
 | Active writer | **none** |
 | Unfinished WIP in next targets | **none known** |
-| Locally complete (documented scopes) | **2.1–2.4j** |
-| Not complete / not claimed | full plan step 2; full immutable lifecycle; real FS deletion; orphan cleanup mutations; age/budget thresholds; status→CLI wiring; admin HTTP; DB model/migration field; full suite; live drills; project/release/production readiness |
-| Next allowed candidate | **2.4k** load tenant job statuses + wire transition annotations into operator CLI (**not started**; still **no** deletion) |
+| Locally complete (documented scopes) | **2.1–2.4k** |
+| Not complete / not claimed | full plan step 2; full immutable lifecycle; real FS deletion; orphan cleanup mutations; age/budget thresholds; admin HTTP; DB model/migration field; full suite; live drills; project/release/production readiness |
+| Next allowed candidate | **re-scope** — do **not** re-select 2.1–2.4k; do **not** invent deletion without explicit opt-in |
 | Gates | no push / deploy / live services / destructive Git / production claims |
 
-**Transparency-only Update-60:** no implementation/test/plan/backlog/user-WIP
-change and **no** project test rerun in this docs turn. Implementation state
-is unchanged after `ea3f59e` / **2.4j**.
-
-**Known verification (2.4j; unchanged):** focused green **47 passed**
-(orphans + CLI + retention + inventory); adjacent gate **127 passed**;
-scoped Ruff clean; `git diff --check` clean; mypy Python 3.12 Success
-(1 file). Full suite / live services **not** run.
+**Known verification (2.4k):** focused green **53 passed** (orphans + CLI +
+retention + inventory); scoped Ruff clean; staged-path `git diff --check`
+clean. Full suite / live services **not** run.
 
 **Key invariant (do not violate):** failed jobs with `source_path`-matched
 job-objects are `retained_after_failed_transition` — intentional retention,
@@ -50,11 +44,11 @@ job-objects are `retained_after_failed_transition` — intentional retention,
 | Module / path | Slice | Role |
 |---------------|-------|------|
 | `api/routers/upload.py` | 2.4a | create path: job row → immutable → legacy-previous → flat |
-| `ingestion/jobs.py` | 2.4f+ | `sync_list_known_job_object_refs`; future status load for 2.4k |
+| `ingestion/jobs.py` | 2.4f/2.4k | `sync_list_known_job_object_refs` + `sync_list_job_statuses_for_tenant` |
 | `ingestion/job_object_inventory.py` | 2.4e/2.4f | classify + tenant preview |
 | `ingestion/job_object_retention.py` | 2.4g/2.4h | fail-closed policy + guarded no-op command |
 | `ingestion/job_object_orphans.py` | 2.4j | transition ownership annotations |
-| `scripts/preview_job_object_inventory.py` | 2.4i | operator CLI (extend carefully in 2.4k) |
+| `scripts/preview_job_object_inventory.py` | 2.4i/2.4k | operator CLI + status annotations |
 | `vectordb/*` index retention | 2.1–2.3i | **separate** Chroma subsystem — must not delete job-objects |
 
 ### Protected state (do not touch/stage/remove without explicit request)
@@ -81,21 +75,18 @@ next-candidate WIP на момент этого handoff.
 1. **Cycle-guard preflight** on the latest user message.
 2. `cd D:\RAG_Support_Assistant`; run fresh `git status --short --branch` and
    `git log -5 --oneline` as **separate** commands; **actual Git wins** over
-   embedded hashes/counts (known implementation `ea3f59e` / **2.4j**; known
-   Update-59 docs `a077f0d`; this Update-60 docs SHA from fresh `git log`).
-3. Read **only** top **Update-60** in `AGENT_STATE.md` + this
+   embedded hashes/counts (known implementation `9e358f1` / **2.4k**; known
+   Update-60 docs `3c96a03`; this Update-61 docs SHA from fresh `git log`).
+3. Read **only** top **Update-61** in `AGENT_STATE.md` + this
    **Нулевая неоднозначность** capsule first; treat older Update blocks
-   (including Update-59) as archive. Do **not** reselect 2.1–2.4j.
-4. For **2.4k** (only allowed next candidate):
-   - add narrow tenant `job_id → status` loader (candidate:
-     `ingestion/jobs.py`, sync, read-only);
-   - wire `annotate_job_object_transition_context` into
-     `scripts/preview_job_object_inventory.py` human + JSON output;
-   - still **no** deletion, age/budget invention, or FS mutation;
-   - re-check protected dirty/untracked list;
-   - do **not** reopen 2.4e–2.4j domain semantics, 2.4a–2.4d upload/receipt,
-     or index retention operator surfaces unless investigation proves a
-     required conflict — then **stop and re-scope**.
+   (including Update-60) as archive. Do **not** reselect 2.1–2.4k.
+4. **Re-scope before coding:** job-object operator-visibility track is
+   complete through **2.4k**. Pick **one** remaining plan §2 gap that is
+   still non-deletion, **or** get explicit product opt-in before any
+   deletion/age/budget design. Do **not** invent auto-delete classes.
+   Re-check protected dirty/untracked list. Do **not** reopen 2.4a–2.4k
+   domain semantics unless investigation proves a required conflict —
+   then **stop and re-scope**.
 5. Use **Grok** via the local verified route; announce counters
    `slice 1/1`, `delegated run N/3`, `QA follow-up N/1`. Execute **at most
    one** named atomic next candidate.
@@ -112,25 +103,22 @@ opt-in and must **not** be selected as the default next slice.
 
 1. `git status --short --branch` и `git log -5 --oneline` — авторитетный
    источник текущего filesystem/Git state.
-2. Далее: верхний блок `AGENT_STATE.md` (**Update-60**) и эта капсула
+2. Далее: верхний блок `AGENT_STATE.md` (**Update-61**) и эта капсула
    (**Нулевая неоднозначность**).
 3. `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26` и их
    dirty working-tree contents — protected user state; могут быть stale. Они
-   **не** переопределяют Update-60 и **не** дают права повторять уже
-   завершённые срезы 2.1–2.4j.
+   **не** переопределяют Update-61 и **не** дают права повторять уже
+   завершённые срезы 2.1–2.4k.
 4. Untracked `_NEXT_SESSION.md` — **pointer only**; **not** routing authority.
 5. `rag-remediation-plan-2026-08-03.md` — активный plan source
    (untracked/protected). Do **not** edit its checkboxes from docs turns.
    Старый `plan_sol_23_07_26` — protected legacy.
 6. Один user turn = максимум один named atomic slice.
 
-**Authoritative implementation state:** latest implementation is `ea3f59e`
-(**2.4j** ownership annotations). Latest pre-transparency docs commit:
-`a077f0d` (Update-59). Do **not** embed a guessed future Update-60 docs
-commit hash; next session reads actual `git log`. Branch advisory
-`master...origin/master [ahead 101]` before this docs commit — refresh
-mandatory. Push/deploy not authorized. Update-60 is transparency-only and
-does **not** change implementation, tests, plan, backlog, or user WIP.
+**Authoritative implementation state:** latest implementation is `9e358f1`
+(**2.4k** status load + CLI annotations). Do **not** embed a guessed future
+Update-61 docs commit hash; next session reads actual `git log`.
+Push/deploy not authorized.
 
 ## Карта реализации
 
@@ -157,19 +145,50 @@ does **not** change implementation, tests, plan, backlog, or user WIP.
 | **2.4h** | guarded job-object retention command (empty expected only; no-op; no FS mutation) | `9761caf` | Update-57 |
 | **2.4i** | operator CLI for inventory + policy + optional guarded no-op | `f0f79b9` | Update-58 |
 | **2.4j** | failed-transition ownership annotations (no deletion) | `ea3f59e` | Update-59 `a077f0d` + Update-60 handoff |
+| **2.4k** | job status load + CLI transition annotations (no deletion) | `9e358f1` | Update-61 |
 
-Срезы **2.1–2.4j** локально complete и verified at documented scopes
-(**2.4j** only at ownership annotations; **2.4i** only at operator CLI).
-Локальный operator surface для index retention preview + guarded execution и
-validated rollback **present**. Immutable upload originals + receipts +
-job-object inventory/policy/command/CLI stack **present** through 2.4i.
-Failed-transition ownership annotations **present** after 2.4j (failed jobs
-with source_path originals are retained, not GC). Полный plan step 2, full
-immutable lifecycle, real FS deletion path, orphan cleanup mutations,
-status-load CLI wiring, age/budget thresholds, admin HTTP, fault injection,
-live drills, project и release — **не** complete. **2.1–2.4j must never be
-selected again.** Next safe candidate is **2.4k status load + CLI
-transition annotations** (**not started**; still **no** deletion).
+Срезы **2.1–2.4k** локально complete и verified at documented scopes
+(**2.4k** only at status load + CLI annotation wiring). Локальный operator
+surface для index retention preview + guarded execution и validated rollback
+**present**. Immutable upload originals + receipts + job-object
+inventory/policy/command/CLI/annotation stack **present** through 2.4k.
+Failed-transition ownership annotations **wired into CLI** after 2.4k
+(failed jobs with source_path originals are retained, not GC). Полный plan
+step 2, full immutable lifecycle, real FS deletion path, orphan cleanup
+mutations, age/budget thresholds, admin HTTP, fault injection, live drills,
+project и release — **не** complete. **2.1–2.4k must never be selected
+again.** Next work requires **re-scope** (still **no** deletion by default).
+
+## Контракт 2.4k (status load + CLI transition annotations) — COMPLETE
+
+Status load + operator CLI annotation wiring at `9e358f1`:
+
+**API / surface:**
+
+- `ingestion.jobs.sync_list_job_statuses_for_tenant(tenant_id) ->
+  dict[str, str]` — read-only, tenant-scoped; blank tenant fails closed;
+  blank status values skipped; status lowercased
+- `scripts/preview_job_object_inventory.py`:
+  - `run_operator_preview(..., job_statuses=…)` always produces
+    `transition_annotations` via `annotate_job_object_transition_context`
+  - CLI injects `load_job_statuses` (default DB loader) like known-job refs
+  - human + JSON include `transition_annotations`
+- failed+protected → `retained_after_failed_transition` with
+  `auto_delete_eligible=false`
+
+**Implementation paths changed in `9e358f1` only:**
+
+- `ingestion/jobs.py`
+- `scripts/preview_job_object_inventory.py`
+- `tests/test_job_object_inventory.py`
+- `tests/test_preview_job_object_inventory_cli.py`
+
+**Boundary:** status load + report wiring only. **Нет** deletion,
+age/budget thresholds, admin HTTP, upload-path edits, plan checkbox edits,
+live-service, push, or deploy.
+
+**Verification (2.4k):** focused 53 passed; Ruff clean; diff-check clean on
+scoped paths. Full suite / live services **not** run.
 
 ## Контракт 2.4j (failed-transition ownership annotations) — COMPLETE
 
@@ -976,11 +995,10 @@ python -m ruff check ingestion/job_object_orphans.py tests/test_job_object_orpha
 python -m mypy ingestion/job_object_orphans.py --config-file pyproject.toml
 ```
 
-### Reference commands (2.4k candidate) — after status/CLI wiring
+### Reference commands (2.4k — landed)
 
 ```powershell
-# Adjust once 2.4k lands; keep orphans + CLI green:
-python -m pytest tests/test_job_object_orphans.py tests/test_preview_job_object_inventory_cli.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4k-<unique>
+python -m pytest tests/test_job_object_orphans.py tests/test_preview_job_object_inventory_cli.py tests/test_job_object_retention.py tests/test_job_object_inventory.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step2-4k-<unique>
 ```
 
 ### Reference commands (2.4d) — только при new code/failure
@@ -1049,13 +1067,11 @@ never claim unconditional full-file Mypy cleanliness without evidence.
 - DB migration/model fields for index version/collection; API/UI surfaces
   (out of 2.4f preview scope unless proven required).
 
-**Remaining honest limitations after 2.4j:**
+**Remaining honest limitations after 2.4k:**
 
 - both accepted upload paths still record publication receipts (2.4c/2.4d)
-- job-object inventory / policy / guarded no-op / operator CLI stack present
-  through 2.4i
-- failed-transition ownership annotations present (`ea3f59e`) but **not**
-  yet wired to DB status load or CLI output
+- job-object inventory / policy / guarded no-op / operator CLI + status
+  annotations stack present through 2.4k
 - full immutable-original lifecycle is still **not** complete
 - no real filesystem **deletion** path for job-objects / legacy
 - no orphan cleanup **mutations** (annotations only; failed jobs retained)
@@ -1065,64 +1081,35 @@ never claim unconditional full-file Mypy cleanliness without evidence.
 - no live concurrency/fault-injection; full suite not run
 - full plan step 2 / project / release / production readiness **not** complete
 
-**Next candidate (not started):** **2.4k load tenant job statuses + wire
-transition annotations into operator CLI**. Candidate only — **not**
-completed work and **not** started. Still **no** deletion. Do **not** invent
-auto-delete classes or age/budget rules, edit the plan, reopen 2.1–2.4j, or
-mark 2.4k started/complete from docs alone.
+**Next candidate (re-scope required — not started):** job-object
+operator-visibility track is complete through **2.4k**. Do **not** re-select
+2.1–2.4k. Do **not** invent auto-delete classes or age/budget rules, edit the
+plan checkboxes, or start real FS deletion without explicit product opt-in.
+Next session re-reads plan §2 and picks **one** remaining non-deletion gap
+(or gets explicit opt-in before any deletion design).
 
-**Superseded / do not re-select:** 2.1–2.4j are complete. Historical
-next-work text that still names **2.4a**–**2.4j** as the next candidate is
+**Superseded / do not re-select:** 2.1–2.4k are complete. Historical
+next-work text that still names **2.4a**–**2.4k** as the next candidate is
 stale. Historical headings containing `✅ START HERE` are archival.
 
-### Следующий named candidate: 2.4k status load + CLI annotations (не начат)
+### Следующий шаг: re-scope (не начат; deletion не default)
 
-Smallest safe framing: load `job_id → status` for one tenant, call
-`annotate_job_object_transition_context`, include notes in CLI human/JSON
-output. **Not started.** **Do not re-select 2.4a–2.4j.** Still **no** real
-deletion.
+Job-object observability is done through 2.4k. Safe default for next session:
+pick a **non-deletion** remaining plan §2 item, or stop and ask the owner
+before designing real deletion/age/budget.
 
-**Suggested acceptance (tests-first):**
+**Do not:**
 
-1. Narrow sync helper, e.g. `sync_list_job_statuses_for_tenant(tenant_id) ->
-   dict[str, str]` (or tuple of pairs) — read-only, tenant-scoped, empty
-   tenant fails closed; blank statuses skipped or normalized.
-2. Operator path: after inventory + policy, load statuses → annotate →
-   surface ownership in human + JSON (`transition_annotations` or similar).
-3. Failed+protected rows report `retained_after_failed_transition` with
-   `auto_delete_eligible=false`.
-4. Focused tests: loader isolation, CLI injection without live DB, JSON
-   shape; adjacent gate keeps orphans + CLI + retention + inventory green.
-5. **No** deletion, age/budget, admin HTTP, upload reopen, plan checkbox
-   edits.
-
-**Candidate ownership (confirm read-only before edits):**
-
-| Surface | Module / symbols | Notes |
-|---------|------------------|-------|
-| Annotations (do not reopen labels) | `annotate_job_object_transition_context` | 2.4j @ `ea3f59e` |
-| Operator CLI (extend carefully) | `scripts/preview_job_object_inventory.py` | 2.4i @ `f0f79b9` |
-| Job status load (new narrow helper) | `ingestion/jobs.py` | candidate; mirror `sync_list_known_job_object_refs` style |
-| Create / fail paths | `api/routers/upload.py` | do **not** reopen |
-| Index retention | `vectordb/*` | do **not** couple deletes |
-
-**Evidence-based boundary for 2.4k:**
-
-- status load + report wiring only — **no** inventing auto-delete classes
-- **no** age/budget thresholds / FS mutation
-- **no** treating failed jobs as deletable orphans
-- **no** reopening 2.4e–2.4j domain semantics without proven conflict
-- **no** plan checkbox edits from docs turns
-- do **not** mark 2.4k started/complete from docs alone
+- invent auto-delete classes or age/budget thresholds
+- treat failed jobs as deletable orphans
+- reopen 2.4a–2.4k domain semantics without proven conflict
+- edit plan checkboxes from docs turns
+- push / deploy / live services without explicit opt-in
 
 **Plan source (direction only):** active untracked plan
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)
 §2 still carries the broader immutable/versioned originals + lifecycle bind
-item (do **not** edit plan checkboxes here). 2.4j landed ownership
-annotations; 2.4k is the status-load/CLI wiring candidate only.
-
-**This Update-60 docs-only turn** did **not** run project tests and did
-**not** start 2.4k.
+item (do **not** edit plan checkboxes here).
 
 ### Historical 2.4d ownership notes (archive; 2.4d COMPLETE @ `dfbbca0`)
 
