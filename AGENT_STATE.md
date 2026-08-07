@@ -1,12 +1,78 @@
 # Agent State
 
-## 2026-08-07 Update-74 — record completed slice 3.1b @ `76179d5` ✅ START HERE
+## 2026-08-07 Update-75 — record completed slice 3.1c @ `d9ba87e` ✅ START HERE
 
-> **Routing authority:** Update-74 records completed **3.1b** and supersedes
-> Update-73 for start-point routing. All older Update blocks below, including
+> **Routing authority:** Update-75 records completed **3.1c** and supersedes
+> Update-74 for start-point routing. All older Update blocks below, including
 > headings that literally contain `✅ START HERE`, are **archival**. **Only
 > the first/topmost Update block in this file is authoritative.** Never
 > select work by grepping old `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `d9ba87e`
+>   (`feat(session): serialize concurrent asks and discard stale turn mutations`)
+>   — slice **3.1c**
+> - Previous implementation: `76179d5` (**3.1b** cooperative provider deadline)
+> - Previous docs: Update-74 `6594a13`
+> - This Update-75 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Completion truth:**
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | index/job-object/fault-injection local residual |
+> | **3.1a** | shared request executor + capacity hold past 504 |
+> | **3.1b** | cooperative request deadline at provider boundary |
+> | **3.1c** | per-session serialize + stale turn discard |
+> | Full plan §2 / §3 | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan §3 → local progress map (honest):**
+> | Plan §3 bullet | Local | Residual |
+> |----------------|-------|----------|
+> | shared pool + capacity until work done | **3.1a** | stream capacity-hold |
+> | cooperative deadline through boundaries | **3.1b** (provider) | retriever/reranker/tools |
+> | per-session serialize / sticky experiment ids | **3.1c** (session lock+epoch) | durable optimistic version / multi-replica sticky |
+> | max_tokens/temperature per LLM role | not started | **← next 3.1d** |
+> | per-request LLM call/token budget | not started | |
+>
+> **3.1c contract (landed):**
+> - `ConversationSession` exclusive turn (`_busy` + Condition)
+> - monotonic `_mutation_epoch`; stale `_append_history` / `_set_pending_action` discarded
+> - wall-budget timeout immediately bumps epoch + clears pending, force-appends timeout answer
+> - pipeline uses `_history_snapshot()` (copy)
+> - Honest: API paths that still mutate `session._history` directly (error/cache
+>   branches in conversation.py) are residual, not this slice
+>
+> **Verification (3.1c):** focused `test_session_serialize` + wall-budget /
+> deadline / agent_tools — **26 passed**; Ruff clean. Full suite **not** run.
+>
+> **Open boundaries:** live multi-service opt-in; §3 role token limits +
+> token budget; stream capacity-hold; job-object delete/age-budget; push/deploy.
+>
+> **Active writer / WIP:** none.
+>
+> **Next candidate only (not started):**
+> named **3.1d — configurable max_tokens / temperature per LLM role**
+> with safe production defaults (tests-first). Still no live services / push.
+>
+> **Do not re-select:** 2.1–2.6g, **3.1a–3.1c**.
+>
+> **Protected dirty / untracked:** do not touch without request.
+>
+> **External gates:** push, deploy, live services, destructive Git, prod claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit.
+>
+> **Git advisory:** was `ahead 129` after 3.1c impl — **refresh next session**.
+
+## 2026-08-07 Update-74 — record completed slice 3.1b @ `76179d5` ✅ START HERE
+
+> **Historical handoff (superseded by Update-75 for start-point routing).**
+> Recorded **3.1b** @ `76179d5`. Next-work naming **3.1c** is **stale**.
+>
+> **Original routing note (archival):** Update-74 recorded completed **3.1b** and superseded
+> Update-73 for start-point routing.
 >
 > **Known lineage (actual Git wins over any embedded hash):**
 > - Latest implementation: `76179d5`
