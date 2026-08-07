@@ -53,9 +53,10 @@ def test_grade_docs_accepts_mistral_tool_payload_with_extra_type(
     assert "[grade_docs] LLM error" not in caplog.text
 
 
-def test_grade_docs_preserves_top_retrieval_hit_when_grader_drops_it(
+def test_grade_docs_does_not_force_top_hit_after_rejection(
     monkeypatch,
 ) -> None:
+    """Plan §5.3: no silent top-1 restore when grader rejects rank-1."""
     import agent.graph as graph
 
     class _SequencedSchemaLLM:
@@ -108,9 +109,10 @@ def test_grade_docs_preserves_top_retrieval_hit_when_grader_drops_it(
 
     result = node(state)
 
-    assert result["graded_docs"][0] is top_doc
-    assert result["graded_docs"][1] is second_doc
-    assert "preserved top-ranked doc" in (result["doc_grade_reason"] or "")
+    assert top_doc not in result["graded_docs"]
+    assert result["graded_docs"] == [second_doc]
+    assert "preserved top-ranked doc" not in (result["doc_grade_reason"] or "")
+    assert result.get("doc_grade_outcome") == "ok"
 
 
 def test_grade_docs_batches_multiple_documents_with_schema(

@@ -79,6 +79,8 @@ class GraphState(TypedDict, total=False):
     context_docs: list[dict]
     graded_docs: list[dict]
     doc_grade_reason: Optional[str]
+    # Plan §5.3: ok | empty_retrieval | all_rejected | grader_error | partial_grader_error
+    doc_grade_outcome: Optional[str]
     answer: Optional[str]
     relevance_score: Optional[float]
     quality_score: Optional[int]

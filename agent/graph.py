@@ -1142,6 +1142,11 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
 
     Corrective RAG: LLM проверяет каждый документ (YES/NO).
     Нерелевантные отфильтровываются → в graded_docs попадают только полезные.
+
+    Plan §5.3 fail-closed:
+    - grader error → document rejected (not silently accepted);
+    - no forced top-1 re-injection after rejection;
+    - all_rejected / grader_error mark knowledge_gap + not_verified.
     """
 
     def node(state: GraphState) -> GraphState:
@@ -1149,21 +1154,29 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
             return state
         trace_id = state.get("trace_id", "unknown-trace-id")
         try:
+            from agent.doc_grade import finalize_grade_state
+
             question = state.get("question", "")
             context_docs = state.get("context_docs", []) or []
             model = _get_llm_model_name(llm) or ""
 
             if not context_docs:
-                new_state: GraphState = {**state, "graded_docs": [], "doc_grade_reason": "No documents retrieved"}
+                new_state = finalize_grade_state(
+                    state,
+                    graded=[],
+                    context_docs=[],
+                    filtered_count=0,
+                    grader_errors=0,
+                )
                 log_step(trace_id, "grade_docs", new_state)
-                return new_state
+                return new_state  # type: ignore[return-value]
 
             graded: list[dict[str, Any]] = []
             filtered_count = 0
+            grader_errors = 0
             usage = _new_llm_usage("grade_docs")
             usage_recorded = False
             tracer = get_otel_tracer()
-            preserved_top_doc = False
             with tracer.start_as_current_span("rag.rerank") as span:
                 span.set_attribute("rag.tenant_id", str(state.get("tenant_id", "default")))
                 span.set_attribute("rag.input_docs", len(context_docs))
@@ -1280,26 +1293,29 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
                             )
                         except Exception as exc:
                             logger.warning("[grade_docs] LLM error: %s", exc, extra={"trace_id": trace_id})
-                            is_relevant = True
+                            # Plan §5.3: fail-closed — do not accept on grader error.
+                            is_relevant = False
+                            grader_errors += 1
                         if is_relevant:
                             graded.append(doc)
                         else:
                             filtered_count += 1
-                if graded and all(doc is not context_docs[0] for doc in graded):
-                    graded.insert(0, context_docs[0])
-                    filtered_count = max(0, filtered_count - 1)
-                    preserved_top_doc = True
+                # Plan §5.3: do NOT force re-insert top-ranked doc after rejection.
                 span.set_attribute("rag.filtered_docs", filtered_count)
                 span.set_attribute("rag.output_docs", len(graded))
+                span.set_attribute("rag.grader_errors", grader_errors)
 
-            reason = f"Kept {len(graded)}/{len(context_docs)}, filtered {filtered_count}"
-            if preserved_top_doc:
-                reason += ", preserved top-ranked doc"
-            new_state = {**state, "graded_docs": graded, "doc_grade_reason": reason}
+            new_state = finalize_grade_state(
+                state,
+                graded=graded,
+                context_docs=context_docs,
+                filtered_count=filtered_count,
+                grader_errors=grader_errors,
+            )
             if usage_recorded:
-                new_state = _apply_llm_usage(new_state, usage)
+                new_state = _apply_llm_usage(new_state, usage)  # type: ignore[arg-type]
             log_step(trace_id, "grade_docs", new_state)
-            return new_state
+            return new_state  # type: ignore[return-value]
         except Exception as exc:
             return _make_error_state(state, "grade_docs", exc)
 
@@ -1322,8 +1338,12 @@ def make_generate_node(
             return state
         trace_id = state.get("trace_id", "unknown-trace-id")
         try:
+            from agent.doc_grade import resolve_generation_context_docs
+
             question = state.get("question", "")
-            docs = state.get("graded_docs") or state.get("context_docs", []) or []
+            # Plan §5.3: after grade_docs, empty graded_docs must not fall back
+            # to raw context_docs (silent restore of rejected / failed grade).
+            docs = resolve_generation_context_docs(state)
             chat_history = state.get("chat_history", [])
             complexity = state.get("complexity", "unknown")
             llm = llm_fast if complexity == "simple" else llm_strong
@@ -1444,8 +1464,11 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                 log_step(trace_id, "verify_facts", new_state)
                 return new_state
 
+            from agent.doc_grade import resolve_generation_context_docs
+
             answer = state.get("answer", "")
-            docs = state.get("graded_docs") or state.get("context_docs") or []
+            # Same doc selection as generate (§5.3) — no silent restore after grade.
+            docs = resolve_generation_context_docs(state)
             # Verification evidence must cover the same context the answer was
             # generated from: with parent-expansion ON chunks reach
             # parent_expansion_max_chars (3600), so a tighter cap here would
@@ -1876,8 +1899,15 @@ def make_route_or_retry_node(
             elif scores_ok and grounded:
                 route = "auto"
             elif iteration < max_iter:
-                # Retry for weak scores or incomplete grounding/retrieval.
-                route = "retry"
+                # Simple path skips verify forever — retry cannot make it verified.
+                if (
+                    state.get("complexity") == "simple"
+                    and state.get("fact_verification_skipped")
+                ):
+                    route = "human"
+                else:
+                    # Retry for weak scores, all_rejected grade, incomplete grounding.
+                    route = "retry"
             else:
                 route = "human"
 

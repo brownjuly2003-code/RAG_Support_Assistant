@@ -183,9 +183,11 @@ def test_simple_graph_fast_path_skips_grade_docs_and_verify(monkeypatch) -> None
     )
 
     assert final_state["complexity"] == "simple"
-    assert final_state["route"] == "auto"
+    # Plan §5.1–5.3: simple path skips verify → not_verified → never auto.
+    assert final_state["route"] == "human"
     assert final_state["doc_grade_reason"] is None
     assert final_state["claims"] == []
     assert final_state["fact_verification_skipped"] is True
-    assert final_state["factuality_score"] == 100
+    assert final_state["factuality_score"] == 0
+    assert final_state.get("grounding_status") == "not_verified"
     assert llm.invoke.call_count == 4

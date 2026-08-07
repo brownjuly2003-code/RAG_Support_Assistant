@@ -240,7 +240,8 @@ def test_verify_facts_node_uses_consensus_schema_when_enabled(
     llm = _ConsensusLLM()
     node = graph.make_verify_facts_node(llm)
     state = create_initial_state(question="Какие правила возврата?", trace_id="trace-consensus-1")
-    state["answer"] = "Возврат доступен 14 дней."
+    # §5.2: substantial claims require answer citations [N].
+    state["answer"] = "Возврат доступен 14 дней [1]."
     state["graded_docs"] = [
         {
             "page_content": "Возврат товара возможен в течение 14 дней.",
@@ -253,4 +254,5 @@ def test_verify_facts_node_uses_consensus_schema_when_enabled(
     assert llm.schema_calls
     assert llm.schema_calls[0]["reliability_level"] == "standard"
     assert result["factuality_score"] == 100
+    assert result.get("grounding_status") == "verified"
     assert captured_metrics == [("standard", "supported")]
