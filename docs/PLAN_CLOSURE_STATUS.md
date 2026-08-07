@@ -1,10 +1,16 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-07  
-**Plan:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md)  
-**Rule:** checkboxes in the plan file stay open until **behavioral DoD + evidence**.  
-Local code slices ≠ full plan section complete ≠ production release.
+**Date:** 2026-08-07 (Update-92 transparency)  
+**Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-92**)  
+**Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
+
+**Rules:**
+
+1. Checkboxes in the plan file stay open until **behavioral DoD + evidence**.  
+2. Local code slice ≠ full plan section complete ≠ production release.  
+3. Actual Git wins over any SHA embedded here.  
+4. Quality > speed; one named atomic slice per user turn.
 
 ---
 
@@ -16,70 +22,142 @@ Local code slices ≠ full plan section complete ≠ production release.
 | **2** index lifecycle | **2.1–2.6g local residual closed** | **OPEN** live PG/Redis/Celery/Chroma | yes for live index ops |
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.5 local** | **OPEN** true graph tokens; parity default off; schedule wiring | partial |
-| **5** grounding fail-closed | **5.1–5.3 local** (`7c53bdb`, `50bb220`, `1cdecb2`); live metrics open | **OPEN** live metric thresholds / CI | **yes** quality |
-| **6** judge / safety / agentic parity | not started | OPEN | yes |
-| **7** eval gate fail-closed | partial historical | OPEN | yes |
+| **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
+| **6** judge / safety / agentic parity | **not started** | OPEN | **yes** |
+| **7** eval gate fail-closed | partial historical | OPEN | **yes** |
 | **8** widget / edge security | partial historical | OPEN | yes |
 | **9** cache / architecture / SLO | partial historical | OPEN | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
-**Project / production release: NOT claimed and not claimable until §1 + §5–7 evidence + §10.**
+**Project / production release: NOT claimed.**
+
+Not claimable until §1 live evidence + §5 live quality metrics + §6–7 + §10.
 
 ---
 
-## Quality-first closure order (decision)
+## Quality-first closure order (standing decision)
 
-User priority: **quality over speed**, close plan thoroughly.
+User priority: **quality over speed**, close plan thoroughly and honestly.
 
-Recommended sequence (local code first, live last):
-
-1. **§5 grounding fail-closed** (5.1 foundations → 5.2 auto citation support → 5.3 grader fail-closed)
-2. **§6 judge independence + pre-response safety + remove fixed agentic scores**
-3. **§7 regression gate honest skip policy**
-4. **§4 residual** graph-only default / true SSE tokens (pipeline honesty)
-5. **§2/§3 residual** only if product needs multi-replica or live index drills
-6. **§1 + §10** only with **explicit owner opt-in** (live PG, cluster, canary)
+| Order | Work | Status |
+|-------|------|--------|
+| 1 | §5.1 grounding foundations | **done** `7c53bdb` |
+| 2 | §5.2 citation-bound claims | **done** `50bb220` |
+| 3 | §5.3 grader fail-closed | **done** `1cdecb2` |
+| 4 | **§6.1 remove agentic fixed quality scores** | **← next** |
+| 5 | §6.x judge independence + pre-response safety | not started |
+| 6 | §7 regression gate honest skip policy | not started |
+| 7 | §4 residual (graph-only default / true SSE tokens) | residual |
+| 8 | §2/§3 residual if product needs | residual |
+| 9 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
 ---
 
-## §4 local ledger (done at documented scopes)
+## §2 map (honest — live DoD open)
 
-| Slice | SHA | Scope |
-|-------|-----|-------|
-| 4.1 | `eaf41f3` | single terminal/history when parity on |
+| Bullet | Local | Residual |
+|--------|-------|----------|
+| inventory / retention / operator / lifecycle | through 2.5b + related | live DoD; no job-object delete execute HTTP; no real FS delete |
+| fault injection | **2.6a–2.6g** | local residual closed |
+| live PG/Redis/Celery/Chroma + migrations | not started | **opt-in**; migrations **019–023** on disk |
+
+**Invariant:** failed jobs with `source_path`-matched job-objects →
+`retained_after_failed_transition`; `auto_delete_eligible` always false.
+
+Last §2 fault-injection impl: `f347feb` (**2.6g**). **Do not re-select 2.x.**
+
+---
+
+## §3 map + ledger
+
+| Bullet | Local slices | Residual |
+|--------|--------------|----------|
+| shared executor + capacity until work done | 3.1a, 3.1f | — documented |
+| cooperative deadline provider/retrieve/tool/rerank | 3.1b, 3.1f–h | cooperative only |
+| session serialize / version / sticky | 3.1c, 3.1i | multi-replica durable store; optional HTTP If-Match |
+| max_tokens/temperature per role | 3.1d | — |
+| per-request LLM budget | 3.1e, 3.1f | — |
+
+| Slice | SHA |
+|-------|-----|
+| 3.1a | `a21f364` |
+| 3.1b | `76179d5` |
+| 3.1c | `d9ba87e` |
+| 3.1d | `48c2381` |
+| 3.1e | `b98b917` |
+| 3.1f | `2581855` |
+| 3.1g | `ae13000` |
+| 3.1h | `ab7b417` |
+| 3.1i | `fe2f0aa` |
+
+---
+
+## §4 map + ledger
+
+| Bullet | Local | Residual |
+|--------|-------|----------|
+| LangGraph sole path; SSE transmits | partial 4.1–4.2 | true node/token events; legacy stream when parity **off** (default) |
+| one terminal + one history | 4.1–4.2 when parity **on** | dual path when parity off |
+| idempotent ticket + outbox | 4.3 + 4.5 retry API | Celery/cron/HTTP invoke; multi-row outbox table optional |
+| ticket_id + delivery_state; no false claim | 4.3–4.4 | live migrate 023 opt-in |
+| auto-escalate human/error on normal ask | 4.4 | stream-path parity if needed |
+
+| Slice | SHA | What |
+|-------|-----|------|
+| 4.1 | `eaf41f3` | single terminal/history when parity succeeds |
 | 4.2 | `f1c846e` | graph-only generation when parity on |
 | 4.3 | `ad5e435` | durable idempotent escalation |
-| 4.4 | `0371971` | auto human-route escalate on ask |
-| 4.5 | `6453530` | outbox retry API |
-
-Residual: Celery/cron for 4.5; true LangGraph token events; `STREAMING_RAG_PARITY` default still false.
+| 4.4 | `0371971` | auto human-route on normal ask |
+| 4.5 | `6453530` | outbox retry without second ticket |
 
 ---
 
-## §5 progress
+## §5 map + ledger (quality path)
 
-| Slice | Status | Contract |
-|-------|--------|----------|
-| **5.1** | **done** @ `7c53bdb` | `grounding_status` verified/unsupported/not_verified; no fake factuality 100 on skip/none/no-context; auto blocked unless grounding allows |
-| **5.2** | **done** @ `50bb220` | claims bound to answer `[N]`; evidence only in cited docs; missing citations → not_verified; auto requires citation_bound |
-| **5.3** | **done** @ `1cdecb2` | grader error rejects doc; no forced top-1; all_rejected/grader_error → not_verified; no empty-graded→raw-context restore |
-| 5.4 | not started | claim budget / evidence truncation → not_verified whole answer |
-| Live DoD | opt-in | precision/recall/faithfulness thresholds × 3 runs |
+| Slice | Status | SHA | Contract |
+|-------|--------|-----|----------|
+| **5.1** | **done** | `7c53bdb` | `grounding_status`; no fake factuality 100; auto requires grounding_allows_auto |
+| **5.2** | **done** | `50bb220` | claims bound to answer `[N]`; cited docs only |
+| **5.3** | **done** | `1cdecb2` | grader error rejects; no forced top-1; no empty-graded→raw restore |
+| 5.4 | largely covered by 5.1 truncation + 5.2 | — | claim-budget truncation already forces not_verified; no separate slice unless gaps found |
+| Live DoD | **open** | — | precision ≥0.63, recall ≥0.97, FULL≥97, faithfulness≥0.90, … ×3 runs |
+
+**§5 local residual (not live):**
+
+- `relevance_score` still derived from quality/100 in evaluate (plan wants split)  
+- simple path skips verify → cannot auto (by design after 5.1–5.3)  
+- agentic fixed scores still open → **§6.1**  
 
 ---
 
-## What “plan closed” means (definition used here)
+## §6 next (not started) — default 6.1
+
+**6.1 — remove agentic fixed quality scores**
+
+- Locate `quality_source="fixed"` and hardcoded 80/85/90 in agentic flow
+  (`agent/graph.py` primarily).  
+- Tests-first: no unmeasured auto from fixed scores.  
+- Prefer real evaluate/grounding gate or fail-closed human/`not_verified`.  
+- Do not solve full independent judge or live calibration in the same slice.
+
+Later 6.x: independent judge policy, PII/injection pre-response, agentic
+parity with measured gates.
+
+---
+
+## What “plan closed” means
 
 The plan is **closed** only when:
 
 1. Every section’s **Проверка** has fresh evidence artifacts, and  
 2. Gate A–D / §10 checklist is signed, and  
 3. `unverified auto-rate = 0` on the release gate, and  
-4. No production claim rests on graceful skip, fixed agentic scores, or self-judge without calibration.
+4. No production claim rests on graceful skip, fixed agentic scores, or
+   self-judge without calibration.
 
-Until then status remains **ACTIVE** with honest local residual progress.
+Until then status remains **ACTIVE**.
 
 ---
 
@@ -97,5 +175,6 @@ Until then status remains **ACTIVE** with honest local residual progress.
 
 - One named atomic slice per user turn (workspace cycle budget).  
 - Do not casually checkbox the plan file.  
-- Dirty `BACKLOG.md` / `README.md` / audits: do not treat as queue.  
-- Actual Git wins over embedded SHAs in handoff.
+- Dirty `BACKLOG.md` / `README.md` / audits: **not** the work queue.  
+- Actual Git wins over embedded SHAs.  
+- Prefer Grok implements; local commit only unless user opts into push.  
