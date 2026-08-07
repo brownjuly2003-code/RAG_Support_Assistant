@@ -1,20 +1,22 @@
 # ruff: noqa: E402
 #!/usr/bin/env python3
-"""Operator CLI for job-object inventory + retention policy (plan 2.4i).
+"""Operator CLI for job-object inventory + retention policy (plan 2.4i/2.4k).
 
 For one tenant: load known job refs (or accept injected refs in tests),
 preview/classify the job-objects tree, assess fail-closed retention policy,
-and optionally run the guarded empty-candidate no-op command.
+optionally run the guarded empty-candidate no-op command, and annotate
+failed-transition ownership from job statuses.
 
 Never invents auto-delete classes or age/budget thresholds. Under the current
 policy execution is always a no-op with deleted=() and no filesystem mutation.
 """
+
 from __future__ import annotations
 
 import argparse
 import json
 import sys
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -28,6 +30,11 @@ from ingestion.job_object_inventory import (
     JobObjectInventoryValidationError,
     KnownJobObjectRef,
     preview_tenant_job_object_inventory,
+)
+from ingestion.job_object_orphans import (
+    JobObjectOrphanValidationError,
+    JobObjectTransitionAnnotation,
+    annotate_job_object_transition_context,
 )
 from ingestion.job_object_retention import (
     JobObjectRetentionAssessment,
@@ -56,6 +63,7 @@ class OperatorPreviewReport:
     inventory_entries: tuple[JobObjectInventoryEntry, ...]
     assessment: JobObjectRetentionAssessment
     execution: JobObjectRetentionExecutionResult | None
+    transition_annotations: tuple[JobObjectTransitionAnnotation, ...]
 
 
 def run_operator_preview(
@@ -64,12 +72,14 @@ def run_operator_preview(
     project_root: Path | str,
     upload_root: Path | str,
     known_jobs: Sequence[KnownJobObjectRef],
+    job_statuses: Mapping[str, str] | None = None,
     execute: bool = False,
 ) -> OperatorPreviewReport:
-    """Compose load→preview→policy→optional guarded no-op for one tenant.
+    """Compose load→preview→policy→optional guarded no-op→annotations.
 
-    ``known_jobs`` is supplied by the caller (CLI loads from DB; tests inject).
-    This function never deletes or rewrites filesystem state.
+    ``known_jobs`` and ``job_statuses`` are supplied by the caller (CLI loads
+    from DB; tests inject). This function never deletes or rewrites
+    filesystem state.
     """
     root = Path(project_root)
     upload_base = Path(upload_root)
@@ -88,6 +98,11 @@ def run_operator_preview(
             entries=preview.entries,
             expected_candidates=assessment.auto_delete_candidates,
         )
+    statuses = dict(job_statuses or {})
+    annotations = annotate_job_object_transition_context(
+        preview.entries,
+        job_statuses=statuses,
+    )
     return OperatorPreviewReport(
         tenant_id=preview.tenant_id,
         upload_dir=str(upload_dir),
@@ -95,6 +110,7 @@ def run_operator_preview(
         inventory_entries=preview.entries,
         assessment=assessment,
         execution=execution,
+        transition_annotations=annotations,
     )
 
 
@@ -102,6 +118,12 @@ def _default_load_known_jobs(tenant_id: str) -> tuple[KnownJobObjectRef, ...]:
     from ingestion.jobs import sync_list_known_job_object_refs
 
     return sync_list_known_job_object_refs(tenant_id)
+
+
+def _default_load_job_statuses(tenant_id: str) -> dict[str, str]:
+    from ingestion.jobs import sync_list_job_statuses_for_tenant
+
+    return sync_list_job_statuses_for_tenant(tenant_id)
 
 
 def _report_to_jsonable(report: OperatorPreviewReport) -> dict:
@@ -115,6 +137,7 @@ def _report_to_jsonable(report: OperatorPreviewReport) -> dict:
         for e in report.inventory_entries
     ]
     dispositions = [asdict(d) for d in report.assessment.dispositions]
+    annotations = [asdict(a) for a in report.transition_annotations]
     payload: dict = {
         "tenant_id": report.tenant_id,
         "upload_dir": report.upload_dir,
@@ -122,6 +145,7 @@ def _report_to_jsonable(report: OperatorPreviewReport) -> dict:
         "inventory_entries": entries,
         "auto_delete_candidates": list(report.assessment.auto_delete_candidates),
         "dispositions": dispositions,
+        "transition_annotations": annotations,
         "execution": None,
     }
     if report.execution is not None:
@@ -141,13 +165,8 @@ def _print_human(report: OperatorPreviewReport) -> None:
     print(f"inventory_entries: {len(report.inventory_entries)}")
     for entry in report.inventory_entries:
         jid = entry.job_id or "-"
-        print(
-            f"  [{entry.classification}] {entry.kind} "
-            f"job={jid} path={entry.relative_path}"
-        )
-    print(
-        f"auto_delete_candidates: {len(report.assessment.auto_delete_candidates)}"
-    )
+        print(f"  [{entry.classification}] {entry.kind} job={jid} path={entry.relative_path}")
+    print(f"auto_delete_candidates: {len(report.assessment.auto_delete_candidates)}")
     if report.assessment.auto_delete_candidates:
         for cand in report.assessment.auto_delete_candidates:
             print(f"  candidate: {cand}")
@@ -158,10 +177,16 @@ def _print_human(report: OperatorPreviewReport) -> None:
             f"  disposition: {disp.disposition} reason={disp.reason} "
             f"class={disp.classification} path={disp.relative_path}"
         )
+    print(f"transition_annotations: {len(report.transition_annotations)}")
+    for note in report.transition_annotations:
+        jstatus = note.job_status if note.job_status is not None else "-"
+        print(
+            f"  ownership={note.ownership} job_status={jstatus} "
+            f"eligible={note.auto_delete_eligible} path={note.relative_path}"
+        )
     if report.execution is not None:
         print(
-            f"execution: status={report.execution.status} "
-            f"deleted={len(report.execution.deleted)}"
+            f"execution: status={report.execution.status} deleted={len(report.execution.deleted)}"
         )
         if report.execution.deleted:
             for path in report.execution.deleted:
@@ -175,7 +200,8 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Preview tenant job-object inventory and fail-closed retention "
             "policy. Optional --execute runs the guarded empty-candidate "
-            "no-op command (no filesystem mutation under current policy)."
+            "no-op command (no filesystem mutation under current policy). "
+            "Includes failed-transition ownership annotations from job statuses."
         )
     )
     parser.add_argument("--tenant", default="default")
@@ -211,29 +237,34 @@ def main(
     argv: Sequence[str] | None = None,
     *,
     load_known_jobs: Callable[[str], Sequence[KnownJobObjectRef]] | None = None,
+    load_job_statuses: Callable[[str], Mapping[str, str]] | None = None,
 ) -> int:
     parser = build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     project_root = Path(args.project_root) if args.project_root else PROJECT_ROOT
-    upload_root = (
-        Path(args.upload_root)
-        if args.upload_root
-        else project_root / "data" / "uploads"
-    )
+    upload_root = Path(args.upload_root) if args.upload_root else project_root / "data" / "uploads"
     loader = load_known_jobs or _default_load_known_jobs
+    status_loader = load_job_statuses or _default_load_job_statuses
     tenant = str(args.tenant or "default")
 
     try:
         known = tuple(loader(tenant))
+        statuses = dict(status_loader(tenant))
         report = run_operator_preview(
             tenant_id=tenant,
             project_root=project_root,
             upload_root=upload_root,
             known_jobs=known,
+            job_statuses=statuses,
             execute=bool(args.execute),
         )
-    except (JobObjectInventoryValidationError, JobObjectRetentionError, ValueError) as exc:
+    except (
+        JobObjectInventoryValidationError,
+        JobObjectRetentionError,
+        JobObjectOrphanValidationError,
+        ValueError,
+    ) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     except OSError as exc:

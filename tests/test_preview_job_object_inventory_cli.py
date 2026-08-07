@@ -1,8 +1,10 @@
-"""Operator CLI for job-object inventory + policy (plan 2.4i).
+"""Operator CLI for job-object inventory + policy + annotations (2.4i/2.4k).
 
 Composes tenant load → preview → fail-closed policy → optional guarded
-no-op execute. Never mutates filesystem under current empty-candidate policy.
+no-op execute → transition ownership annotations. Never mutates filesystem
+under current empty-candidate policy.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -70,10 +72,7 @@ def test_run_operator_preview_classifies_and_policy_fail_closed(
     assert report.known_job_count == 1
     assert len(report.inventory_entries) == 2
     assert report.assessment.auto_delete_candidates == ()
-    assert all(
-        d.disposition == "never_auto_delete"
-        for d in report.assessment.dispositions
-    )
+    assert all(d.disposition == "never_auto_delete" for d in report.assessment.dispositions)
     assert report.execution is None
     assert absolute.is_file() and absolute.read_bytes() == b"v1"
     assert orphan.is_file() and orphan.read_bytes() == b"orphan"
@@ -138,6 +137,7 @@ def test_main_json_output_with_injected_loader(
             "--execute",
         ],
         load_known_jobs=lambda _tid: (known,),
+        load_job_statuses=lambda _tid: {str(job_id): "completed"},
     )
     assert code == 0
     payload = json.loads(capsys.readouterr().out)
@@ -168,12 +168,14 @@ def test_main_human_output_exit_zero(
             str(upload_root),
         ],
         load_known_jobs=lambda _tid: (),
+        load_job_statuses=lambda _tid: {},
     )
     assert code == 0
     out = capsys.readouterr().out
     assert "tenant: default" in out
     assert "auto_delete_candidates: 0" in out
     assert "fail-closed" in out
+    assert "transition_annotations: 0" in out
 
 
 def test_main_loader_value_error_exits_2(
@@ -198,6 +200,7 @@ def test_main_loader_value_error_exits_2(
             str(upload_root),
         ],
         load_known_jobs=boom,
+        load_job_statuses=lambda _tid: {},
     )
     assert code == 2
     err = capsys.readouterr().err
@@ -232,3 +235,113 @@ def test_non_default_tenant_uses_physical_upload_dir(
     assert Path(report.upload_dir) == tenant_upload
     assert len(report.inventory_entries) == 1
     assert report.inventory_entries[0].classification == "protected"
+
+
+def test_run_operator_preview_annotates_failed_transition(
+    tmp_path: Path,
+) -> None:
+    """2.4k: failed+protected → retained_after_failed_transition, never deletable."""
+    cli = _cli()
+    inv = _inv()
+    project_root = tmp_path / "project"
+    upload_root = project_root / "data" / "uploads"
+    job_id = uuid.uuid4()
+    absolute = _write(
+        upload_root / "job-objects" / str(job_id) / "doc.md",
+        b"kept-after-fail",
+    )
+    source = absolute.resolve().relative_to(project_root.resolve()).as_posix()
+    known = inv.KnownJobObjectRef(job_id=str(job_id), source_path=source)
+
+    report = cli.run_operator_preview(
+        tenant_id="default",
+        project_root=project_root,
+        upload_root=upload_root,
+        known_jobs=(known,),
+        job_statuses={str(job_id): "failed"},
+        execute=False,
+    )
+
+    assert len(report.transition_annotations) == 1
+    note = report.transition_annotations[0]
+    assert note.ownership == "retained_after_failed_transition"
+    assert note.job_status == "failed"
+    assert note.auto_delete_eligible is False
+    assert report.assessment.auto_delete_candidates == ()
+    assert absolute.is_file() and absolute.read_bytes() == b"kept-after-fail"
+
+
+def test_main_json_includes_transition_annotations(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    cli = _cli()
+    inv = _inv()
+    project_root = tmp_path / "project"
+    upload_root = project_root / "data" / "uploads"
+    job_id = uuid.uuid4()
+    absolute = _write(
+        upload_root / "job-objects" / str(job_id) / "a.md",
+        b"a",
+    )
+    source = absolute.resolve().relative_to(project_root.resolve()).as_posix()
+    known = inv.KnownJobObjectRef(job_id=str(job_id), source_path=source)
+
+    code = cli.main(
+        [
+            "--tenant",
+            "default",
+            "--project-root",
+            str(project_root),
+            "--upload-root",
+            str(upload_root),
+            "--json",
+        ],
+        load_known_jobs=lambda _tid: (known,),
+        load_job_statuses=lambda _tid: {str(job_id): "failed"},
+    )
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out)
+    notes = payload["transition_annotations"]
+    assert len(notes) == 1
+    assert notes[0]["ownership"] == "retained_after_failed_transition"
+    assert notes[0]["job_status"] == "failed"
+    assert notes[0]["auto_delete_eligible"] is False
+    assert notes[0]["job_id"] == str(job_id)
+    assert absolute.is_file()
+
+
+def test_main_human_shows_transition_ownership(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    cli = _cli()
+    inv = _inv()
+    project_root = tmp_path / "project"
+    upload_root = project_root / "data" / "uploads"
+    job_id = uuid.uuid4()
+    absolute = _write(
+        upload_root / "job-objects" / str(job_id) / "a.md",
+        b"a",
+    )
+    source = absolute.resolve().relative_to(project_root.resolve()).as_posix()
+    known = inv.KnownJobObjectRef(job_id=str(job_id), source_path=source)
+
+    code = cli.main(
+        [
+            "--tenant",
+            "default",
+            "--project-root",
+            str(project_root),
+            "--upload-root",
+            str(upload_root),
+        ],
+        load_known_jobs=lambda _tid: (known,),
+        load_job_statuses=lambda _tid: {str(job_id): "completed"},
+    )
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "transition_annotations:" in out
+    assert "retained_durable_original" in out
+    assert "job_status=completed" in out
+    assert absolute.is_file()

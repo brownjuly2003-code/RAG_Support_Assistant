@@ -10,6 +10,7 @@ Async helpers for the synchronous upload path do not require a worker lease.
 Upload idempotency (plan step 4.4 core) stores only SHA-256 key hash and
 payload fingerprint; raw Idempotency-Key values never enter this module.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -276,9 +277,7 @@ async def create_or_reuse_ingestion_job(
                 # Unexpected constraint race; do not invent a second row.
                 raise
             if existing.payload_fingerprint != payload_fingerprint:
-                raise IdempotencyConflictError(
-                    "Idempotency-Key conflict"
-                ) from None
+                raise IdempotencyConflictError("Idempotency-Key conflict") from None
             return CreateJobOutcome(job=existing, created=False)
 
 
@@ -484,9 +483,7 @@ def sync_require_job(job_id: uuid.UUID, tenant_id: str) -> IngestionJob:
     with sync_session() as session:
         job = session.get(IngestionJob, job_id)
         if job is None or job.tenant_id != tenant_id:
-            raise JobIdentityError(
-                f"Ingestion job {job_id} not found for tenant {tenant_id}"
-            )
+            raise JobIdentityError(f"Ingestion job {job_id} not found for tenant {tenant_id}")
         # Detach a lightweight snapshot for the caller.
         session.expunge(job)
         return job
@@ -587,9 +584,7 @@ def sync_mark_completed(
         )
         if int(getattr(res, "rowcount", 0) or 0) != 1:
             session.rollback()
-            raise JobOwnershipError(
-                f"Lost lease completing ingestion job {job_id}"
-            )
+            raise JobOwnershipError(f"Lost lease completing ingestion job {job_id}")
         session.commit()
 
 
@@ -622,9 +617,7 @@ def sync_mark_failed(
         )
         if int(getattr(res, "rowcount", 0) or 0) != 1:
             session.rollback()
-            raise JobOwnershipError(
-                f"Lost lease failing ingestion job {job_id}"
-            )
+            raise JobOwnershipError(f"Lost lease failing ingestion job {job_id}")
         session.commit()
 
 
@@ -656,3 +649,31 @@ def sync_list_known_job_object_refs(tenant_id: str) -> tuple[Any, ...]:
             continue
         refs.append(KnownJobObjectRef(job_id=str(job_id), source_path=path))
     return tuple(refs)
+
+
+def sync_list_job_statuses_for_tenant(tenant_id: str) -> dict[str, str]:
+    """Load durable ``job_id → status`` map for one tenant (read-only).
+
+    Used by operator CLI transition ownership annotations (plan 2.4k).
+    Blank/missing status values are skipped (callers treat missing keys as
+    unknown). Never mutates rows or filesystem state.
+    """
+    if not tenant_id or not str(tenant_id).strip():
+        raise ValueError("tenant_id is required")
+    tid = str(tenant_id).strip()
+
+    with sync_session() as session:
+        rows = session.execute(
+            select(IngestionJob.id, IngestionJob.status)
+            .where(IngestionJob.tenant_id == tid)
+            .order_by(IngestionJob.created_at, IngestionJob.id)
+        ).all()
+
+    statuses: dict[str, str] = {}
+    for job_id, status in rows:
+        sid = str(job_id).strip()
+        st = str(status or "").strip().lower()
+        if not sid or not st:
+            continue
+        statuses[sid] = st
+    return statuses

@@ -4,6 +4,7 @@ Read-only classification of immutable upload originals under
 ``job-objects/``. This contract never deletes, renames, or mutates files
 and never invents a retention age/budget policy.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -130,11 +131,7 @@ def test_legacy_previous_recovery_objects_are_always_protected(
     upload_dir = project_root / "data" / "uploads"
     digest = "a" * 64
     absolute = _write(
-        upload_dir
-        / "job-objects"
-        / "legacy-previous"
-        / digest
-        / "prior.md",
+        upload_dir / "job-objects" / "legacy-previous" / digest / "prior.md",
         b"prior-flat",
     )
 
@@ -515,6 +512,86 @@ def test_sync_list_known_job_object_refs_requires_tenant(
         jobs_mod.sync_list_known_job_object_refs("")
     with pytest.raises(ValueError, match="tenant_id"):
         jobs_mod.sync_list_known_job_object_refs("   ")
+
+
+def test_sync_list_job_statuses_for_tenant_is_tenant_scoped(
+    ingestion_jobs_db,
+) -> None:
+    from db.models import IngestionJob
+    from ingestion import jobs as jobs_mod
+
+    job_a = uuid.uuid4()
+    job_b = uuid.uuid4()
+    job_other = uuid.uuid4()
+    with jobs_mod.sync_session() as session:
+        session.add_all(
+            [
+                IngestionJob(
+                    id=job_a,
+                    tenant_id="tenant-a",
+                    filename="a.md",
+                    source_path="data/uploads/job-objects/%s/a.md" % job_a,
+                    status="completed",
+                ),
+                IngestionJob(
+                    id=job_b,
+                    tenant_id="tenant-a",
+                    filename="b.md",
+                    source_path="data/uploads/job-objects/%s/b.md" % job_b,
+                    status="failed",
+                ),
+                IngestionJob(
+                    id=job_other,
+                    tenant_id="tenant-b",
+                    filename="other.md",
+                    source_path="data/uploads/job-objects/%s/other.md" % job_other,
+                    status="queued",
+                ),
+            ]
+        )
+        session.commit()
+
+    statuses = jobs_mod.sync_list_job_statuses_for_tenant("tenant-a")
+    assert isinstance(statuses, dict)
+    assert statuses == {str(job_a): "completed", str(job_b): "failed"}
+    assert str(job_other) not in statuses
+
+
+def test_sync_list_job_statuses_for_tenant_covers_all_job_states(
+    ingestion_jobs_db,
+) -> None:
+    from db.models import IngestionJob
+    from ingestion import jobs as jobs_mod
+
+    ids = {name: uuid.uuid4() for name in ("queued", "running", "completed", "failed")}
+    with jobs_mod.sync_session() as session:
+        session.add_all(
+            [
+                IngestionJob(
+                    id=job_id,
+                    tenant_id="all-states",
+                    filename=f"{status}.md",
+                    source_path="data/uploads/job-objects/%s/%s.md" % (job_id, status),
+                    status=status,
+                )
+                for status, job_id in ids.items()
+            ]
+        )
+        session.commit()
+
+    statuses = jobs_mod.sync_list_job_statuses_for_tenant("all-states")
+    assert statuses == {str(job_id): status for status, job_id in ids.items()}
+
+
+def test_sync_list_job_statuses_for_tenant_requires_tenant(
+    ingestion_jobs_db,
+) -> None:
+    from ingestion import jobs as jobs_mod
+
+    with pytest.raises(ValueError, match="tenant_id"):
+        jobs_mod.sync_list_job_statuses_for_tenant("")
+    with pytest.raises(ValueError, match="tenant_id"):
+        jobs_mod.sync_list_job_statuses_for_tenant("   ")
 
 
 def test_tenant_preview_end_to_end_load_and_classify(
