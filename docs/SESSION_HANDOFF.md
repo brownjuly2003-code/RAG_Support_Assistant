@@ -1,14 +1,12 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 (Update-62 after completed **2.5a** @ `0855528`;
-previous **2.4k** `9e358f1`; next requires re-scope — job-object
-operator-visibility includes CLI + read-only admin HTTP)
+**Обновлено:** 2026-08-07 (Update-63 after completed **2.5b** @ `6dbabef`;
+previous **2.5a** `0855528`; next in plan §2 order: **fault injection**)
 
 **Назначение:** самодостаточный next-session handoff для coding agent после
 compacted context. История срезов — в [`AGENT_STATE.md`](../AGENT_STATE.md)
-(**только верхний блок Update-62** — routing authority; older blocks including
-literal `✅ START HERE` headings are archival). Evidence 2.5a — ниже;
-2.4k — Update-61. Активный plan source — untracked/protected
+(**только верхний блок Update-63** — routing authority). Plan source —
+untracked/protected
 [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md).
 
 ## Нулевая неоднозначность: состояние на входе
@@ -18,21 +16,20 @@ literal `✅ START HERE` headings are archival). Evidence 2.5a — ниже;
 
 | Факт | Значение |
 |------|----------|
-| Latest implementation | `0855528` (`feat(admin): read-only job-object inventory preview HTTP surface`) — **2.5a** |
-| Previous implementation | `9e358f1` (slice **2.4k**) |
-| Latest pre-2.5a docs | Update-61 `33327b9` |
-| This Update-62 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
-| Branch advisory | `master...origin/master [ahead 105]` after 2.5a impl — **refresh mandatory** |
+| Latest implementation | `6dbabef` (`feat(ingestion): durable job-to-index publication lifecycle bind`) — **2.5b** |
+| Previous implementation | `0855528` (slice **2.5a**) |
+| Latest pre-2.5b docs | Update-62 `8dceeab` |
+| This Update-63 docs commit | **unknown inside its own content**; next session: `git log -5 --oneline` |
+| Branch advisory | refresh mandatory |
 | Active writer | **none** |
-| Unfinished WIP in next targets | **none known** |
-| Locally complete (documented scopes) | **2.1–2.4k + 2.5a** |
-| Not complete / not claimed | full plan step 2; full immutable lifecycle; real FS deletion; orphan cleanup mutations; age/budget thresholds; job-object retention execute HTTP; DB model/migration field; full suite; live drills; project/release/production readiness |
-| Next allowed candidate | **re-scope** — do **not** re-select 2.1–2.4k/2.5a; do **not** invent deletion without explicit opt-in |
+| Locally complete (documented scopes) | **2.1–2.4k + 2.5a + 2.5b** |
+| Not complete / not claimed | full plan step 2; real FS deletion; age/budget; fault injection expansion; live drills; project/release readiness |
+| Next allowed candidate | **fault injection** (plan §2 next ordered item) — still **no** deletion by default; live drills need opt-in |
 | Gates | no push / deploy / live services / destructive Git / production claims |
 
-**Known verification (2.5a):** focused green **61 passed** (admin job-objects
-+ orphans + CLI + retention + inventory); Ruff clean. Full suite / live
-services **not** run.
+**Known verification (2.5b):** focused green **51 passed** (job contract +
+ingest task + admin job-objects); Ruff clean. Full suite / live migration
+on real Postgres **not** run.
 
 **Key invariant (do not violate):** failed jobs with `source_path`-matched
 job-objects are `retained_after_failed_transition` — intentional retention,
@@ -78,16 +75,15 @@ next-candidate WIP на момент этого handoff.
    `git log -5 --oneline` as **separate** commands; **actual Git wins** over
    embedded hashes/counts (known implementation `9e358f1` / **2.4k**; known
    Update-60 docs `3c96a03`; this Update-61 docs SHA from fresh `git log`).
-3. Read **only** top **Update-62** in `AGENT_STATE.md` + this
+3. Read **only** top **Update-63** in `AGENT_STATE.md` + this
    **Нулевая неоднозначность** capsule first; treat older Update blocks
-   as archive. Do **not** reselect 2.1–2.4k/2.5a.
-4. **Re-scope before coding:** job-object operator-visibility track is
-   complete through **2.5a** (CLI + read-only admin HTTP). Pick **one**
-   remaining plan §2 gap that is still non-deletion, **or** get explicit
-   product opt-in before any deletion/age/budget design. Do **not** invent
-   auto-delete classes. Re-check protected dirty/untracked list. Do **not**
-   reopen 2.4a–2.5a domain semantics unless investigation proves a required
-   conflict — then **stop and re-scope**.
+   as archive. Do **not** reselect 2.1–2.5b.
+4. **Next ordered plan §2 item:** expand **fault injection** (before/after
+   embeddings, validation, inventory, manifest switch, cleanup; concurrent
+   same-tenant uploads / duplicate job / worker recovery / lock contention
+   as sub-slices). Still **no** deletion/age-budget by default. Live
+   PG/Redis/Celery/Chroma drills require explicit opt-in. Re-check protected
+   dirty/untracked list.
 5. Use **Grok** via the local verified route; announce counters
    `slice 1/1`, `delegated run N/3`, `QA follow-up N/1`. Execute **at most
    one** named atomic next candidate.
@@ -148,13 +144,34 @@ Push/deploy not authorized.
 | **2.4j** | failed-transition ownership annotations (no deletion) | `ea3f59e` | Update-59 `a077f0d` + Update-60 handoff |
 | **2.4k** | job status load + CLI transition annotations (no deletion) | `9e358f1` | Update-61 |
 | **2.5a** | read-only admin job-object inventory HTTP preview + audit | `0855528` | Update-62 |
+| **2.5b** | durable job↔index publication lifecycle bind columns | `6dbabef` | Update-63 |
 
-Срезы **2.1–2.4k + 2.5a** локально complete at documented scopes.
-Job-object operator-visibility: CLI + shared composition module + admin GET.
-Полный plan step 2, real FS deletion, age/budget, retention execute HTTP,
-fault injection, live drills — **не** complete. **Do not re-select
-2.1–2.4k/2.5a.** Next work requires **re-scope** (still **no** deletion by
-default). Plan: `rag-remediation-plan-2026-08-03.md` §2.
+Срезы **2.1–2.4k + 2.5a + 2.5b** локально complete at documented scopes.
+Lifecycle bind: first-class columns + public `index_publication_bind`.
+Полный plan step 2, real FS deletion, age/budget, fault injection, live
+drills — **не** complete. **Do not re-select 2.1–2.5b.** Next ordered:
+**fault injection** (still **no** deletion by default). Plan:
+`rag-remediation-plan-2026-08-03.md` §2.
+
+## Контракт 2.5b (job↔index lifecycle bind) — COMPLETE
+
+Durable bind at `6dbabef`:
+
+- migration `022_ingestion_job_index_bind`
+- columns on `IngestionJob`: `index_active_collection`,
+  `index_previous_collection`, `index_manifest_generation`
+- `index_publication_bind_values(result)` + write on
+  `mark_job_completed` / `sync_mark_completed`
+- `job_public_dict` → `index_publication_bind` (null when unbound)
+- result JSON `index_publication` unchanged (2.4c/2.4d)
+
+**Paths:** `alembic/versions/022_*.py`, `db/models.py`, `ingestion/jobs.py`,
+`tests/test_ingestion_job_contract.py`
+
+**Boundary:** bind only. **Нет** deletion, age/budget, fault injection,
+live migration drill, plan checkbox edits.
+
+**Verification:** 51 passed focused; Ruff clean.
 
 ## Контракт 2.5a (admin job-object inventory preview) — COMPLETE
 

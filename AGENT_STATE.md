@@ -1,52 +1,47 @@
 # Agent State
 
+## 2026-08-07 Update-63 — record completed slice 2.5b @ `6dbabef` ✅ START HERE
+
+> **Routing authority:** Update-63 supersedes Update-62 **only for
+> start-point routing**. Older Update blocks (including literal
+> `✅ START HERE`) are **archival**. **Only the first/topmost Update block
+> is authoritative.**
+>
+> **Latest implementation:** `6dbabef`
+> (`feat(ingestion): durable job-to-index publication lifecycle bind`) —
+> slice **2.5b** (plan §2 ordered next after operator surface; **no**
+> deletion).
+>
+> **Previous:** **2.5a** `0855528`; docs Update-62 `8dceeab`.
+>
+> **Completion truth:** **2.1–2.4k + 2.5a + 2.5b** at documented scopes.
+> Full plan step 2 still **incomplete** (fault injection, live drills,
+> real job-object FS deletion, age/budget).
+>
+> **2.5b contract:**
+> - migration `022_ingestion_job_index_bind`
+> - columns: `index_active_collection`, `index_previous_collection`,
+>   `index_manifest_generation`
+> - filled from `result.index_publication` on async/sync complete
+> - `job_public_dict` → `index_publication_bind` (or null if unbound)
+>
+> **Verification:** focused **51 passed** (job contract + ingest task +
+> admin job-objects); Ruff clean. Full suite / live migrations **not** run.
+>
+> **Next in plan §2 order:** expand **fault injection** (embeddings /
+> validation / inventory / manifest switch / cleanup + concurrent upload
+> coverage). Still **no** deletion by default; live PG/Redis/Celery/Chroma
+> drills require explicit opt-in. Do **not** re-select 2.1–2.5b.
+>
+> **Gates:** no push/deploy/live without opt-in. Protected dirty/untracked
+> untouched. No plan checkbox edits.
+>
+> **Git advisory:** refresh `git log` / status next session.
+
 ## 2026-08-07 Update-62 — record completed slice 2.5a @ `0855528` ✅ START HERE
 
-> **Routing authority:** Update-62 supersedes Update-61 **only for
-> start-point routing**. All older Update blocks below, including headings
-> that literally contain `✅ START HERE`, are **archival**. **Only the
-> first/topmost Update block in this file is authoritative.** Never select
-> work by grepping old `START HERE` markers.
->
-> **Latest implementation:** `0855528`
-> (`feat(admin): read-only job-object inventory preview HTTP surface`) —
-> slice **2.5a** (admin GET inventory preview + audit; **no** deletion).
->
-> **Previous lineage (actual Git wins):** **2.4k** `9e358f1`; docs Update-61
-> `33327b9`. This Update-62 docs SHA is unknown inside its own content.
->
-> **Completion truth:** **2.1–2.4k + 2.5a** locally complete at documented
-> scopes only. Full plan step 2 / full immutable lifecycle **incomplete**.
->
-> **2.5a contract:**
-> - `GET /api/admin/job-objects/inventory` — admin role, JWT tenant only
-> - uses `ingestion.job_object_operator.load_and_run_operator_preview`
->   (`execute=False`); composition shared with CLI
-> - response: inventory + dispositions + transition_annotations; **no**
->   `execution` block
-> - audit action `job_object_inventory_preview`
-> - failed+protected remains `retained_after_failed_transition`,
->   `auto_delete_eligible=false`
->
-> **Verification (2.5a):** focused green **61 passed** (admin job-objects +
-> orphans + CLI + retention + inventory); Ruff clean. Full suite / live
-> services **not** run.
->
-> **Open boundaries:** **no** real FS deletion; **no** age/budget; **no**
-> orphan cleanup mutations; **no** job-object retention execute HTTP; **no**
-> DB model field for index version/collection; **no** live drills;
-> **no** push/deploy / production claim.
->
-> **Next candidate (re-scope — not started):** do **not** re-select
-> 2.1–2.4k/2.5a. Prefer another plan §2 non-deletion gap, or explicit
-> opt-in before deletion design. Plan source:
-> untracked `rag-remediation-plan-2026-08-03.md` §2.
->
-> **Protected dirty/untracked:** do not touch without request. No plan
-> checkbox edits. Gates: no push/deploy/live without opt-in.
->
-> **Git advisory:** `master...origin/master [ahead 105]` after 2.5a impl —
-> refresh next session.
+> **Historical (superseded by Update-63).** **2.5a** @ `0855528` complete.
+> Later closed by **2.5b** @ `6dbabef`.
 
 ## 2026-08-07 Update-61 — record completed slice 2.4k @ `9e358f1` ✅ START HERE
 
