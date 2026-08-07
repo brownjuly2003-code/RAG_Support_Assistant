@@ -1,8 +1,91 @@
 # Agent State
 
+## 2026-08-07 Update-83 — record completed slice 4.1 @ `eaf41f3` ✅ START HERE
+
+> **Routing authority:** Update-83 supersedes Update-82 **for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `eaf41f3`
+>   (`feat(stream): single terminal answer and history when graph parity succeeds`)
+>   — slice **4.1**
+> - Previous: `fe2f0aa` — **3.1i**; `ab7b417` — **3.1h**; …
+> - Previous docs: Update-82 `c6c022f`
+> - This Update-83 docs SHA unknown in-file — refresh `git log`
+>
+> **Branch advisory:** was `ahead 145` before this docs commit — refresh.
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | local residual closed at documented scopes |
+> | **3.1a–3.1i** | runtime/session/LLM local at documented scopes |
+> | **4.1** | single terminal answer + single history mutation when graph parity succeeds |
+> | Full plan §2 / §3 / §4 | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
+>
+> ---
+>
+> ### Plan §4 map (honest)
+>
+> | Plan §4 bullet | Local | Residual |
+> |----------------|-------|----------|
+> | LangGraph sole execution + SSE transmit | not started | full graph token stream |
+> | remove direct streaming RAG + parallel parity; one terminal answer + one history mutation | **4.1** (when parity succeeds) | dual generation still exists (stream tokens + parallel graph); parity still opt-in |
+> | idempotent escalation + outbox | not started | — |
+> | ticket_id / delivery state | not started | — |
+>
+> ---
+>
+> ### 4.1 contract (COMPLETE @ `eaf41f3`)
+>
+> - `_resolve_stream_terminal`: non-empty graph answer → terminal for SSE + DB
+> - Stream-side history append skipped when graph owns terminal (or already mutated)
+> - SSE `answer_source`: `graph` | `stream`
+> - Parity off / graph fail: stream answer + stream history (prior behavior)
+> - **Not** done: eliminate second generation; LangGraph-only token events
+>
+> **Verification:** 12 passed (`test_streaming_rag_parity` + stream capacity +
+> chat streaming); Ruff clean. Full suite / live **not** run.
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **4.2** — reduce dual generation: either stream tokens from graph
+> events only **or** disable parallel full `session.ask` parity in favor of
+> one graph path (read §4 DoD; pick one atomic approach tests-first).
+>
+> Alternate: durable multi-replica session version; escalation outbox.
+>
+> **Do not re-select:** 2.1–2.6g, **3.1a–3.1i**, **4.1**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
+> Untracked: plan, `_NEXT_SESSION.md`, pytest temps, etc.
+>
+> ### Gates
+>
+> no push / deploy / live multi-service without opt-in.
+>
+> **Git advisory:** refresh status/log — actual Git wins.
+
 ## 2026-08-07 Update-82 — record completed slice 3.1i @ `fe2f0aa` ✅ START HERE
 
-> **Routing authority:** Update-82 supersedes Update-81 **for start-point
+> **Historical handoff (superseded by Update-83 for start-point routing).**
+> Recorded **3.1i** @ `fe2f0aa`. **4.1** complete under Update-83.
+>
+> **Original routing note (archival):** Update-82 supersedes Update-81 **for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old
