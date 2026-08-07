@@ -1,12 +1,95 @@
 # Agent State
 
+## 2026-08-07 Update-53 — record completed slice 2.4e @ `13be7d9` ✅ START HERE
+
+> **Routing authority:** Update-53 supersedes Update-52 **for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Implementation commit:** `13be7d9` (`feat(ingestion): classify immutable
+> job-object inventory`). Slice **2.4e is locally complete and verified** at
+> the bounded read-only classification scope. Previous docs commit before this
+> impl/docs turn: `ac4f553` (`docs: refresh transparent next-session handoff`
+> — Update-52). Previous implementation: `dfbbca0` (slice **2.4d**). The
+> future docs commit that records Update-53 **cannot** be known inside its
+> own content; next session must obtain it from `git log -5 --oneline`.
+>
+> **Implementation paths changed in `13be7d9` only:**
+> - `ingestion/job_object_inventory.py` (new)
+> - `tests/test_job_object_inventory.py` (new)
+> - diff stat: 2 files changed, 584 insertions
+>
+> **2.4e behavior (landed):**
+> - pure filesystem classifier for `upload_dir/job-objects/**` given injected
+>   known job refs (`job_id` + project-relative `source_path`);
+> - `source_path`-matched job objects → `protected`;
+> - `legacy-previous/<sha256>/…` recovery objects → always `protected`;
+> - valid job-object layout without a known job → `unrecorded` (never
+>   auto-deletable in this slice);
+> - path mismatch / malformed layout → `untrusted` (never auto-deletable);
+> - flat corpus view outside `job-objects/` is never listed;
+> - duplicate known job ids and upload_dir outside project_root fail closed;
+> - **no** delete/rename/mutate, **no** age/budget policy, **no** admin API,
+>   **no** DB/loader/upload/retention-index changes.
+>
+> **Read-only ownership confirmed before the contract:**
+> - create path owner: `api/routers/upload.py` (2.4a; not reopened);
+> - durable reference: `IngestionJob.source_path`;
+> - no pre-existing GC/orphan cleanup modules found;
+> - index retention (`vectordb/index_retention.py`) is a separate subsystem.
+>
+> **Verification (this turn):** tests-first red 11 failed
+> (`ModuleNotFoundError`); green focused 11 passed; adjacent upload/job gate
+> **91 passed** (inventory + upload_idempotency + upload_security +
+> ingestion_job_contract); scoped Ruff clean; `git diff --check` clean;
+> mypy 1.19.1 on Python 3.12 Success (1 file; host 3.13 hits known NumPy
+> stub syntax issue). Full suite / live services **not** run.
+>
+> **Boundary (completion truth):** slices **2.1 through 2.4e** remain
+> locally complete **only at documented scopes**. Full plan step 2 and full
+> immutable lifecycle remain **incomplete**: **no** GC/retention executor for
+> job-objects or legacy-previous, **no** operator/CLI preview wiring, **no**
+> failed-transition orphan cleanup, **no** DB model/migration field, **no**
+> full/live verification, **no** push/deploy or production-readiness claim.
+>
+> **Active writer / WIP:** none. No unfinished next-candidate WIP.
+>
+> **Next candidate only (not started):** **2.4f tenant-scoped job-object
+> inventory preview** — load known job refs for one tenant and call the
+> existing classifier (still **no** deletion). Do **not** invent age/budget
+> delete rules, reopen 2.1–2.4e, or edit plan checkboxes. Details:
+> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+>
+> **Protected dirty / untracked state:** see handoff capsule; do not
+> touch/stage/remove without explicit request. Do **not** edit the active
+> untracked plan or its checkboxes.
+>
+> **External gates (not authorized):** push, deploy, live services,
+> destructive Git, production-readiness claims. Live
+> PostgreSQL/Redis/Celery/Chroma drills require explicit opt-in and must
+> **not** be the default next slice.
+>
+> **Standing execution preference:** **Grok** implements/content-writes;
+> orchestrator protects files, verifies independently, commits scoped
+> results. One user turn = **one** named atomic slice. Explicit-path local
+> commit only. Do **not** re-select 2.1–2.4e.
+>
+> **Git advisory only:** branch observed as
+> `master...origin/master [ahead 89]` after impl — refresh next session.
+
 ## 2026-08-03 Update-52 — docs-only transparency after Update-51 @ `ecf73fe` ✅ START HERE
 
-> **Routing authority:** Update-52 is **docs-only / transparency-only** and
-> supersedes Update-51 **only for start-point routing**. All older Update
-> blocks below, including headings that literally contain `✅ START HERE`, are
-> **archival**. **Only the first/topmost Update block in this file is
-> authoritative.** Never select work by grepping old `START HERE` markers.
+> **Historical handoff (superseded by Update-53 for start-point routing).**
+> Older `✅ START HERE` markers in this archive are **not** routing authority.
+> Refresh `git status` first. This Update-52 block previously superseded
+> Update-51 as the start point. That turn was **docs-only / transparency-only**
+> and supersedes Update-51 **only for start-point routing** at that time. All
+> older Update blocks below, including headings that literally contain
+> `✅ START HERE`, remain **archival**. **Only the first/topmost Update block
+> in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
 >
 > **No new implementation in this docs turn.** Code, tests, plans, backlog,
 > README, audit, settings, and API paths were **not** edited here. Project
@@ -26,27 +109,22 @@
 > - Previous implementation before 2.4d: `999c90f` (slice **2.4c**).
 > - The future docs commit that records Update-52 **cannot** be known inside
 >   its own content; next session must obtain it from `git log -5 --oneline`.
+>   Actual Update-52 docs commit is now known as `ac4f553`.
 >
-> **Completion truth (unchanged):** slices **2.1 through 2.4d** remain
-> locally complete and verified **only at documented scopes**. Full plan
-> step 2 and full immutable-original lifecycle remain **incomplete**. Open
-> boundaries unchanged: **no** GC/retention policy/executor for `job-objects`
-> or `legacy-previous`, **no** failed-transition orphan cleanup, **no** DB
-> model/migration field, **no** full/live verification, **no** push/deploy
-> or production-readiness claim.
+> **Completion truth (unchanged at that time):** slices **2.1 through 2.4d**
+> remain locally complete and verified **only at documented scopes**. Full
+> plan step 2 and full immutable-original lifecycle remain **incomplete**.
+> Open boundaries unchanged: **no** GC/retention policy/executor for
+> `job-objects` or `legacy-previous`, **no** failed-transition orphan
+> cleanup, **no** DB model/migration field, **no** full/live verification,
+> **no** push/deploy or production-readiness claim.
 >
 > **Active writer / WIP:** none. No unfinished next-candidate WIP. No active
 > Grok/delegated writer at this handoff.
 >
-> **Next candidate only (not started):** **2.4e immutable job-object
-> lifecycle cleanup ownership/policy investigation**. Do **not** invent
-> deletion rules, edit plan checkboxes, or mark 2.4e started/complete.
-> Restore route: confirm owners, retention safety invariants, job/index
-> references, and tests **read-only** before selecting the smallest
-> test-first contract. Current durable evidence only: 2.4a creates
-> `job-objects/<job_id>/...` and `job-objects/legacy-previous/<sha256>/...`;
-> current handoff states no GC or orphan cleanup exists. Details:
-> [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+> **Next candidate only (not started at that time):** **2.4e immutable
+> job-object lifecycle cleanup ownership/policy investigation**. Later closed
+> by Update-53 / `13be7d9` at classification scope only.
 >
 > **Protected dirty / untracked state:** see handoff capsule; do not
 > touch/stage/remove without explicit request. Do **not** edit the active
@@ -67,7 +145,7 @@
 
 ## 2026-08-03 Update-51 — record completed slice 2.4d @ `dfbbca0` ✅ START HERE
 
-> **Historical handoff (superseded by Update-52 for start-point routing).**
+> **Historical handoff (superseded by Update-53 for start-point routing).**
 > Older `✅ START HERE` markers in this archive are **not** routing authority.
 > Refresh `git status` first. This Update-51 block previously superseded
 > Update-50 as the start point. That turn was **docs-only** and supersedes
