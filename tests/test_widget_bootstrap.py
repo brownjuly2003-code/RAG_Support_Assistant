@@ -137,6 +137,71 @@ def test_bootstrap_rejects_origin_header_mismatch(
     assert resp.status_code == 403
 
 
+def test_bootstrap_allows_service_origin_header_for_iframe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Widget iframe is same-origin with API; Origin is the API host, not parent."""
+    import config.settings as settings_mod
+
+    monkeypatch.setenv("WIDGET_ALLOWED_ORIGINS", "https://shop.example.com")
+    cache_clear = getattr(settings_mod.get_settings, "cache_clear", None)
+    if callable(cache_clear):
+        cache_clear()
+
+    api_app = importlib.import_module("api.app")
+    client = TestClient(api_app.app)
+    # TestClient base URL is http://testserver — that is the service origin.
+    resp = client.post(
+        "/api/widget/bootstrap",
+        json={
+            "parent_origin": "https://shop.example.com",
+            "tenant_id": "acme",
+            "session_id": "33333333-3333-3333-3333-333333333333",
+        },
+        headers={"Origin": "http://testserver"},
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["session_id"] == "33333333-3333-3333-3333-333333333333"
+    assert data["parent_origin"] == "https://shop.example.com"
+    payload = verify_token(data["token"], expected_type="widget")
+    assert payload is not None
+    assert payload["origin"] == "https://shop.example.com"
+    assert payload["sid"] == data["session_id"]
+
+
+def test_bootstrap_reuses_session_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import config.settings as settings_mod
+
+    monkeypatch.setenv("WIDGET_ALLOWED_ORIGINS", "https://shop.example.com")
+    cache_clear = getattr(settings_mod.get_settings, "cache_clear", None)
+    if callable(cache_clear):
+        cache_clear()
+
+    api_app = importlib.import_module("api.app")
+    client = TestClient(api_app.app)
+    first = client.post(
+        "/api/widget/bootstrap",
+        json={"parent_origin": "https://shop.example.com", "tenant_id": "acme"},
+        headers={"Origin": "https://shop.example.com"},
+    )
+    assert first.status_code == 200, first.text
+    sid = first.json()["session_id"]
+    second = client.post(
+        "/api/widget/bootstrap",
+        json={
+            "parent_origin": "https://shop.example.com",
+            "tenant_id": "acme",
+            "session_id": sid,
+        },
+        headers={"Origin": "https://shop.example.com"},
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["session_id"] == sid
+
+
 def test_widget_html_has_path_specific_frame_ancestors(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

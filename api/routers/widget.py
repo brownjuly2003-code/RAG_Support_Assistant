@@ -98,17 +98,27 @@ def widget_bootstrap(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=f"invalid parent_origin: {exc}") from exc
 
-    # Prefer explicit body origin; optionally cross-check Origin/Referer headers.
+    # Cross-check Origin only when the caller is a third-party page.
+    # The embeddable widget iframe is same-origin with this API; browsers send
+    # Origin=<API host> on that POST while body.parent_origin is the allowlisted
+    # parent embed host (postMessage handshake). Requiring Origin==parent would
+    # reject every real iframe bootstrap (plan §8.5 / cross-origin embed).
     header_origin = (request.headers.get("origin") or "").strip()
     if header_origin and header_origin != "null":
         try:
-            if normalize_origin(header_origin) != parent_origin:
+            normalized_header = normalize_origin(header_origin)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="invalid Origin header") from exc
+        if normalized_header != parent_origin:
+            try:
+                service_origin = normalize_origin(str(request.base_url).rstrip("/"))
+            except ValueError:
+                service_origin = ""
+            if not service_origin or normalized_header != service_origin:
                 raise HTTPException(
                     status_code=403,
                     detail="parent_origin does not match Origin header",
                 )
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail="invalid Origin header") from exc
 
     if not origin_allowed(parent_origin, allowed):
         raise HTTPException(
