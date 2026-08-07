@@ -312,10 +312,16 @@ jobs:
           list-files: shell
           filters: |
             regression:
-              - 'agent/prompts.py'
+              - 'agent/**'
+              - 'api/routers/conversation.py'
+              - 'cache/**'
               - 'config/settings.py'
-              - 'evaluation/curated_cases.jsonl'
-              - 'evaluation/experiments/*.yaml'
+              - 'config/providers.yml'
+              - 'evaluation/**'
+              - 'ingestion/**'
+              - 'llm/**'
+              - 'scripts/regression_eval.py'
+              - 'vectordb/**'
 
       - name: Skip when regression inputs did not change
         if: steps.regression_changes.outputs.regression != 'true'

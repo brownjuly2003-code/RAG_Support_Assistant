@@ -60,6 +60,10 @@ class CaseRunResult(BaseModel):
     cost_usd: float | None = None
     route: str = "unknown"
     trace_id: str = ""
+    # Plan §7.1: skipped/infra must fail the release gate (never graceful pass).
+    skipped: bool = False
+    skip_reason: str = ""
+    infrastructure_error: bool = False
 
 
 def _utc_now() -> datetime:
@@ -99,6 +103,70 @@ def _is_refusal_answer(answer: str) -> bool:
 def _is_infrastructure_failure(answer: str) -> bool:
     normalized = (answer or "").strip().lower()
     return "[provider_unavailable]" in normalized or "[model_mismatch]" in normalized
+
+
+def decide_regression_gate(
+    *,
+    total_cases: int,
+    effective_cases: int,
+    infrastructure_failures: int,
+    skipped_cases: int,
+    regressions: int,
+    max_regressions: int,
+    baseline_pass_rate: float,
+    candidate_pass_rate: float,
+    min_pass_rate: float,
+) -> dict[str, Any]:
+    """Compute release-gate verdict (plan §7.1 fail-closed).
+
+    Infrastructure failures, skipped cases, and empty effective sets **never**
+    pass. Pass rates are only evaluated when ``effective_cases > 0`` so an
+    all-skipped run cannot claim 1.0 / PASSED via division edge cases.
+    Verdict is always ``PASS`` or ``FAIL`` — never ``PASSED (graceful skip)``.
+    """
+    reasons: list[str] = []
+    if total_cases <= 0:
+        reasons.append("no cases executed")
+    if infrastructure_failures > 0:
+        reasons.append(
+            f"infrastructure failures: {infrastructure_failures} "
+            "(provider/pipeline/import errors fail the gate)"
+        )
+    if skipped_cases > 0:
+        reasons.append(
+            f"skipped cases: {skipped_cases} "
+            "(graceful skip is not a pass)"
+        )
+    if total_cases > 0 and effective_cases <= 0:
+        reasons.append(
+            "no effective cases after infrastructure/skip "
+            "(cannot claim pass rates)"
+        )
+
+    if effective_cases > 0:
+        if regressions > max_regressions:
+            reasons.append(
+                f"max regressions exceeded: {regressions} > {max_regressions}"
+            )
+        if candidate_pass_rate < min_pass_rate:
+            reasons.append(
+                f"candidate pass rate {candidate_pass_rate:.2%} "
+                f"below minimum {min_pass_rate:.2%}"
+            )
+        if candidate_pass_rate + 1e-9 < baseline_pass_rate:
+            reasons.append(
+                f"candidate pass rate {candidate_pass_rate:.2%} "
+                f"below baseline {baseline_pass_rate:.2%}"
+            )
+
+    passed = not reasons
+    return {
+        "passed": passed,
+        "reasons": reasons,
+        "verdict": "PASS" if passed else "FAIL",
+        # Explicit anti-pattern: never report graceful-skip as success evidence.
+        "graceful_skip_pass_forbidden": True,
+    }
 
 
 def _resolve_provider_target(target: str, provider_registry_path: Path | None) -> dict[str, Any] | None:
@@ -326,13 +394,74 @@ def run_regression_cases(
     baseline_refusals = 0
     candidate_refusals = 0
     infrastructure_failures = 0
+    skipped_cases = 0
+
+    def _run_executor(case: CuratedCase, target: str) -> CaseRunResult:
+        try:
+            result = executor(case, target)
+        except InfrastructureError as exc:
+            return CaseRunResult(
+                answer=f"[provider_unavailable] {exc}",
+                route="error",
+                infrastructure_error=True,
+                skip_reason=str(exc) or "infrastructure_error",
+            )
+        except Exception as exc:
+            # Import/pipeline/runtime crashes are infrastructure, not soft skips.
+            return CaseRunResult(
+                answer=f"[provider_unavailable] executor error: {exc}",
+                route="error",
+                infrastructure_error=True,
+                skip_reason=f"executor_error:{type(exc).__name__}",
+            )
+        if not isinstance(result, CaseRunResult):
+            return CaseRunResult(
+                answer="[provider_unavailable] executor returned non-CaseRunResult",
+                route="error",
+                infrastructure_error=True,
+                skip_reason="invalid_executor_result",
+            )
+        return result
 
     for case in cases:
-        baseline_result = executor(case, baseline)
-        candidate_result = executor(case, candidate)
+        baseline_result = _run_executor(case, baseline)
+        candidate_result = _run_executor(case, candidate)
 
-        baseline_infra = _is_infrastructure_failure(baseline_result.answer)
-        candidate_infra = _is_infrastructure_failure(candidate_result.answer)
+        baseline_skip = bool(baseline_result.skipped)
+        candidate_skip = bool(candidate_result.skipped)
+        baseline_infra = bool(baseline_result.infrastructure_error) or _is_infrastructure_failure(
+            baseline_result.answer
+        )
+        candidate_infra = bool(
+            candidate_result.infrastructure_error
+        ) or _is_infrastructure_failure(candidate_result.answer)
+
+        if baseline_skip or candidate_skip:
+            skipped_cases += 1
+            case_payload = {
+                "case_id": case.case_id,
+                "tenant_id": case.tenant_id,
+                "query": case.query,
+                "baseline": baseline_result.model_dump(mode="json"),
+                "candidate": candidate_result.model_dump(mode="json"),
+                "baseline_passed": False,
+                "candidate_passed": False,
+                "baseline_failures": (
+                    [f"skipped: {baseline_result.skip_reason or 'unspecified'}"]
+                    if baseline_skip
+                    else []
+                ),
+                "candidate_failures": (
+                    [f"skipped: {candidate_result.skip_reason or 'unspecified'}"]
+                    if candidate_skip
+                    else []
+                ),
+                "diff": _build_diff(baseline_result, candidate_result),
+                "outcome": "skipped",
+            }
+            comparisons.append(case_payload)
+            continue
+
         if baseline_infra or candidate_infra:
             infrastructure_failures += 1
             case_payload = {
@@ -406,26 +535,34 @@ def run_regression_cases(
             )
 
     total_cases = len(comparisons)
-    effective_total_cases = total_cases - infrastructure_failures
-    baseline_pass_rate = baseline_passes / effective_total_cases if effective_total_cases else 0.0
-    candidate_pass_rate = candidate_passes / effective_total_cases if effective_total_cases else 0.0
-    neutral_count = total_cases - len(regressions) - len(new_passes) - infrastructure_failures
+    effective_total_cases = total_cases - infrastructure_failures - skipped_cases
+    # Fail-closed rates: never invent 1.0 when nothing was effectively evaluated.
+    if effective_total_cases > 0:
+        baseline_pass_rate = baseline_passes / effective_total_cases
+        candidate_pass_rate = candidate_passes / effective_total_cases
+    else:
+        baseline_pass_rate = 0.0
+        candidate_pass_rate = 0.0
+    neutral_count = (
+        total_cases
+        - len(regressions)
+        - len(new_passes)
+        - infrastructure_failures
+        - skipped_cases
+    )
 
-    gate_reasons: list[str] = []
-    if len(regressions) > max_regressions:
-        gate_reasons.append(
-            f"max regressions exceeded: {len(regressions)} > {max_regressions}"
-        )
-    if candidate_pass_rate < min_pass_rate:
-        gate_reasons.append(
-            f"candidate pass rate {candidate_pass_rate:.2%} below minimum {min_pass_rate:.2%}"
-        )
-    if candidate_pass_rate + 1e-9 < baseline_pass_rate:
-        gate_reasons.append(
-            f"candidate pass rate {candidate_pass_rate:.2%} below baseline {baseline_pass_rate:.2%}"
-        )
-
-    gate_passed = not gate_reasons
+    gate = decide_regression_gate(
+        total_cases=total_cases,
+        effective_cases=effective_total_cases,
+        infrastructure_failures=infrastructure_failures,
+        skipped_cases=skipped_cases,
+        regressions=len(regressions),
+        max_regressions=max_regressions,
+        baseline_pass_rate=baseline_pass_rate,
+        candidate_pass_rate=candidate_pass_rate,
+        min_pass_rate=min_pass_rate,
+    )
+    gate_passed = bool(gate["passed"])
     exit_code = 0 if gate_passed else 1
 
     return {
@@ -439,6 +576,7 @@ def run_regression_cases(
             "total_cases": total_cases,
             "effective_cases": effective_total_cases,
             "infrastructure_failures": infrastructure_failures,
+            "skipped_cases": skipped_cases,
             "baseline_pass_rate": round(baseline_pass_rate, 4),
             "candidate_pass_rate": round(candidate_pass_rate, 4),
             "regressions": len(regressions),
@@ -453,9 +591,11 @@ def run_regression_cases(
         },
         "gate": {
             "passed": gate_passed,
+            "verdict": gate["verdict"],
             "max_regressions": max_regressions,
             "min_pass_rate": min_pass_rate,
-            "reasons": gate_reasons,
+            "reasons": list(gate["reasons"]),
+            "graceful_skip_pass_forbidden": True,
         },
         "cases": comparisons,
         "regressions": regressions,
@@ -484,7 +624,7 @@ def _render_summary_table(report: dict[str, Any]) -> str:
             f"| Candidate total cost | ${aggregate['candidate_total_cost_usd']:.6f} |",
             f"| Baseline refusal rate | {aggregate['baseline_refusal_rate']:.2%} |",
             f"| Candidate refusal rate | {aggregate['candidate_refusal_rate']:.2%} |",
-            f"| Gate | {'pass' if gate['passed'] else 'fail'} |",
+            f"| Gate | {gate.get('verdict') or ('PASS' if gate['passed'] else 'FAIL')} |",
         ]
     )
 
@@ -1045,6 +1185,18 @@ def run_regression(
         report["mode"] = "mock-experiment-regression"
     else:
         report["mode"] = "experiment-regression"
+    # Plan §7.1 honesty: mock expected-copy is not release evidence.
+    mock_modes = {"mock-provider-benchmark", "mock-experiment-regression"}
+    report["evidence_valid"] = report["mode"] not in mock_modes
+    if not report["evidence_valid"]:
+        report.setdefault("gate", {})
+        report["gate"]["evidence_valid"] = False
+        report["gate"]["evidence_note"] = (
+            "mock expected-copy / mock provider scores are not release evidence"
+        )
+    else:
+        report.setdefault("gate", {})
+        report["gate"]["evidence_valid"] = True
     return report
 
 

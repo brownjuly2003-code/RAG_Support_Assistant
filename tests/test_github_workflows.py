@@ -114,7 +114,13 @@ def test_regression_eval_filter_tracks_curated_dataset_changes() -> None:
     filter_step = next(step for step in steps if "dorny/paths-filter" in str(step.get("uses", "")))
     filters = str(filter_step["with"]["filters"])
 
-    assert "evaluation/curated_cases.jsonl" in filters
+    # Plan §7.1: path filter covers graph/retrieval/ingestion/providers/cache,
+    # not only prompts + curated dataset.
+    assert "evaluation/" in filters
+    assert "agent/" in filters
+    assert "llm/" in filters
+    assert "vectordb/" in filters
+    assert "scripts/regression_eval.py" in filters
 
 
 def test_regression_eval_runs_on_master_pushes_not_only_pull_requests() -> None:
