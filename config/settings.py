@@ -40,6 +40,49 @@ from pydantic import SecretStr
 # Определяем корень проекта как родительскую директорию для config/
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 EXPERIMENT_OVERRIDE_PATH = PROJECT_ROOT / "config" / "experiment_override.yaml"
+
+# Known insecure placeholders that must never pass production validation
+# (includes .env.example sample values and historical repo defaults).
+KNOWN_INSECURE_SECRETS: frozenset[str] = frozenset(
+    {
+        "changeme",
+        "change-me",
+        "change_me",
+        "changeme-generate-with-secrets-token_urlsafe",
+        "dev-secret-change-in-production!",
+        "secret",
+        "password",
+        "admin",
+    }
+)
+
+
+def is_known_insecure_secret(value: str | None) -> bool:
+    """True when value is empty or a documented placeholder/default secret."""
+    text = (value or "").strip()
+    if not text:
+        return True
+    return text.lower() in {item.lower() for item in KNOWN_INSECURE_SECRETS}
+
+
+def production_secret_rejection_reason(
+    value: str | None,
+    *,
+    min_length: int,
+    label: str,
+) -> str | None:
+    """Return a human-readable rejection reason, or None if the secret is ok."""
+    text = (value or "").strip()
+    if not text:
+        return f"{label} is required in production"
+    if is_known_insecure_secret(text):
+        return f"{label} must not be a known placeholder or dev default"
+    if len(text) < min_length:
+        return (
+            f"{label} is too short for production "
+            f"(got {len(text)} chars, need >= {min_length})"
+        )
+    return None
 EXPERIMENT_SETTINGS_KEYS = (
     "llm_provider_profile",
     "ollama_model_name",
@@ -1123,56 +1166,67 @@ class Settings:
                 "       e.g. CORS_ORIGINS='https://app.example.com,https://admin.example.com'\n"
                 f"       Current RAG_ENV={self.rag_env}, CORS_ORIGINS={self.cors_origins}"
             )
-        if self.rag_env == "production" and not self.db_encryption_key.get_secret_value():
-            raise RuntimeError(
-                "\nERROR: DB_ENCRYPTION_KEY is required in production.\n"
-                "       Set DB_ENCRYPTION_KEY to a strong secret stored outside git."
-            )
         if self.rag_env != "production" and not self.db_encryption_key.get_secret_value():
             log.warning(
                 "DB_ENCRYPTION_KEY is not set; encryption operations will fail. "
                 "Set it in .env for local dev — see .env.example."
             )
 
-        # Production secrets fail-fast (Codex audit 2026-04-27 P0).
-        # Без этих проверок production принимает admin/admin и подписывает
-        # токены известным repo default'ом.
+        # Production secrets fail-fast (SEC-02 / plan §8.4).
+        # Reject empty, known placeholders, short secrets, and any production
+        # ALLOW_DEV_ADMIN_LOGIN bypass (admin/admin must never be reachable).
         if self.rag_env == "production":
-            _DEV_SECRET = "dev-secret-change-in-production!"
-            jwt_secret = (os.getenv("JWT_SECRET", "") or "").strip()
-            if not jwt_secret or jwt_secret == _DEV_SECRET:
+            enc_key = (self.db_encryption_key.get_secret_value() or "").strip()
+            enc_reason = production_secret_rejection_reason(
+                enc_key, min_length=16, label="DB_ENCRYPTION_KEY"
+            )
+            if enc_reason is not None:
                 raise RuntimeError(
-                    "\nERROR: JWT_SECRET is required in production and must not be the dev default.\n"
+                    f"\nERROR: DB_ENCRYPTION_KEY {enc_reason}.\n"
+                    "       Set DB_ENCRYPTION_KEY to a strong secret stored outside git.\n"
+                    "       Generate: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+                )
+
+            jwt_secret = (os.getenv("JWT_SECRET", "") or "").strip()
+            jwt_reason = production_secret_rejection_reason(
+                jwt_secret, min_length=32, label="JWT_SECRET"
+            )
+            if jwt_reason is not None:
+                raise RuntimeError(
+                    f"\nERROR: JWT_SECRET {jwt_reason}.\n"
                     "       Set JWT_SECRET to a strong random value (>= 32 chars) outside git.\n"
                     "       Generate with: python -c \"import secrets; print(secrets.token_urlsafe(48))\""
-                )
-            if len(jwt_secret) < 32:
-                raise RuntimeError(
-                    "\nERROR: JWT_SECRET is too short for production (got %d chars, need >= 32).\n"
-                    "       Use python -c \"import secrets; print(secrets.token_urlsafe(48))\"."
-                    % len(jwt_secret)
                 )
 
             session_secret = (
                 os.getenv("SESSION_SECRET_KEY", "") or os.getenv("JWT_SECRET", "") or ""
             ).strip()
-            if not session_secret or session_secret == _DEV_SECRET:
+            session_reason = production_secret_rejection_reason(
+                session_secret, min_length=32, label="SESSION_SECRET_KEY"
+            )
+            if session_reason is not None:
                 raise RuntimeError(
-                    "\nERROR: SESSION_SECRET_KEY is required in production and must not be the dev default.\n"
+                    f"\nERROR: SESSION_SECRET_KEY {session_reason}.\n"
                     "       Set SESSION_SECRET_KEY to a strong random value (>= 32 chars)."
                 )
 
-            admin_hash = (os.getenv("ADMIN_PASSWORD_HASH", "") or "").strip()
             allow_dev_admin = (
                 os.getenv("ALLOW_DEV_ADMIN_LOGIN", "").strip().lower()
                 in ("1", "true", "yes")
             )
-            if not admin_hash and not allow_dev_admin:
+            if allow_dev_admin:
+                raise RuntimeError(
+                    "\nERROR: ALLOW_DEV_ADMIN_LOGIN is not allowed in production.\n"
+                    "       Dev-admin bypass (admin/admin) must remain disabled.\n"
+                    "       Set ADMIN_PASSWORD_HASH to a bcrypt hash and unset ALLOW_DEV_ADMIN_LOGIN."
+                )
+
+            admin_hash = (os.getenv("ADMIN_PASSWORD_HASH", "") or "").strip()
+            if not admin_hash:
                 raise RuntimeError(
                     "\nERROR: ADMIN_PASSWORD_HASH is required in production.\n"
                     "       Without it, /api/auth/login accepts admin/admin as a valid credential.\n"
-                    "       Generate a bcrypt hash and set ADMIN_PASSWORD_HASH, or set\n"
-                    "       ALLOW_DEV_ADMIN_LOGIN=1 to acknowledge the risk explicitly."
+                    "       Generate a bcrypt hash and set ADMIN_PASSWORD_HASH."
                 )
 
         try:
