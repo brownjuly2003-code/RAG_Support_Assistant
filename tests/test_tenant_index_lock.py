@@ -263,6 +263,7 @@ def test_main_and_factcard_rebuilds_hold_the_tenant_lock(
         events.append("publish")
         return SimpleNamespace(
             active_collection=active_collection,
+            previous_collection=None,
             generation=1,
         )
 
