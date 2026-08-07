@@ -12,6 +12,7 @@ from typing import Any
 
 from config.settings import get_settings
 from utils.tenant_naming import physical_tenant_component
+from vectordb.index_lifecycle_faults import MANIFEST_PUBLISH, maybe_inject
 from vectordb.tenant_lock import TenantIndexLockToken, require_tenant_index_lock
 
 _SCHEMA_VERSION = 1
@@ -230,6 +231,9 @@ def publish_active_collection(
             temporary_file.write(serialized)
             temporary_file.flush()
             os.fsync(temporary_file.fileno())
+        # Inject only at the durable commit boundary so a failed publish cannot
+        # switch the active collection or leave a half-applied manifest.
+        maybe_inject(MANIFEST_PUBLISH)
         os.replace(temporary_path, path)
     except BaseException:
         try:

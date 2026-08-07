@@ -13,6 +13,7 @@ from typing import Any
 
 from config.settings import get_settings
 from utils.tenant_naming import physical_tenant_component
+from vectordb.index_lifecycle_faults import INVENTORY_WRITE, maybe_inject
 from vectordb.index_manifest import read_index_manifest
 from vectordb.index_staging import IndexStagingValidationError, staged_collection_name
 from vectordb.tenant_lock import TenantIndexLockToken, require_tenant_index_lock
@@ -324,6 +325,9 @@ def _write_inventory(
             temporary_file.write(serialized)
             temporary_file.flush()
             os.fsync(temporary_file.fileno())
+        # Inject only at the durable commit boundary so a failed write cannot
+        # leave a partially published inventory or advance the active manifest.
+        maybe_inject(INVENTORY_WRITE)
         os.replace(temporary_path, path)
     except BaseException:
         try:
