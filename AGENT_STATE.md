@@ -1,18 +1,39 @@
 # Agent State
 
-## 2026-08-07 Update-98 — completed slice 8.1 widget bootstrap @ `0bee13e` ✅ START HERE
+## 2026-08-07 Update-99 — docs-only transparency after 8.1 / Update-98 ✅ START HERE
 
-> **Routing authority:** Update-98 supersedes Update-97. Only topmost Update
-> is authoritative.
+> **Routing authority:** Update-99 is **docs-only / transparency-only** and
+> supersedes Update-98 **only for start-point routing**. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`,
+> are **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
 >
-> **Known lineage (actual Git wins):**
+> **No new implementation in this docs turn.** Code, tests, plan checkboxes,
+> backlog, README, audit, settings, and API paths were **not** edited here.
+> Project tests were **not** re-run. Protected dirty files and untracked
+> plan/temps were not staged beyond handoff/pointer refresh.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
 > - Latest implementation: `0bee13e`
 >   (`feat(widget): bootstrap token, origin allowlist, frame-ancestors (8.1)`)
-> - Previous: `25788ee` **7.2**; `94ac64e` **7.1**; `d6e3a55` **6.3**
-> - Migrations on disk (not applied): **019-023**
+>   - slice **8.1**
+> - Latest impl docs before this turn: `6140df7` (Update-98)
+> - Quality chain (recent):
+>   - 5: `7c53bdb` 5.1 · `50bb220` 5.2 · `1cdecb2` **5.3**
+>   - 6: `b3494a0` 6.1 · `d0317e9` 6.2 · `d6e3a55` **6.3**
+>   - 7: `94ac64e` 7.1 · `25788ee` **7.2**
+>   - 8: **`0bee13e` 8.1**
+> - 4 chain ends: `6453530` **4.5**
+> - 3 chain ends: `fe2f0aa` **3.1i**
+> - 2 fault-injection last: `f347feb` (**2.6g**)
+> - Migrations on disk (not applied): **019–023**
+> - This Update-99 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
 >
-> **Branch advisory:** was `master...origin/master [ahead 173]` after 8.1.
-> **WIP:** none.
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 174]` before this docs commit.
+>
+> **Active writer / WIP:** **none**.
 >
 > ---
 >
@@ -20,43 +41,104 @@
 >
 > | Band | Status |
 > |------|--------|
-> | **2.1–7.2** + **8.1** | local at documented scopes |
-> | Full plan §8 | **NOT** complete (ASGI bytes, OIDC, secrets/advisories, Playwright E2E) |
-> | Production | **NOT** claimed |
+> | **2.1–2.6g** | local residual closed at documented scopes |
+> | **3.1a–3.1i** | local at documented scopes |
+> | **4.1–4.5** | stream parity + durable escalation **local** |
+> | **5.1–5.3** | grounding + citation-bound + grader fail-closed **local** |
+> | **6.1–6.3** | unmeasured agentic + pre-response safety + independent judge **local** |
+> | **7.1–7.2** | eval gate fail-closed + mock ≠ release PASS **local** |
+> | **8.1** | widget bootstrap security **local** @ `0bee13e` |
+> | Full plan §1–§10 | **NOT** complete (live DoD / calibration / E2E / Gate A open) |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+>
+> **Transparency maps:**
+> - [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) — full next-session capsule
+> - [`docs/PLAN_CLOSURE_STATUS.md`](docs/PLAN_CLOSURE_STATUS.md) — residual matrix
+> - [`_NEXT_SESSION.md`](_NEXT_SESSION.md) — pointer only (not SoT)
 >
 > ---
 >
-> ### Plan 8.1 contract (local)
+> ### Recent quality path (impl SHAs)
 >
-> - `POST /api/widget/bootstrap` — short-lived `aud=widget` JWT
-> - `WIDGET_ALLOWED_ORIGINS` fail-closed (empty deny); Origin header match
-> - Path-specific CSP `frame-ancestors` for `/static/widget.html`; no DENY there
-> - Widget JS: handshake ack, Bearer token, session_id reuse, origin checks
-> - Settings: `widget_allowed_origins`, `widget_token_ttl_sec`
->
-> ---
->
-> ### Known verification (8.1)
->
-> - Focused: **12 passed** (widget bootstrap + security headers + widget assets);
->   Ruff clean
-> - Playwright cross-origin E2E **not** run
+> | Slice | SHA | One-line |
+> |-------|-----|----------|
+> | 5.3 | `1cdecb2` | grader fail-closed |
+> | 6.1 | `b3494a0` | agentic unmeasured |
+> | 6.2 | `d0317e9` | PII + injection pre-response |
+> | 6.3 | `d6e3a55` | independent judge |
+> | 7.1 | `94ac64e` | eval gate skip/infra FAIL |
+> | 7.2 | `25788ee` | mock SMOKE only |
+> | **8.1** | **`0bee13e`** | widget bootstrap + frame-ancestors |
 >
 > ---
 >
-> ### Open / next
+> ### Known verification (last impl 8.1; not re-run this docs turn)
 >
-> - **← next 8.2:** ASGI body byte limit / upload stream atomic rename **or**
->   OIDC email_verified / identity binding
-> - Prefer **8.2** request body limits if security-first; else residual §7/§1
->
-> **Do not re-select:** through **8.1**.
+> - **8.1:** 12 passed focused (widget bootstrap + security headers + assets);
+>   Ruff clean.
+> - Prior bands verified in their turns (6.x, 7.x) — not re-run here.
+> - Full suite / live multi-service / migrate / push / deploy **not** run /
+>   **not** claimed.
 >
 > ---
 >
-> ### Gates
+> ### Open boundaries (honest)
 >
-> No push/deploy/live/migrate without opt-in. One atomic slice per turn.
+> - **← next 8.2:** ASGI received-byte limits; upload stream + atomic rename
+> - 8 residual: OIDC email_verified; production secrets; Playwright widget E2E
+> - 7 residual: merge-base baseline artifact; dataset expansion; live provider gate
+> - 6 residual: calibration; measured agentic evaluate when KB context exists
+> - 5 residual: live precision/recall/faithfulness ×3
+> - 4 residual: true graph SSE tokens; parity default off; outbox schedule
+> - multi-replica durable session version
+> - live multi-service + migrations **019–023** (**opt-in**)
+> - plan 9–10; full suite / release / production
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **8.2 — ASGI body limits / upload stream atomic rename** (tests-first):
+> - bound **actually received** ASGI bytes (not Content-Length alone);
+> - upload streams to temp file then atomic rename;
+> - still **no** live multi-service / push / deploy / migrate without opt-in.
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–3.1i, 4.1–4.5, 5.1–5.3, 6.1–6.3,
+> 7.1–7.2, **8.1**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Do not touch/stage/remove without explicit request:
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+>   `_NEXT_SESSION.md` (**pointer only — not routing authority**),
+>   `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
+>   casually), architecture HTML, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live PostgreSQL/Redis/Celery/Chroma drills, `alembic upgrade`
+> (incl. **019–023**), destructive Git, production-readiness claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; quality > speed.
+>
+> **Git advisory:** refresh `git status --short --branch` and
+> `git log -12 --oneline` at session start — **actual Git wins**.
+
+
+## 2026-08-07 Update-98 — completed slice 8.1 widget bootstrap @ `0bee13e` ✅ START HERE
+
+> **Historical handoff (superseded by Update-99 for start-point routing).**
+> Recorded **8.1** @ `0bee13e`; docs `6140df7`. Full transparency under Update-99.
 
 
 ## 2026-08-07 Update-97 — completed slice 7.2 mock not release PASS @ `25788ee` ✅ START HERE

@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-07 (Update-98 after 8.1)  
+**Date:** 2026-08-07 (Update-99 transparency after 8.1)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-98**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-99**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -24,14 +24,14 @@
 | **4** unified pipeline + escalation | **4.1–4.5 local** | **OPEN** true graph tokens; parity default off; schedule wiring | partial |
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.3 local** | OPEN (calibration / measured agentic) | **yes** |
-| **7** eval gate fail-closed | **7.1–7.2 local** | OPEN (merge-base baseline / dataset / live gate) | **yes** |
+| **7** eval gate fail-closed | **7.1–7.2 local** | OPEN (merge-base / dataset / live gate) | **yes** |
 | **8** widget / edge security | **8.1 local** | OPEN (body limits, OIDC, secrets, E2E) | yes |
 | **9** cache / architecture / SLO | partial historical | OPEN | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
 **Project / production release: NOT claimed.**
 
-Not claimable until §1 live evidence + §5 live quality metrics + §6–7 + §10.
+Not claimable until §1 live evidence + §5 live quality metrics + §6–8 residual + §10.
 
 ---
 
@@ -47,14 +47,16 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 4 | §6.1 remove agentic fixed quality scores | **done** `b3494a0` |
 | 5 | §6.2 pre-response PII / prompt-injection | **done** `d0317e9` |
 | 6 | §6.3 independent judge policy | **done** `d6e3a55` |
-| 7 | §6.x calibration + measured agentic evaluate | not started |
-| 8 | §7.1 eval gate fail-closed skip/infra | **done** `94ac64e` |
-| 9 | §7.2 honest release evidence (no mock PASS) | **done** `25788ee` |
-| 10 | §8.1 widget bootstrap security | **done** `0bee13e` |
-| 11 | **§8.2 ASGI body limits / upload stream** | **← next** |
-| 9 | §4 residual (graph-only default / true SSE tokens) | residual |
-| 10 | §2/§3 residual if product needs | residual |
-| 11 | §1 + §10 | **opt-in live only** |
+| 7 | §7.1 eval gate fail-closed skip/infra | **done** `94ac64e` |
+| 8 | §7.2 honest release evidence (no mock PASS) | **done** `25788ee` |
+| 9 | §8.1 widget bootstrap security | **done** `0bee13e` |
+| 10 | **§8.2 ASGI body limits / upload stream** | **← next** |
+| 11 | §8.x OIDC / secrets / Playwright E2E | not started |
+| 12 | §6.x calibration + measured agentic evaluate | residual |
+| 13 | §7.x merge-base baseline / live provider gate | residual |
+| 14 | §4 residual (graph tokens / parity default) | residual |
+| 15 | §2/§3 residual if product needs | residual |
+| 16 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -64,26 +66,15 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 
 | Bullet | Local | Residual |
 |--------|-------|----------|
-| inventory / retention / operator / lifecycle | through 2.5b + related | live DoD; no job-object delete execute HTTP; no real FS delete |
+| inventory / retention / operator / lifecycle | through 2.5b + related | live DoD |
 | fault injection | **2.6a–2.6g** | local residual closed |
 | live PG/Redis/Celery/Chroma + migrations | not started | **opt-in**; migrations **019–023** on disk |
 
-**Invariant:** failed jobs with `source_path`-matched job-objects →
-`retained_after_failed_transition`; `auto_delete_eligible` always false.
-
-Last §2 fault-injection impl: `f347feb` (**2.6g**). **Do not re-select 2.x.**
+**Do not re-select 2.x.** Last §2 fault-injection impl: `f347feb` (**2.6g**).
 
 ---
 
 ## §3 map + ledger
-
-| Bullet | Local slices | Residual |
-|--------|--------------|----------|
-| shared executor + capacity until work done | 3.1a, 3.1f | — documented |
-| cooperative deadline provider/retrieve/tool/rerank | 3.1b, 3.1f–h | cooperative only |
-| session serialize / version / sticky | 3.1c, 3.1i | multi-replica durable store; optional HTTP If-Match |
-| max_tokens/temperature per role | 3.1d | — |
-| per-request LLM budget | 3.1e, 3.1f | — |
 
 | Slice | SHA |
 |-------|-----|
@@ -97,17 +88,11 @@ Last §2 fault-injection impl: `f347feb` (**2.6g**). **Do not re-select 2.x.**
 | 3.1h | `ab7b417` |
 | 3.1i | `fe2f0aa` |
 
+**Residual:** multi-replica durable session version.
+
 ---
 
 ## §4 map + ledger
-
-| Bullet | Local | Residual |
-|--------|-------|----------|
-| LangGraph sole path; SSE transmits | partial 4.1–4.2 | true node/token events; legacy stream when parity **off** (default) |
-| one terminal + one history | 4.1–4.2 when parity **on** | dual path when parity off |
-| idempotent ticket + outbox | 4.3 + 4.5 retry API | Celery/cron/HTTP invoke; multi-row outbox table optional |
-| ticket_id + delivery_state; no false claim | 4.3–4.4 | live migrate 023 opt-in |
-| auto-escalate human/error on normal ask | 4.4 | stream-path parity if needed |
 
 | Slice | SHA | What |
 |-------|-----|------|
@@ -117,22 +102,20 @@ Last §2 fault-injection impl: `f347feb` (**2.6g**). **Do not re-select 2.x.**
 | 4.4 | `0371971` | auto human-route on normal ask |
 | 4.5 | `6453530` | outbox retry without second ticket |
 
+**Residual:** true node/token SSE; parity default off; Celery/cron for outbox.
+
 ---
 
-## §5 map + ledger (quality path)
+## §5 map + ledger
 
-| Slice | Status | SHA | Contract |
-|-------|--------|-----|----------|
-| **5.1** | **done** | `7c53bdb` | `grounding_status`; no fake factuality 100; auto requires grounding_allows_auto |
-| **5.2** | **done** | `50bb220` | claims bound to answer `[N]`; cited docs only |
-| **5.3** | **done** | `1cdecb2` | grader error rejects; no forced top-1; no empty-graded→raw restore |
-| 5.4 | largely covered by 5.1 truncation + 5.2 | — | claim-budget truncation already forces not_verified; no separate slice unless gaps found |
-| Live DoD | **open** | — | precision ≥0.63, recall ≥0.97, FULL≥97, faithfulness≥0.90, … ×3 runs |
+| Slice | Status | SHA |
+|-------|--------|-----|
+| **5.1** | **done** | `7c53bdb` |
+| **5.2** | **done** | `50bb220` |
+| **5.3** | **done** | `1cdecb2` |
+| Live DoD | **open** | — |
 
-**§5 local residual (not live):**
-
-- `relevance_score` still derived from quality/100 in evaluate (plan wants split)  
-- simple path skips verify → cannot auto (by design after 5.1–5.3)  
+**Residual:** live precision/recall/faithfulness ×3; relevance still derived from quality/100.
 
 ---
 
@@ -140,15 +123,34 @@ Last §2 fault-injection impl: `f347feb` (**2.6g**). **Do not re-select 2.x.**
 
 | Slice | Status | SHA | Contract |
 |-------|--------|-----|----------|
-| **6.1** | **done local** | `b3494a0` | unmeasured agentic gate; no fixed 80/85/90; never auto without measure |
-| **6.2** | **done local** | `d0317e9` | pre-response PII redact + injection refuse→human; graph + agentic |
-| **6.3** | **done local** | `d6e3a55` | independent judge policy; fail-closed on unavailable/error/parse |
-| 6.x | not started | — | calibration; measured agentic evaluate when context exists |
+| **6.1** | **done local** | `b3494a0` | unmeasured agentic; never auto on fixed scores |
+| **6.2** | **done local** | `d0317e9` | PII redact + injection refuse→human |
+| **6.3** | **done local** | `d6e3a55` | independent judge; fail-closed on outage/parse |
+| 6.x | not started | — | calibration; measured agentic evaluate |
 
-**6.1 residual:** agentic not yet full evaluate/grounding when KB context exists.  
-**6.2 residual:** pattern-based injection (not ML); online evaluators monitoring-only.  
-**6.3 residual:** dual-model profiles cannot fully separate judge vs fact-checker
-vs generator three ways; calibration artifact not built.
+---
+
+## §7 map + ledger
+
+| Slice | Status | SHA | Contract |
+|-------|--------|-----|----------|
+| **7.1** | **done local** | `94ac64e` | infra/skip/empty effective → FAIL |
+| **7.2** | **done local** | `25788ee` | mock = SMOKE only; release needs evidence |
+| 7.x | not started | — | merge-base baseline; dataset expansion; scheduled live gate |
+
+**7.2 residual:** CI still runs `--mock-experiment-runtime` as **smoke** (documented non-evidence).
+
+---
+
+## §8 map + ledger
+
+| Slice | Status | SHA | Contract |
+|-------|--------|-----|----------|
+| **8.1** | **done local** | `0bee13e` | bootstrap JWT, allowlist, frame-ancestors, session/token JS |
+| **8.2** | **← next** | — | ASGI received-byte limits; upload stream + atomic rename |
+| 8.x | not started | — | OIDC email_verified; production secrets; Playwright E2E |
+
+**8.1 residual:** no Playwright cross-origin E2E yet; production must set `WIDGET_ALLOWED_ORIGINS`.
 
 ---
 
@@ -159,8 +161,8 @@ The plan is **closed** only when:
 1. Every section’s **Проверка** has fresh evidence artifacts, and  
 2. Gate A–D / §10 checklist is signed, and  
 3. `unverified auto-rate = 0` on the release gate, and  
-4. No production claim rests on graceful skip, fixed agentic scores, or
-   self-judge without calibration.
+4. No production claim rests on graceful skip, fixed agentic scores, mock  
+   expected-copy, or self-judge without calibration.
 
 Until then status remains **ACTIVE**.
 
@@ -172,14 +174,3 @@ Until then status remains **ACTIVE**.
 - Live Redis/Celery/Chroma/worker drills  
 - Docker/kind install, restore, RPO/RTO  
 - Push, deploy, canary, production release  
-- Live Mistral/GraceKelly benchmark as sole quality proof  
-
----
-
-## Protected / process
-
-- One named atomic slice per user turn (workspace cycle budget).  
-- Do not casually checkbox the plan file.  
-- Dirty `BACKLOG.md` / `README.md` / audits: **not** the work queue.  
-- Actual Git wins over embedded SHAs.  
-- Prefer Grok implements; local commit only unless user opts into push.  

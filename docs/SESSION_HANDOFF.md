@@ -1,51 +1,280 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 — **Update-98** after **8.1** @ `0bee13e`.
+**Обновлено:** 2026-08-07 — **Update-99** (docs-only transparency after  
+**8.1** @ `0bee13e` + docs `6140df7`).  
+**Назначение:** самодостаточный старт **следующей** сессии без чтения всей  
+истории `AGENT_STATE.md`.
 
 ---
 
-## 0. Routing
+## 0. Routing (обязательно)
 
-1. Actual Git  
-2. `AGENT_STATE.md` **Update-98**  
-3. This file + `PLAN_CLOSURE_STATUS.md`
+| Приоритет | Источник |
+|-----------|----------|
+| 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-99**) |
+| 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
+| 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
----
+**Не использовать:** старые `✅ START HERE` ниже Update-99; dirty  
+`BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` как единственный SoT  
+(это pointer only).
 
-## 1. Facts
-
-| | |
-|--|--|
-| Latest impl | `0bee13e` — **8.1** widget bootstrap |
-| Prior | `25788ee` 7.2; `94ac64e` 7.1 |
-| Local complete | … + **7.1–7.2** + **8.1** |
-| Production | NOT claimed |
-| Next | **8.2** ASGI body / upload stream |
-| WIP | none |
-
-**Verify 8.1:** 12 focused passed; Ruff clean. Playwright E2E not run.
+**Plan checkboxes:** не править casually. Local slice ≠ section closed ≠ release.
 
 ---
 
-## 2. Contract 8.1 @ `0bee13e`
+## 1. Нулевая неоднозначность
+
+| Факт | Значение |
+|------|----------|
+| Latest **implementation** | `0bee13e` — **8.1** widget bootstrap security |
+| Latest **docs before this Update** | `6140df7` — Update-98 |
+| This Update-99 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | `master...origin/master [ahead 174]` before this docs commit — **refresh mandatory** |
+| Active writer / WIP | **none** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.2** + **8.1** |
+| Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
+| Plan status | **ACTIVE** |
+| Next ordered (default) | **8.2** ASGI body limits / upload stream atomic rename |
+| Gates | **no** push / deploy / live multi-service / migrate 019–023 without **explicit opt-in** |
+
+**This Update-99 is docs-only:** no code/test/plan-checkbox change; project  
+tests **not** re-run here. Implementation state unchanged after `0bee13e`.
+
+**Last known verification (8.1; not re-run this docs turn):** focused **12  
+passed** (widget bootstrap + security headers + widget assets); Ruff clean.  
+Playwright cross-origin E2E **not** run. Full suite / live **not** claimed.
+
+---
+
+## 2. Быстрый старт следующей сессии
+
+```text
+1. Cycle-guard: one named atomic slice per user turn.
+2. cd D:\RAG_Support_Assistant
+3. git status --short --branch
+4. git log -12 --oneline          # actual Git wins
+5. Read ONLY top Update-99 in AGENT_STATE.md + this file §1–§9
+6. Default work: 8.2 (below). Announce: slice 1/1
+7. Tests-first → proportional gate → local commit only (no push)
+8. Optional handoff refresh; STOP after one slice
+```
+
+**Not authorized without opt-in:** push, deploy, live PostgreSQL/Redis/Celery/  
+Chroma, `alembic upgrade` (incl. **019–023**), destructive Git, production  
+claims, bulk plan checkbox edits.
+
+---
+
+## 3. Honest residual (plan sections)
+
+| Plan § | Local | Residual / blockers |
+|--------|-------|---------------------|
+| **1** live multi-tenant / backup / RPO | partial chart/docs | **opt-in live** — Gate A open |
+| **2** index lifecycle | **2.1–2.6g** local residual closed | live PG/Redis/Celery/Chroma + migrate drills |
+| **3** execution / session / budget | **3.1a–3.1i** local | multi-replica durable session version |
+| **4** pipeline + escalation | **4.1–4.5** local | true graph tokens; parity default **off**; outbox Celery/cron |
+| **5** grounding fail-closed | **5.1–5.3** local | live metrics DoD ×3; relevance≠quality residual |
+| **6** judge / safety / agentic | **6.1–6.3** local | calibration; measured agentic evaluate when KB context |
+| **7** eval gate | **7.1–7.2** local | merge-base baseline artifact; dataset expansion; live provider gate |
+| **8** widget / edge | **8.1** local | **← 8.2** body limits; OIDC; secrets; Playwright E2E |
+| **9** cache / architecture / SLO | partial historical | as plan |
+| **10** final verification | not started | after 1–9 + opt-in evidence |
+
+**Release / production: NOT claimable** until §1 live + §5 live quality +  
+§6–7 residual + §8 residual + §10.
+
+Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
+
+---
+
+## 4. Implementation ledgers (impl SHAs only)
+
+### §3 runtime
+
+| Slice | SHA | Surface |
+|-------|-----|---------|
+| 3.1a–3.1i | ends `fe2f0aa` | executor, deadline, session, roles, budget, stream, retrieve, rerank, CAS |
+
+### §4 pipeline + escalation
+
+| Slice | SHA | Surface |
+|-------|-----|---------|
+| 4.1 | `eaf41f3` | single terminal/history when stream parity on |
+| 4.2 | `f1c846e` | graph-only generation when parity on |
+| 4.3 | `ad5e435` | durable idempotent escalation |
+| 4.4 | `0371971` | auto human-route on normal ask |
+| 4.5 | `6453530` | outbox retry API |
+
+### §5 grounding
+
+| Slice | SHA | Surface |
+|-------|-----|---------|
+| 5.1 | `7c53bdb` | `grounding_status`; auto needs grounding |
+| 5.2 | `50bb220` | citation-bound claims |
+| **5.3** | `1cdecb2` | grader fail-closed; no silent context restore |
+
+### §6 judge / safety / agentic
+
+| Slice | SHA | Surface |
+|-------|-----|---------|
+| **6.1** | `b3494a0` | agentic unmeasured gate; never auto on fixed 80/85/90 |
+| **6.2** | `d0317e9` | pre-response PII redact + injection refuse→human |
+| **6.3** | `d6e3a55` | independent judge policy; fail-closed unavailable/error/parse |
+
+### §7 eval gate
+
+| Slice | SHA | Surface |
+|-------|-----|---------|
+| **7.1** | `94ac64e` | infra/skip/zero-effective → FAIL exit 1 |
+| **7.2** | `25788ee` | mock → `SMOKE_PASS` only; `--release-gate` needs evidence |
+
+### §8 widget / edge
+
+| Slice | SHA | Surface |
+|-------|-----|---------|
+| **8.1** | **`0bee13e`** | widget bootstrap JWT, origins, frame-ancestors, session/token JS |
+
+---
+
+## 5. Contracts (recent complete slices)
+
+### 8.1 @ `0bee13e`
 
 - `POST /api/widget/bootstrap` → short-lived JWT `type=widget`, `aud=widget`
-- Env: `WIDGET_ALLOWED_ORIGINS`, `WIDGET_TOKEN_TTL_SEC` (default 900)
-- Empty allowlist → 403 (fail-closed)
-- `/static/widget.html`: CSP `frame-ancestors` from allowlist; no `X-Frame-Options: DENY`
-- Widget JS: origin handshake, Bearer token, `session_id` reuse
-- Auth accepts widget Bearer for `/api/ask`
+- Env: `WIDGET_ALLOWED_ORIGINS` (empty → 403), `WIDGET_TOKEN_TTL_SEC` (default 900)
+- Origin body must match `Origin` header when present
+- `/static/widget.html`: CSP `frame-ancestors` from allowlist; **no** global `X-Frame-Options: DENY` on that path
+- Other routes still `X-Frame-Options: DENY`
+- `static/widget.inline.js` / `widget.js`: handshake ack, Bearer, `session_id` reuse, origin checks
+- Auth: widget Bearer accepted as role `widget` for `/api/ask`
+
+### 7.2 @ `25788ee`
+
+- `apply_evidence_policy()` — mock modes never release `PASS`
+- Smoke exit follows metrics; `--release-gate` fails without evidence
+- CI uses mock smoke **without** `--release-gate`
+
+### 7.1 @ `94ac64e`
+
+- `decide_regression_gate()` — infra/skip/empty → FAIL
+- No silent pass-rate 1.0 for zero effective cases
+
+### 6.3–6.1 / 5.3 (summary)
+
+- Independent judge; PII/injection pre-response; unmeasured agentic; grader fail-closed  
+- See older handoff blocks / git for full contracts  
 
 ---
 
-## 3. Next: 8.2
+## 6. Module owners (do not reopen without conflict)
 
-ASGI received-byte limits; upload stream to temp + atomic rename.
-
-Alternates: OIDC `email_verified`; production secret guards; Playwright widget E2E.
+| Path | Slices | Role |
+|------|--------|------|
+| `api/routers/widget.py` | **8.1** | bootstrap + origin/frame helpers |
+| `auth/jwt_handler.py` | **8.1** | `create_widget_token` / widget verify |
+| `auth/dependencies.py` | **8.1** | accept widget Bearer |
+| `static/widget*.js` | **8.1** | handshake, token, session |
+| `scripts/regression_eval.py` | **7.1–7.2** | gate + evidence policy |
+| `agent/judge_policy.py` | **6.3** | independent judge |
+| `agent/response_safety.py` | **6.2** | PII + injection |
+| `agent/grounding.py` / `doc_grade.py` | **5.1–5.3** | grounding / grade |
+| `agent/graph.py` | 3.1*, 5–6, 6.1 | graph + agentic + evaluate + safety node |
+| job-object / index stack | 2.1–2.6g | **do not re-select** |
 
 ---
 
-## 4. Do not
+## 7. Key invariants (do not regress)
 
-Re-select through **8.1**. No push/live/migrate without opt-in. One slice/turn.
+1. Failed jobs with `source_path` match → retained; not auto-delete  
+2. LLM budget exhaust → `route=human` / never `auto`  
+3. Deadline fail-closed at provider/retrieve/tool/rerank  
+4. Stream parity on → single graph generation + single terminal/history  
+5. Escalation: no «передан оператору» without durable ticket  
+6. No fake factuality 100 on skip/disabled/no-context  
+7. Claims need cited `[N]` for auto  
+8. Empty graded after grade ≠ silent restore of raw context  
+9. Agentic unmeasured ≠ `route=auto` and ≠ fake quality 80/85/90  
+10. PII in terminal answer redacted; injection → refuse + human  
+11. Judge unavailable/error/parse ≠ auto; ≠ silent score 50 + `quality_source=llm`  
+12. Eval: infra/skip/zero-effective → gate FAIL  
+13. Mock expected-copy → `SMOKE_PASS` only; never release `PASS`  
+14. Widget: empty allowlist → no bootstrap; framing only via allowlisted ancestors  
+
+---
+
+## 8. Verification recipes (last known green; re-run when coding)
+
+### §8.1 band
+
+```powershell
+python -m pytest tests/test_widget_bootstrap.py tests/test_request_id.py::test_browser_security_headers_are_set tests/test_admin_ui.py::test_widget_assets_served -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step8-1-<unique>
+python -m ruff check api/routers/widget.py auth/jwt_handler.py auth/dependencies.py api/app.py config/settings.py tests/test_widget_bootstrap.py
+```
+
+### §7 band
+
+```powershell
+python -m pytest tests/test_regression_evidence_policy.py tests/test_regression_gate_fail_closed.py tests/test_regression_runner.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step7-<unique>
+```
+
+### §6 band
+
+```powershell
+python -m pytest tests/test_judge_policy.py tests/test_response_safety.py tests/test_agent_tools.py tests/test_grounding_fail_closed.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step6-<unique>
+```
+
+Full suite / live / migrate — **not** the default gate for a single slice.
+
+---
+
+## 9. Next named candidate: 8.2 (not started)
+
+**Name:** **8.2 — ASGI received-byte limits / upload stream atomic rename**  
+**Why next:** plan §8 residual; request body must be bounded by **actually  
+received** ASGI bytes; uploads stream to temp + atomic rename.
+
+### Intent
+
+1. Enforce max body on real received bytes (not Content-Length alone).  
+2. Upload path: stream to temporary file, atomic rename into place.  
+3. Tests-first fail-closed: oversized / chunked abuse rejected.  
+4. Do **not** start OIDC + secrets + Playwright in the same slice.
+
+### Out of 8.2 without opt-in
+
+- full OIDC identity binding  
+- Playwright cross-origin widget E2E  
+- live multi-service / migrate / push / deploy  
+- re-select through **8.1**  
+
+### Alternates (only if user prioritizes)
+
+- Playwright widget E2E for 8.1  
+- OIDC `email_verified` + (issuer, subject)  
+- §7 merge-base baseline artifact  
+- live §1 / migrate 019–023 (**explicit opt-in only**)  
+
+---
+
+## 10. Protected dirty / untracked
+
+**Dirty tracked (do not stage without request):**  
+`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
+
+**Untracked (do not treat as queue):**  
+`rag-remediation-plan-2026-08-03.md` (active plan), `_NEXT_SESSION.md` (pointer),  
+`.pytest_tmp*/`, presentations, architecture HTML, `.grok-prompts/`, etc.
+
+---
+
+## 11. Do not
+
+- Grep old `✅ START HERE` for work selection  
+- Re-select **2.1–2.6g**, **3.1a–3.1i**, **4.1–4.5**, **5.1–5.3**, **6.1–6.3**,  
+  **7.1–7.2**, **8.1**  
+- Claim full plan sections or production readiness  
+- Edit plan checkboxes casually  
+- Push / deploy / live multi-service / migrate without explicit opt-in  
+- Start a second named slice in the same user turn  
