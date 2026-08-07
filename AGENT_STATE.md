@@ -1,11 +1,67 @@
 # Agent State
 
+## 2026-08-07 Update-77 — record completed slice 3.1e @ `b98b917` ✅ START HERE
+
+> **Routing authority:** Update-77 records completed **3.1e** and supersedes
+> Update-76 for start-point routing. Older `✅ START HERE` blocks are
+> **archival**. Only the first/topmost Update is authoritative.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `b98b917`
+>   (`feat(llm): per-request call and token budget fail-closed`) — **3.1e**
+> - Previous: `48c2381` (**3.1d**), `d9ba87e` (**3.1c**), `76179d5` (**3.1b**),
+>   `a21f364` (**3.1a**)
+> - Previous docs: Update-76 `a29d861`
+> - This Update-77 docs SHA unknown in-file — refresh `git log`
+>
+> **Completion truth:**
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | local fault-injection residual |
+> | **3.1a–3.1e** | executor, deadline, session lock, role params, request budget |
+> | Full plan §2 / §3 | **NOT** complete (residuals remain) |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan §3 map (honest):**
+> | Bullet | Local | Residual |
+> |--------|-------|----------|
+> | shared pool + capacity hold | **3.1a** | **stream** path capacity-hold |
+> | cooperative deadline | **3.1b** (provider) | retriever/reranker/tools |
+> | per-session serialize | **3.1c** | durable optimistic version |
+> | max_tokens/temperature per role | **3.1d** | — |
+> | per-request LLM call/token budget | **3.1e** | stream path must bind same budget |
+>
+> **3.1e contract (landed):**
+> - `llm/request_budget.py` — ContextVar budget (calls + in/out/total tokens)
+> - Defaults: 24 calls / 48k in / 8k out / 50k total (`0` disables a limit)
+> - `ProviderBackedLLM` precheck + charge; no failover on budget
+> - `ConversationSession.ask` binds budget; maps `LLMBudgetExceeded` →
+>   `route=human`, `error_node=llm_budget` (**never auto**)
+>
+> **Verification:** focused **42 passed** (budget + role/deadline/session/tools);
+> Ruff clean. Full suite **not** run.
+>
+> **Next candidate only (not started):**
+> named **3.1f — streaming path capacity-hold + budget/deadline bind**
+> (`/api/ask/stream`): hold pipeline semaphore until orphan work done; bind
+> request deadline + LLM budget on stream path. Still no push/live.
+>
+> **Do not re-select:** 2.1–2.6g, **3.1a–3.1e**.
+>
+> **Protected dirty / untracked:** do not touch without request.
+>
+> **External gates:** push, deploy, live, destructive Git, prod claims.
+>
+> **Standing preference:** one turn = one named slice; local commit only.
+>
+> **Git advisory:** refresh `git status` / `git log -5` next session.
+
 ## 2026-08-07 Update-76 — record completed slice 3.1d @ `48c2381` ✅ START HERE
 
-> **Routing authority:** Update-76 records completed **3.1d** and supersedes
-> Update-75 for start-point routing. All older Update blocks below, including
-> headings that literally contain `✅ START HERE`, are **archival**. **Only
-> the first/topmost Update block in this file is authoritative.**
+> **Historical handoff (superseded by Update-77 for start-point routing).**
+> Recorded **3.1d** @ `48c2381`. Next-work naming **3.1e** is **stale**.
+>
+> **Original routing note (archival):** Update-76 recorded completed **3.1d**.
 >
 > **Known lineage (actual Git wins over any embedded hash):**
 > - Latest implementation: `48c2381`
