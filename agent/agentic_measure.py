@@ -135,23 +135,38 @@ def measure_agentic_terminal(
 
     measured_quality = False
     q_score = 0
-    r_score = 0.0
+    r_score: float | None = None
+    r_source = "unmeasured"
     q_source = "unmeasured"
     if quality_source in {"llm", "heuristic"} and quality_score is not None:
         try:
             q_score = int(quality_score)
-            r_score = (
-                float(relevance_score)
-                if relevance_score is not None
-                else round(q_score / 100.0, 3)
-            )
             q_source = str(quality_source)
             measured_quality = True
         except (TypeError, ValueError):
             measured_quality = False
             q_score = 0
-            r_score = 0.0
             q_source = "unmeasured"
+
+    # Plan §5.4: never derive relevance from quality/100.
+    from agent.relevance import measure_retrieval_relevance
+
+    if relevance_score is not None:
+        try:
+            r_score = float(relevance_score)
+            r_source = "caller"
+        except (TypeError, ValueError):
+            r_score = None
+            r_source = "unmeasured"
+    if r_score is None:
+        # Prefer retrieval scores on KB docs; fraction of self is last resort
+        # only when graded==context would apply after measure packs fields.
+        measured_r, measured_src = measure_retrieval_relevance(
+            context_docs=context,
+            graded_docs=None,
+        )
+        r_score = measured_r
+        r_source = measured_src
 
     fields: dict[str, Any] = {
         "context_docs": list(context),
@@ -161,7 +176,8 @@ def measure_agentic_terminal(
         "fact_verification_skipped": bool(skipped),
         "factuality_score": int(factuality),
         "quality_score": q_score if measured_quality else 0,
-        "relevance_score": r_score if measured_quality else 0.0,
+        "relevance_score": r_score if r_score is not None else 0.0,
+        "relevance_source": r_source,
         "quality_source": q_source,
         "agentic_measure": "kb_grounding" + ("+quality" if measured_quality else ""),
         "knowledge_gap": False,
@@ -175,8 +191,9 @@ def measure_agentic_terminal(
     grounded = grounding_allows_auto(probe, min_factuality=min_factuality)
     scores_ok = (
         measured_quality
+        and r_score is not None
         and q_score >= int(min_quality)
-        and r_score >= float(min_relevance)
+        and float(r_score) >= float(min_relevance)
     )
     if grounded and scores_ok:
         fields["route"] = "auto"

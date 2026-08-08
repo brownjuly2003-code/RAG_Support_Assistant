@@ -42,18 +42,21 @@ class AgenticEvaluateResult:
     measured: bool
 
     def as_measure_kwargs(self) -> dict[str, Any]:
-        """Kwargs accepted by ``measure_agentic_terminal`` when measured."""
+        """Kwargs accepted by ``measure_agentic_terminal`` when measured.
+
+        Plan §5.4: never invent ``relevance = quality/100``. When relevance is
+        unmeasured (None), omit it so the measure path computes retrieval
+        relevance independently.
+        """
         if not self.measured or self.quality_score is None:
             return {}
-        return {
+        out: dict[str, Any] = {
             "quality_score": int(self.quality_score),
-            "relevance_score": (
-                float(self.relevance_score)
-                if self.relevance_score is not None
-                else round(int(self.quality_score) / 100.0, 3)
-            ),
             "quality_source": self.quality_source or "llm",
         }
+        if self.relevance_score is not None:
+            out["relevance_score"] = float(self.relevance_score)
+        return out
 
     def as_state_fields(self) -> dict[str, Any]:
         """Observability fields; safe to merge without clobbering grounding."""
@@ -171,9 +174,17 @@ def evaluate_agentic_answer(
             independent=bool(resolution.independent),
         )
 
+    # Plan §5.4: relevance from retrieval docs — never quality/100.
+    from agent.relevance import measure_retrieval_relevance
+
+    rel_score, _rel_source = measure_retrieval_relevance(
+        context_docs=docs,
+        graded_docs=None,
+    )
+
     return AgenticEvaluateResult(
         quality_score=int(score),
-        relevance_score=round(int(score) / 100.0, 3),
+        relevance_score=rel_score,
         quality_source="llm",
         judge_status="ok",
         judge_reason=resolution.reason or "ok",

@@ -62,7 +62,9 @@ def test_measured_llm_score_on_success() -> None:
     assert result.measured is True
     assert result.quality_source == "llm"
     assert result.quality_score == 92
-    assert result.relevance_score == pytest.approx(0.92)
+    # Plan §5.4: relevance is retrieval keep-all for unscored docs — not 0.92.
+    assert result.relevance_score == pytest.approx(1.0)
+    assert result.relevance_score != pytest.approx(0.92)
     assert result.judge_status == "ok"
     assert result.judge_independent is True
     kwargs = result.as_measure_kwargs()

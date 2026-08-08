@@ -2199,12 +2199,20 @@ def make_evaluate_node(
                     return new_state
 
                 span.set_attribute("rag.quality_score", score)
+            # Plan §5.4: relevance is retrieval coverage — never quality/100.
+            from agent.relevance import measure_retrieval_relevance
+
+            rel_score, rel_source = measure_retrieval_relevance(
+                context_docs=state.get("context_docs"),
+                graded_docs=state.get("graded_docs"),
+            )
             new_state = cast(
                 GraphState,
                 {
                     **state,
                     "quality_score": score,
-                    "relevance_score": round(score / 100.0, 3),
+                    "relevance_score": rel_score,
+                    "relevance_source": rel_source,
                     "quality_source": "llm",
                     "judge_status": "ok",
                     "judge_reason": resolution.reason,
