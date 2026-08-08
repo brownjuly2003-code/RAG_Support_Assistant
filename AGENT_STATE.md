@@ -1,5 +1,91 @@
 # Agent State
 
+## 2026-08-08 Update-116 — 6.7 human calibration readiness / recalibrate CLI ✅ START HERE
+
+> **Routing authority:** Update-116 supersedes Update-115 **only for
+> start-point routing**. Older Update blocks (including literal
+> `✅ START HERE`) are **archival**. **Only the first/topmost Update block
+> is authoritative.** Never select work by grepping old markers.
+>
+> **Implementation this turn:** slice **6.7** — human calibration readiness
+> gate + recalibrate CLI. Does **not** claim full production human labelling
+> DoD (seed remains synthetic). No push / deploy / live / migrate.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `c707c46`
+>   (`feat(routing): human calibration readiness and recalibrate CLI (6.7)`)
+> - Prior: `69c6fdf` **6.6** · `47e255a` **7.7** · `431893c` **6.5** ·
+>   `a7cefc3` **6.4**
+> - Prior docs: `add33e9` Update-115
+> - Quality path §6: `b3494a0` 6.1 · `d0317e9` 6.2 · `d6e3a55` 6.3 ·
+>   `a7cefc3` 6.4 · `431893c` 6.5 · `69c6fdf` 6.6 · **`c707c46` 6.7**
+> - Migrations on disk (not applied): **019–023**
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **6.1–6.7** | local (bootstrap + evaluate wire + **human readiness gate**) |
+> | Full human production labelling DoD | **OPEN** (needs real dual-annotator sample) |
+> | **2.x–5.x / 7.1–7.7 / 8.x / DEP-01** | prior local scopes unchanged |
+> | Full plan / production | **NOT** claimed |
+>
+> ---
+>
+> ### Slice 6.7 contract
+>
+> - `assess_human_calibration_readiness` — fail-closed floors (n, dual-label,
+>   kappa, raw agreement, annotator ids, gold)
+> - Synthetic / unknown `label_source` **blocks** `source=human-labelled`
+> - `reissue_calibration_from_labels` recomputes agreement + cost matrix
+> - CLI: `scripts/recalibrate_routing.py` (`readiness` / `reissue`,
+>   `--require-human`, `--write`)
+> - Seed `labelled_routes.jsonl` marked `label_source=synthetic`
+> - Bootstrap artifact notes point at §6.7 reissue path
+>
+> **Files:** `agent/calibration.py`, `scripts/recalibrate_routing.py`,
+> `evaluation/calibration/*`, `tests/test_calibration_artifact.py`
+>
+> ---
+>
+> ### Known verification (6.7 turn)
+>
+> | Gate | Result |
+> |------|--------|
+> | `tests/test_calibration_artifact.py` | **19 passed** |
+> | Seed readiness CLI | `ready=False` / `NOT_READY` (synthetic — expected) |
+> | Ruff | clean |
+> | Full suite / live / push | **not** run / **not** claimed |
+>
+> ---
+>
+> ### Open boundaries
+>
+> - **← next default:** real dual-annotator human sample →
+>   `recalibrate_routing.py --require-human --write` **or** live provider
+>   execute (opt-in) **or** residual §4/§5 live / Astro7
+> - 6 residual after 6.7: production human labels not yet collected
+> - 7 residual: live execute evidence; mock≠release PASS
+> - live multi-service + migrations **019–023** (opt-in)
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–i, 4.1–4.5, 5.1–5.3, **6.1–6.7**,
+> 7.1–7.7, 8.1–8.5, DEP-01.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`  
+> Untracked: plan file, `_NEXT_SESSION.md` (pointer), pytest temps, presentations
+>
+> ### External gates (opt-in only)
+>
+> push · deploy · live multi-service · live provider execute · alembic 019–023
+
 ## 2026-08-08 Update-115 — 6.6 agentic LLM evaluate wire ✅ START HERE
 
 > **Routing authority:** Update-115 supersedes Update-114 **only for

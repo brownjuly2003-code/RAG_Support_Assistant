@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-08 (Update-115 after 6.6 agentic LLM evaluate)  
+**Date:** 2026-08-08 (Update-116 after 6.7 human calibration readiness)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-115**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-116**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -23,7 +23,7 @@
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.5 local** | **OPEN** true graph tokens; parity default off; schedule wiring | partial |
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
-| **6** judge / safety / agentic parity | **6.1–6.6 local** | OPEN (full human calibration DoD) | **yes** |
+| **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | partial + **DEP-01 local** | OPEN (Astro7 residual; cache/SLO) | soft |
@@ -63,11 +63,12 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 20 | §7.6 live provider gate scaffold | **done** `d1ae4d6` |
 | 21 | §7.7 deeper curated corpus (≥3/slice) | **done** `47e255a` |
 | 22 | §6.6 agentic LLM evaluate wire | **done** `69c6fdf` |
-| 23 | **human cal / live execute** | **← next pick** |
-| 24 | §4 residual (graph tokens / parity default) | residual |
-| 25 | §2/§3 residual if product needs | residual |
-| 26 | Astro 7 (clears DEP-01 moderate residual) | residual |
-| 27 | §1 + §10 | **opt-in live only** |
+| 23 | §6.7 human calibration readiness + CLI | **done** `c707c46` |
+| 24 | **real human sample reissue / live execute** | **← next pick** |
+| 25 | §4 residual (graph tokens / parity default) | residual |
+| 26 | §2/§3 residual if product needs | residual |
+| 27 | Astro 7 (clears DEP-01 moderate residual) | residual |
+| 28 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -140,7 +141,8 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **6.4** | **done local** | `a7cefc3` | routing calibration artifact + threshold resolve |
 | **6.5** | **done local** | `431893c` | measured grounding when agentic has KB docs |
 | **6.6** | **done local** | `69c6fdf` | LLM evaluate wire on KB agentic terminals |
-| 6.x | residual | — | full human recalibration DoD |
+| **6.7** | **done local** | `c707c46` | human readiness gate + recalibrate CLI |
+| 6.x | residual | — | production dual-annotator sample + reissue |
 
 **6.4 residual:** seed is bootstrap-defaults (historical 80/80/0.8/70), not live
 human production labelling DoD.
@@ -251,8 +253,8 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-1. **Human-labelled recalibration** (replace bootstrap calibration seed)  
+1. **Collect real dual-annotator human sample** + `recalibrate_routing.py --require-human --write`  
 2. **Live provider execute** (`RAG_LIVE_PROVIDER_GATE` + secrets + `--execute`) — opt-in  
 3. **Astro 7** major when Starlight supports it (DEP-01 moderate residual)  
 
-**Do not re-select** 2.x–8.5, 6.1–6.6, 7.1–7.7, DEP-01.
+**Do not re-select** 2.x–8.5, 6.1–6.7, 7.1–7.7, DEP-01.

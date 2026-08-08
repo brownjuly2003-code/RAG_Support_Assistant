@@ -1,7 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-08 — **Update-115** after **6.6** @ `69c6fdf`  
-(agentic LLM evaluate wire; prior docs Update-114 `93761e9`).  
+**Обновлено:** 2026-08-08 — **Update-116** after **6.7** @ `c707c46`  
+(human calibration readiness; prior `69c6fdf` 6.6 / Update-115).  
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей  
 истории `AGENT_STATE.md`.
 
@@ -12,11 +12,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-115**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-116**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-115; dirty  
+**Не использовать:** старые `✅ START HERE` ниже Update-116; dirty  
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` как единственный SoT  
 (это pointer only).
 
@@ -28,21 +28,21 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **implementation** | `69c6fdf` — **6.6** agentic LLM evaluate wire |
-| Prior implementation | `47e255a` — **7.7** deeper curated corpus (67 cases) |
-| Latest **docs before this Update** | `93761e9` — Update-114 |
-| This Update-115 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | `master...origin/master [ahead 203]` before this docs commit — **refresh mandatory** |
+| Latest **implementation** | `c707c46` — **6.7** human calibration readiness + recalibrate CLI |
+| Prior implementation | `69c6fdf` **6.6** · `47e255a` **7.7** |
+| Latest **docs before this Update** | `add33e9` — Update-115 |
+| This Update-116 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | refresh via `git status -sb` |
 | Active writer / WIP | **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.6** + **7.1–7.7** + **8.1–8.5** + **DEP-01** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered (default) | human recalibration **or** live execute (opt-in) |
+| Next ordered (default) | real human dual-annotator sample + reissue **or** live execute (opt-in) |
 | Gates | **no** push / deploy / live multi-service / live provider execute / migrate 019–023 without **explicit opt-in** |
 
-**This Update-115 records 6.6.** Implementation `69c6fdf` is committed.  
-Verification this turn: agentic evaluate + measure + agent_tools **32 passed**;  
-Ruff clean. Full suite / live / push **not** claimed.
+**This Update-116 records 6.7.** Implementation `c707c46` is committed.  
+Verification: calibration band **19 passed**; seed readiness NOT_READY (synthetic);  
+Ruff clean. Full suite / live / push **not** claimed. Production human labels **not** collected.
 
 ### Dataset snapshot (7.7)
 
@@ -70,8 +70,8 @@ Ruff clean. Full suite / live / push **not** claimed.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-115 in AGENT_STATE.md + this file §1–§11
-6. Default work: human recalibration OR live execute opt-in. Announce: slice 1/1
+5. Read ONLY top Update-116 in AGENT_STATE.md + this file §1–§11
+6. Default work: real human dual-annotator sample + reissue OR live execute opt-in. Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
 ```
@@ -91,7 +91,7 @@ destructive Git, production claims, bulk plan checkbox edits.
 | **3** execution / session / budget | **3.1a–3.1i** local | multi-replica durable session version |
 | **4** pipeline + escalation | **4.1–4.5** local | true graph tokens; parity default **off**; outbox Celery/cron |
 | **5** grounding fail-closed | **5.1–5.3** local | live metrics DoD ×3; relevance≠quality residual |
-| **6** judge / safety / agentic | **6.1–6.6** local | full human calibration DoD (bootstrap residual) |
+| **6** judge / safety / agentic | **6.1–6.7** local | production human dual-annotator sample residual |
 | **7** eval gate | **7.1–7.7** local | live execute with secrets; mock≠release; optional more depth |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
 | **9** cache / architecture / SLO | partial + **DEP-01 local** | Astro7 residual; cache/SLO |
@@ -127,7 +127,8 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | **6.3** | `d6e3a55` | independent judge fail-closed |
 | **6.4** | `a7cefc3` | routing calibration artifact (bootstrap-defaults) |
 | **6.5** | `431893c` | measured grounding when agentic has KB docs |
-| **6.6** | **`69c6fdf`** | LLM evaluate wire on KB agentic terminals |
+| **6.6** | `69c6fdf` | LLM evaluate wire on KB agentic terminals |
+| **6.7** | **`c707c46`** | human readiness gate + recalibrate CLI |
 
 ### §8 widget / edge
 
@@ -170,6 +171,14 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 - Live argv: `--release-gate --allow-paid-apis`; **forbids** mock
 - Workflow: `.github/workflows/live-provider-gate.yml` (schedule + dispatch)
 - Tests: `tests/test_live_provider_gate.py`
+
+### 6.7 @ `c707c46`
+
+- `assess_human_calibration_readiness` fail-closed floors
+- synthetic `label_source` cannot claim `source=human-labelled`
+- `reissue_calibration_from_labels` recomputes agreement/cost
+- CLI `scripts/recalibrate_routing.py` readiness/reissue/`--require-human`
+- Seed remains synthetic; production human sample still residual
 
 ### 6.6 @ `69c6fdf`
 
@@ -231,8 +240,9 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | `agent/agentic_evaluate.py` | **6.6** | agentic LLM evaluate wire |
 | `agent/agentic_measure.py` | **6.5** | measured agentic KB gate |
 | `agent/tools.py` | **6.5** | `search_kb_docs` |
-| `agent/calibration.py` | **6.4** | routing calibration |
-| `evaluation/calibration/` | **6.4** | seed artifact + labelled_routes |
+| `agent/calibration.py` | **6.4 / 6.7** | routing calibration + human readiness |
+| `scripts/recalibrate_routing.py` | **6.7** | recalibrate CLI |
+| `evaluation/calibration/` | **6.4 / 6.7** | seed artifact + labelled_routes |
 | `agent/judge_policy.py` | **6.3** | independent judge |
 | `agent/response_safety.py` | **6.2** | PII / injection |
 | `agent/grounding.py` | **5.1–5.2** | factuality / citations |
@@ -272,6 +282,7 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 26. Live provider gate is separate from PR mock smoke; opt-in only; never silent PASS  
 27. Required dataset slices need ≥3 cases each (depth floor §7.7)  
 28. Agentic KB terminals run LLM evaluate when flag ON; fail-closed quality (§6.6)  
+29. Synthetic calibration labels never upgrade to human-labelled without readiness (§6.7)  
 
 ---
 
@@ -290,6 +301,14 @@ python -m ruff check scripts/regression_eval.py tests/test_curated_dataset_expan
 python -m pytest tests/test_live_provider_gate.py tests/test_github_workflows.py -q -p no:cacheprovider -p no:schemathesis
 python -m ruff check scripts/live_provider_gate.py tests/test_live_provider_gate.py
 python scripts/live_provider_gate.py --mode readiness --write-report reports/regression/live-provider-gate-readiness.json
+```
+
+### §6.7 band
+
+```powershell
+python -m pytest tests/test_calibration_artifact.py -q -p no:cacheprovider -p no:schemathesis
+python -m ruff check agent/calibration.py scripts/recalibrate_routing.py tests/test_calibration_artifact.py
+python scripts/recalibrate_routing.py --mode readiness --labels evaluation/calibration/labelled_routes.jsonl
 ```
 
 ### §6.6 band
@@ -328,9 +347,8 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 **Default picks (one only):**
 
-1. **Real human-labelled recalibration** — replace synthetic  
-   `evaluation/calibration/labelled_routes.jsonl`; recompute agreement/cost;  
-   re-issue calibration artifact (not bootstrap-defaults)  
+1. **Collect real dual-annotator human sample** then  
+   `python scripts/recalibrate_routing.py --mode reissue --require-human --write`  
 2. **Live provider execute** with secrets + `RAG_LIVE_PROVIDER_GATE` +  
    `--execute` (**explicit opt-in only**)  
 3. **Astro 7** major when Starlight supports it (clears DEP-01 moderate residual)  
@@ -338,7 +356,7 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 ### Out without opt-in
 
 - live multi-service / migrate / push / deploy / live provider execute  
-- re-select through **8.5** / **6.1–6.6** / **7.1–7.7** / **DEP-01**  
+- re-select through **8.5** / **6.1–6.7** / **7.1–7.7** / **DEP-01**  
 - OIDC live IdP drill; full browser matrix expansion  
 - bulk plan checkbox edits; production claims  
 
