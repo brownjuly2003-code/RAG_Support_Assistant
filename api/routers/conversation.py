@@ -876,51 +876,179 @@ async def ask_stream(
             )
             settings = _app.get_settings()
 
-            if graph_parity_enabled and hasattr(session, "ask"):
-                # --- 4.2 single graph path (no parallel stream LLM) ---
-                graph_task = loop.run_in_executor(
-                    get_request_executor(),
-                    _session_ask_with_shared_limits,
-                )
+            if graph_parity_enabled and (
+                hasattr(session, "iter_ask_events") or hasattr(session, "ask")
+            ):
+                # --- 4.2/4.7 single graph path (no parallel stream LLM) ---
+                # Prefer iter_ask_events (§4.7): real LangGraph node status SSE.
+                # Fall back to session.ask for test doubles without event stream.
                 graph_result: dict[str, Any] | None = None
-                try:
-                    graph_result = await asyncio.wait_for(
-                        asyncio.shield(graph_task),
-                        timeout=graph_parity_timeout,
+                graph_nodes: list[str] = []
+                use_events = callable(getattr(session, "iter_ask_events", None))
+
+                if use_events:
+                    event_queue: asyncio.Queue[tuple[str, Any]] = asyncio.Queue()
+
+                    def _session_events_worker() -> None:
+                        try:
+                            if stream_deadline_obj is not None:
+                                from utils.request_deadline import (  # noqa: PLC0415
+                                    set_request_deadline,
+                                )
+
+                                set_request_deadline(stream_deadline_obj)
+                            if stream_budget_obj is not None:
+                                from llm.request_budget import (  # noqa: PLC0415
+                                    set_llm_request_budget,
+                                )
+
+                                set_llm_request_budget(stream_budget_obj)
+                            for ev in session.iter_ask_events(
+                                question,
+                                tenant_id=tenant,
+                                user_id=str(_user.get("sub") or "anonymous"),
+                                session_id=session_id,
+                                trace_id=request_id,
+                                confirm=body.confirm,
+                            ):
+                                loop.call_soon_threadsafe(
+                                    event_queue.put_nowait, ("event", ev)
+                                )
+                            loop.call_soon_threadsafe(
+                                event_queue.put_nowait, ("done", None)
+                            )
+                        except Exception as worker_exc:  # noqa: BLE001
+                            loop.call_soon_threadsafe(
+                                event_queue.put_nowait, ("error", worker_exc)
+                            )
+
+                    graph_task = loop.run_in_executor(
+                        get_request_executor(),
+                        _session_events_worker,
                     )
-                except asyncio.TimeoutError:
-                    logger.warning(
-                        "Streaming graph path exceeded %.1fs timeout; "
-                        "holding pipeline capacity until orphan completes",
-                        graph_parity_timeout,
-                    )
-                    if not capacity_held_for_orphan:
-                        capacity_held_for_orphan = True
-                        _hold_capacity_until_future_done(
-                            loop=loop,
-                            fut=graph_task,
-                            semaphore=semaphore,
-                        )
                     try:
-                        prometheus_metrics.record_request_timeout("/api/ask/stream")
-                    except Exception:
-                        pass
-                    yield "data: " + _json.dumps({
-                        "type": "error",
-                        "detail": "Request deadline exceeded waiting for graph",
-                        "route": "timeout",
-                        "generation_source": "graph_only",
-                    }) + "\n\n"
-                    return
-                except Exception as graph_exc:
-                    logger.warning("Streaming graph path failed: %s", graph_exc)
-                    yield "data: " + _json.dumps({
-                        "type": "error",
-                        "detail": "Graph pipeline failed",
-                        "route": "error",
-                        "generation_source": "graph_only",
-                    }) + "\n\n"
-                    return
+                        while True:
+                            try:
+                                kind, payload = await asyncio.wait_for(
+                                    event_queue.get(),
+                                    timeout=graph_parity_timeout,
+                                )
+                            except asyncio.TimeoutError:
+                                logger.warning(
+                                    "Streaming graph events exceeded %.1fs timeout; "
+                                    "holding pipeline capacity until orphan completes",
+                                    graph_parity_timeout,
+                                )
+                                if not capacity_held_for_orphan:
+                                    capacity_held_for_orphan = True
+                                    _hold_capacity_until_future_done(
+                                        loop=loop,
+                                        fut=graph_task,
+                                        semaphore=semaphore,
+                                    )
+                                try:
+                                    prometheus_metrics.record_request_timeout(
+                                        "/api/ask/stream"
+                                    )
+                                except Exception:
+                                    pass
+                                yield "data: " + _json.dumps({
+                                    "type": "error",
+                                    "detail": "Request deadline exceeded waiting for graph",
+                                    "route": "timeout",
+                                    "generation_source": "graph_only",
+                                }) + "\n\n"
+                                return
+
+                            if kind == "error":
+                                logger.warning(
+                                    "Streaming graph event path failed: %s", payload
+                                )
+                                yield "data: " + _json.dumps({
+                                    "type": "error",
+                                    "detail": "Graph pipeline failed",
+                                    "route": "error",
+                                    "generation_source": "graph_only",
+                                }) + "\n\n"
+                                return
+                            if kind == "done":
+                                break
+                            if not isinstance(payload, dict):
+                                continue
+                            if payload.get("type") == "status":
+                                node_name = str(payload.get("node") or "unknown")
+                                graph_nodes.append(node_name)
+                                yield "data: " + _json.dumps({
+                                    "type": "status",
+                                    "node": node_name,
+                                    "source": "graph",
+                                    "phase": str(payload.get("phase") or "end"),
+                                }) + "\n\n"
+                            elif payload.get("type") == "pipeline_result":
+                                state = payload.get("state")
+                                if isinstance(state, dict):
+                                    graph_result = state
+                                nodes = payload.get("nodes")
+                                if isinstance(nodes, list):
+                                    for n in nodes:
+                                        name = str(n)
+                                        if name and name not in graph_nodes:
+                                            graph_nodes.append(name)
+                    except Exception as graph_exc:
+                        logger.warning(
+                            "Streaming graph event path failed: %s", graph_exc
+                        )
+                        yield "data: " + _json.dumps({
+                            "type": "error",
+                            "detail": "Graph pipeline failed",
+                            "route": "error",
+                            "generation_source": "graph_only",
+                        }) + "\n\n"
+                        return
+                else:
+                    # Legacy §4.2 ask-only path (test doubles without events).
+                    graph_task = loop.run_in_executor(
+                        get_request_executor(),
+                        _session_ask_with_shared_limits,
+                    )
+                    try:
+                        graph_result = await asyncio.wait_for(
+                            asyncio.shield(graph_task),
+                            timeout=graph_parity_timeout,
+                        )
+                    except asyncio.TimeoutError:
+                        logger.warning(
+                            "Streaming graph path exceeded %.1fs timeout; "
+                            "holding pipeline capacity until orphan completes",
+                            graph_parity_timeout,
+                        )
+                        if not capacity_held_for_orphan:
+                            capacity_held_for_orphan = True
+                            _hold_capacity_until_future_done(
+                                loop=loop,
+                                fut=graph_task,
+                                semaphore=semaphore,
+                            )
+                        try:
+                            prometheus_metrics.record_request_timeout("/api/ask/stream")
+                        except Exception:
+                            pass
+                        yield "data: " + _json.dumps({
+                            "type": "error",
+                            "detail": "Request deadline exceeded waiting for graph",
+                            "route": "timeout",
+                            "generation_source": "graph_only",
+                        }) + "\n\n"
+                        return
+                    except Exception as graph_exc:
+                        logger.warning("Streaming graph path failed: %s", graph_exc)
+                        yield "data: " + _json.dumps({
+                            "type": "error",
+                            "detail": "Graph pipeline failed",
+                            "route": "error",
+                            "generation_source": "graph_only",
+                        }) + "\n\n"
+                        return
 
                 if not isinstance(graph_result, dict):
                     yield "data: " + _json.dumps({
@@ -940,11 +1068,18 @@ async def ask_stream(
                     graph_appended_history = True
 
                 terminal_answer = str(graph_result.get("answer") or "")
-                yield "data: " + _json.dumps({"type": "token_start"}) + "\n\n"
+                # UX tokens of the finished graph answer (not a second LLM stream).
+                yield "data: " + _json.dumps({
+                    "type": "token_start",
+                    "source": "graph",
+                    "token_source": "graph_answer_chunks",
+                }) + "\n\n"
                 for chunk in _chunk_text_for_sse(terminal_answer):
                     yield "data: " + _json.dumps({
                         "type": "token",
                         "token": chunk,
+                        "source": "graph",
+                        "token_source": "graph_answer_chunks",
                     }) + "\n\n"
 
                 if not graph_appended_history:
@@ -977,6 +1112,8 @@ async def ask_stream(
                     "answer": terminal_answer,
                     "answer_source": "graph",
                     "generation_source": "graph_only",
+                    "events_source": "graph" if use_events else "ask",
+                    "graph_nodes": graph_nodes,
                     "quality_score": quality,
                     "quality_source": quality_source,
                     "route": route,

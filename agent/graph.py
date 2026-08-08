@@ -2620,6 +2620,70 @@ def _start_trace_for_request(
     return start_trace(*args, **kwargs)
 
 
+def _prepare_qa_pipeline(
+    question: str,
+    retriever: Any,
+    llm: SupportsInvoke | None = None,
+    max_iterations: int = 2,
+    chat_history: list[dict[str, str]] | None = None,
+    trace_id: str | None = None,
+    tenant_id: str = "default",
+    user_id: str = "anonymous",
+    session_id: str | None = None,
+) -> tuple[Any, GraphState, Any, str, Any]:
+    """Shared setup for invoke and event-stream QA paths.
+
+    Returns ``(graph, initial_state, settings, internal_trace_id, experiment_token)``.
+    """
+    # Inbound ``trace_id`` is external correlation; internal UUID comes back.
+    internal_trace_id = _start_trace_for_request(trace_id, tenant_id=tenant_id)
+    assigned_experiment = None
+    try:
+        from agent.prompt_registry import resolve_active_experiment as _resolve_active
+
+        assigned_experiment = _resolve_active(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            session_id=session_id,
+        )
+    except Exception:
+        assigned_experiment = None
+    experiment_token = (
+        set_current_experiment(
+            assigned_experiment
+            if assigned_experiment is not None
+            else (load_current_experiment() if load_current_experiment is not None else None)
+        )
+        if set_current_experiment is not None
+        else None
+    )
+    if get_settings is not None and getattr(get_settings, "__module__", "") != "config.settings":
+        settings = get_settings()
+    else:
+        try:
+            from config.settings import get_settings as config_get_settings
+        except ImportError:
+            settings = get_settings() if get_settings is not None else None
+        else:
+            settings = config_get_settings()
+    initial_state = create_initial_state(
+        question=question,
+        trace_id=internal_trace_id,
+        tenant_id=tenant_id,
+    )
+    initial_state["max_iterations"] = max_iterations
+    if chat_history:
+        initial_state["chat_history"] = chat_history
+
+    graph = build_support_graph(
+        retriever=retriever,
+        llm=llm,
+        min_quality=getattr(settings, "quality_threshold", 80) if settings else 80,
+        max_iterations=max_iterations,
+    )
+    return graph, initial_state, settings, internal_trace_id, experiment_token
+
+
 def run_qa_pipeline(
     question: str,
     retriever: Any,
@@ -2642,53 +2706,18 @@ def run_qa_pipeline(
         trace_id: external request correlation (e.g. X-Request-Id); not the
             internal SQLite primary key.
     """
-    # Inbound ``trace_id`` is external correlation; internal UUID comes back.
-    trace_id = _start_trace_for_request(trace_id, tenant_id=tenant_id)
-    assigned_experiment = None
-    try:
-        from agent.prompt_registry import resolve_active_experiment as _resolve_active
-        assigned_experiment = _resolve_active(
-            tenant_id=tenant_id,
-            user_id=user_id,
-            session_id=session_id,
-        )
-    except Exception:
-        assigned_experiment = None
-    experiment_token = (
-        set_current_experiment(
-            assigned_experiment
-            if assigned_experiment is not None
-            else (load_current_experiment() if load_current_experiment is not None else None)
-        )
-        if set_current_experiment is not None
-        else None
+    graph, initial_state, settings, trace_id, experiment_token = _prepare_qa_pipeline(
+        question=question,
+        retriever=retriever,
+        llm=llm,
+        max_iterations=max_iterations,
+        chat_history=chat_history,
+        trace_id=trace_id,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        session_id=session_id,
     )
     try:
-        if get_settings is not None and getattr(get_settings, "__module__", "") != "config.settings":
-            settings = get_settings()
-        else:
-            try:
-                from config.settings import get_settings as config_get_settings
-            except ImportError:
-                settings = get_settings() if get_settings is not None else None
-            else:
-                settings = config_get_settings()
-        initial_state = create_initial_state(
-            question=question,
-            trace_id=trace_id,
-            tenant_id=tenant_id,
-        )
-        initial_state["max_iterations"] = max_iterations
-        if chat_history:
-            initial_state["chat_history"] = chat_history
-
-        graph = build_support_graph(
-            retriever=retriever,
-            llm=llm,
-            min_quality=getattr(settings, "quality_threshold", 80),
-            max_iterations=max_iterations,
-        )
-
         final_state = graph.invoke(initial_state)
         finish_trace(trace_id, final_state)
         if (
@@ -2790,6 +2819,67 @@ def run_qa_pipeline(
                         extra={"trace_id": trace_id},
                     )
         return final_state
+    finally:
+        if experiment_token is not None and reset_current_experiment is not None:
+            reset_current_experiment(experiment_token)
+
+
+def iter_qa_pipeline_events(
+    question: str,
+    retriever: Any,
+    llm: SupportsInvoke | None = None,
+    max_iterations: int = 2,
+    chat_history: list[dict[str, str]] | None = None,
+    trace_id: str | None = None,
+    tenant_id: str = "default",
+    user_id: str = "anonymous",
+    session_id: str | None = None,
+) -> Any:
+    """Yield real LangGraph node status events then a terminal pipeline_result.
+
+    Plan §4.7: SSE can relay graph node names while the single pipeline runs.
+    Does not run a second generation. Sync callers should use ``run_qa_pipeline``.
+    """
+    from agent.graph_stream import stream_graph_node_events
+
+    graph, initial_state, settings, internal_trace, experiment_token = _prepare_qa_pipeline(
+        question=question,
+        retriever=retriever,
+        llm=llm,
+        max_iterations=max_iterations,
+        chat_history=chat_history,
+        trace_id=trace_id,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        session_id=session_id,
+    )
+    try:
+        final_state: GraphState | None = None
+        for event in stream_graph_node_events(graph, initial_state):
+            if event.get("type") == "pipeline_result":
+                state = event.get("state")
+                final_state = cast(GraphState, state if isinstance(state, dict) else {})
+                # Ensure trace_id is the internal one used for finish_trace.
+                if final_state.get("trace_id") in (None, "", trace_id):
+                    final_state = {**final_state, "trace_id": internal_trace}
+                finish_trace(internal_trace, final_state)
+                yield {
+                    "type": "pipeline_result",
+                    "state": final_state,
+                    "source": "graph",
+                    "nodes": list(event.get("nodes") or []),
+                }
+            else:
+                yield event
+        if final_state is None:
+            final_state = graph.invoke(initial_state)
+            finish_trace(internal_trace, final_state)
+            yield {
+                "type": "pipeline_result",
+                "state": final_state,
+                "source": "graph",
+                "nodes": [],
+            }
     finally:
         if experiment_token is not None and reset_current_experiment is not None:
             reset_current_experiment(experiment_token)
@@ -3395,6 +3485,119 @@ class ConversationSession:
                 extra={"trace_id": trace_id},
             )
             return self._timed_out_state(question, budget_sec, trace_id, tenant_id)
+
+    def iter_ask_events(
+        self,
+        question: str,
+        trace_id: Optional[str] = None,
+        tenant_id: str = "default",
+        confirm: bool | None = None,
+        user_id: str = "anonymous",
+        session_id: str | None = None,
+        expected_version: int | None = None,
+    ) -> Any:
+        """Yield graph node status events then a terminal pipeline_result (plan §4.7).
+
+        Same exclusive-turn and history semantics as ``ask``, but the LangGraph
+        path publishes real node names for SSE. Agentic short-circuit yields a
+        single ``agentic`` status then the agentic terminal state.
+        """
+        from config.settings import get_settings
+
+        settings = get_settings()
+        if expected_version is not None:
+            try:
+                expected_version = int(expected_version)
+            except (TypeError, ValueError):
+                conflict = self._version_conflict_state(
+                    question,
+                    expected_version=-1,
+                    actual_version=self.mutation_version,
+                    trace_id=trace_id,
+                    tenant_id=tenant_id,
+                )
+                yield {"type": "status", "node": "conflict", "source": "graph", "phase": "end"}
+                yield {
+                    "type": "pipeline_result",
+                    "state": conflict,
+                    "source": "graph",
+                    "nodes": ["conflict"],
+                }
+                return
+
+        turn = self._acquire_turn(expected_version=expected_version)
+        if turn is None:
+            conflict = self._version_conflict_state(
+                question,
+                expected_version=int(expected_version or -1),
+                actual_version=self.mutation_version,
+                trace_id=trace_id,
+                tenant_id=tenant_id,
+            )
+            yield {"type": "status", "node": "conflict", "source": "graph", "phase": "end"}
+            yield {
+                "type": "pipeline_result",
+                "state": conflict,
+                "source": "graph",
+                "nodes": ["conflict"],
+            }
+            return
+
+        history_appended = False
+        try:
+            def _emit_terminal(state: GraphState, *, nodes: list[str] | None = None) -> Any:
+                nonlocal history_appended
+                answer = state.get("answer") or ""
+                if not history_appended:
+                    self._append_history(question, answer, turn=turn)
+                    history_appended = True
+                stamped = self._stamp_session_version(state)
+                return {
+                    "type": "pipeline_result",
+                    "state": stamped,
+                    "source": "graph",
+                    "nodes": list(nodes or []),
+                }
+
+            if getattr(settings, "agentic_mode", False):
+                yield {
+                    "type": "status",
+                    "node": "agentic",
+                    "source": "graph",
+                    "phase": "end",
+                }
+                agentic_result = self._run_agentic_flow(
+                    question=question,
+                    trace_id=trace_id,
+                    tenant_id=tenant_id,
+                    user_id=user_id,
+                    session_id=session_id,
+                    confirm=confirm,
+                )
+                if agentic_result is not None:
+                    yield _emit_terminal(agentic_result, nodes=["agentic"])
+                    return
+
+            for event in iter_qa_pipeline_events(
+                question=question,
+                retriever=self._retriever,
+                llm=self._llm,
+                max_iterations=self._max_iterations,
+                chat_history=self._history_snapshot(),
+                trace_id=trace_id,
+                tenant_id=tenant_id,
+                user_id=user_id,
+                session_id=session_id,
+            ):
+                if event.get("type") == "pipeline_result":
+                    state = event.get("state")
+                    final = cast(GraphState, state if isinstance(state, dict) else {})
+                    nodes = event.get("nodes") if isinstance(event.get("nodes"), list) else []
+                    yield _emit_terminal(final, nodes=[str(n) for n in nodes])
+                else:
+                    yield event
+        finally:
+            self._release_turn(turn, invalidate=False)
 
     def ask(
         self,
