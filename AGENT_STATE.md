@@ -1,5 +1,137 @@
 # Agent State
 
+## 2026-08-08 Update-115 — 6.6 agentic LLM evaluate wire ✅ START HERE
+
+> **Routing authority:** Update-115 supersedes Update-114 **only for
+> start-point routing**. All older Update blocks below (including headings
+> that literally contain `✅ START HERE`) are **archival**. **Only the
+> first/topmost Update block in this file is authoritative.** Never select
+> work by grepping old `START HERE` markers.
+>
+> **Implementation this turn:** slice **6.6** — agentic LLM evaluate wire.
+> Plan checkboxes, backlog, README, audit, protected dirty files, and
+> dataset content were **not** bulk-edited. No push / deploy / live /
+> migrate.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `69c6fdf`
+>   (`feat(agentic): wire LLM evaluate on KB terminals (6.6)`)
+>   - slice **6.6**
+> - Prior impl: `47e255a` **7.7** · `431893c` **6.5** · `d1ae4d6` **7.6**
+> - Prior docs: `93761e9` Update-114 · `10da548` Update-113
+> - Quality path (impl SHAs, recent):
+>   - 5: `7c53bdb` 5.1 · `50bb220` 5.2 · `1cdecb2` **5.3**
+>   - 6: `b3494a0` 6.1 · `d0317e9` 6.2 · `d6e3a55` 6.3 · `a7cefc3` 6.4 ·
+>     `431893c` 6.5 · **`69c6fdf` 6.6**
+>   - 7: `94ac64e` 7.1 · `25788ee` 7.2 · `0d34be2` 7.3 · `8f4269f` 7.4 ·
+>     `4eceed3` 7.5 · `d1ae4d6` 7.6 · `47e255a` **7.7**
+>   - 8: `0bee13e`…`4d6be52` **8.5** · DEP-01 `f622d58`
+> - Migrations on disk (not applied): **019–023**
+> - This Update-115 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 203]` before this docs commit.
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | local residual closed at documented scopes |
+> | **3.1a–3.1i** | local at documented scopes |
+> | **4.1–4.5** | stream parity + durable escalation **local** |
+> | **5.1–5.3** | grounding + citation-bound + grader fail-closed **local** |
+> | **6.1–6.6** | unmeasured → measured KB grounding → **LLM evaluate wire** **local** |
+> | **7.1–7.7** | eval fail-closed + mock≠PASS + baseline + CI + live scaffold + depth **local** |
+> | **8.1–8.5** | widget/edge security + Playwright E2E **local** |
+> | **DEP-01** | docs-site npm audit high=0 + dated exceptions **local** |
+> | Full plan §1–§10 | **NOT** complete (live DoD / human cal / Gate A open) |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+>
+> **Transparency maps:**
+> - [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) — full next-session capsule
+> - [`docs/PLAN_CLOSURE_STATUS.md`](docs/PLAN_CLOSURE_STATUS.md) — residual matrix
+> - [`_NEXT_SESSION.md`](_NEXT_SESSION.md) — pointer only (not SoT)
+>
+> ---
+>
+> ### Slice 6.6 contract
+>
+> - Module: `agent/agentic_evaluate.py` — independent-judge self-eval for agentic
+> - Wire: `_agentic_terminal_fields_with_eval` on KB agentic terminals (provider
+>   tool loop final/fallback + heuristic order+KB path)
+> - Measured `quality_source=llm` only when judge returns parseable 1–100 score
+> - Fail-closed: unavailable / error / parse → quality unmeasured (no fixed
+>   80/85/90); citation-bound grounding from §6.5 is **not** wiped
+> - `route=auto` only when grounding + measured quality clear calibration floors
+> - Flag: `RAG_AGENTIC_QUALITY_EVAL` / `settings.agentic_quality_eval` (default ON)
+> - Confirmation / order-only / no-KB remain unmeasured (6.1)
+>
+> **Files:** `agent/agentic_evaluate.py`, `agent/graph.py`, `config/settings.py`,
+> `tests/test_agentic_evaluate.py`, `tests/test_agent_tools.py`
+>
+> ---
+>
+> ### Known verification (6.6 turn)
+>
+> | Gate | Result |
+> |------|--------|
+> | `tests/test_agentic_evaluate.py` + measure + agent_tools | **32 passed** |
+> | Ruff on touched paths | clean |
+> | Full suite / live / migrate / push | **not** run / **not** claimed |
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next default pick one:** real **human-labelled recalibration** **or**
+>   **live provider execute** (opt-in + secrets + `--execute`) **or** optional
+>   further residual (graph tokens / Astro7 / live multi-service)
+> - 6 residual after 6.6: full human calibration DoD (seed still bootstrap);
+>   live quality metrics ×3 still open under §5
+> - 7 residual: live execute evidence; mock still not release PASS
+> - 4 residual: true graph SSE tokens; parity default off; outbox schedule
+> - multi-replica durable session version
+> - DEP-01 residual: Astro 6 moderate until Astro 7; exceptions expire **2026-11-07**
+> - live multi-service + migrations **019–023** (**opt-in**)
+> - plan 9–10; full suite / release / production
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **human recalibration** **or** **live provider execute (opt-in)** —
+> one atomic residual; do not combine with live drills without opt-in.
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–3.1i, 4.1–4.5, 5.1–5.3, 6.1–**6.6**,
+> 7.1–7.7, **8.1–8.5**, **DEP-01**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Do not touch/stage/remove without explicit request:
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+>   `_NEXT_SESSION.md` (**pointer only — not routing authority**),
+>   `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
+>   casually), architecture HTML, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push · deploy · live multi-service · live provider execute · alembic 019–023 ·
+> production claims · bulk plan checkbox edits
+
 ## 2026-08-08 Update-114 — docs-only full transparency after 7.7 / Update-113 ✅ START HERE
 
 > **Routing authority:** Update-114 is **docs-only / transparency-only** and

@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-08 (Update-114 full transparency after 7.7)  
+**Date:** 2026-08-08 (Update-115 after 6.6 agentic LLM evaluate)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-114**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-115**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -23,7 +23,7 @@
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.5 local** | **OPEN** true graph tokens; parity default off; schedule wiring | partial |
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
-| **6** judge / safety / agentic parity | **6.1–6.5 local** | OPEN (full human calibration; agentic LLM evaluate) | **yes** |
+| **6** judge / safety / agentic parity | **6.1–6.6 local** | OPEN (full human calibration DoD) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | partial + **DEP-01 local** | OPEN (Astro7 residual; cache/SLO) | soft |
@@ -62,11 +62,12 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 19 | §6.5 measured agentic KB gate | **done** `431893c` |
 | 20 | §7.6 live provider gate scaffold | **done** `d1ae4d6` |
 | 21 | §7.7 deeper curated corpus (≥3/slice) | **done** `47e255a` |
-| 22 | **agentic LLM evaluate / human cal / live execute** | **← next pick** |
-| 23 | §4 residual (graph tokens / parity default) | residual |
-| 24 | §2/§3 residual if product needs | residual |
-| 25 | Astro 7 (clears DEP-01 moderate residual) | residual |
-| 26 | §1 + §10 | **opt-in live only** |
+| 22 | §6.6 agentic LLM evaluate wire | **done** `69c6fdf` |
+| 23 | **human cal / live execute** | **← next pick** |
+| 24 | §4 residual (graph tokens / parity default) | residual |
+| 25 | §2/§3 residual if product needs | residual |
+| 26 | Astro 7 (clears DEP-01 moderate residual) | residual |
+| 27 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -138,14 +139,18 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **6.3** | **done local** | `d6e3a55` | independent judge; fail-closed on outage/parse |
 | **6.4** | **done local** | `a7cefc3` | routing calibration artifact + threshold resolve |
 | **6.5** | **done local** | `431893c` | measured grounding when agentic has KB docs |
-| 6.x | residual | — | full human recalibration; **agentic LLM evaluate wire** |
+| **6.6** | **done local** | `69c6fdf` | LLM evaluate wire on KB agentic terminals |
+| 6.x | residual | — | full human recalibration DoD |
 
 **6.4 residual:** seed is bootstrap-defaults (historical 80/80/0.8/70), not live
 human production labelling DoD.
 
-**6.5 residual:** KB path measures citation-bound grounding; quality stays
-unmeasured until a real llm/heuristic score is supplied — auto requires both.
+**6.5 residual (closed by 6.6 for quality wire):** KB path measures citation-bound
+grounding; 6.6 supplies llm quality when judge succeeds.
 Confirmation/order-only remain unmeasured by design.
+
+**6.6 residual:** live judge quality evidence under production load still open
+under §5 live metrics; flag can disable evaluate for cost rollback.
 
 ---
 
@@ -246,8 +251,8 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-1. **Agentic LLM evaluate wire** (measured quality on KB agentic terminals)  
-2. **Human-labelled recalibration** (replace bootstrap calibration seed)  
-3. **Live provider execute** (`RAG_LIVE_PROVIDER_GATE` + secrets + `--execute`) — opt-in  
+1. **Human-labelled recalibration** (replace bootstrap calibration seed)  
+2. **Live provider execute** (`RAG_LIVE_PROVIDER_GATE` + secrets + `--execute`) — opt-in  
+3. **Astro 7** major when Starlight supports it (DEP-01 moderate residual)  
 
-**Do not re-select** 2.x–8.5, 6.1–6.5, 7.1–7.7, DEP-01.
+**Do not re-select** 2.x–8.5, 6.1–6.6, 7.1–7.7, DEP-01.
