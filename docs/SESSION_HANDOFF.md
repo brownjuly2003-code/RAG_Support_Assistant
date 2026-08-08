@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 — **Update-105** (completed **7.3** @ `0d34be2`).  
+**Обновлено:** 2026-08-07 — **Update-106** (completed **DEP-01** @ `f622d58`).  
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей  
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-105**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-106**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-105; dirty  
+**Не использовать:** старые `✅ START HERE` ниже Update-106; dirty  
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` как единственный SoT  
 (это pointer only).
 
@@ -27,20 +27,20 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **implementation** | `0d34be2` — **7.3** merge-base baseline artifact |
-| Latest **docs before this Update** | `ad8be2b` — Update-104 |
-| This Update-105 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | `master...origin/master [ahead 185]` after impl — **refresh mandatory** |
+| Latest **implementation** | `f622d58` — **DEP-01** docs-site npm audit (high=0) |
+| Latest **docs before this Update** | `5650711` — Update-105 |
+| This Update-106 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | `master...origin/master [ahead 187]` after impl — **refresh mandatory** |
 | Active writer / WIP | **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.3** + **8.1–8.5** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.3** + **8.1–8.5** + **DEP-01** |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered (default) | DEP-01 **or** §7 dataset expansion **or** §6 calibration residual |
+| Next ordered (default) | §7 dataset expansion **or** §6 calibration **or** CI baseline-artifact wire |
 | Gates | **no** push / deploy / live multi-service / migrate 019–023 without **explicit opt-in** |
 
-**Last known verification (7.3 this turn):** focused **37 passed**  
-(baseline artifact + evidence + gate + regression_runner); Ruff clean. Full  
-suite / live **not** claimed.
+**Last known verification (DEP-01 this turn):** `npm run audit:deps` PASS;  
+`npm audit --audit-level=high` exit 0; focused **4 passed**. Full suite /  
+Pages deploy **not** claimed.
 
 ---
 
@@ -51,8 +51,8 @@ suite / live **not** claimed.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-105 in AGENT_STATE.md + this file §1–§11
-6. Default work: DEP-01 OR §7 dataset OR §6 calibration. Announce: slice 1/1
+5. Read ONLY top Update-106 in AGENT_STATE.md + this file §1–§11
+6. Default work: §7 dataset OR §6 calibration OR CI baseline wire. Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
 ```
@@ -75,7 +75,7 @@ claims, bulk plan checkbox edits.
 | **6** judge / safety / agentic | **6.1–6.3** local | calibration; measured agentic evaluate when KB context |
 | **7** eval gate | **7.1–7.3** local | dataset expansion; live provider gate; CI wire artifact |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
-| **9** cache / architecture / SLO | partial historical | as plan; DEP-01 docs-site audit residual |
+| **9** cache / architecture / SLO | partial + **DEP-01 local** | Astro7 residual when Starlight ready; cache/SLO |
 | **10** final verification | not started | after 1–9 + opt-in evidence |
 
 **Release / production: NOT claimable** until §1 live + §5 live quality +  
@@ -118,6 +118,15 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 ---
 
 ## 5. Contracts (recent complete slices)
+
+### DEP-01 @ `f622d58`
+
+- `docs-site`: astro `^6.4.8`, sharp `^0.35.3`; lock refresh → **high=0 critical=0**
+- Residual moderate/low: dated exceptions to **2026-11-07** in
+  `docs-site/npm-audit-exceptions.json`
+- Gate: `npm audit --audit-level=high` + `npm run audit:deps` (no `|| true`)
+- Files: `docs-site/scripts/check-npm-audit.mjs`, `.github/workflows/docs-site.yml`,
+  `tests/test_docs_site_npm_audit.py`
 
 ### 7.3 @ `0d34be2`
 
@@ -239,6 +248,14 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 
 ## 8. Verification recipes (last known green; re-run when coding)
 
+### DEP-01 band
+
+```powershell
+cd docs-site; npm audit --audit-level=high; npm run audit:deps
+cd ..
+python -m pytest tests/test_docs_site_npm_audit.py tests/test_github_workflows.py::test_docs_site_workflow_audits_npm_dependencies_before_build -q -p no:cacheprovider
+```
+
 ### §7.3 band
 
 ```powershell
@@ -294,15 +311,15 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 **Default picks (one only):**
 
-1. **DEP-01 docs-site dependency audit**  
-2. **§7 dataset expansion** (multi-tenant / grounding / adversarial slices)  
-3. **§6 calibration / measured agentic residual** when KB context exists  
-4. **CI wire** of `--baseline-artifact` / `--require-baseline-artifact` on release path  
+1. **§7 dataset expansion** (multi-tenant / grounding / adversarial slices)  
+2. **§6 calibration / measured agentic residual** when KB context exists  
+3. **CI wire** of `--baseline-artifact` / `--require-baseline-artifact` on release path  
+4. **Astro 7** major when Starlight supports it (clears residual moderate)  
 
 ### Out without opt-in
 
 - live multi-service / migrate / push / deploy  
-- re-select through **8.5** / **7.3**  
+- re-select through **8.5** / **7.3** / **DEP-01**  
 - OIDC live IdP drill; full browser matrix expansion  
 
 ### Alternates (only if user prioritizes)
@@ -327,7 +344,8 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 - Grep old `✅ START HERE` for work selection  
 - Re-select **2.1–2.6g**, **3.1a–3.1i**, **4.1–4.5**, **5.1–5.3**, **6.1–6.3**,  
-  **7.1–7.3**, **8.1–8.5**  
+  **7.1–7.3**, **8.1–8.5**, **DEP-01**  
+ 
  
  
 - Claim full plan sections or production readiness  

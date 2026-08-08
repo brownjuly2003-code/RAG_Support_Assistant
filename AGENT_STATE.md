@@ -1,8 +1,97 @@
 # Agent State
 
+## 2026-08-07 Update-106 — completed DEP-01 docs-site npm audit @ `f622d58` ✅ START HERE
+
+> **Routing authority:** Update-106 supersedes Update-105 **only for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `f622d58`
+>   (`fix(deps): docs-site npm audit DEP-01 lock refresh and fail-closed gate`)
+>   - slice **DEP-01**
+> - Previous: `0d34be2` — **7.3**; docs Update-105 `5650711`
+> - Migrations on disk (not applied): **019–023**
+> - This Update-106 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 187]` after impl (before this docs commit).
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** … **8.1–8.5** | local at documented scopes |
+> | **7.1–7.3** | eval gate band local |
+> | **DEP-01** | docs-site npm audit **local** @ `f622d58` (high=0) |
+> | Full plan §1–§10 | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
+>
+> ---
+>
+> ### DEP-01 contract (local)
+>
+> - Lock refresh: `astro@6.4.8`, `sharp@0.35.3`, transitive audit fix
+> - Posture: **high=0 critical=0** (was 6–8 high)
+> - Residual: 4 moderate + 1 low (Astro 6 / esbuild) — dated exceptions to
+>   **2026-11-07** in `docs-site/npm-audit-exceptions.json`
+> - Gate: `npm audit --audit-level=high` + `npm run audit:deps` (no `|| true`)
+> - Checker: `docs-site/scripts/check-npm-audit.mjs`
+>
+> **Verification:** `npm run audit:deps` PASS; focused **4 passed** (exceptions
+> register + workflow); high audit exit 0. Full docs build / Pages deploy
+> **not** run this turn. Full suite / push / live **not** claimed.
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next residual (default):** §7 dataset expansion **or** §6 calibration
+>   **or** CI wire baseline artifact **or** Astro 7 major when Starlight ready
+> - DEP-01 residual: moderate Astro advisories until Astro 7; exception expiry
+> - 7 residual: dataset; live provider gate; CI smoke still mock default
+> - live multi-service + migrations **019–023** (**opt-in**)
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **§7 dataset expansion** **or** **§6 calibration residual** **or**
+> **CI wire of baseline artifact** — one atomic residual only.
+>
+> **Do not re-select:** through **8.5**, **7.1–7.3**, **DEP-01**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked:** plan file, `_NEXT_SESSION.md` (pointer), pytest temps, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live drills, `alembic upgrade`, destructive Git, production claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; quality > speed. **Actual Git wins.**
+
+
 ## 2026-08-07 Update-105 — completed slice 7.3 merge-base baseline artifact @ `0d34be2` ✅ START HERE
 
-> **Routing authority:** Update-105 supersedes Update-104 **only for start-point
+> **Historical handoff (superseded by Update-106 for start-point routing).**
+> Recorded **7.3** @ `0d34be2`. Next was DEP-01 — now done @ `f622d58`.
+>
+> **Original routing note (archival):** Update-105 supersedes Update-104 **only for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old

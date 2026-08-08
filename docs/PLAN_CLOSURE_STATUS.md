@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-07 (Update-105 after 7.3 merge-base baseline)  
+**Date:** 2026-08-07 (Update-106 after DEP-01 docs-site npm audit)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-105**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-106**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -26,7 +26,7 @@
 | **6** judge / safety / agentic parity | **6.1–6.3 local** | OPEN (calibration / measured agentic) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.3 local** | OPEN (dataset / live gate / CI wire) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
-| **9** cache / architecture / SLO | partial historical | OPEN (DEP-01 residual) | soft |
+| **9** cache / architecture / SLO | partial + **DEP-01 local** | OPEN (Astro7 residual; cache/SLO) | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
 **Project / production release: NOT claimed.**
@@ -55,7 +55,8 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 12 | §8.4 production secrets / no dev-admin | **done** `68a30b2` |
 | 13 | §8.5 Playwright widget E2E | **done** `4d6be52` |
 | 14 | §7.3 merge-base baseline artifact | **done** `0d34be2` |
-| 15 | **DEP-01 / §7 dataset / §6 calibration** | **← next pick** |
+| 15 | DEP-01 docs-site npm audit | **done** `f622d58` |
+| 16 | **§7 dataset / §6 calibration / CI baseline wire** | **← next pick** |
 | 16 | §4 residual (graph tokens / parity default) | residual |
 | 17 | §2/§3 residual if product needs | residual |
 | 18 | DEP-01 docs-site dependency audit | residual |
