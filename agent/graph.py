@@ -275,6 +275,182 @@ def _invoke_llm(
         raise
 
 
+def _coerce_stream_chunk(chunk: Any) -> str:
+    """Normalize provider/LangChain stream chunks to plain text."""
+    if chunk is None:
+        return ""
+    if isinstance(chunk, str):
+        return chunk
+    content = getattr(chunk, "content", None)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict) and item.get("text"):
+                parts.append(str(item["text"]))
+            else:
+                text = getattr(item, "text", None)
+                if text:
+                    parts.append(str(text))
+        return "".join(parts)
+    text = getattr(chunk, "text", None)
+    if isinstance(text, str):
+        return text
+    return str(chunk)
+
+
+def _stream_llm_tokens(
+    llm: SupportsInvoke,
+    prompt: str,
+    *,
+    role: str = "default",
+    on_token: Callable[[str], None],
+) -> str | None:
+    """Best-effort provider/LangChain token stream; None → caller falls back.
+
+    Plan §4.8: used only when SSE parity enables provider token streaming.
+    Failures return None so generate can fall back to ``_invoke_llm`` without
+    claiming ``provider_generate`` tokens.
+    """
+    from llm.request_budget import LLMBudgetExceeded
+    from llm.role_params import generation_kwargs_for_role
+
+    params = generation_kwargs_for_role(role)
+
+    gen_stream = getattr(llm, "generate_stream", None)
+    if callable(gen_stream):
+        parts: list[str] = []
+
+        async def _agen() -> Any:
+            messages = [{"role": "user", "content": prompt}]
+            try:
+                stream = gen_stream(messages, **params)
+            except TypeError:
+                stream = gen_stream(messages)
+            async for chunk in stream:
+                text = _coerce_stream_chunk(chunk)
+                if text:
+                    parts.append(text)
+                    on_token(text)
+                    yield text
+
+        try:
+            # Drain for side effects; reassemble from parts.
+            async def _collect() -> str:
+                async for _ in _agen():
+                    pass
+                return "".join(parts)
+
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                text = asyncio.run(_collect())
+            else:
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    text = pool.submit(lambda: asyncio.run(_collect())).result()
+            if text:
+                return text
+        except LLMBudgetExceeded:
+            raise
+        except Exception as exc:
+            logger.warning(
+                "[generate] provider generate_stream failed; fallback invoke: %s",
+                exc,
+            )
+            return None
+
+    stream_fn = getattr(llm, "stream", None)
+    if not callable(stream_fn):
+        # LocalOllama wraps an inner langchain model that may stream.
+        inner = getattr(llm, "_llm", None)
+        stream_fn = getattr(inner, "stream", None) if inner is not None else None
+    if callable(stream_fn):
+        parts = []
+        try:
+            try:
+                chunks = stream_fn(prompt, **params)
+            except TypeError:
+                chunks = stream_fn(prompt)
+            for chunk in chunks:
+                text = _coerce_stream_chunk(chunk)
+                if text:
+                    parts.append(text)
+                    on_token(text)
+            if parts:
+                return "".join(parts)
+        except LLMBudgetExceeded:
+            raise
+        except Exception as exc:
+            logger.warning(
+                "[generate] sync stream failed; fallback invoke: %s",
+                exc,
+            )
+            return None
+    return None
+
+
+def _emit_provider_token(token: str) -> None:
+    """Write a provider token into LangGraph custom stream (best-effort)."""
+    if not token:
+        return
+    try:
+        from langgraph.config import get_stream_writer
+
+        writer = get_stream_writer()
+    except Exception:
+        return
+    if not callable(writer):
+        return
+    try:
+        writer(
+            {
+                "type": "token",
+                "token": token,
+                "token_source": "provider_generate",
+                "source": "graph",
+            }
+        )
+    except Exception:
+        # Writer may be a no-op under invoke(); never break generate.
+        return
+
+
+def _generate_answer_text(
+    llm: SupportsInvoke,
+    prompt: str,
+    *,
+    role: str = "generate",
+) -> str:
+    """Generate answer text; stream provider tokens when SSE flag is on."""
+    try:
+        from agent.graph_stream import provider_token_stream_enabled
+    except Exception:
+        provider_token_stream_enabled = None  # type: ignore[assignment]
+
+    stream_on = False
+    if provider_token_stream_enabled is not None:
+        try:
+            stream_on = bool(provider_token_stream_enabled.get())
+        except Exception:
+            stream_on = False
+
+    if stream_on:
+        streamed = _stream_llm_tokens(
+            llm,
+            prompt,
+            role=role,
+            on_token=_emit_provider_token,
+        )
+        if streamed is not None:
+            return streamed
+    return _invoke_llm(llm, prompt, role=role)
+
+
 def _budget_exhausted_state(
     question: str,
     trace_id: Optional[str],
@@ -1551,7 +1727,9 @@ def make_generate_node(
                 span.set_attribute("rag.input_docs", len(docs))
                 try:
                     t0 = time.monotonic()
-                    answer = _invoke_llm(llm, prompt, role="generate")
+                    # Plan §4.8: when provider_token_stream_enabled, stream tokens
+                    # via LangGraph custom writer (single generation, no second path).
+                    answer = _generate_answer_text(llm, prompt, role="generate")
                     usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "generate"))
                     usage_recorded = True
                     trace_llm_call(
@@ -2835,12 +3013,17 @@ def iter_qa_pipeline_events(
     user_id: str = "anonymous",
     session_id: str | None = None,
 ) -> Any:
-    """Yield real LangGraph node status events then a terminal pipeline_result.
+    """Yield real LangGraph node/token events then a terminal pipeline_result.
 
     Plan §4.7: SSE can relay graph node names while the single pipeline runs.
+    Plan §4.8: enables provider token streaming into LangGraph custom mode
+    (``token_source=provider_generate``) when the LLM supports stream.
     Does not run a second generation. Sync callers should use ``run_qa_pipeline``.
     """
-    from agent.graph_stream import stream_graph_node_events
+    from agent.graph_stream import (
+        provider_token_stream_enabled,
+        stream_graph_node_events,
+    )
 
     graph, initial_state, settings, internal_trace, experiment_token = _prepare_qa_pipeline(
         question=question,
@@ -2853,6 +3036,7 @@ def iter_qa_pipeline_events(
         user_id=user_id,
         session_id=session_id,
     )
+    stream_flag = provider_token_stream_enabled.set(True)
     try:
         final_state: GraphState | None = None
         for event in stream_graph_node_events(graph, initial_state):
@@ -2881,6 +3065,7 @@ def iter_qa_pipeline_events(
                 "nodes": [],
             }
     finally:
+        provider_token_stream_enabled.reset(stream_flag)
         if experiment_token is not None and reset_current_experiment is not None:
             reset_current_experiment(experiment_token)
 

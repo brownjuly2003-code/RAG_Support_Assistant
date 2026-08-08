@@ -886,6 +886,10 @@ async def ask_stream(
                 graph_nodes: list[str] = []
                 use_events = callable(getattr(session, "iter_ask_events", None))
 
+                # Plan §4.8: live provider tokens from generate (when available).
+                provider_tokens_seen = False
+                token_start_emitted = False
+
                 if use_events:
                     event_queue: asyncio.Queue[tuple[str, Any]] = asyncio.Queue()
 
@@ -984,6 +988,29 @@ async def ask_stream(
                                     "source": "graph",
                                     "phase": str(payload.get("phase") or "end"),
                                 }) + "\n\n"
+                            elif payload.get("type") == "token":
+                                # Live provider tokens from generate (§4.8).
+                                token_text = str(payload.get("token") or "")
+                                if not token_text:
+                                    continue
+                                token_source = str(
+                                    payload.get("token_source") or "provider_generate"
+                                )
+                                if not token_start_emitted:
+                                    token_start_emitted = True
+                                    yield "data: " + _json.dumps({
+                                        "type": "token_start",
+                                        "source": "graph",
+                                        "token_source": token_source,
+                                    }) + "\n\n"
+                                if token_source == "provider_generate":
+                                    provider_tokens_seen = True
+                                yield "data: " + _json.dumps({
+                                    "type": "token",
+                                    "token": token_text,
+                                    "source": "graph",
+                                    "token_source": token_source,
+                                }) + "\n\n"
                             elif payload.get("type") == "pipeline_result":
                                 state = payload.get("state")
                                 if isinstance(state, dict):
@@ -1068,19 +1095,25 @@ async def ask_stream(
                     graph_appended_history = True
 
                 terminal_answer = str(graph_result.get("answer") or "")
-                # UX tokens of the finished graph answer (not a second LLM stream).
-                yield "data: " + _json.dumps({
-                    "type": "token_start",
-                    "source": "graph",
-                    "token_source": "graph_answer_chunks",
-                }) + "\n\n"
-                for chunk in _chunk_text_for_sse(terminal_answer):
-                    yield "data: " + _json.dumps({
-                        "type": "token",
-                        "token": chunk,
-                        "source": "graph",
-                        "token_source": "graph_answer_chunks",
-                    }) + "\n\n"
+                # Plan §4.8: if live provider tokens already streamed, do not
+                # re-chunk the finished answer. Else §4.7 UX chunk fallback.
+                if provider_tokens_seen:
+                    token_source_final = "provider_generate"
+                else:
+                    token_source_final = "graph_answer_chunks"
+                    if not token_start_emitted:
+                        yield "data: " + _json.dumps({
+                            "type": "token_start",
+                            "source": "graph",
+                            "token_source": token_source_final,
+                        }) + "\n\n"
+                    for chunk in _chunk_text_for_sse(terminal_answer):
+                        yield "data: " + _json.dumps({
+                            "type": "token",
+                            "token": chunk,
+                            "source": "graph",
+                            "token_source": token_source_final,
+                        }) + "\n\n"
 
                 if not graph_appended_history:
                     _append_stream_history(
@@ -1113,6 +1146,7 @@ async def ask_stream(
                     "answer_source": "graph",
                     "generation_source": "graph_only",
                     "events_source": "graph" if use_events else "ask",
+                    "token_source": token_source_final,
                     "graph_nodes": graph_nodes,
                     "quality_score": quality,
                     "quality_source": quality_source,
