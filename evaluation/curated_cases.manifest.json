@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "dataset": "curated_cases.jsonl",
+  "updated": "2026-08-07",
+  "plan_slice": "7.4",
+  "required_slices": [
+    "multi_tenant",
+    "multi_turn",
+    "claim_citation",
+    "no_answer",
+    "tools",
+    "streaming",
+    "adversarial",
+    "pii",
+    "durable_escalation",
+    "context_recall"
+  ],
+  "min_cases_per_slice": 1,
+  "notes": "Regression-eval dataset (scripts.regression_eval.CuratedCase). Distinct from evaluation.dataset.CuratedCase learning schema."
+}

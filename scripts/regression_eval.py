@@ -40,6 +40,8 @@ class CaseExpectation(BaseModel):
     min_quality: float | None = None
     min_factuality: float | None = None
     citations_min_count: int | None = None
+    # Plan §7.4: optional context-recall floor (0..1 or 0..100; compared to run metric).
+    min_context_recall: float | None = None
 
 
 class CuratedCase(BaseModel):
@@ -49,6 +51,11 @@ class CuratedCase(BaseModel):
     tenant_id: str = Field(default="default", validation_alias=AliasChoices("tenant_id", "tenant"))
     query: str = Field(validation_alias=AliasChoices("query", "question"))
     expected: CaseExpectation = Field(default_factory=CaseExpectation)
+    # Plan §7.4: versioned dataset slices for coverage validation / filtering.
+    slices: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    session_id: str | None = None
+    turn_index: int | None = None
 
 
 class CaseRunResult(BaseModel):
@@ -60,10 +67,28 @@ class CaseRunResult(BaseModel):
     cost_usd: float | None = None
     route: str = "unknown"
     trace_id: str = ""
+    context_recall: float | None = None
     # Plan §7.1: skipped/infra must fail the release gate (never graceful pass).
     skipped: bool = False
     skip_reason: str = ""
     infrastructure_error: bool = False
+
+
+# Plan §7.4 required coverage dimensions (at least one case each).
+REQUIRED_DATASET_SLICES: frozenset[str] = frozenset(
+    {
+        "multi_tenant",
+        "multi_turn",
+        "claim_citation",
+        "no_answer",
+        "tools",
+        "streaming",
+        "adversarial",
+        "pii",
+        "durable_escalation",
+        "context_recall",
+    }
+)
 
 
 def _utc_now() -> datetime:
@@ -600,6 +625,98 @@ def sample_cases(
     return sampled
 
 
+def collect_dataset_slices(cases: Sequence[CuratedCase]) -> set[str]:
+    """Union of ``slices`` (and legacy ``tags``) across cases."""
+    found: set[str] = set()
+    for case in cases:
+        for item in case.slices or []:
+            value = str(item).strip()
+            if value:
+                found.add(value)
+        for item in case.tags or []:
+            value = str(item).strip()
+            if value:
+                found.add(value)
+    return found
+
+
+def validate_dataset_slice_coverage(
+    cases: Sequence[CuratedCase],
+    *,
+    required_slices: frozenset[str] | set[str] | None = None,
+    min_cases_per_slice: int = 1,
+) -> dict[str, Any]:
+    """Plan §7.4: ensure versioned dataset covers required evaluation slices."""
+    required = frozenset(required_slices or REQUIRED_DATASET_SLICES)
+    if min_cases_per_slice < 1:
+        raise ValueError("min_cases_per_slice must be >= 1")
+
+    counts: dict[str, int] = {name: 0 for name in sorted(required)}
+    for case in cases:
+        labels = {str(x).strip() for x in (case.slices or []) if str(x).strip()}
+        labels |= {str(x).strip() for x in (case.tags or []) if str(x).strip()}
+        for name in required:
+            if name in labels:
+                counts[name] = counts.get(name, 0) + 1
+
+    missing = sorted(name for name, count in counts.items() if count < min_cases_per_slice)
+    reasons: list[str] = []
+    if missing:
+        reasons.append(
+            "missing required slices (or below min_cases_per_slice="
+            f"{min_cases_per_slice}): {missing}"
+        )
+    if "multi_tenant" in required and counts.get("multi_tenant", 0) >= min_cases_per_slice:
+        multi_tenant_ids = {
+            case.tenant_id
+            for case in cases
+            if "multi_tenant" in set(case.slices or []) or "multi_tenant" in set(case.tags or [])
+        }
+        if len(multi_tenant_ids) < 2:
+            reasons.append(
+                "multi_tenant slice requires >=2 distinct tenant_id values "
+                f"among multi_tenant cases (got {sorted(multi_tenant_ids)!r})"
+            )
+    if "multi_turn" in required and counts.get("multi_turn", 0) >= min_cases_per_slice:
+        # At least one session with 2+ turns among multi_turn cases.
+        by_session: dict[str, list[int]] = {}
+        for case in cases:
+            labels = set(case.slices or []) | set(case.tags or [])
+            if "multi_turn" not in labels or not case.session_id:
+                continue
+            by_session.setdefault(case.session_id, []).append(int(case.turn_index or 0))
+        if not any(len(turns) >= 2 for turns in by_session.values()):
+            reasons.append(
+                "multi_turn slice requires a session_id with at least two turns"
+            )
+
+    return {
+        "ok": not reasons,
+        "required_slices": sorted(required),
+        "slice_counts": counts,
+        "missing_slices": missing,
+        "total_cases": len(cases),
+        "reasons": reasons,
+    }
+
+
+def _normalize_metric_threshold(value: float) -> float:
+    """Accept 0..1 or 0..100 style thresholds; compare in 0..100 space when >1."""
+    return float(value)
+
+
+def _metric_meets_floor(actual: float | None, minimum: float) -> bool:
+    if actual is None:
+        return False
+    # If both look like ratios (<=1.0), compare as ratios; else 0..100 scale.
+    if minimum <= 1.0 and actual <= 1.0:
+        return actual + 1e-9 >= minimum
+    # Normalize ratio actual to percent when threshold is percent-like.
+    actual_n = actual * 100.0 if actual <= 1.0 and minimum > 1.0 else actual
+    minimum_n = minimum * 100.0 if minimum <= 1.0 and actual > 1.0 else minimum
+    return actual_n + 1e-9 >= minimum_n
+
+
 def _evaluate_case_output(result: CaseRunResult, expected: CaseExpectation) -> tuple[bool, list[str]]:
     failures: list[str] = []
 
@@ -620,6 +737,13 @@ def _evaluate_case_output(result: CaseRunResult, expected: CaseExpectation) -> t
         failures.append(
             f"citations {len(result.citations)} below minimum {expected.citations_min_count}"
         )
+
+    if expected.min_context_recall is not None:
+        floor = _normalize_metric_threshold(float(expected.min_context_recall))
+        if not _metric_meets_floor(result.context_recall, floor):
+            failures.append(
+                f"context_recall {result.context_recall!r} below minimum {floor:g}"
+            )
 
     answer_lower = (result.answer or "").lower()
     for needle in expected.answer_contains:
