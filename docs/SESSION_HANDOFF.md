@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 — **Update-106** (completed **DEP-01** @ `f622d58`).  
+**Обновлено:** 2026-08-07 — **Update-107** (completed **7.4** @ `8f4269f`).  
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей  
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-106**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-107**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-106; dirty  
+**Не использовать:** старые `✅ START HERE` ниже Update-107; dirty  
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` как единственный SoT  
 (это pointer only).
 
@@ -27,20 +27,19 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **implementation** | `f622d58` — **DEP-01** docs-site npm audit (high=0) |
-| Latest **docs before this Update** | `5650711` — Update-105 |
-| This Update-106 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | `master...origin/master [ahead 187]` after impl — **refresh mandatory** |
+| Latest **implementation** | `8f4269f` — **7.4** curated dataset slices (47 cases) |
+| Latest **docs before this Update** | `20b2ac0` — Update-106 |
+| This Update-107 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | `master...origin/master [ahead 189]` after impl — **refresh mandatory** |
 | Active writer / WIP | **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.3** + **8.1–8.5** + **DEP-01** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.4** + **8.1–8.5** + **DEP-01** |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered (default) | §7 dataset expansion **or** §6 calibration **or** CI baseline-artifact wire |
+| Next ordered (default) | §6 calibration **or** CI baseline-artifact wire **or** live provider gate |
 | Gates | **no** push / deploy / live multi-service / migrate 019–023 without **explicit opt-in** |
 
-**Last known verification (DEP-01 this turn):** `npm run audit:deps` PASS;  
-`npm audit --audit-level=high` exit 0; focused **4 passed**. Full suite /  
-Pages deploy **not** claimed.
+**Last known verification (7.4 this turn):** focused **44 passed** (dataset +  
+regression band); Ruff clean. Full suite / live **not** claimed.
 
 ---
 
@@ -51,8 +50,8 @@ Pages deploy **not** claimed.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-106 in AGENT_STATE.md + this file §1–§11
-6. Default work: §7 dataset OR §6 calibration OR CI baseline wire. Announce: slice 1/1
+5. Read ONLY top Update-107 in AGENT_STATE.md + this file §1–§11
+6. Default work: §6 calibration OR CI baseline wire OR live gate. Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
 ```
@@ -73,7 +72,7 @@ claims, bulk plan checkbox edits.
 | **4** pipeline + escalation | **4.1–4.5** local | true graph tokens; parity default **off**; outbox Celery/cron |
 | **5** grounding fail-closed | **5.1–5.3** local | live metrics DoD ×3; relevance≠quality residual |
 | **6** judge / safety / agentic | **6.1–6.3** local | calibration; measured agentic evaluate when KB context |
-| **7** eval gate | **7.1–7.3** local | dataset expansion; live provider gate; CI wire artifact |
+| **7** eval gate | **7.1–7.4** local | live provider gate; CI wire artifact; deeper per-slice corpus |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
 | **9** cache / architecture / SLO | partial + **DEP-01 local** | Astro7 residual when Starlight ready; cache/SLO |
 | **10** final verification | not started | after 1–9 + opt-in evidence |
@@ -103,7 +102,8 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 |-------|-----|---------|
 | **7.1** | `94ac64e` | infra/skip/empty → FAIL |
 | **7.2** | `25788ee` | mock → `SMOKE_PASS` only; `--release-gate` needs evidence |
-| **7.3** | **`0d34be2`** | merge-base baseline artifact load/write/require |
+| **7.3** | `0d34be2` | merge-base baseline artifact load/write/require |
+| **7.4** | **`8f4269f`** | required slices + min_context_recall; 47 cases |
 
 ### §6 / §5 / §4 / §3 (summary)
 
@@ -118,6 +118,14 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 ---
 
 ## 5. Contracts (recent complete slices)
+
+### 7.4 @ `8f4269f`
+
+- Schema: `slices` / `tags` / `session_id` / `turn_index`; `min_context_recall`
+- Coverage validator: `validate_dataset_slice_coverage` + `REQUIRED_DATASET_SLICES`
+- Dataset 35 → **47** cases; manifest `evaluation/curated_cases.manifest.json`
+- Files: `scripts/regression_eval.py`, `evaluation/curated_cases.jsonl`,
+  `tests/test_curated_dataset_expansion.py`
 
 ### DEP-01 @ `f622d58`
 
@@ -215,8 +223,10 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | `auth/jwt_handler.py` | **8.1** | `create_widget_token` / widget verify |
 | `auth/dependencies.py` | **8.1** | accept widget Bearer |
 | `static/widget*.js` / `widget.html` | **8.1** | handshake, token, session, CSP |
-| `scripts/regression_eval.py` | **7.1–7.3** | gate + evidence policy + baseline artifact |
+| `scripts/regression_eval.py` | **7.1–7.4** | gate + evidence + baseline artifact + slices |
 | `tests/test_regression_baseline_artifact.py` | **7.3** | merge-base artifact contract |
+| `tests/test_curated_dataset_expansion.py` | **7.4** | slice coverage + context_recall |
+| `evaluation/curated_cases.jsonl` | **7.4** | regression curated corpus |
 | job-object / index stack | 2.1–2.6g | **do not re-select** |
 
 ---
@@ -247,6 +257,13 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 ---
 
 ## 8. Verification recipes (last known green; re-run when coding)
+
+### §7.4 band
+
+```powershell
+python -m pytest tests/test_curated_dataset_expansion.py tests/test_regression_runner.py tests/test_regression_baseline_artifact.py -q -p no:cacheprovider -p no:schemathesis
+python -m ruff check scripts/regression_eval.py tests/test_curated_dataset_expansion.py
+```
 
 ### DEP-01 band
 
@@ -311,15 +328,15 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 **Default picks (one only):**
 
-1. **§7 dataset expansion** (multi-tenant / grounding / adversarial slices)  
-2. **§6 calibration / measured agentic residual** when KB context exists  
-3. **CI wire** of `--baseline-artifact` / `--require-baseline-artifact` on release path  
-4. **Astro 7** major when Starlight supports it (clears residual moderate)  
+1. **§6 calibration / measured agentic residual** when KB context exists  
+2. **CI wire** of `--baseline-artifact` / `--require-baseline-artifact` on release path  
+3. **Scheduled live provider gate** scaffolding (opt-in live)  
+4. **Astro 7** major when Starlight supports it  
 
 ### Out without opt-in
 
 - live multi-service / migrate / push / deploy  
-- re-select through **8.5** / **7.3** / **DEP-01**  
+- re-select through **8.5** / **7.4** / **DEP-01**  
 - OIDC live IdP drill; full browser matrix expansion  
 
 ### Alternates (only if user prioritizes)
@@ -344,7 +361,8 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 - Grep old `✅ START HERE` for work selection  
 - Re-select **2.1–2.6g**, **3.1a–3.1i**, **4.1–4.5**, **5.1–5.3**, **6.1–6.3**,  
-  **7.1–7.3**, **8.1–8.5**, **DEP-01**  
+  **7.1–7.4**, **8.1–8.5**, **DEP-01**  
+ 
  
  
  

@@ -1,8 +1,96 @@
 # Agent State
 
+## 2026-08-07 Update-107 — completed slice 7.4 curated dataset expansion @ `8f4269f` ✅ START HERE
+
+> **Routing authority:** Update-107 supersedes Update-106 **only for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `8f4269f`
+>   (`feat(eval): expand curated dataset with required slices (7.4)`)
+>   - slice **7.4**
+> - Previous: `f622d58` — **DEP-01**; docs Update-106 `20b2ac0`
+> - 7 chain: `94ac64e` 7.1 · `25788ee` 7.2 · `0d34be2` 7.3 · **`8f4269f` 7.4**
+> - Migrations on disk (not applied): **019–023**
+> - This Update-107 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 189]` after impl (before this docs commit).
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **7.1–7.4** | fail-closed + mock≠PASS + baseline artifact + **dataset slices** local |
+> | **8.1–8.5** + **DEP-01** | local |
+> | Full plan §1–§10 | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
+>
+> ---
+>
+> ### 7.4 contract (local)
+>
+> - `CuratedCase`: `slices`, `tags`, `session_id`, `turn_index`
+> - `CaseExpectation.min_context_recall` + `CaseRunResult.context_recall`
+> - `REQUIRED_DATASET_SLICES` (10) + `validate_dataset_slice_coverage`
+> - Dataset: **47** cases (was 35); manifest `evaluation/curated_cases.manifest.json`
+> - Coverage: multi_tenant, multi_turn, claim_citation, no_answer, tools,
+>   streaming, adversarial, pii, durable_escalation, context_recall
+>
+> **Verification:** focused **44 passed** (dataset expansion + regression band);
+> Ruff clean. Full suite / live providers / push **not** claimed.
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next residual (default):** §6 calibration **or** CI baseline-artifact
+>   wire **or** scheduled live provider gate
+> - 7 residual after 7.4: live provider gate; CI still smoke mock; more case
+>   depth per slice optional
+> - live multi-service + migrations **019–023** (**opt-in**)
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **§6 calibration residual** **or** **CI wire of baseline artifact**
+> **or** **scheduled live provider gate scaffolding** — one atomic only.
+>
+> **Do not re-select:** through **8.5**, **7.1–7.4**, **DEP-01**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked:** plan file, `_NEXT_SESSION.md` (pointer), pytest temps, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live drills, `alembic upgrade`, destructive Git, production claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; quality > speed. **Actual Git wins.**
+
+
 ## 2026-08-07 Update-106 — completed DEP-01 docs-site npm audit @ `f622d58` ✅ START HERE
 
-> **Routing authority:** Update-106 supersedes Update-105 **only for start-point
+> **Historical handoff (superseded by Update-107 for start-point routing).**
+> Recorded **DEP-01** @ `f622d58`. Next was 7.4 — now done @ `8f4269f`.
+>
+> **Original routing note (archival):** Update-106 supersedes Update-105 **only for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old
