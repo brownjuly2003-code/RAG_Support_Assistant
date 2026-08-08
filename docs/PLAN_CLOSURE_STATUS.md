@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-08 (Update-116 after 6.7 human calibration readiness)  
+**Date:** 2026-08-08 (Update-117 after 4.6 outbox schedule)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-116**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-117**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -21,7 +21,7 @@
 | **1** live multi-tenant / backup / RPO | partial chart/docs only | **OPEN** (opt-in live) | **yes** Gate A |
 | **2** index lifecycle | **2.1–2.6g local residual closed** | **OPEN** live PG/Redis/Celery/Chroma | yes for live index ops |
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
-| **4** unified pipeline + escalation | **4.1–4.5 local** | **OPEN** true graph tokens; parity default off; schedule wiring | partial |
+| **4** unified pipeline + escalation | **4.1–4.6 local** | **OPEN** true graph tokens; parity default off | partial |
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
@@ -64,8 +64,8 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 21 | §7.7 deeper curated corpus (≥3/slice) | **done** `47e255a` |
 | 22 | §6.6 agentic LLM evaluate wire | **done** `69c6fdf` |
 | 23 | §6.7 human calibration readiness + CLI | **done** `c707c46` |
-| 24 | **real human sample reissue / live execute** | **← next pick** |
-| 25 | §4 residual (graph tokens / parity default) | residual |
+| 24 | §4.6 outbox retry schedule | **done** `11acfec` |
+| 25 | **graph SSE tokens / human sample / live execute** | **← next pick** |
 | 26 | §2/§3 residual if product needs | residual |
 | 27 | Astro 7 (clears DEP-01 moderate residual) | residual |
 | 28 | §1 + §10 | **opt-in live only** |
@@ -113,8 +113,9 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | 4.3 | `ad5e435` | durable idempotent escalation |
 | 4.4 | `0371971` | auto human-route on normal ask |
 | 4.5 | `6453530` | outbox retry without second ticket |
+| **4.6** | **`11acfec`** | Celery beat + CLI outbox schedule |
 
-**Residual:** true node/token SSE; parity default off; Celery/cron for outbox.
+**Residual:** true node/token SSE; parity default off.
 
 ---
 
@@ -253,8 +254,9 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-1. **Collect real dual-annotator human sample** + `recalibrate_routing.py --require-human --write`  
-2. **Live provider execute** (`RAG_LIVE_PROVIDER_GATE` + secrets + `--execute`) — opt-in  
-3. **Astro 7** major when Starlight supports it (DEP-01 moderate residual)  
+1. **True graph node/token SSE** (§4 residual)  
+2. **Collect real dual-annotator human sample** + `recalibrate_routing.py --require-human --write`  
+3. **Live provider execute** (`RAG_LIVE_PROVIDER_GATE` + secrets + `--execute`) — opt-in  
+4. **Astro 7** major when Starlight supports it (DEP-01 moderate residual)  
 
-**Do not re-select** 2.x–8.5, 6.1–6.7, 7.1–7.7, DEP-01.
+**Do not re-select** 2.x–8.5, 4.1–4.6, 6.1–6.7, 7.1–7.7, DEP-01.

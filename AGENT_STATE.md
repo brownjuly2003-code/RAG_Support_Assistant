@@ -1,5 +1,88 @@
 # Agent State
 
+## 2026-08-08 Update-117 — 4.6 outbox retry schedule wire ✅ START HERE
+
+> **Routing authority:** Update-117 supersedes Update-116 **only for
+> start-point routing**. Older Update blocks are **archival**. **Only the
+> first/topmost Update block is authoritative.**
+>
+> **Implementation this turn:** slice **4.6** — Celery beat + CLI for
+> escalation outbox retry. No push / deploy / live multi-service / migrate.
+> Does **not** claim true graph SSE tokens residual closed.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `11acfec`
+>   (`feat(escalation): Celery beat and CLI for outbox retry schedule (4.6)`)
+> - Prior: `c707c46` **6.7** · `69c6fdf` **6.6** · `6453530` **4.5**
+> - Prior docs: `7c1d170` Update-116
+> - §4 path: `eaf41f3` 4.1 · `f1c846e` 4.2 · `ad5e435` 4.3 · `0371971` 4.4 ·
+>   `6453530` 4.5 · **`11acfec` 4.6**
+> - Migrations on disk (not applied): **019–023**
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **4.1–4.6** | stream parity + durable escalation + **outbox schedule wire** local |
+> | §4 residual | **true graph node/token SSE**; parity default still **off** |
+> | **6.1–6.7** | prior local (human production sample residual) |
+> | Full plan / production | **NOT** claimed |
+>
+> ---
+>
+> ### Slice 4.6 contract
+>
+> - Task: `tasks.outbox_retry_task.retry_escalation_outbox`
+> - Beat schedule key `escalation-outbox-retry` (default interval 300s)
+> - Env: `RAG_OUTBOX_RETRY_BEAT` (default on), `…_INTERVAL_SEC`, `…_BATCH_LIMIT`,
+>   `…_INCLUDE_PENDING`
+> - CLI: `scripts/outbox_retry.py` (cron/operator; `--dry-run-config`)
+> - Compose: `worker-beat` schedule-only; **single** ingest `worker` unchanged
+> - Never creates second tickets (reuses §4.5 retry API)
+>
+> **Files:** `tasks/outbox_retry_task.py`, `tasks/celery_app.py`,
+> `scripts/outbox_retry.py`, `docker-compose.yml`, `config/settings.py`,
+> `tests/test_outbox_retry_schedule.py`, topology test update
+>
+> ---
+>
+> ### Known verification (4.6 turn)
+>
+> | Gate | Result |
+> |------|--------|
+> | `tests/test_outbox_retry_schedule.py` | **8 passed** |
+> | compose single ingest worker | green (beat allowed) |
+> | Ruff | clean |
+> | Full suite / live Redis beat / push | **not** run / **not** claimed |
+>
+> ---
+>
+> ### Open boundaries
+>
+> - **← next default:** true **graph node/token SSE** (§4 residual) **or**
+>   real human dual-annotator sample reissue **or** live provider execute
+>   (opt-in) **or** Astro7
+> - parity default remains off (legacy direct stream when off)
+> - multi-replica durable session; live multi-service + migrate 019–023
+>
+> **Do not re-select:** 2.x–3.x, **4.1–4.6**, 5.1–5.3, **6.1–6.7**, 7.1–7.7,
+> 8.1–8.5, DEP-01.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`  
+> Untracked: plan file, `_NEXT_SESSION.md`, pytest temps, presentations
+>
+> ### External gates (opt-in only)
+>
+> push · deploy · live multi-service · live provider execute · alembic 019–023
+
 ## 2026-08-08 Update-116 — 6.7 human calibration readiness / recalibrate CLI ✅ START HERE
 
 > **Routing authority:** Update-116 supersedes Update-115 **only for
