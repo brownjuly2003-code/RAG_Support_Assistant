@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-08 (Update-118 after 4.7 graph node SSE)  
+**Date:** 2026-08-08 (Update-119 full transparency after 4.7)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-118**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-119**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -41,19 +41,7 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 
 | Order | Work | Status |
 |-------|------|--------|
-| 1 | §5.1 grounding foundations | **done** `7c53bdb` |
-| 2 | §5.2 citation-bound claims | **done** `50bb220` |
-| 3 | §5.3 grader fail-closed | **done** `1cdecb2` |
-| 4 | §6.1 remove agentic fixed quality scores | **done** `b3494a0` |
-| 5 | §6.2 pre-response PII / prompt-injection | **done** `d0317e9` |
-| 6 | §6.3 independent judge policy | **done** `d6e3a55` |
-| 7 | §7.1 eval gate fail-closed skip/infra | **done** `94ac64e` |
-| 8 | §7.2 honest release evidence (no mock PASS) | **done** `25788ee` |
-| 9 | §8.1 widget bootstrap security | **done** `0bee13e` |
-| 10 | §8.2 ASGI body limits / upload stream | **done** `756562e` |
-| 11 | §8.3 OIDC email_verified / (issuer, subject) | **done** `13a9a5b` |
-| 12 | §8.4 production secrets / no dev-admin | **done** `68a30b2` |
-| 13 | §8.5 Playwright widget E2E | **done** `4d6be52` |
+| 1–13 | §5.1–5.3, §6.1–6.3, §7.1–7.2, §8.1–8.5 | **done** (see ledgers) |
 | 14 | §7.3 merge-base baseline artifact | **done** `0d34be2` |
 | 15 | DEP-01 docs-site npm audit | **done** `f622d58` |
 | 16 | §7.4 curated dataset slices | **done** `8f4269f` |
@@ -67,9 +55,9 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 24 | §4.6 outbox retry schedule | **done** `11acfec` |
 | 25 | §4.7 graph node status SSE | **done** `6b91a35` |
 | 26 | **provider tokens / human sample / live execute** | **← next pick** |
-| 26 | §2/§3 residual if product needs | residual |
-| 27 | Astro 7 (clears DEP-01 moderate residual) | residual |
-| 28 | §1 + §10 | **opt-in live only** |
+| 27 | §2/§3 residual if product needs | residual |
+| 28 | Astro 7 (clears DEP-01 moderate residual) | residual |
+| 29 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -117,7 +105,14 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **4.6** | `11acfec` | Celery beat + CLI outbox schedule |
 | **4.7** | **`6b91a35`** | real LangGraph node status SSE |
 
-**Residual:** provider token streaming through generate; parity default off.
+**Residual after 4.7:**
+
+| Item | Status |
+|------|--------|
+| Graph **node** SSE on parity path | **done local** (4.7) |
+| Answer **token** stream from provider generate | **OPEN** (still UX chunks of finished answer) |
+| `STREAMING_RAG_PARITY` default | **off** (product decision to flip) |
+| Outbox schedule (beat/CLI) | **done local** (4.6) |
 
 ---
 
@@ -147,15 +142,12 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **6.7** | **done local** | `c707c46` | human readiness gate + recalibrate CLI |
 | 6.x | residual | — | production dual-annotator sample + reissue |
 
-**6.4 residual:** seed is bootstrap-defaults (historical 80/80/0.8/70), not live
+**6.4 residual:** seed is bootstrap-defaults (historical 80/80/0.8/70), not live  
 human production labelling DoD.
 
-**6.5 residual (closed by 6.6 for quality wire):** KB path measures citation-bound
-grounding; 6.6 supplies llm quality when judge succeeds.
-Confirmation/order-only remain unmeasured by design.
-
-**6.6 residual:** live judge quality evidence under production load still open
-under §5 live metrics; flag can disable evaluate for cost rollback.
+**6.7 residual:** readiness gate is ready; **real human labels not collected**.  
+Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails  
+`--require-human`.
 
 ---
 
@@ -173,8 +165,6 @@ under §5 live metrics; flag can disable evaluate for cost rollback.
 | 7.x | residual | — | live execute with secrets; optional further depth |
 
 **7.2 residual:** CI still runs `--mock-experiment-runtime` as **smoke** (documented non-evidence).  
-**7.3 residual:** closed for local CLI; CI wire completed in **7.5** (smoke path only).  
-**7.5 residual:** artifact wire is smoke-only on PR path.  
 **7.6 residual:** scaffold only — real paid live evidence needs opt-in + secrets + `--execute`.  
 **7.7 residual:** still synthetic curated (not production human labels); optional deeper still.
 
@@ -194,14 +184,6 @@ under §5 live metrics; flag can disable evaluate for cost rollback.
 | context_recall | 3 |
 | **total** | **67** |
 
-### §7 last-known verification (7.7 turn; not re-run in Update-114)
-
-| Slice | Gate | Result |
-|-------|------|--------|
-| **7.7** | curated expansion + depth floor | **8 passed** |
-| **7.6** | live-gate + workflows | prior **21 passed** |
-| **7.5** | workflow wire + baseline | prior green |
-
 ---
 
 ## §8 map + ledger
@@ -213,15 +195,6 @@ under §5 live metrics; flag can disable evaluate for cost rollback.
 | **8.3** | **done local** | `13a9a5b` | email_verified; (issuer, subject); no rebind; shared tenant map |
 | **8.4** | **done local** | `68a30b2` | placeholders rejected; ALLOW_DEV_ADMIN_LOGIN banned in production |
 | **8.5** | **done local** | `4d6be52` | Playwright cross-origin E2E; iframe Origin=API allowed; fail-closed empty/disallowed |
-
-### §8 last-known verification (prior turns)
-
-| Slice | Gate | Result |
-|-------|------|--------|
-| **8.5** | `test_widget_bootstrap` + `test_widget_e2e_playwright` | **16 passed** |
-| 8.4 | production secrets + CORS | **17 passed** |
-| 8.3 | OIDC + email channel | **19 + 9 passed** |
-| 8.2 | body limits + upload | **64 passed** |
 
 **8 residual:** live IdP; production must set `WIDGET_ALLOWED_ORIGINS`; Chromium-only E2E.
 
@@ -235,8 +208,7 @@ under §5 live metrics; flag can disable evaluate for cost rollback.
 | Dated exceptions + `audit:deps` | **done local** | `f622d58` |
 | Astro 7 major | residual | — |
 
-**Exceptions expire:** 2026-11-07 (`docs-site/npm-audit-exceptions.json`).  
-**Last known:** `npm audit --audit-level=high` exit 0; `npm run audit:deps` PASS; 4 pytest.
+**Exceptions expire:** 2026-11-07 (`docs-site/npm-audit-exceptions.json`).
 
 ---
 
@@ -257,8 +229,26 @@ Local green slices alone **do not** close the plan.
 ## Next session pick (one only)
 
 1. **True provider token streaming** through generate (optional §4 residual)  
-2. **Collect real dual-annotator human sample** + `recalibrate_routing.py --require-human --write`  
+2. **Collect real dual-annotator human sample** +  
+   `recalibrate_routing.py --require-human --write`  
 3. **Live provider execute** (`RAG_LIVE_PROVIDER_GATE` + secrets + `--execute`) — opt-in  
 4. **Astro 7** / product decision to default `STREAMING_RAG_PARITY=true`  
 
-**Do not re-select** 2.x–8.5, 4.1–4.7, 6.1–6.7, 7.1–7.7, DEP-01.
+**Do not re-select** 2.x–3.x, 4.1–4.7, 5.1–5.3, 6.1–6.7, 7.1–7.7, 8.1–8.5, DEP-01.
+
+---
+
+## Last-known verification snapshot (not re-run in Update-119)
+
+| Band | Last known |
+|------|------------|
+| **4.7** | 12 passed (node SSE + parity) |
+| **4.6** | 8 passed (outbox schedule) |
+| **6.7** | 19 passed; seed NOT_READY |
+| **6.6** | 32 passed |
+| **7.7** | 8 passed (depth) |
+| **7.6** | 21 passed |
+| **8.5** | 16 passed |
+| **DEP-01** | npm audit high=0 |
+
+Full suite / live / migrate / push / deploy: **not** claimed.

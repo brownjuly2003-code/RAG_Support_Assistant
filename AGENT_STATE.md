@@ -1,5 +1,147 @@
 # Agent State
 
+## 2026-08-08 Update-119 — docs-only full transparency after 4.7 / recent quality path ✅ START HERE
+
+> **Routing authority:** Update-119 is **docs-only / transparency-only** and
+> supersedes Update-118 **only for start-point routing**. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`,
+> are **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
+>
+> **No new implementation in this docs turn.** Code, tests, plan checkboxes,
+> backlog, README, audit, settings, API, docs-site lock, and dataset content
+> were **not** edited here. Project tests were **not** re-run. Protected dirty
+> files were not staged.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `6b91a35`
+>   (`feat(stream): emit real LangGraph node status events on parity SSE (4.7)`)
+> - Latest docs before this turn: `b89f197` (Update-118)
+> - Recent quality / pipeline path (impl SHAs):
+>   - **4:** `eaf41f3` 4.1 · `f1c846e` 4.2 · `ad5e435` 4.3 · `0371971` 4.4 ·
+>     `6453530` 4.5 · `11acfec` 4.6 · **`6b91a35` 4.7**
+>   - **5:** `7c53bdb` 5.1 · `50bb220` 5.2 · `1cdecb2` **5.3**
+>   - **6:** `b3494a0` 6.1 · `d0317e9` 6.2 · `d6e3a55` 6.3 · `a7cefc3` 6.4 ·
+>     `431893c` 6.5 · `69c6fdf` 6.6 · **`c707c46` 6.7**
+>   - **7:** `94ac64e`…`d1ae4d6` 7.6 · **`47e255a` 7.7**
+>   - **8:** `0bee13e`…**`4d6be52` 8.5** · **DEP-01** `f622d58`
+> - Migrations on disk (not applied): **019–023**
+> - This Update-119 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 210]` before this docs commit.
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | local residual closed at documented scopes |
+> | **3.1a–3.1i** | local at documented scopes |
+> | **4.1–4.7** | stream parity + escalation + outbox schedule + **graph node SSE** local |
+> | **5.1–5.3** | grounding + citation-bound + grader fail-closed **local** |
+> | **6.1–6.7** | unmeasured → evaluate wire → human readiness gate **local** |
+> | **7.1–7.7** | eval fail-closed + mock≠PASS + baseline + CI + live scaffold + depth **local** |
+> | **8.1–8.5** | widget/edge security + Playwright E2E **local** |
+> | **DEP-01** | docs-site npm audit high=0 + dated exceptions **local** |
+> | Full plan §1–§10 | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+>
+> **Transparency maps:**
+> - [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) — full next-session capsule
+> - [`docs/PLAN_CLOSURE_STATUS.md`](docs/PLAN_CLOSURE_STATUS.md) — residual matrix
+> - [`_NEXT_SESSION.md`](_NEXT_SESSION.md) — pointer only (not SoT)
+>
+> ---
+>
+> ### Recent impl ledger (one-liners)
+>
+> | Slice | SHA | One-line |
+> |-------|-----|----------|
+> | **4.7** | **`6b91a35`** | LangGraph node status SSE on parity path |
+> | **4.6** | `11acfec` | Celery beat + CLI outbox retry |
+> | **6.7** | `c707c46` | human calibration readiness (synthetic cannot claim human) |
+> | **6.6** | `69c6fdf` | agentic LLM evaluate wire on KB terminals |
+> | **7.7** | `47e255a` | curated depth ≥3/slice; 67 cases |
+> | **7.6** | `d1ae4d6` | live provider gate scaffold (opt-in) |
+> | **6.5** | `431893c` | measured agentic KB grounding |
+> | **8.5** | `4d6be52` | Playwright widget E2E |
+> | **DEP-01** | `f622d58` | docs-site high=0 audit gate |
+>
+> ---
+>
+> ### Known verification (last impl 4.7; not re-run this docs turn)
+>
+> | Slice | Last known gate |
+> |-------|-----------------|
+> | **4.7** | 12 passed (graph node SSE + streaming parity); Ruff clean |
+> | **4.6** | 8 passed (outbox schedule); single ingest worker + beat allowed |
+> | **6.7** | 19 passed (calibration); seed readiness NOT_READY (synthetic) |
+> | **6.6** | 32 passed (evaluate + measure + agent_tools) |
+> | **7.7** | 8 passed (curated depth) |
+> | **7.6** | 21 passed (live-gate + workflows) |
+> | **8.5** | 16 passed (widget + Playwright) |
+> | **DEP-01** | npm audit high=0 |
+>
+> Full suite / live multi-service / migrate / push / deploy / live provider
+> execute **not** run / **not** claimed.
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next default pick one:**
+>   1. true **provider token streaming** through generate (optional §4 residual)
+>   2. **real dual-annotator human sample** +
+>      `recalibrate_routing.py --require-human --write`
+>   3. **live provider execute** (opt-in + secrets + `--execute`)
+>   4. **Astro 7** / product decision `STREAMING_RAG_PARITY=true` default
+> - §4 residual after 4.7: answer tokens still UX chunks of finished graph
+>   answer (`token_source=graph_answer_chunks`); parity default **off**
+> - §6 residual: production human labels not collected (seed synthetic)
+> - §7 residual: live execute evidence; mock≠release PASS
+> - §5 residual: live precision/recall/faithfulness ×3
+> - multi-replica durable session version
+> - DEP-01 residual: Astro 6 moderate until Astro 7; exceptions **2026-11-07**
+> - live multi-service + migrations **019–023** (**opt-in**)
+> - plan §9–§10; full suite / release / production
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> Named residual above — **one atomic** per user turn. Do not combine with
+> live drills without opt-in.
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–3.1i, **4.1–4.7**, 5.1–5.3,
+> **6.1–6.7**, 7.1–7.7, **8.1–8.5**, **DEP-01**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Do not touch/stage/remove without explicit request:
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+>   `_NEXT_SESSION.md` (**pointer only — not routing authority**),
+>   `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
+>   casually), architecture HTML, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push · deploy · live multi-service · live provider execute · alembic 019–023 ·
+> production claims · bulk plan checkbox edits
+
 ## 2026-08-08 Update-118 — 4.7 graph node status SSE ✅ START HERE
 
 > **Routing authority:** Update-118 supersedes Update-117 **only for
