@@ -1,7 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-08 — **Update-111** (slice **6.5** measured agentic KB  
-gate @ `431893c`; supersedes Update-110 for start-point routing).  
+**Обновлено:** 2026-08-08 — **Update-112** (slice **7.6** live provider gate  
+scaffold @ `d1ae4d6`; supersedes Update-111 for start-point routing).  
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей  
 истории `AGENT_STATE.md`.
 
@@ -12,11 +12,11 @@ gate @ `431893c`; supersedes Update-110 for start-point routing).
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-111**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-112**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-111; dirty  
+**Не использовать:** старые `✅ START HERE` ниже Update-112; dirty  
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` как единственный SoT  
 (это pointer only).
 
@@ -28,19 +28,20 @@ gate @ `431893c`; supersedes Update-110 for start-point routing).
 
 | Факт | Значение |
 |------|----------|
-| Latest **implementation** | `431893c` — **6.5** measured agentic KB gate |
-| Latest **docs before this Update** | `91685c3` — Update-110 |
-| This Update-111 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | `master...origin/master [ahead 196]` after impl — **refresh mandatory** |
+| Latest **implementation** | `d1ae4d6` — **7.6** live provider gate scaffold |
+| Latest **docs before this Update** | `2b06f6c` — Update-111 |
+| This Update-112 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | `master...origin/master [ahead 198]` after impl — **refresh mandatory** |
 | Active writer / WIP | **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.5** + **7.1–7.5** + **8.1–8.5** + **DEP-01** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.5** + **7.1–7.6** + **8.1–8.5** + **DEP-01** |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered (default) | live provider gate scaffold **or** deeper corpus **or** agentic LLM evaluate |
-| Gates | **no** push / deploy / live multi-service / migrate 019–023 without **explicit opt-in** |
+| Next ordered (default) | deeper corpus **or** agentic LLM evaluate **or** human recalibration |
+| Gates | **no** push / deploy / live multi-service / live provider execute / migrate 019–023 without **explicit opt-in** |
 
-**Last known verification (6.5):** agentic band **21 passed**; Ruff clean. Full  
-suite / live / push **not** claimed.
+**Last known verification (7.6):** live-gate + workflow band **21 passed**;  
+Ruff clean; readiness `SKIPPED_NO_OPT_IN`. Full suite / live execute / push  
+**not** claimed.
 
 ---
 
@@ -51,15 +52,15 @@ suite / live / push **not** claimed.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-111 in AGENT_STATE.md + this file §1–§11
-6. Default work: live gate scaffold OR deeper corpus OR agentic LLM evaluate. Announce: slice 1/1
+5. Read ONLY top Update-112 in AGENT_STATE.md + this file §1–§11
+6. Default work: deeper corpus OR agentic LLM evaluate OR human cal. Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
 ```
 
 **Not authorized without opt-in:** push, deploy, live PostgreSQL/Redis/Celery/  
-Chroma, `alembic upgrade` (incl. **019–023**), destructive Git, production  
-claims, bulk plan checkbox edits.
+Chroma, live provider execute with secrets, `alembic upgrade` (incl. **019–023**),  
+destructive Git, production claims, bulk plan checkbox edits.
 
 ---
 
@@ -73,7 +74,7 @@ claims, bulk plan checkbox edits.
 | **4** pipeline + escalation | **4.1–4.5** local | true graph tokens; parity default **off**; outbox Celery/cron |
 | **5** grounding fail-closed | **5.1–5.3** local | live metrics DoD ×3; relevance≠quality residual |
 | **6** judge / safety / agentic | **6.1–6.5** local | full human calibration; optional agentic LLM evaluate |
-| **7** eval gate | **7.1–7.5** local | live provider gate; deeper per-slice corpus; mock≠release |
+| **7** eval gate | **7.1–7.6** local | live execute with secrets; deeper corpus; mock≠release |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
 | **9** cache / architecture / SLO | partial + **DEP-01 local** | Astro7 residual; cache/SLO |
 | **10** final verification | not started | after 1–9 + opt-in evidence |
@@ -95,7 +96,8 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | **7.2** | `25788ee` | mock → `SMOKE_PASS` only; `--release-gate` needs evidence |
 | **7.3** | `0d34be2` | merge-base baseline artifact load/write/require |
 | **7.4** | `8f4269f` | required slices + min_context_recall; **47** cases |
-| **7.5** | **`4eceed3`** | CI write + upload + require-wire of baseline artifact |
+| **7.5** | `4eceed3` | CI write + upload + require-wire of baseline artifact |
+| **7.6** | **`d1ae4d6`** | scheduled live provider gate scaffold (opt-in) |
 
 ### §8 widget / edge
 
@@ -126,6 +128,15 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 ---
 
 ## 5. Contracts (recent complete slices)
+
+### 7.6 @ `d1ae4d6`
+
+- `scripts/live_provider_gate.py` readiness/command/live
+- Default readiness: no live calls; `SKIPPED_NO_OPT_IN`; never release PASS
+- Live: `RAG_LIVE_PROVIDER_GATE` + provider keys; fail-closed without keys
+- Live argv: `--release-gate --allow-paid-apis`; forbids mock
+- Workflow: `.github/workflows/live-provider-gate.yml` (schedule + dispatch)
+- Tests: `tests/test_live_provider_gate.py`
 
 ### 6.5 @ `431893c`
 
@@ -210,6 +221,9 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | `scripts/regression_eval.py` | **7.1–7.4** | gate + evidence + baseline artifact + slices |
 | `.github/workflows/ci.yml` | **7.5** | write + upload + require-wire baseline artifact |
 | `tests/test_github_workflows.py` | **7.5** | CI wire contract lock |
+| `scripts/live_provider_gate.py` | **7.6** | live gate scaffold policy + readiness |
+| `.github/workflows/live-provider-gate.yml` | **7.6** | scheduled/opt-in live gate |
+| `tests/test_live_provider_gate.py` | **7.6** | live gate contract |
 | `evaluation/curated_cases.jsonl` | **7.4** | regression curated corpus (47) |
 | `evaluation/curated_cases.manifest.json` | **7.4** | required slices register |
 | `tests/test_curated_dataset_expansion.py` | **7.4** | slice coverage + context_recall |
@@ -253,10 +267,19 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 23. CI: write + publish + require-load baseline artifact (smoke; mock≠release)  
 24. Routing floors from calibration artifact (bootstrap ok; full human residual)  
 25. Agentic + KB docs → measured grounding; auto needs measured quality too  
+26. Live provider gate is separate from PR mock smoke; opt-in only; never silent PASS  
 
 ---
 
 ## 8. Verification recipes (last known green; re-run when coding)
+
+### §7.6 band
+
+```powershell
+python -m pytest tests/test_live_provider_gate.py tests/test_github_workflows.py -q -p no:cacheprovider -p no:schemathesis
+python -m ruff check scripts/live_provider_gate.py tests/test_live_provider_gate.py
+python scripts/live_provider_gate.py --mode readiness --write-report reports/regression/live-provider-gate-readiness.json
+```
 
 ### §6.5 band
 
@@ -309,16 +332,16 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 **Default picks (one only):**
 
-1. **Scheduled live provider gate** scaffolding (**opt-in** for real providers)  
-2. **Deeper per-slice curated corpus**  
-3. **Agentic LLM evaluate wire** (supply measured quality on KB terminals)  
-4. **Real human-labelled recalibration** (replace synthetic labelled_routes)  
+1. **Deeper per-slice curated corpus**  
+2. **Agentic LLM evaluate wire** (supply measured quality on KB terminals)  
+3. **Real human-labelled recalibration** (replace synthetic labelled_routes)  
+4. **Live provider execute** with secrets + `--execute` (**explicit opt-in only**)  
 5. **Astro 7** major when Starlight supports it (clears DEP-01 moderate residual)  
 
 ### Out without opt-in
 
-- live multi-service / migrate / push / deploy  
-- re-select through **8.5** / **6.1–6.5** / **7.1–7.5** / **DEP-01**  
+- live multi-service / migrate / push / deploy / live provider execute  
+- re-select through **8.5** / **6.1–6.5** / **7.1–7.6** / **DEP-01**  
 - OIDC live IdP drill; full browser matrix expansion  
 
 ### Alternates (only if user prioritizes)

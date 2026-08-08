@@ -1,5 +1,115 @@
 # Agent State
 
+## 2026-08-08 Update-112 — completed slice 7.6 live provider gate scaffold @ `d1ae4d6` ✅ START HERE
+
+> **Routing authority:** Update-112 supersedes Update-111 **only for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `d1ae4d6`
+>   (`feat(eval): scheduled live provider gate scaffold (7.6)`)
+>   - slice **7.6**
+> - Previous impl: `431893c` — **6.5**; docs Update-111 `2b06f6c`
+> - Quality path (impl SHAs, recent):
+>   - 6: `b3494a0`…`431893c` **6.5**
+>   - 7: `94ac64e` 7.1 · `25788ee` 7.2 · `0d34be2` 7.3 · `8f4269f` 7.4 ·
+>     `4eceed3` 7.5 · **`d1ae4d6` 7.6**
+>   - 8: `0bee13e`…`4d6be52` **8.5**
+>   - DEP-01: **`f622d58`**
+> - Migrations on disk (not applied): **019–023**
+> - This Update-112 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 198]` after impl (before this docs commit).
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **6.1–6.5** | local |
+> | **7.1–7.6** | eval fail-closed + baseline + dataset + CI wire + **live gate scaffold** local |
+> | **8.1–8.5** + **DEP-01** | local |
+> | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
+>
+> ---
+>
+> ### 7.6 contract (local)
+>
+> - `scripts/live_provider_gate.py`: readiness / command / live modes
+> - Default readiness: **no live calls**, verdict `SKIPPED_NO_OPT_IN`, never
+>   `release_passed`
+> - Live requires `RAG_LIVE_PROVIDER_GATE` / `--live` + provider API key env;
+>   fail-closed without credentials
+> - Live argv: `--release-gate --allow-paid-apis --no-persist`; **forbids**
+>   `--mock-experiment-runtime`
+> - Workflow: `.github/workflows/live-provider-gate.yml` (weekly schedule +
+>   workflow_dispatch `enable_live` default **false**)
+> - Files: script + workflow + `tests/test_live_provider_gate.py`
+>
+> **Honest residual:** scaffold does not execute paid providers by default;
+> real live evidence still needs operator opt-in + secrets + `--execute`.
+>
+> **Verification:** live-gate + workflow band **21 passed**; Ruff clean;
+> readiness CLI `SKIPPED_NO_OPT_IN`. Full suite / live / push **not** claimed.
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next default pick one:** deeper curated corpus **or** agentic LLM
+>   evaluate wire **or** real human recalibration **or** live execute with
+>   secrets (**opt-in**)
+> - 7 residual after 7.6: actual live runs; deeper corpus; mock smoke remains
+>   non-release on PR path
+> - 6 residual: full human calibration; optional agentic LLM evaluate
+> - 5 residual: live precision/recall/faithfulness ×3
+> - 4 residual: graph SSE tokens; parity default off; outbox schedule
+> - DEP-01 residual: Astro7; exceptions expire **2026-11-07**
+> - live multi-service + migrations **019–023** (**opt-in**)
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **deeper curated corpus** **or** **agentic LLM evaluate wire** **or**
+> **human recalibration** — one atomic residual; live execute only with opt-in.
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–3.1i, 4.1–4.5, 5.1–5.3, 6.1–6.5,
+> 7.1–7.6, **8.1–8.5**, **DEP-01**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Do not touch/stage/remove without explicit request:
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+>   `_NEXT_SESSION.md`, `rag-remediation-plan-2026-08-03.md`
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live PostgreSQL/Redis/Celery/Chroma drills, `alembic upgrade`
+> (incl. **019–023**), live provider execute with secrets, destructive Git,
+> production-readiness claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; quality > speed.
+>
+> **Git advisory:** refresh `git status --short --branch` and
+> `git log -12 --oneline` at session start — **actual Git wins**.
+
+
 ## 2026-08-08 Update-111 — completed slice 6.5 measured agentic KB gate @ `431893c` ✅ START HERE
 
 > **Routing authority:** Update-111 supersedes Update-110 **only for start-point

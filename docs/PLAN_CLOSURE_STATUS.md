@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-08 (Update-111 after 6.5 measured agentic KB gate)  
+**Date:** 2026-08-08 (Update-112 after 7.6 live provider gate scaffold)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-111**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-112**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -24,7 +24,7 @@
 | **4** unified pipeline + escalation | **4.1–4.5 local** | **OPEN** true graph tokens; parity default off; schedule wiring | partial |
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.5 local** | OPEN (full human calibration; optional agentic LLM evaluate) | **yes** |
-| **7** eval gate fail-closed | **7.1–7.5 local** | OPEN (live gate / depth; mock≠release) | **yes** |
+| **7** eval gate fail-closed | **7.1–7.6 local** | OPEN (live execute / depth; mock≠release) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | partial + **DEP-01 local** | OPEN (Astro7 residual; cache/SLO) | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
@@ -60,11 +60,12 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 17 | §7.5 CI baseline-artifact wire | **done** `4eceed3` |
 | 18 | §6.4 routing calibration artifact | **done** `a7cefc3` |
 | 19 | §6.5 measured agentic KB gate | **done** `431893c` |
-| 20 | **live gate / deeper corpus / agentic LLM evaluate** | **← next pick** |
-| 21 | §4 residual (graph tokens / parity default) | residual |
-| 22 | §2/§3 residual if product needs | residual |
-| 23 | Astro 7 (clears DEP-01 moderate residual) | residual |
-| 24 | §1 + §10 | **opt-in live only** |
+| 20 | §7.6 live provider gate scaffold | **done** `d1ae4d6` |
+| 21 | **deeper corpus / agentic LLM evaluate / human cal** | **← next pick** |
+| 22 | §4 residual (graph tokens / parity default) | residual |
+| 23 | §2/§3 residual if product needs | residual |
+| 24 | Astro 7 (clears DEP-01 moderate residual) | residual |
+| 25 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -157,12 +158,14 @@ Confirmation/order-only remain unmeasured by design.
 | **7.3** | **done local** | `0d34be2` | merge-base baseline artifact load/write/require |
 | **7.4** | **done local** | `8f4269f` | 10 required slices + min_context_recall; 47 cases |
 | **7.5** | **done local** | `4eceed3` | CI write + upload + require-wire baseline artifact |
-| 7.x | residual | — | scheduled live provider gate; deeper per-slice corpus |
+| **7.6** | **done local** | `d1ae4d6` | scheduled live provider gate scaffold (opt-in) |
+| 7.x | residual | — | live execute with secrets; deeper per-slice corpus |
 
 **7.2 residual:** CI still runs `--mock-experiment-runtime` as **smoke** (documented non-evidence).  
 **7.3 residual:** closed for local CLI; CI wire completed in **7.5** (smoke path only).  
 **7.4 residual:** more cases per slice optional; live metrics still open.  
-**7.5 residual:** live non-mock release gate still open; artifact wire is smoke-only.
+**7.5 residual:** artifact wire is smoke-only on PR path.  
+**7.6 residual:** scaffold only — real paid live evidence needs opt-in + secrets + `--execute`.
 
 ### §7 last-known verification (7.5 turn)
 
