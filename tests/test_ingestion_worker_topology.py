@@ -181,13 +181,23 @@ def test_compose_defines_single_ingestion_worker_service() -> None:
         assert dep_name in worker_deps
         assert worker_deps[dep_name] == dep_cfg
 
-    # Exactly one dedicated ingestion worker service (no second Celery service)
+    # Exactly one dedicated ingestion *worker* (concurrency path). Plan §4.6 may
+    # add a Celery *beat* schedule process (worker-beat) — that is not a second
+    # ingestion worker and must not claim parallel ingest concurrency.
     celery_services = [
         name
         for name, svc in services.items()
         if "tasks.celery_app:celery_app" in _command_text(svc)
     ]
-    assert celery_services == ["worker"]
+    assert "worker" in celery_services
+    ingest_workers = [
+        name
+        for name in celery_services
+        if re.search(r"(^|[\s])worker([\s]|$)", _command_text(services[name]))
+    ]
+    assert ingest_workers == ["worker"], (
+        f"expected single ingest worker, got {ingest_workers}"
+    )
 
     # Healthcheck must invoke the exact-worker probe (not a PID/process grep)
     health = worker.get("healthcheck")

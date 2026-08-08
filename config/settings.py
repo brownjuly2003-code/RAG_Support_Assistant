@@ -621,6 +621,24 @@ class Settings:
         ).strip().lower()
         in ("1", "true", "yes")
     )
+    # Plan §4.6: Celery beat registration for escalation outbox retry.
+    # Worker executes the task; beat (or cron/scripts/outbox_retry.py) schedules it.
+    outbox_retry_beat: bool = field(
+        default_factory=lambda: os.getenv(
+            "RAG_OUTBOX_RETRY_BEAT", "true"
+        ).strip().lower()
+        in ("1", "true", "yes", "on")
+    )
+    outbox_retry_interval_sec: float = field(
+        default_factory=lambda: float(
+            os.getenv("RAG_OUTBOX_RETRY_INTERVAL_SEC", "300") or 300
+        )
+    )
+    outbox_retry_batch_limit: int = field(
+        default_factory=lambda: int(
+            os.getenv("RAG_OUTBOX_RETRY_BATCH_LIMIT", "50") or 50
+        )
+    )
 
     # --- HyDE (Hypothetical Document Embeddings) ---
     hyde: bool = field(

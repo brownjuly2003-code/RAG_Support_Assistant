@@ -11,7 +11,8 @@ celery_app = Celery(
     "rag_tasks",
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=["tasks.ingest_task"],
+    # ingest_task + outbox_retry_task (plan §4.6 escalation outbox schedule)
+    include=["tasks.ingest_task", "tasks.outbox_retry_task"],
 )
 
 celery_app.conf.update(
@@ -36,6 +37,22 @@ celery_app.conf.update(
     },
 )
 
+# Plan §4.6: periodic escalation outbox retry (failed inbox deliveries).
+# Requires a Celery beat process; worker alone does not fire the schedule.
+# Disable registration with RAG_OUTBOX_RETRY_BEAT=false.
+try:
+    from tasks.outbox_retry_task import build_outbox_beat_schedule
+
+    _outbox_beat = build_outbox_beat_schedule()
+    if _outbox_beat:
+        existing = dict(getattr(celery_app.conf, "beat_schedule", None) or {})
+        existing.update(_outbox_beat)
+        celery_app.conf.beat_schedule = existing
+except Exception:
+    # Import-time failures must not block ingest worker startup.
+    pass
+
 celery_app.autodiscover_tasks(["tasks"], related_name="ingest_task")
+celery_app.autodiscover_tasks(["tasks"], related_name="outbox_retry_task")
 
 app = celery_app
