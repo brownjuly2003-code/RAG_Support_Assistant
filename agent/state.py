@@ -22,9 +22,9 @@ agent/state.py
     Ответ ассистента. На старте None, после узла generate — строка.
 
 - relevance_score: float | None
-    Оценка релевантности ответа вопросу (0.0–1.0). В простом варианте
-    мы будем считать её как quality_score / 100.0, но при желании можно
-    сделать отдельный узел с более точной оценкой.
+    Retrieval relevance (0.0–1.0), plan §5.4. Independent of quality_score:
+    graded_docs/context fraction and/or retrieval metadata scores via
+    ``agent.relevance.measure_retrieval_relevance``. Never quality/100.
 
 - quality_score: int | None
     Оценка качества ответа по шкале 1–100 (чем выше, тем лучше). Эти

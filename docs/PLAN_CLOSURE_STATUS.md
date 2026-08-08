@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-08 (Update-120 after 4.8 provider token stream)  
+**Date:** 2026-08-08 (Update-121 after 5.4 independent relevance)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-120**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-121**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -22,7 +22,7 @@
 | **2** index lifecycle | **2.1–2.6g local residual closed** | **OPEN** live PG/Redis/Celery/Chroma | yes for live index ops |
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.8 local** | **OPEN** parity default still off (product) | partial |
-| **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
+| **5** grounding fail-closed | **5.1–5.4 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
@@ -55,10 +55,11 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 24 | §4.6 outbox retry schedule | **done** `11acfec` |
 | 25 | §4.7 graph node status SSE | **done** `6b91a35` |
 | 26 | §4.8 provider token stream through generate | **done** `fc7f07b` |
-| 27 | **human sample / live execute / parity-default** | **← next pick** |
-| 28 | §2/§3 residual if product needs | residual |
-| 29 | Astro 7 (clears DEP-01 moderate residual) | residual |
-| 30 | §1 + §10 | **opt-in live only** |
+| 27 | §5.4 independent retrieval relevance | **done** `4f95e18` |
+| 28 | **human sample / live execute / live metrics ×3** | **← next pick** |
+| 29 | §2/§3 residual if product needs | residual |
+| 30 | Astro 7 (clears DEP-01 moderate residual) | residual |
+| 31 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -126,9 +127,10 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **5.1** | **done** | `7c53bdb` |
 | **5.2** | **done** | `50bb220` |
 | **5.3** | **done** | `1cdecb2` |
+| **5.4** | **done** | `4f95e18` independent retrieval relevance |
 | Live DoD | **open** | — |
 
-**Residual:** live precision/recall/faithfulness ×3; relevance still derived from quality/100.
+**Residual after 5.4:** live precision/recall/faithfulness ×3. Relevance is **not** quality/100.
 
 ---
 
@@ -234,23 +236,21 @@ Local green slices alone **do not** close the plan.
 1. **Collect real dual-annotator human sample** +  
    `recalibrate_routing.py --require-human --write`  
 2. **Live provider execute** (`RAG_LIVE_PROVIDER_GATE` + secrets + `--execute`) — opt-in  
-3. **Astro 7** / product decision to default `STREAMING_RAG_PARITY=true`  
+3. **Live quality metrics** scaffold/runs (precision/recall/faithfulness ×3)  
+4. **Astro 7** / product decision to default `STREAMING_RAG_PARITY=true`  
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, 5.1–5.3, 6.1–6.7, 7.1–7.7, 8.1–8.5, DEP-01.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.4**, 6.1–6.7, 7.1–7.7, 8.1–8.5, DEP-01.
 
 ---
 
-## Last-known verification snapshot (4.8 turn)
+## Last-known verification snapshot (5.4 turn)
 
 | Band | Last known |
 |------|------------|
+| **5.4** | 56 passed (relevance + agentic + grounding/judge) |
 | **4.8** | 16 passed (provider tokens + node SSE + parity) |
-| **4.7** | included in 4.8 band |
-| **4.6** | 8 passed (outbox schedule) |
 | **6.7** | 19 passed; seed NOT_READY |
-| **6.6** | 32 passed |
 | **7.7** | 8 passed (depth) |
-| **7.6** | 21 passed |
 | **8.5** | 16 passed |
 | **DEP-01** | npm audit high=0 |
 

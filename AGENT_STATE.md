@@ -1,7 +1,100 @@
 # Agent State
 
+## 2026-08-08 Update-121 — 5.4 independent retrieval relevance ✅ START HERE
+
+> **Routing authority:** Update-121 supersedes Update-120 **only for
+> start-point routing**. All older Update blocks below, including headings
+> that literally contain `✅ START HERE`, are **archival**. **Only the
+> first/topmost Update block in this file is authoritative.** Never select
+> work by grepping old `START HERE` markers.
+>
+> **Implementation this turn:** slice **5.4** — independent retrieval
+> relevance (not `quality/100`). No push / deploy / live / migrate. Does
+> **not** claim live precision/recall/faithfulness ×3 DoD or production.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `4f95e18`
+>   (`feat(relevance): independent retrieval relevance, not quality/100 (5.4)`)
+> - Prior impl: `fc7f07b` **4.8** · `6b91a35` **4.7** · `c707c46` **6.7**
+> - Prior docs: `cf12230` Update-120
+> - §5 path: `7c53bdb` 5.1 · `50bb220` 5.2 · `1cdecb2` 5.3 · **`4f95e18` 5.4**
+> - Migrations on disk (not applied): **019–023**
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | local residual closed at documented scopes |
+> | **3.1a–3.1i** | local at documented scopes |
+> | **4.1–4.8** | stream parity + provider tokens local |
+> | **5.1–5.4** | grounding + citation-bound + grader + **independent relevance** local |
+> | **6.1–6.7** | judge / safety / agentic / calibration local |
+> | **7.1–7.7** | eval gate band local |
+> | **8.1–8.5** + **DEP-01** | local |
+> | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
+>
+> ---
+>
+> ### Slice 5.4 contract
+>
+> - `agent/relevance.py` — `measure_retrieval_relevance`
+>   - sources: `empty_context` | `retrieval_scores` | `graded_fraction` |
+>     `context_kept` | `unmeasured`
+>   - **never** reads or derives from `quality_score`
+> - Wired: evaluate node, agentic evaluate, agentic measure
+> - `relevance_source` stamped on state when measured
+> - auto still needs quality + relevance + grounding floors
+>
+> **Files:** `agent/relevance.py`, `agent/graph.py`, `agent/agentic_evaluate.py`,
+> `agent/agentic_measure.py`, `agent/state.py`, `tests/test_retrieval_relevance.py`,
+> `tests/test_agentic_evaluate.py`
+>
+> ---
+>
+> ### Known verification (5.4 turn)
+>
+> | Gate | Result |
+> |------|--------|
+> | relevance + agentic + grounding/judge band | **56 passed** |
+> | Ruff on touched paths | clean |
+> | Full suite / live metrics ×3 / push | **not** run / **not** claimed |
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next default pick one:**
+>   1. **real dual-annotator human sample** + recalibrate `--require-human`
+>   2. **live provider execute** (opt-in + secrets)
+>   3. **live quality metrics** scaffold/runs (precision/recall/faithfulness ×3)
+>   4. Astro7 / `STREAMING_RAG_PARITY` default product decision
+> - §5 residual after 5.4: live metrics DoD ×3
+> - §6 residual: production human dual-annotator sample
+> - multi-replica durable session (design DEFER without SLA)
+> - live multi-service + migrations **019–023** (**opt-in**)
+>
+> **Do not re-select:** 2.x–3.x, **4.1–4.8**, **5.1–5.4**, 6.1–6.7, 7.1–7.7,
+> 8.1–8.5, DEP-01.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`  
+> Untracked: plan file, `_NEXT_SESSION.md`, pytest temps, presentations
+>
+> ### External gates (opt-in only)
+>
+> push · deploy · live multi-service · live provider execute · alembic 019–023
+
 ## 2026-08-08 Update-120 — 4.8 provider token streaming through generate ✅ START HERE
 
+> **Historical (superseded by Update-121 for start-point routing).**
+>
 > **Routing authority:** Update-120 supersedes Update-119 **only for
 > start-point routing**. All older Update blocks below, including headings
 > that literally contain `✅ START HERE`, are **archival**. **Only the
