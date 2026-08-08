@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-07 (Update-108 full transparency after 7.4)  
+**Date:** 2026-08-08 (Update-109 after 7.5 CI baseline-artifact wire)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-108**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-109**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -24,7 +24,7 @@
 | **4** unified pipeline + escalation | **4.1–4.5 local** | **OPEN** true graph tokens; parity default off; schedule wiring | partial |
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.3 local** | OPEN (**← calibration** / measured agentic) | **yes** |
-| **7** eval gate fail-closed | **7.1–7.4 local** | OPEN (live gate / CI wire / depth) | **yes** |
+| **7** eval gate fail-closed | **7.1–7.5 local** | OPEN (live gate / depth; mock≠release) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | partial + **DEP-01 local** | OPEN (Astro7 residual; cache/SLO) | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
@@ -57,11 +57,12 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 14 | §7.3 merge-base baseline artifact | **done** `0d34be2` |
 | 15 | DEP-01 docs-site npm audit | **done** `f622d58` |
 | 16 | §7.4 curated dataset slices | **done** `8f4269f` |
-| 17 | **§6 calibration / CI baseline wire / live gate** | **← next pick** |
-| 18 | §4 residual (graph tokens / parity default) | residual |
-| 19 | §2/§3 residual if product needs | residual |
-| 20 | Astro 7 (clears DEP-01 moderate residual) | residual |
-| 21 | §1 + §10 | **opt-in live only** |
+| 17 | §7.5 CI baseline-artifact wire | **done** `4eceed3` |
+| 18 | **§6 calibration / live gate / deeper corpus** | **← next pick** |
+| 19 | §4 residual (graph tokens / parity default) | residual |
+| 20 | §2/§3 residual if product needs | residual |
+| 21 | Astro 7 (clears DEP-01 moderate residual) | residual |
+| 22 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -143,19 +144,21 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **7.2** | **done local** | `25788ee` | mock = SMOKE only; release needs evidence |
 | **7.3** | **done local** | `0d34be2` | merge-base baseline artifact load/write/require |
 | **7.4** | **done local** | `8f4269f` | 10 required slices + min_context_recall; 47 cases |
-| 7.x | residual | — | scheduled live gate; CI wire artifact; deeper per-slice corpus |
+| **7.5** | **done local** | `4eceed3` | CI write + upload + require-wire baseline artifact |
+| 7.x | residual | — | scheduled live provider gate; deeper per-slice corpus |
 
 **7.2 residual:** CI still runs `--mock-experiment-runtime` as **smoke** (documented non-evidence).  
-**7.3 residual:** CI does not yet require/publish baseline artifact on release path.  
-**7.4 residual:** more cases per slice optional; live metrics still open.
+**7.3 residual:** closed for local CLI; CI wire completed in **7.5** (smoke path only).  
+**7.4 residual:** more cases per slice optional; live metrics still open.  
+**7.5 residual:** live non-mock release gate still open; artifact wire is smoke-only.
 
-### §7 last-known verification (7.4 turn; not re-run in Update-108)
+### §7 last-known verification (7.5 turn)
 
 | Slice | Gate | Result |
 |-------|------|--------|
-| **7.4** | dataset expansion + regression band | **44 passed** |
-| 7.3 | baseline artifact (included in band) | green in 7.4 turn |
-| 7.2 / 7.1 | evidence + gate fail-closed (included) | green in 7.4 turn |
+| **7.5** | workflow wire + baseline band + local write→require | **11 + 15 passed**; SMOKE_PASS |
+| **7.4** | dataset expansion + regression band | prior **44 passed** |
+| 7.3 | baseline artifact (included in band) | green in 7.4/7.5 turns |
 
 ---
 

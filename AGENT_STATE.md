@@ -1,5 +1,128 @@
 # Agent State
 
+## 2026-08-08 Update-109 — completed slice 7.5 CI baseline-artifact wire @ `4eceed3` ✅ START HERE
+
+> **Routing authority:** Update-109 supersedes Update-108 **only for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `4eceed3`
+>   (`feat(ci): wire baseline artifact write, publish, require (7.5)`)
+>   - slice **7.5**
+> - Previous impl: `8f4269f` — **7.4**; docs Update-108 `9817d1c`
+> - Quality path (impl SHAs, recent):
+>   - 5: `7c53bdb` 5.1 · `50bb220` 5.2 · `1cdecb2` **5.3**
+>   - 6: `b3494a0` 6.1 · `d0317e9` 6.2 · `d6e3a55` **6.3**
+>   - 7: `94ac64e` 7.1 · `25788ee` 7.2 · `0d34be2` 7.3 · `8f4269f` 7.4 ·
+>     **`4eceed3` 7.5**
+>   - 8: `0bee13e` 8.1 · `756562e` 8.2 · `13a9a5b` 8.3 · `68a30b2` 8.4 ·
+>     `4d6be52` **8.5**
+>   - DEP-01: **`f622d58`**
+> - Migrations on disk (not applied): **019–023**
+> - This Update-109 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 192]` after impl (before this docs commit).
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | local residual closed at documented scopes |
+> | **3.1a–3.1i** | local at documented scopes |
+> | **4.1–4.5** | stream parity + durable escalation **local** |
+> | **5.1–5.3** | grounding + citation-bound + grader fail-closed **local** |
+> | **6.1–6.3** | unmeasured agentic + pre-response safety + independent judge **local** |
+> | **7.1–7.5** | eval fail-closed + mock≠PASS + baseline artifact + dataset + **CI wire** local |
+> | **8.1–8.5** | widget/edge security + Playwright E2E **local** |
+> | **DEP-01** | docs-site npm audit high=0 + dated exceptions **local** |
+> | Full plan §1–§10 | **NOT** complete (live DoD / calibration / Gate A open) |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+>
+> **Transparency maps:**
+> - [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) — full next-session capsule
+> - [`docs/PLAN_CLOSURE_STATUS.md`](docs/PLAN_CLOSURE_STATUS.md) — residual matrix
+> - [`_NEXT_SESSION.md`](_NEXT_SESSION.md) — pointer only (not SoT)
+>
+> ---
+>
+> ### 7.5 contract (local)
+>
+> - CI `regression-eval` smoke writes `reports/regression/ci-baseline-artifact.json`
+> - Upload: `actions/upload-artifact@v4` name `regression-baseline-artifact`
+>   (`if-no-files-found: error`)
+> - Second step re-compares with `--baseline-artifact` + `--require-baseline-artifact`
+> - Mock path still **SMOKE only** — no `--release-gate` (plan §7.2)
+> - Files: `.github/workflows/ci.yml`, `tests/test_github_workflows.py`
+>
+> **Verification:** workflow suite **11 passed**; baseline band **15 passed**
+> (incl. new wire contract); local mock write→require **exit 0 / SMOKE_PASS**;
+> Ruff clean on test. Full suite / live providers / push **not** claimed.
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next default pick one:** §6 calibration / measured agentic **or**
+>   scheduled live provider gate scaffolding **or** deeper per-slice corpus
+> - 7 residual after 7.5: live provider gate (real non-mock evidence);
+>   deeper per-slice corpus optional; mock still not release PASS
+> - 5 residual: live precision/recall/faithfulness ×3
+> - 4 residual: true graph SSE tokens; parity default off; outbox schedule
+> - multi-replica durable session version
+> - DEP-01 residual: Astro 6 moderate until Astro 7 / Starlight; exceptions
+>   expire **2026-11-07**
+> - live multi-service + migrations **019–023** (**opt-in**)
+> - plan 9–10; full suite / release / production
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **§6 calibration residual** **or** **live provider gate scaffold**
+> **or** **deeper curated corpus** — one atomic residual; do not combine
+> with live drills without opt-in.
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–3.1i, 4.1–4.5, 5.1–5.3, 6.1–6.3,
+> 7.1–7.5, **8.1–8.5**, **DEP-01**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Do not touch/stage/remove without explicit request:
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+>   `_NEXT_SESSION.md` (**pointer only — not routing authority**),
+>   `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
+>   casually), architecture HTML, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live PostgreSQL/Redis/Celery/Chroma drills, `alembic upgrade`
+> (incl. **019–023**), destructive Git, production-readiness claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; quality > speed.
+>
+> **Git advisory:** refresh `git status --short --branch` and
+> `git log -12 --oneline` at session start — **actual Git wins**.
+
+
 ## 2026-08-07 Update-108 — docs-only full transparency after 7.4 / Update-107 ✅ START HERE
 
 > **Routing authority:** Update-108 is **docs-only / transparency-only** and

@@ -1,7 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 — **Update-108** (docs-only full transparency after  
-**7.4** @ `8f4269f` + docs Update-107 `6a2b674`).  
+**Обновлено:** 2026-08-08 — **Update-109** (slice **7.5** CI baseline-artifact  
+wire @ `4eceed3`; supersedes Update-108 for start-point routing).  
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей  
 истории `AGENT_STATE.md`.
 
@@ -12,11 +12,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-108**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-109**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-108; dirty  
+**Не использовать:** старые `✅ START HERE` ниже Update-109; dirty  
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` как единственный SoT  
 (это pointer only).
 
@@ -28,23 +28,20 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **implementation** | `8f4269f` — **7.4** curated dataset slices (47 cases) |
-| Latest **docs before this Update** | `6a2b674` — Update-107 |
-| This Update-108 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | `master...origin/master [ahead 190]` before this docs commit — **refresh mandatory** |
+| Latest **implementation** | `4eceed3` — **7.5** CI baseline-artifact wire |
+| Latest **docs before this Update** | `9817d1c` — Update-108 |
+| This Update-109 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | `master...origin/master [ahead 192]` after impl — **refresh mandatory** |
 | Active writer / WIP | **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.4** + **8.1–8.5** + **DEP-01** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.5** + **8.1–8.5** + **DEP-01** |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered (default) | §6 calibration **or** CI baseline-artifact wire **or** live provider gate scaffold |
+| Next ordered (default) | §6 calibration **or** live provider gate scaffold **or** deeper corpus |
 | Gates | **no** push / deploy / live multi-service / migrate 019–023 without **explicit opt-in** |
 
-**This Update-108 is docs-only:** no code/test/plan-checkbox change; project  
-tests **not** re-run here. Implementation state unchanged after `8f4269f`.
-
-**Last known verification (7.4; not re-run this docs turn):** focused **44  
-passed** (dataset expansion + regression band); Ruff clean. Full suite / live  
-**not** claimed.
+**Last known verification (7.5):** workflow suite **11 passed**; baseline + wire  
+band **15 passed**; local mock write→require **exit 0 / SMOKE_PASS**; Ruff clean  
+on test. Full suite / live / push **not** claimed.
 
 ---
 
@@ -55,8 +52,8 @@ passed** (dataset expansion + regression band); Ruff clean. Full suite / live
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-108 in AGENT_STATE.md + this file §1–§11
-6. Default work: §6 calibration OR CI baseline wire OR live gate scaffold. Announce: slice 1/1
+5. Read ONLY top Update-109 in AGENT_STATE.md + this file §1–§11
+6. Default work: §6 calibration OR live gate scaffold OR deeper corpus. Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
 ```
@@ -77,7 +74,7 @@ claims, bulk plan checkbox edits.
 | **4** pipeline + escalation | **4.1–4.5** local | true graph tokens; parity default **off**; outbox Celery/cron |
 | **5** grounding fail-closed | **5.1–5.3** local | live metrics DoD ×3; relevance≠quality residual |
 | **6** judge / safety / agentic | **6.1–6.3** local | **← calibration**; measured agentic evaluate when KB context |
-| **7** eval gate | **7.1–7.4** local | live provider gate; CI wire artifact; deeper per-slice corpus |
+| **7** eval gate | **7.1–7.5** local | live provider gate; deeper per-slice corpus; mock≠release |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
 | **9** cache / architecture / SLO | partial + **DEP-01 local** | Astro7 residual; cache/SLO |
 | **10** final verification | not started | after 1–9 + opt-in evidence |
@@ -98,7 +95,8 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | **7.1** | `94ac64e` | infra/skip/empty → FAIL |
 | **7.2** | `25788ee` | mock → `SMOKE_PASS` only; `--release-gate` needs evidence |
 | **7.3** | `0d34be2` | merge-base baseline artifact load/write/require |
-| **7.4** | **`8f4269f`** | required slices + min_context_recall; **47** cases |
+| **7.4** | `8f4269f` | required slices + min_context_recall; **47** cases |
+| **7.5** | **`4eceed3`** | CI write + upload + require-wire of baseline artifact |
 
 ### §8 widget / edge
 
@@ -129,6 +127,15 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 ---
 
 ## 5. Contracts (recent complete slices)
+
+### 7.5 @ `4eceed3`
+
+- CI smoke: `--write-baseline-artifact reports/regression/ci-baseline-artifact.json`
+- Publish: `actions/upload-artifact@v4` → `regression-baseline-artifact`
+  (`if-no-files-found: error`)
+- Require wire: second step `--baseline-artifact` + `--require-baseline-artifact`
+- Still mock → still **SMOKE only**; **no** `--release-gate` (plan §7.2)
+- Files: `.github/workflows/ci.yml`, `tests/test_github_workflows.py`
 
 ### 7.4 @ `8f4269f`
 
@@ -176,6 +183,8 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | Path | Slices | Role |
 |------|--------|------|
 | `scripts/regression_eval.py` | **7.1–7.4** | gate + evidence + baseline artifact + slices |
+| `.github/workflows/ci.yml` | **7.5** | write + upload + require-wire baseline artifact |
+| `tests/test_github_workflows.py` | **7.5** | CI wire contract lock |
 | `evaluation/curated_cases.jsonl` | **7.4** | regression curated corpus (47) |
 | `evaluation/curated_cases.manifest.json` | **7.4** | required slices register |
 | `tests/test_curated_dataset_expansion.py` | **7.4** | slice coverage + context_recall |
@@ -216,10 +225,18 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 20. Regression: baseline from artifact for honest release compare  
 21. Dataset: required slices covered; `min_context_recall` enforceable  
 22. Docs-site: high/critical fail closed; residual only with dated exceptions  
+23. CI: write + publish + require-load baseline artifact (smoke; mock≠release)  
 
 ---
 
 ## 8. Verification recipes (last known green; re-run when coding)
+
+### §7.5 band
+
+```powershell
+python -m pytest tests/test_github_workflows.py tests/test_regression_baseline_artifact.py tests/test_regression_evidence_policy.py -q -p no:cacheprovider -p no:schemathesis
+python -m ruff check tests/test_github_workflows.py
+```
 
 ### §7.4 band
 
@@ -252,21 +269,20 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 **Default picks (one only):**
 
 1. **§6 calibration / measured agentic residual** when KB context exists  
-2. **CI wire** of `--baseline-artifact` / `--require-baseline-artifact` on release path  
-3. **Scheduled live provider gate** scaffolding (**opt-in** for real providers)  
+2. **Scheduled live provider gate** scaffolding (**opt-in** for real providers)  
+3. **Deeper per-slice curated corpus**  
 4. **Astro 7** major when Starlight supports it (clears DEP-01 moderate residual)  
 
 ### Out without opt-in
 
 - live multi-service / migrate / push / deploy  
-- re-select through **8.5** / **7.4** / **DEP-01**  
+- re-select through **8.5** / **7.1–7.5** / **DEP-01**  
 - OIDC live IdP drill; full browser matrix expansion  
 
 ### Alternates (only if user prioritizes)
 
 - live §1 / migrate 019–023 (**explicit opt-in only**)  
 - §4 graph tokens / stream parity default  
-- deeper per-slice corpus expansion  
 
 ---
 
