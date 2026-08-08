@@ -1,5 +1,132 @@
 # Agent State
 
+## 2026-08-08 Update-110 — completed slice 6.4 routing calibration artifact @ `a7cefc3` ✅ START HERE
+
+> **Routing authority:** Update-110 supersedes Update-109 **only for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `a7cefc3`
+>   (`feat(routing): calibration artifact for auto-route thresholds (6.4)`)
+>   - slice **6.4**
+> - Previous impl: `4eceed3` — **7.5**; docs Update-109 `31a880b`
+> - Quality path (impl SHAs, recent):
+>   - 5: `7c53bdb` 5.1 · `50bb220` 5.2 · `1cdecb2` **5.3**
+>   - 6: `b3494a0` 6.1 · `d0317e9` 6.2 · `d6e3a55` 6.3 · **`a7cefc3` 6.4**
+>   - 7: `94ac64e` 7.1 · `25788ee` 7.2 · `0d34be2` 7.3 · `8f4269f` 7.4 ·
+>     `4eceed3` **7.5**
+>   - 8: `0bee13e`…`4d6be52` **8.5**
+>   - DEP-01: **`f622d58`**
+> - Migrations on disk (not applied): **019–023**
+> - This Update-110 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 194]` after impl (before this docs commit).
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | local residual closed at documented scopes |
+> | **3.1a–3.1i** | local at documented scopes |
+> | **4.1–4.5** | stream parity + durable escalation **local** |
+> | **5.1–5.3** | grounding + citation-bound + grader fail-closed **local** |
+> | **6.1–6.4** | unmeasured agentic + safety + judge + **calibration artifact** local |
+> | **7.1–7.5** | eval fail-closed + baseline + dataset + CI wire local |
+> | **8.1–8.5** | widget/edge security + Playwright E2E **local** |
+> | **DEP-01** | docs-site npm audit high=0 + dated exceptions **local** |
+> | Full plan §1–§10 | **NOT** complete (live DoD / full human calibration / Gate A open) |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+>
+> **Transparency maps:**
+> - [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) — full next-session capsule
+> - [`docs/PLAN_CLOSURE_STATUS.md`](docs/PLAN_CLOSURE_STATUS.md) — residual matrix
+> - [`_NEXT_SESSION.md`](_NEXT_SESSION.md) — pointer only (not SoT)
+>
+> ---
+>
+> ### 6.4 contract (local)
+>
+> - Artifact: `kind=routing-calibration`, schema v1
+> - Thresholds: min_quality / min_factuality / min_relevance / self_rag_min_quality
+> - Labeling rules + agreement report (Cohen's κ) + auto/human cost matrix
+> - Seed: `evaluation/calibration/routing_calibration.v1.json` (bootstrap-defaults)
+> - Synthetic dual labels: `evaluation/calibration/labelled_routes.jsonl`
+> - API: `resolve_routing_thresholds` / load/write/require fail-closed
+> - Wired into `make_route_or_retry_node` + `build_support_graph`
+> - Settings: `calibration_artifact_path`, `require_calibration_artifact`
+>   (prod default require=true), `min_factuality_for_auto`, `min_relevance_for_auto`
+>
+> **Honest residual:** seed is bootstrap from historical 80/80/0.8/70, not full
+> human production labelling. Measured agentic evaluate when KB context still open.
+>
+> **Verification:** focused **12 passed** (calibration); grounding/citation/judge
+> band **43 passed** with prior; Ruff clean. Full suite / live / push **not** claimed.
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next default pick one:** measured agentic evaluate when KB context **or**
+>   live provider gate scaffold **or** deeper curated corpus **or** real
+>   human-labelled recalibration (opt-in labour)
+> - 6 residual after 6.4: full human calibration DoD; measured agentic path
+> - 7 residual: live provider gate; deeper corpus; mock≠release
+> - 5 residual: live precision/recall/faithfulness ×3
+> - 4 residual: true graph SSE tokens; parity default off; outbox schedule
+> - multi-replica durable session version
+> - DEP-01 residual: Astro 6 moderate until Astro 7; exceptions expire **2026-11-07**
+> - live multi-service + migrations **019–023** (**opt-in**)
+> - plan 9–10; full suite / release / production
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **measured agentic residual** **or** **live provider gate scaffold**
+> **or** **deeper curated corpus** — one atomic residual; do not combine
+> with live drills without opt-in.
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–3.1i, 4.1–4.5, 5.1–5.3, 6.1–6.4,
+> 7.1–7.5, **8.1–8.5**, **DEP-01**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Do not touch/stage/remove without explicit request:
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+>   `_NEXT_SESSION.md` (**pointer only — not routing authority**),
+>   `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
+>   casually), architecture HTML, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live PostgreSQL/Redis/Celery/Chroma drills, `alembic upgrade`
+> (incl. **019–023**), destructive Git, production-readiness claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; quality > speed.
+>
+> **Git advisory:** refresh `git status --short --branch` and
+> `git log -12 --oneline` at session start — **actual Git wins**.
+
+
 ## 2026-08-08 Update-109 — completed slice 7.5 CI baseline-artifact wire @ `4eceed3` ✅ START HERE
 
 > **Routing authority:** Update-109 supersedes Update-108 **only for start-point

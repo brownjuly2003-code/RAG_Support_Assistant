@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-08 (Update-109 after 7.5 CI baseline-artifact wire)  
+**Date:** 2026-08-08 (Update-110 after 6.4 routing calibration artifact)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-109**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-110**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -23,7 +23,7 @@
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.5 local** | **OPEN** true graph tokens; parity default off; schedule wiring | partial |
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
-| **6** judge / safety / agentic parity | **6.1–6.3 local** | OPEN (**← calibration** / measured agentic) | **yes** |
+| **6** judge / safety / agentic parity | **6.1–6.4 local** | OPEN (full human calibration / measured agentic) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.5 local** | OPEN (live gate / depth; mock≠release) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | partial + **DEP-01 local** | OPEN (Astro7 residual; cache/SLO) | soft |
@@ -58,11 +58,12 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 15 | DEP-01 docs-site npm audit | **done** `f622d58` |
 | 16 | §7.4 curated dataset slices | **done** `8f4269f` |
 | 17 | §7.5 CI baseline-artifact wire | **done** `4eceed3` |
-| 18 | **§6 calibration / live gate / deeper corpus** | **← next pick** |
-| 19 | §4 residual (graph tokens / parity default) | residual |
-| 20 | §2/§3 residual if product needs | residual |
-| 21 | Astro 7 (clears DEP-01 moderate residual) | residual |
-| 22 | §1 + §10 | **opt-in live only** |
+| 18 | §6.4 routing calibration artifact | **done** `a7cefc3` |
+| 19 | **measured agentic / live gate / deeper corpus** | **← next pick** |
+| 20 | §4 residual (graph tokens / parity default) | residual |
+| 21 | §2/§3 residual if product needs | residual |
+| 22 | Astro 7 (clears DEP-01 moderate residual) | residual |
+| 23 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -132,7 +133,12 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **6.1** | **done local** | `b3494a0` | unmeasured agentic; never auto on fixed scores |
 | **6.2** | **done local** | `d0317e9` | PII redact + injection refuse→human |
 | **6.3** | **done local** | `d6e3a55` | independent judge; fail-closed on outage/parse |
-| 6.x | **← next residual** | — | calibration; measured agentic evaluate |
+| **6.4** | **done local** | `a7cefc3` | routing calibration artifact + threshold resolve |
+| 6.x | residual | — | full human-labelled recalibration; measured agentic |
+
+**6.4 residual:** seed is bootstrap-defaults (historical 80/80/0.8/70), not live
+human production labelling DoD. Replace labelled_routes + recompute agreement/cost
+before claiming full §6 calibration closed.
 
 ---
 

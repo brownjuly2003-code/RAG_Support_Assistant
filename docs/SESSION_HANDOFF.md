@@ -1,7 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-08 — **Update-109** (slice **7.5** CI baseline-artifact  
-wire @ `4eceed3`; supersedes Update-108 for start-point routing).  
+**Обновлено:** 2026-08-08 — **Update-110** (slice **6.4** routing calibration  
+artifact @ `a7cefc3`; supersedes Update-109 for start-point routing).  
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей  
 истории `AGENT_STATE.md`.
 
@@ -12,11 +12,11 @@ wire @ `4eceed3`; supersedes Update-108 for start-point routing).
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-109**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-110**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-109; dirty  
+**Не использовать:** старые `✅ START HERE` ниже Update-110; dirty  
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` как единственный SoT  
 (это pointer only).
 
@@ -28,20 +28,20 @@ wire @ `4eceed3`; supersedes Update-108 for start-point routing).
 
 | Факт | Значение |
 |------|----------|
-| Latest **implementation** | `4eceed3` — **7.5** CI baseline-artifact wire |
-| Latest **docs before this Update** | `9817d1c` — Update-108 |
-| This Update-109 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | `master...origin/master [ahead 192]` after impl — **refresh mandatory** |
+| Latest **implementation** | `a7cefc3` — **6.4** routing calibration artifact |
+| Latest **docs before this Update** | `31a880b` — Update-109 |
+| This Update-110 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | `master...origin/master [ahead 194]` after impl — **refresh mandatory** |
 | Active writer / WIP | **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.5** + **8.1–8.5** + **DEP-01** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.4** + **7.1–7.5** + **8.1–8.5** + **DEP-01** |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered (default) | §6 calibration **or** live provider gate scaffold **or** deeper corpus |
+| Next ordered (default) | measured agentic **or** live provider gate scaffold **or** deeper corpus |
 | Gates | **no** push / deploy / live multi-service / migrate 019–023 without **explicit opt-in** |
 
-**Last known verification (7.5):** workflow suite **11 passed**; baseline + wire  
-band **15 passed**; local mock write→require **exit 0 / SMOKE_PASS**; Ruff clean  
-on test. Full suite / live / push **not** claimed.
+**Last known verification (6.4):** calibration suite **12 passed**;  
+grounding/citation/judge + calibration band **43 passed**; Ruff clean. Full  
+suite / live / push **not** claimed.
 
 ---
 
@@ -52,8 +52,8 @@ on test. Full suite / live / push **not** claimed.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-109 in AGENT_STATE.md + this file §1–§11
-6. Default work: §6 calibration OR live gate scaffold OR deeper corpus. Announce: slice 1/1
+5. Read ONLY top Update-110 in AGENT_STATE.md + this file §1–§11
+6. Default work: measured agentic OR live gate scaffold OR deeper corpus. Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
 ```
@@ -73,7 +73,7 @@ claims, bulk plan checkbox edits.
 | **3** execution / session / budget | **3.1a–3.1i** local | multi-replica durable session version |
 | **4** pipeline + escalation | **4.1–4.5** local | true graph tokens; parity default **off**; outbox Celery/cron |
 | **5** grounding fail-closed | **5.1–5.3** local | live metrics DoD ×3; relevance≠quality residual |
-| **6** judge / safety / agentic | **6.1–6.3** local | **← calibration**; measured agentic evaluate when KB context |
+| **6** judge / safety / agentic | **6.1–6.4** local | full human calibration; measured agentic evaluate when KB context |
 | **7** eval gate | **7.1–7.5** local | live provider gate; deeper per-slice corpus; mock≠release |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
 | **9** cache / architecture / SLO | partial + **DEP-01 local** | Astro7 residual; cache/SLO |
@@ -118,7 +118,7 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 
 | Band | Ends at SHA | Note |
 |------|-------------|------|
-| §6 | `d6e3a55` **6.3** | independent judge fail-closed |
+| §6 | `a7cefc3` **6.4** | calibration artifact + thresholds; residual human/measured agentic |
 | §5 | `1cdecb2` **5.3** | grader fail-closed |
 | §4 | `6453530` **4.5** | outbox retry API |
 | §3 | `fe2f0aa` **3.1i** | runtime/session/budget band |
@@ -127,6 +127,17 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 ---
 
 ## 5. Contracts (recent complete slices)
+
+### 6.4 @ `a7cefc3`
+
+- Artifact `kind=routing-calibration` schema v1; seed bootstrap-defaults
+- Thresholds: min_quality 80 / min_factuality 80 / min_relevance 0.8 /
+  self_rag_min_quality 70 (historical band; not full human DoD)
+- Labeling rules + Cohen's κ agreement + auto/human cost matrix
+- `resolve_routing_thresholds` → `route_or_retry` / `build_support_graph`
+- Settings: `calibration_artifact_path`, `require_calibration_artifact` (prod)
+- Files: `agent/calibration.py`, `evaluation/calibration/*`,
+  `tests/test_calibration_artifact.py`, `agent/graph.py`, `config/settings.py`
 
 ### 7.5 @ `4eceed3`
 
@@ -182,6 +193,9 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 
 | Path | Slices | Role |
 |------|--------|------|
+| `agent/calibration.py` | **6.4** | routing calibration artifact + threshold resolve |
+| `evaluation/calibration/` | **6.4** | seed artifact + labelled_routes fixture |
+| `tests/test_calibration_artifact.py` | **6.4** | calibration contract |
 | `scripts/regression_eval.py` | **7.1–7.4** | gate + evidence + baseline artifact + slices |
 | `.github/workflows/ci.yml` | **7.5** | write + upload + require-wire baseline artifact |
 | `tests/test_github_workflows.py` | **7.5** | CI wire contract lock |
@@ -226,10 +240,18 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 21. Dataset: required slices covered; `min_context_recall` enforceable  
 22. Docs-site: high/critical fail closed; residual only with dated exceptions  
 23. CI: write + publish + require-load baseline artifact (smoke; mock≠release)  
+24. Routing floors from calibration artifact (bootstrap ok; full human residual)  
 
 ---
 
 ## 8. Verification recipes (last known green; re-run when coding)
+
+### §6.4 band
+
+```powershell
+python -m pytest tests/test_calibration_artifact.py tests/test_grounding_fail_closed.py tests/test_citation_bound_grounding.py tests/test_judge_policy.py -q -p no:cacheprovider -p no:schemathesis
+python -m ruff check agent/calibration.py tests/test_calibration_artifact.py agent/graph.py config/settings.py
+```
 
 ### §7.5 band
 
@@ -268,15 +290,16 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 **Default picks (one only):**
 
-1. **§6 calibration / measured agentic residual** when KB context exists  
+1. **Measured agentic evaluate** when KB context exists (still unmeasured residual)  
 2. **Scheduled live provider gate** scaffolding (**opt-in** for real providers)  
 3. **Deeper per-slice curated corpus**  
-4. **Astro 7** major when Starlight supports it (clears DEP-01 moderate residual)  
+4. **Real human-labelled recalibration** (replace synthetic labelled_routes)  
+5. **Astro 7** major when Starlight supports it (clears DEP-01 moderate residual)  
 
 ### Out without opt-in
 
 - live multi-service / migrate / push / deploy  
-- re-select through **8.5** / **7.1–7.5** / **DEP-01**  
+- re-select through **8.5** / **6.1–6.4** / **7.1–7.5** / **DEP-01**  
 - OIDC live IdP drill; full browser matrix expansion  
 
 ### Alternates (only if user prioritizes)
