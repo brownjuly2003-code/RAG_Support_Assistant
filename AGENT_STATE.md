@@ -1,7 +1,104 @@
 # Agent State
 
+## 2026-08-08 Update-122 — 5.5 live quality metrics gate scaffold ✅ START HERE
+
+> **Routing authority:** Update-122 supersedes Update-121 **only for
+> start-point routing**. All older Update blocks below, including headings
+> that literally contain `✅ START HERE`, are **archival**. **Only the
+> first/topmost Update block in this file is authoritative.** Never select
+> work by grepping old `START HERE` markers.
+>
+> **Implementation this turn:** slice **5.5** — live quality metrics gate
+> scaffold (plan §5 ×3 DoD structure). No push / deploy / live execute.
+> Does **not** claim live precision/recall/faithfulness evidence or
+> production release.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `a901692`
+>   (`feat(eval): live quality metrics gate scaffold for plan §5 DoD (5.5)`)
+> - Prior: `4f95e18` **5.4** · `fc7f07b` **4.8** · `d1ae4d6` **7.6**
+> - Prior docs: `7b86c1f` Update-121
+> - §5 path: `7c53bdb`…`1cdecb2` 5.3 · `4f95e18` 5.4 · **`a901692` 5.5**
+> - Migrations on disk (not applied): **019–023**
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **5.1–5.5** | grounding + relevance + **live metrics gate scaffold** local |
+> | **4.1–4.8** | stream parity + provider tokens local |
+> | **6.1–6.7** / **7.1–7.7** / **8.x** / **DEP-01** | prior local |
+> | Live quality metrics DoD (×3 real runs) | **OPEN** (scaffold only) |
+> | Full plan / production | **NOT** claimed |
+>
+> ---
+>
+> ### Slice 5.5 contract
+>
+> - `scripts/live_quality_metrics_gate.py`
+>   - modes: `readiness` / `command` / `live` / `evaluate-report`
+>   - plan floors: precision≥0.63, recall≥0.97, full≥0.97, miss≤1,
+>     faithfulness≥0.90, answer_relevancy≥0.92, unverified_auto=0
+>   - `MIN_RUNS=3`; multi-seed commands; mean + CI half-width aggregate
+>   - opt-in `RAG_LIVE_QUALITY_METRICS_GATE` / `--live`; fail-closed no keys
+>   - forbids `--mock-experiment-runtime`; requires release-gate flags
+>   - default readiness: `SKIPPED_NO_OPT_IN`, never `release_passed`
+> - Workflow: `.github/workflows/live-quality-metrics-gate.yml` (weekly +
+>   dispatch `enable_live` default false)
+> - Offline: `--mode evaluate-report --metrics-runs …` scores supplied runs
+>
+> **Honest residual:** scaffold does not execute paid multi-run by default;
+> live metric parse→DoD after `--execute` still needs operator-supplied
+> per-run metric files / evaluate-report.
+>
+> **Files:** script + workflow + `tests/test_live_quality_metrics_gate.py`
+>
+> ---
+>
+> ### Known verification (5.5 turn)
+>
+> | Gate | Result |
+> |------|--------|
+> | live quality metrics + provider gate + workflows | **33 passed** |
+> | readiness CLI | `SKIPPED_NO_OPT_IN` |
+> | Ruff | clean |
+> | Full suite / live / push | **not** run / **not** claimed |
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next default pick one:**
+>   1. **real dual-annotator human sample** + recalibrate `--require-human`
+>   2. **live provider / quality execute** (opt-in + secrets + `--execute`)
+>   3. wire execute path to parse multi-run metrics → evaluate-report
+>   4. Astro7 / `STREAMING_RAG_PARITY` default product decision
+> - §5 residual after 5.5: actual ×3 live evidence
+> - §6 residual: production human labels
+> - live multi-service + migrations **019–023** (**opt-in**)
+>
+> **Do not re-select:** 2.x–3.x, 4.1–4.8, **5.1–5.5**, 6.1–6.7, 7.1–7.7,
+> 8.1–8.5, DEP-01.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`  
+> Untracked: plan file, `_NEXT_SESSION.md`, pytest temps, presentations
+>
+> ### External gates (opt-in only)
+>
+> push · deploy · live multi-service · live provider/quality execute · alembic 019–023
+
 ## 2026-08-08 Update-121 — 5.4 independent retrieval relevance ✅ START HERE
 
+> **Historical (superseded by Update-122 for start-point routing).**
+>
 > **Routing authority:** Update-121 supersedes Update-120 **only for
 > start-point routing**. All older Update blocks below, including headings
 > that literally contain `✅ START HERE`, are **archival**. **Only the
