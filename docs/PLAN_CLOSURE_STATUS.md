@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-07 (Update-107 after 7.4 dataset expansion)  
+**Date:** 2026-08-07 (Update-108 full transparency after 7.4)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-107**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-108**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -23,7 +23,7 @@
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.5 local** | **OPEN** true graph tokens; parity default off; schedule wiring | partial |
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
-| **6** judge / safety / agentic parity | **6.1–6.3 local** | OPEN (calibration / measured agentic) | **yes** |
+| **6** judge / safety / agentic parity | **6.1–6.3 local** | OPEN (**← calibration** / measured agentic) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.4 local** | OPEN (live gate / CI wire / depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | partial + **DEP-01 local** | OPEN (Astro7 residual; cache/SLO) | soft |
@@ -58,10 +58,10 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 15 | DEP-01 docs-site npm audit | **done** `f622d58` |
 | 16 | §7.4 curated dataset slices | **done** `8f4269f` |
 | 17 | **§6 calibration / CI baseline wire / live gate** | **← next pick** |
-| 16 | §4 residual (graph tokens / parity default) | residual |
-| 17 | §2/§3 residual if product needs | residual |
-| 18 | DEP-01 docs-site dependency audit | residual |
-| 19 | §1 + §10 | **opt-in live only** |
+| 18 | §4 residual (graph tokens / parity default) | residual |
+| 19 | §2/§3 residual if product needs | residual |
+| 20 | Astro 7 (clears DEP-01 moderate residual) | residual |
+| 21 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -131,7 +131,7 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **6.1** | **done local** | `b3494a0` | unmeasured agentic; never auto on fixed scores |
 | **6.2** | **done local** | `d0317e9` | PII redact + injection refuse→human |
 | **6.3** | **done local** | `d6e3a55` | independent judge; fail-closed on outage/parse |
-| 6.x | not started | — | calibration; measured agentic evaluate |
+| 6.x | **← next residual** | — | calibration; measured agentic evaluate |
 
 ---
 
@@ -149,6 +149,14 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 **7.3 residual:** CI does not yet require/publish baseline artifact on release path.  
 **7.4 residual:** more cases per slice optional; live metrics still open.
 
+### §7 last-known verification (7.4 turn; not re-run in Update-108)
+
+| Slice | Gate | Result |
+|-------|------|--------|
+| **7.4** | dataset expansion + regression band | **44 passed** |
+| 7.3 | baseline artifact (included in band) | green in 7.4 turn |
+| 7.2 / 7.1 | evidence + gate fail-closed (included) | green in 7.4 turn |
+
 ---
 
 ## §8 map + ledger
@@ -161,21 +169,29 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **8.4** | **done local** | `68a30b2` | placeholders rejected; ALLOW_DEV_ADMIN_LOGIN banned in production |
 | **8.5** | **done local** | `4d6be52` | Playwright cross-origin E2E; iframe Origin=API allowed; fail-closed empty/disallowed |
 
-### §8 last-known verification (8.5 this turn; older not re-run)
+### §8 last-known verification (prior turns; not re-run in Update-108)
 
 | Slice | Gate | Result |
 |-------|------|--------|
 | **8.5** | `test_widget_bootstrap` + `test_widget_e2e_playwright` | **16 passed** |
-| 8.4 | `test_settings_production_secrets` + `test_cors_hardening` | **17 passed** |
-| 8.3 | `test_oidc_identity` + `test_oidc_flow` + `test_email_channel` | **19 + 9 passed** |
-| 8.2 | body limits + upload security/idempotency | **64 passed** |
-| 8.1 | widget bootstrap + security headers + assets | **12 passed** (superseded unit count grows in 8.5) |
+| 8.4 | production secrets + CORS | **17 passed** |
+| 8.3 | OIDC + email channel | **19 + 9 passed** |
+| 8.2 | body limits + upload | **64 passed** |
 
-**8.1 residual:** production must set `WIDGET_ALLOWED_ORIGINS` (E2E local closed in 8.5).  
-**8.2 residual:** none local for body/upload stream scope.  
-**8.3 residual:** live IdP drill not run; legacy rows with short provider names need operator re-link if any.  
-**8.4 residual:** key rotation procedure docs optional; DEP-01 dependency audit separate.  
-**8.5 residual:** full browser matrix / live multi-service host not in scope; Chromium-only.
+**8 residual:** live IdP; production must set `WIDGET_ALLOWED_ORIGINS`; Chromium-only E2E.
+
+---
+
+## DEP-01 (docs-site supply chain)
+
+| Item | Status | SHA |
+|------|--------|-----|
+| Lock refresh + high=0 | **done local** | `f622d58` |
+| Dated exceptions + `audit:deps` | **done local** | `f622d58` |
+| Astro 7 major | residual | — |
+
+**Exceptions expire:** 2026-11-07 (`docs-site/npm-audit-exceptions.json`).  
+**Last known:** `npm audit --audit-level=high` exit 0; `npm run audit:deps` PASS; 4 pytest.
 
 ---
 

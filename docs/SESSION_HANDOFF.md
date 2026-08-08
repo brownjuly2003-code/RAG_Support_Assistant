@@ -1,6 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-07 — **Update-107** (completed **7.4** @ `8f4269f`).  
+**Обновлено:** 2026-08-07 — **Update-108** (docs-only full transparency after  
+**7.4** @ `8f4269f` + docs Update-107 `6a2b674`).  
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей  
 истории `AGENT_STATE.md`.
 
@@ -11,11 +12,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-107**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-108**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-107; dirty  
+**Не использовать:** старые `✅ START HERE` ниже Update-108; dirty  
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` как единственный SoT  
 (это pointer only).
 
@@ -28,18 +29,22 @@
 | Факт | Значение |
 |------|----------|
 | Latest **implementation** | `8f4269f` — **7.4** curated dataset slices (47 cases) |
-| Latest **docs before this Update** | `20b2ac0` — Update-106 |
-| This Update-107 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | `master...origin/master [ahead 189]` after impl — **refresh mandatory** |
+| Latest **docs before this Update** | `6a2b674` — Update-107 |
+| This Update-108 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | `master...origin/master [ahead 190]` before this docs commit — **refresh mandatory** |
 | Active writer / WIP | **none** |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.3** + **7.1–7.4** + **8.1–8.5** + **DEP-01** |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered (default) | §6 calibration **or** CI baseline-artifact wire **or** live provider gate |
+| Next ordered (default) | §6 calibration **or** CI baseline-artifact wire **or** live provider gate scaffold |
 | Gates | **no** push / deploy / live multi-service / migrate 019–023 without **explicit opt-in** |
 
-**Last known verification (7.4 this turn):** focused **44 passed** (dataset +  
-regression band); Ruff clean. Full suite / live **not** claimed.
+**This Update-108 is docs-only:** no code/test/plan-checkbox change; project  
+tests **not** re-run here. Implementation state unchanged after `8f4269f`.
+
+**Last known verification (7.4; not re-run this docs turn):** focused **44  
+passed** (dataset expansion + regression band); Ruff clean. Full suite / live  
+**not** claimed.
 
 ---
 
@@ -50,8 +55,8 @@ regression band); Ruff clean. Full suite / live **not** claimed.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-107 in AGENT_STATE.md + this file §1–§11
-6. Default work: §6 calibration OR CI baseline wire OR live gate. Announce: slice 1/1
+5. Read ONLY top Update-108 in AGENT_STATE.md + this file §1–§11
+6. Default work: §6 calibration OR CI baseline wire OR live gate scaffold. Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
 ```
@@ -71,10 +76,10 @@ claims, bulk plan checkbox edits.
 | **3** execution / session / budget | **3.1a–3.1i** local | multi-replica durable session version |
 | **4** pipeline + escalation | **4.1–4.5** local | true graph tokens; parity default **off**; outbox Celery/cron |
 | **5** grounding fail-closed | **5.1–5.3** local | live metrics DoD ×3; relevance≠quality residual |
-| **6** judge / safety / agentic | **6.1–6.3** local | calibration; measured agentic evaluate when KB context |
+| **6** judge / safety / agentic | **6.1–6.3** local | **← calibration**; measured agentic evaluate when KB context |
 | **7** eval gate | **7.1–7.4** local | live provider gate; CI wire artifact; deeper per-slice corpus |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
-| **9** cache / architecture / SLO | partial + **DEP-01 local** | Astro7 residual when Starlight ready; cache/SLO |
+| **9** cache / architecture / SLO | partial + **DEP-01 local** | Astro7 residual; cache/SLO |
 | **10** final verification | not started | after 1–9 + opt-in evidence |
 
 **Release / production: NOT claimable** until §1 live + §5 live quality +  
@@ -86,6 +91,15 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 
 ## 4. Implementation ledgers (impl SHAs only)
 
+### §7 eval gate
+
+| Slice | SHA | Surface |
+|-------|-----|---------|
+| **7.1** | `94ac64e` | infra/skip/empty → FAIL |
+| **7.2** | `25788ee` | mock → `SMOKE_PASS` only; `--release-gate` needs evidence |
+| **7.3** | `0d34be2` | merge-base baseline artifact load/write/require |
+| **7.4** | **`8f4269f`** | required slices + min_context_recall; **47** cases |
+
 ### §8 widget / edge
 
 | Slice | SHA | Surface |
@@ -94,18 +108,15 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | **8.2** | `756562e` | ASGI received-byte body limits; upload stream temp + exclusive/atomic place |
 | **8.3** | `13a9a5b` | OIDC email_verified; identity (issuer, subject); no rebind; shared tenant map |
 | **8.4** | `68a30b2` | production placeholders rejected; `ALLOW_DEV_ADMIN_LOGIN` banned |
-| **8.5** | **`4d6be52`** | Playwright cross-origin E2E; iframe Origin=API allow; fail-closed paths |
+| **8.5** | `4d6be52` | Playwright cross-origin E2E; iframe Origin=API allow; fail-closed paths |
 
-### §7 eval gate
+### DEP-01
 
 | Slice | SHA | Surface |
 |-------|-----|---------|
-| **7.1** | `94ac64e` | infra/skip/empty → FAIL |
-| **7.2** | `25788ee` | mock → `SMOKE_PASS` only; `--release-gate` needs evidence |
-| **7.3** | `0d34be2` | merge-base baseline artifact load/write/require |
-| **7.4** | **`8f4269f`** | required slices + min_context_recall; 47 cases |
+| **DEP-01** | `f622d58` | docs-site high=0; dated exceptions; fail-closed audit gate |
 
-### §6 / §5 / §4 / §3 (summary)
+### §6 / §5 / §4 / §3 / §2 (summary)
 
 | Band | Ends at SHA | Note |
 |------|-------------|------|
@@ -122,14 +133,15 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 ### 7.4 @ `8f4269f`
 
 - Schema: `slices` / `tags` / `session_id` / `turn_index`; `min_context_recall`
-- Coverage validator: `validate_dataset_slice_coverage` + `REQUIRED_DATASET_SLICES`
-- Dataset 35 → **47** cases; manifest `evaluation/curated_cases.manifest.json`
+- Coverage: `validate_dataset_slice_coverage` + `REQUIRED_DATASET_SLICES` (10)
+- Dataset 35 → **47** cases; multi-tenant (acme/beta) + multi-turn session
+- Manifest: `evaluation/curated_cases.manifest.json` (schema v2)
 - Files: `scripts/regression_eval.py`, `evaluation/curated_cases.jsonl`,
   `tests/test_curated_dataset_expansion.py`
 
 ### DEP-01 @ `f622d58`
 
-- `docs-site`: astro `^6.4.8`, sharp `^0.35.3`; lock refresh → **high=0 critical=0**
+- `docs-site`: astro `^6.4.8`, sharp `^0.35.3`; lock → **high=0 critical=0**
 - Residual moderate/low: dated exceptions to **2026-11-07** in
   `docs-site/npm-audit-exceptions.json`
 - Gate: `npm audit --audit-level=high` + `npm run audit:deps` (no `|| true`)
@@ -139,71 +151,23 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 ### 7.3 @ `0d34be2`
 
 - Artifact schema: `kind=regression-baseline`, `schema_version=1`, per-case map
-- API: `build_baseline_artifact`, `write_baseline_artifact`, `load_baseline_artifact`,
-  `baseline_artifact_from_report`, optional `resolve_git_merge_base`
+- API: `build_baseline_artifact` / `write` / `load` / `baseline_artifact_from_report`
 - Runner: `baseline_case_results` skips baseline executor; missing case → infra FAIL
 - CLI: `--baseline-artifact`, `--write-baseline-artifact`, `--require-baseline-artifact`
-- Files: `scripts/regression_eval.py`, `tests/test_regression_baseline_artifact.py`
 
-### 8.5 @ `4d6be52`
+### 8.5 @ `4d6be52` (summary)
 
-- Bootstrap: if browser `Origin` is the **API service origin** (widget iframe
-  same-origin POST), do **not** require `Origin == parent_origin`; still require
-  allowlisted `parent_origin`. Third-party `Origin` must match parent or 403.
-- E2E: second-origin parent host + `widget.js` embed + Chromium:
-  handshake → JWT `aud=widget` + `session_id` reuse; empty allowlist → CSP
-  `frame-ancestors 'none'` + bootstrap 403; disallowed parent → 403 + no
-  `rag-widget-bootstrapped`.
-- Files: `api/routers/widget.py`, `tests/test_widget_e2e_playwright.py`,
-  `tests/test_widget_bootstrap.py`
+- API Origin allowed on iframe bootstrap; third-party Origin must match parent
+- Playwright: allowlisted handshake + JWT + session reuse; empty/disallowed fail-closed
 
-### 8.4 @ `68a30b2`
+### 8.4–8.1 / 7.2–7.1 (one-liners)
 
-- Helpers: `is_known_insecure_secret`, `production_secret_rejection_reason`
-- Known placeholders include `.env.example`  
-  `changeme-generate-with-secrets-token_urlsafe` and  
-  `dev-secret-change-in-production!`
-- Production rejects empty + placeholders for:
-  - `DB_ENCRYPTION_KEY` (min length **16**)
-  - `JWT_SECRET` (min length **32**)
-  - `SESSION_SECRET_KEY` (min length **32**; falls back to JWT env for length check)
-- `ALLOW_DEV_ADMIN_LOGIN` **forbidden** in production even if hash is set
-- `ADMIN_PASSWORD_HASH` **required**; no bypass path; error text must not offer  
-  `ALLOW_DEV_ADMIN_LOGIN=1` as a production fix
-- Development still allows weak secrets / dev-admin flag
-
-### 8.3 @ `13a9a5b`
-
-- `email_is_verified` / `require_email_verified` — create/link fail closed
-- Identity key: `User.sso_provider` = **issuer URL**, `User.sso_subject_id` = **sub**
-- `resolve_oidc_issuer` — prefer `iss`, provider default, reject mismatch
-- Unbound local user links once; different existing identity refused
-- Shared `match_tenant_from_email_domains` (`*` wildcard); email channel uses it  
-  (OIDC still raises if unmapped; email falls back to `default`)
-
-### 8.2 @ `756562e`
-
-- `api/body_limit.py`: `make_limited_receive` + `BodySizeExceeded`
-- Non-upload middleware: Content-Length early reject **and** wrap receive for  
-  actual ASGI bytes (`max_request_body_bytes`)
-- Metrics: `content_length_too_large`, `received_bytes_too_large`, `upload_too_large`
-- `/api/upload` bypasses general body middleware (multipart ≠ file bytes)
-- Upload: stream → temp `.part` → exclusive place → atomic flat rename;  
-  fingerprint matches `compute_payload_fingerprint`
-
-### 8.1 @ `0bee13e`
-
-- `POST /api/widget/bootstrap` → short-lived JWT `type=widget`, `aud=widget`
-- Env: `WIDGET_ALLOWED_ORIGINS` (empty → 403), `WIDGET_TOKEN_TTL_SEC` (default 900)
-- Origin body must match `Origin` header when present
-- `/static/widget.html`: CSP `frame-ancestors` from allowlist; **no** global  
-  `X-Frame-Options: DENY` on that path
-- `static/widget.inline.js` / `widget.js`: handshake ack, Bearer, `session_id` reuse
-
-### 7.2 / 7.1 (summary)
-
-- Mock expected-copy → `SMOKE_PASS` only; never release `PASS`
-- Infra/skip/zero-effective → gate FAIL
+- **8.4** production secrets + ban `ALLOW_DEV_ADMIN_LOGIN`
+- **8.3** OIDC email_verified + (issuer, subject)
+- **8.2** ASGI received-byte limits + upload stream/atomic place
+- **8.1** widget bootstrap JWT + frame-ancestors
+- **7.2** mock → `SMOKE_PASS` only
+- **7.1** infra/skip/empty → FAIL
 
 ---
 
@@ -211,22 +175,19 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 
 | Path | Slices | Role |
 |------|--------|------|
-| `config/settings.py` | **8.4** | production secret / dev-admin gates |
-| `tests/test_settings_production_secrets.py` | **8.4** | secret-negative tests |
-| `auth/oidc.py` | **8.3** | email_verified, issuer/subject, tenant map |
-| `channels/email_channel.py` | **8.3** | shared tenant domain matcher |
-| `api/body_limit.py` | **8.2** | received-byte receive wrapper |
-| `api/app.py` `_body_size_limit` | **8.2** | middleware wiring |
-| `api/routers/upload.py` | **8.2** (+2.4a) | stream temp + exclusive/atomic place |
-| `api/routers/widget.py` | **8.1 / 8.5** | bootstrap + origin/frame helpers; iframe Origin fix |
-| `tests/test_widget_e2e_playwright.py` | **8.5** | Chromium cross-origin embed E2E |
-| `auth/jwt_handler.py` | **8.1** | `create_widget_token` / widget verify |
-| `auth/dependencies.py` | **8.1** | accept widget Bearer |
-| `static/widget*.js` / `widget.html` | **8.1** | handshake, token, session, CSP |
 | `scripts/regression_eval.py` | **7.1–7.4** | gate + evidence + baseline artifact + slices |
-| `tests/test_regression_baseline_artifact.py` | **7.3** | merge-base artifact contract |
+| `evaluation/curated_cases.jsonl` | **7.4** | regression curated corpus (47) |
+| `evaluation/curated_cases.manifest.json` | **7.4** | required slices register |
 | `tests/test_curated_dataset_expansion.py` | **7.4** | slice coverage + context_recall |
-| `evaluation/curated_cases.jsonl` | **7.4** | regression curated corpus |
+| `tests/test_regression_baseline_artifact.py` | **7.3** | merge-base artifact contract |
+| `docs-site/package.json` + lock | **DEP-01** | npm dependency posture |
+| `docs-site/npm-audit-exceptions.json` | **DEP-01** | dated reachability exceptions |
+| `docs-site/scripts/check-npm-audit.mjs` | **DEP-01** | fail-closed audit checker |
+| `api/routers/widget.py` | **8.1 / 8.5** | bootstrap + iframe Origin fix |
+| `tests/test_widget_e2e_playwright.py` | **8.5** | Chromium cross-origin embed E2E |
+| `config/settings.py` | **8.4** | production secret / dev-admin gates |
+| `auth/oidc.py` | **8.3** | email_verified, issuer/subject |
+| `api/body_limit.py` | **8.2** | received-byte receive wrapper |
 | job-object / index stack | 2.1–2.6g | **do not re-select** |
 
 ---
@@ -248,11 +209,13 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 13. Mock expected-copy → `SMOKE_PASS` only; never release `PASS`  
 14. Widget: empty allowlist → no bootstrap; framing only via allowlisted ancestors  
 15. Body limits: trust **received** ASGI bytes, not Content-Length alone  
-16. Upload: stream to temp + exclusive immutable place + atomic flat rename; no orphan `.part`  
-17. OIDC: no create/link without verified email; identity is (issuer, subject); no silent rebind  
-18. Production: no placeholder secrets; no `ALLOW_DEV_ADMIN_LOGIN`; admin hash required  
-19. Widget iframe bootstrap: API Origin allowed; empty/disallowed parent fail-closed (E2E)  
-20. Regression release-honest compare: baseline from artifact, not identical live re-run only  
+16. Upload: stream to temp + exclusive immutable place + atomic flat rename  
+17. OIDC: verified email + (issuer, subject); no silent rebind  
+18. Production: no placeholder secrets; no `ALLOW_DEV_ADMIN_LOGIN`  
+19. Widget iframe: API Origin allowed; empty/disallowed parent fail-closed (E2E)  
+20. Regression: baseline from artifact for honest release compare  
+21. Dataset: required slices covered; `min_context_recall` enforceable  
+22. Docs-site: high/critical fail closed; residual only with dated exceptions  
 
 ---
 
@@ -261,7 +224,7 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 ### §7.4 band
 
 ```powershell
-python -m pytest tests/test_curated_dataset_expansion.py tests/test_regression_runner.py tests/test_regression_baseline_artifact.py -q -p no:cacheprovider -p no:schemathesis
+python -m pytest tests/test_curated_dataset_expansion.py tests/test_regression_runner.py tests/test_regression_baseline_artifact.py tests/test_regression_evidence_policy.py tests/test_regression_gate_fail_closed.py -q -p no:cacheprovider -p no:schemathesis
 python -m ruff check scripts/regression_eval.py tests/test_curated_dataset_expansion.py
 ```
 
@@ -273,51 +236,11 @@ cd ..
 python -m pytest tests/test_docs_site_npm_audit.py tests/test_github_workflows.py::test_docs_site_workflow_audits_npm_dependencies_before_build -q -p no:cacheprovider
 ```
 
-### §7.3 band
-
-```powershell
-python -m pytest tests/test_regression_baseline_artifact.py tests/test_regression_evidence_policy.py tests/test_regression_gate_fail_closed.py tests/test_regression_runner.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step7-3-<unique>
-python -m ruff check scripts/regression_eval.py tests/test_regression_baseline_artifact.py
-```
-
 ### §8.5 band
 
 ```powershell
-python -m pytest tests/test_widget_bootstrap.py tests/test_widget_e2e_playwright.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step8-5-<unique>
+python -m pytest tests/test_widget_bootstrap.py tests/test_widget_e2e_playwright.py -q -p no:cacheprovider -p no:schemathesis
 python -m ruff check api/routers/widget.py tests/test_widget_bootstrap.py tests/test_widget_e2e_playwright.py
-```
-
-### §8.4 band
-
-```powershell
-python -m pytest tests/test_settings_production_secrets.py tests/test_cors_hardening.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step8-4-<unique>
-python -m ruff check config/settings.py tests/test_settings_production_secrets.py
-```
-
-### §8.3 band
-
-```powershell
-python -m pytest tests/test_oidc_identity.py tests/test_oidc_flow.py tests/test_email_channel.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step8-3-<unique>
-python -m ruff check auth/oidc.py channels/email_channel.py tests/test_oidc_identity.py
-```
-
-### §8.2 band
-
-```powershell
-python -m pytest tests/test_body_size_limits.py tests/test_upload_security.py tests/test_upload_idempotency.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step8-2-<unique>
-python -m ruff check api/body_limit.py api/app.py api/routers/upload.py tests/test_body_size_limits.py
-```
-
-### §8.1 band
-
-```powershell
-python -m pytest tests/test_widget_bootstrap.py tests/test_request_id.py::test_browser_security_headers_are_set tests/test_admin_ui.py::test_widget_assets_served -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step8-1-<unique>
-```
-
-### §7 band
-
-```powershell
-python -m pytest tests/test_regression_evidence_policy.py tests/test_regression_gate_fail_closed.py tests/test_regression_runner.py -q -p no:cacheprovider -p no:schemathesis --basetemp=.tmp/pytest-step7-<unique>
 ```
 
 Full suite / live / migrate — **not** the default gate for a single slice.
@@ -330,8 +253,8 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 1. **§6 calibration / measured agentic residual** when KB context exists  
 2. **CI wire** of `--baseline-artifact` / `--require-baseline-artifact` on release path  
-3. **Scheduled live provider gate** scaffolding (opt-in live)  
-4. **Astro 7** major when Starlight supports it  
+3. **Scheduled live provider gate** scaffolding (**opt-in** for real providers)  
+4. **Astro 7** major when Starlight supports it (clears DEP-01 moderate residual)  
 
 ### Out without opt-in
 
@@ -343,6 +266,7 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 - live §1 / migrate 019–023 (**explicit opt-in only**)  
 - §4 graph tokens / stream parity default  
+- deeper per-slice corpus expansion  
 
 ---
 
@@ -362,11 +286,6 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 - Grep old `✅ START HERE` for work selection  
 - Re-select **2.1–2.6g**, **3.1a–3.1i**, **4.1–4.5**, **5.1–5.3**, **6.1–6.3**,  
   **7.1–7.4**, **8.1–8.5**, **DEP-01**  
- 
- 
- 
- 
-- Claim full plan sections or production readiness  
-- Edit plan checkboxes casually  
-- Push / deploy / live multi-service / migrate without explicit opt-in  
-- Start a second named slice in the same user turn  
+- Claim plan closed / production ready  
+- Push / deploy / live / migrate without opt-in  
+- Edit plan checkboxes casually without full DoD evidence  

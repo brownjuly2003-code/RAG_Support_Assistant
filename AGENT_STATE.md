@@ -1,8 +1,158 @@
 # Agent State
 
+## 2026-08-07 Update-108 — docs-only full transparency after 7.4 / Update-107 ✅ START HERE
+
+> **Routing authority:** Update-108 is **docs-only / transparency-only** and
+> supersedes Update-107 **only for start-point routing**. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`,
+> are **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
+>
+> **No new implementation in this docs turn.** Code, tests, plan checkboxes,
+> backlog, README, audit, settings, API, docs-site lock, and dataset content
+> were **not** edited here. Project tests were **not** re-run. Protected dirty
+> files were not staged.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `8f4269f`
+>   (`feat(eval): expand curated dataset with required slices (7.4)`)
+>   - slice **7.4**
+> - Latest impl docs before this turn: `6a2b674` (Update-107)
+> - Quality path (impl SHAs, recent):
+>   - 5: `7c53bdb` 5.1 · `50bb220` 5.2 · `1cdecb2` **5.3**
+>   - 6: `b3494a0` 6.1 · `d0317e9` 6.2 · `d6e3a55` **6.3**
+>   - 7: `94ac64e` 7.1 · `25788ee` 7.2 · `0d34be2` 7.3 · **`8f4269f` 7.4**
+>   - 8: `0bee13e` 8.1 · `756562e` 8.2 · `13a9a5b` 8.3 · `68a30b2` 8.4 ·
+>     `4d6be52` **8.5**
+>   - DEP-01: **`f622d58`**
+> - 4 chain ends: `6453530` **4.5**
+> - 3 chain ends: `fe2f0aa` **3.1i**
+> - 2 fault-injection last: `f347feb` (**2.6g**)
+> - Migrations on disk (not applied): **019–023**
+> - This Update-108 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 190]` before this docs commit.
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | local residual closed at documented scopes |
+> | **3.1a–3.1i** | local at documented scopes |
+> | **4.1–4.5** | stream parity + durable escalation **local** |
+> | **5.1–5.3** | grounding + citation-bound + grader fail-closed **local** |
+> | **6.1–6.3** | unmeasured agentic + pre-response safety + independent judge **local** |
+> | **7.1–7.4** | eval fail-closed + mock≠PASS + baseline artifact + **dataset slices** local |
+> | **8.1–8.5** | widget/edge security + Playwright E2E **local** |
+> | **DEP-01** | docs-site npm audit high=0 + dated exceptions **local** |
+> | Full plan §1–§10 | **NOT** complete (live DoD / calibration / CI wire / Gate A open) |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+>
+> **Transparency maps:**
+> - [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) — full next-session capsule
+> - [`docs/PLAN_CLOSURE_STATUS.md`](docs/PLAN_CLOSURE_STATUS.md) — residual matrix
+> - [`_NEXT_SESSION.md`](_NEXT_SESSION.md) — pointer only (not SoT)
+>
+> ---
+>
+> ### Recent quality path (impl SHAs)
+>
+> | Slice | SHA | One-line |
+> |-------|-----|----------|
+> | 5.3 | `1cdecb2` | grader fail-closed |
+> | 6.1 | `b3494a0` | agentic unmeasured |
+> | 6.2 | `d0317e9` | PII + injection pre-response |
+> | 6.3 | `d6e3a55` | independent judge |
+> | 7.1 | `94ac64e` | eval gate skip/infra FAIL |
+> | 7.2 | `25788ee` | mock SMOKE only |
+> | 7.3 | `0d34be2` | merge-base baseline artifact |
+> | **7.4** | **`8f4269f`** | curated slices + context_recall (47 cases) |
+> | 8.1–8.5 | `0bee13e`…`4d6be52` | widget → Playwright E2E |
+> | **DEP-01** | **`f622d58`** | docs-site high=0 audit gate |
+>
+> ---
+>
+> ### Known verification (last impl 7.4; not re-run this docs turn)
+>
+> | Slice | Last known gate |
+> |-------|-----------------|
+> | **7.4** | 44 passed (dataset expansion + regression band); Ruff clean |
+> | **7.3** | baseline artifact suite within that 44; prior 37-focused band |
+> | **DEP-01** | `npm audit --audit-level=high` exit 0; `npm run audit:deps` PASS; 4 pytest |
+> | **8.5** | 16 passed (widget bootstrap + Playwright E2E) |
+>
+> Full suite / live multi-service / migrate / push / deploy **not** run /
+> **not** claimed.
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next default pick one:** §6 calibration / measured agentic **or**
+>   CI wire of `--baseline-artifact` / `--require-baseline-artifact` **or**
+>   scheduled live provider gate scaffolding
+> - 7 residual after 7.4: live provider gate; CI still smoke mock; deeper
+>   per-slice corpus optional
+> - 5 residual: live precision/recall/faithfulness ×3
+> - 4 residual: true graph SSE tokens; parity default off; outbox schedule
+> - multi-replica durable session version
+> - DEP-01 residual: Astro 6 moderate until Astro 7 / Starlight; exceptions
+>   expire **2026-11-07**
+> - live multi-service + migrations **019–023** (**opt-in**)
+> - plan 9–10; full suite / release / production
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **§6 calibration residual** **or** **CI baseline-artifact wire**
+> **or** **live provider gate scaffold** — one atomic residual; do not combine
+> with live drills without opt-in.
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–3.1i, 4.1–4.5, 5.1–5.3, 6.1–6.3,
+> 7.1–7.4, **8.1–8.5**, **DEP-01**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Do not touch/stage/remove without explicit request:
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+>   `_NEXT_SESSION.md` (**pointer only — not routing authority**),
+>   `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
+>   casually), architecture HTML, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live PostgreSQL/Redis/Celery/Chroma drills, `alembic upgrade`
+> (incl. **019–023**), destructive Git, production-readiness claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; quality > speed.
+>
+> **Git advisory:** refresh `git status --short --branch` and
+> `git log -12 --oneline` at session start — **actual Git wins**.
+
+
 ## 2026-08-07 Update-107 — completed slice 7.4 curated dataset expansion @ `8f4269f` ✅ START HERE
 
-> **Routing authority:** Update-107 supersedes Update-106 **only for start-point
+> **Historical handoff (superseded by Update-108 for start-point routing).**
+> Recorded **7.4** @ `8f4269f`; docs `6a2b674`. Full transparency under Update-108.
+>
+> **Original routing note (archival):** Update-107 supersedes Update-106 **only for start-point
 > routing**. All older Update blocks below, including headings that literally
 > contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
 > block in this file is authoritative.** Never select work by grepping old
