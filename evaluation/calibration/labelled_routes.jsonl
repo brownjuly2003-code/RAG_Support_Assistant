@@ -1,10 +1,10 @@
-{"case_id": "cal-01", "label_a": "auto", "label_b": "auto", "gold_route": "auto", "predicted_route": "auto", "notes": "verified claims + high quality"}
-{"case_id": "cal-02", "label_a": "human", "label_b": "human", "gold_route": "human", "predicted_route": "human", "notes": "knowledge gap"}
-{"case_id": "cal-03", "label_a": "auto", "label_b": "auto", "gold_route": "auto", "predicted_route": "auto", "notes": "vacuous verified no claims"}
-{"case_id": "cal-04", "label_a": "human", "label_b": "human", "gold_route": "human", "predicted_route": "human", "notes": "missing citation on claim"}
-{"case_id": "cal-05", "label_a": "auto", "label_b": "human", "gold_route": "human", "predicted_route": "auto", "notes": "annotator disagreement; gold prefers human"}
-{"case_id": "cal-06", "label_a": "human", "label_b": "human", "gold_route": "human", "predicted_route": "human", "notes": "judge unavailable"}
-{"case_id": "cal-07", "label_a": "auto", "label_b": "auto", "gold_route": "auto", "predicted_route": "human", "notes": "system cautious vs gold auto"}
-{"case_id": "cal-08", "label_a": "human", "label_b": "human", "gold_route": "human", "predicted_route": "human", "notes": "unmeasured agentic"}
-{"case_id": "cal-09", "label_a": "auto", "label_b": "auto", "gold_route": "auto", "predicted_route": "auto", "notes": "full grounding pass"}
-{"case_id": "cal-10", "label_a": "human", "label_b": "human", "gold_route": "human", "predicted_route": "human", "notes": "PII refuse path"}
+{"case_id": "cal-01", "gold_route": "auto", "label_a": "auto", "label_b": "auto", "label_source": "synthetic", "notes": "verified claims + high quality", "predicted_route": "auto"}
+{"case_id": "cal-02", "gold_route": "human", "label_a": "human", "label_b": "human", "label_source": "synthetic", "notes": "knowledge gap", "predicted_route": "human"}
+{"case_id": "cal-03", "gold_route": "auto", "label_a": "auto", "label_b": "auto", "label_source": "synthetic", "notes": "vacuous verified no claims", "predicted_route": "auto"}
+{"case_id": "cal-04", "gold_route": "human", "label_a": "human", "label_b": "human", "label_source": "synthetic", "notes": "missing citation on claim", "predicted_route": "human"}
+{"case_id": "cal-05", "gold_route": "human", "label_a": "auto", "label_b": "human", "label_source": "synthetic", "notes": "annotator disagreement; gold prefers human", "predicted_route": "auto"}
+{"case_id": "cal-06", "gold_route": "human", "label_a": "human", "label_b": "human", "label_source": "synthetic", "notes": "judge unavailable", "predicted_route": "human"}
+{"case_id": "cal-07", "gold_route": "auto", "label_a": "auto", "label_b": "auto", "label_source": "synthetic", "notes": "system cautious vs gold auto", "predicted_route": "human"}
+{"case_id": "cal-08", "gold_route": "human", "label_a": "human", "label_b": "human", "label_source": "synthetic", "notes": "unmeasured agentic", "predicted_route": "human"}
+{"case_id": "cal-09", "gold_route": "auto", "label_a": "auto", "label_b": "auto", "label_source": "synthetic", "notes": "full grounding pass", "predicted_route": "auto"}
+{"case_id": "cal-10", "gold_route": "human", "label_a": "human", "label_b": "human", "label_source": "synthetic", "notes": "PII refuse path", "predicted_route": "human"}

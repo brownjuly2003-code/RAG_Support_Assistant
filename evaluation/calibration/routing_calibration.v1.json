@@ -45,7 +45,7 @@
     "judge": "settings:judge via provider registry",
     "note": "bootstrap — pin concrete model ids when re-calibrating live"
   },
-  "notes": "Bootstrap calibration artifact for plan §6.4. Thresholds match historical QUALITY_THRESHOLD=80 / min_factuality=80 / min_relevance=0.8 / self_rag_min_quality=70. labelled_routes.jsonl is a synthetic dual-annotator fixture for contract tests; replace with human-labelled production sample before claiming full calibration DoD.",
+  "notes": "Bootstrap calibration artifact for plan §6.4. Thresholds match historical QUALITY_THRESHOLD=80 / min_factuality=80 / min_relevance=0.8 / self_rag_min_quality=70. labelled_routes.jsonl is a synthetic dual-annotator fixture (label_source=synthetic) for contract tests. Plan §6.7: reissue with scripts/recalibrate_routing.py --require-human after a real human dual-annotator sample clears readiness; never claim source=human-labelled from this bootstrap set.",
   "prompt_versions": {
     "evaluate": "agent/prompts.py:evaluate",
     "verify_facts": "agent/prompts.py:verify"

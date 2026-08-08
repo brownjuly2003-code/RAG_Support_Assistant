@@ -1,17 +1,20 @@
-"""Routing threshold calibration artifact (plan §6.4).
+"""Routing threshold calibration artifact (plan §6.4 / §6.7).
 
 Versioned quality/factuality/relevance floors used for ``route=auto`` decisions
 must be reproducible from a durable calibration artifact, not only ad-hoc env
-defaults. Full human-labelling DoD (live agreement on production traffic)
-remains residual; this module provides the artifact contract, agreement/cost
-utilities, seed bootstrap, and fail-closed require path.
+defaults.
+
+§6.4: artifact contract, agreement/cost utilities, seed bootstrap, require path.
+§6.7: human-label provenance gate + recalibrate/reissue path. Synthetic fixtures
+must never claim ``source=human-labelled``; full production DoD still needs a
+real dual-annotator sample that clears readiness floors.
 """
 
 from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -19,10 +22,24 @@ from typing import Any
 CALIBRATION_ARTIFACT_KIND = "routing-calibration"
 CALIBRATION_ARTIFACT_SCHEMA_VERSION = 1
 
+SOURCE_BOOTSTRAP = "bootstrap-defaults"
+SOURCE_SYNTHETIC = "synthetic-fixture"
+SOURCE_HUMAN = "human-labelled"
+
+LABEL_SOURCE_HUMAN = "human"
+LABEL_SOURCE_SYNTHETIC = "synthetic"
+
 DEFAULT_MIN_QUALITY = 80
 DEFAULT_MIN_FACTUALITY = 80
 DEFAULT_MIN_RELEVANCE = 0.8
 DEFAULT_SELF_RAG_MIN_QUALITY = 70
+
+# §6.7 readiness floors for claiming human-labelled calibration DoD (local gate).
+# Production operators may raise these via CLI; they must not be silently bypassed.
+DEFAULT_HUMAN_MIN_ITEMS = 10
+DEFAULT_HUMAN_MIN_DOUBLE_LABELLED = 8
+DEFAULT_HUMAN_MIN_RAW_AGREEMENT = 0.8
+DEFAULT_HUMAN_MIN_KAPPA = 0.6
 
 DEFAULT_LABELING_RULES: dict[str, Any] = {
     "version": "1",
@@ -469,3 +486,249 @@ def load_labelled_routes(path: Path) -> list[dict[str, Any]]:
             )
         items.append(row)
     return items
+
+
+def label_source_of(item: Mapping[str, Any]) -> str:
+    """Return normalized label provenance: human | synthetic | unknown."""
+    raw = item.get("label_source")
+    if raw is None:
+        # Legacy bootstrap rows without provenance → treat as synthetic.
+        return LABEL_SOURCE_SYNTHETIC
+    text = str(raw).strip().lower()
+    if text in {LABEL_SOURCE_HUMAN, LABEL_SOURCE_SYNTHETIC}:
+        return text
+    return "unknown"
+
+
+@dataclass(frozen=True)
+class HumanCalibrationReadiness:
+    """Whether a labelled set may honestly claim human-labelled calibration."""
+
+    ready: bool
+    n_items: int
+    n_human: int
+    n_synthetic: int
+    n_unknown: int
+    n_double_labelled: int
+    raw_agreement: float | None
+    cohens_kappa: float | None
+    missing_annotators: int
+    missing_gold: int
+    reasons: tuple[str, ...] = field(default_factory=tuple)
+    min_items: int = DEFAULT_HUMAN_MIN_ITEMS
+    min_double_labelled: int = DEFAULT_HUMAN_MIN_DOUBLE_LABELLED
+    min_raw_agreement: float = DEFAULT_HUMAN_MIN_RAW_AGREEMENT
+    min_kappa: float = DEFAULT_HUMAN_MIN_KAPPA
+
+    def as_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def assess_human_calibration_readiness(
+    items: Sequence[Mapping[str, Any]],
+    *,
+    min_items: int = DEFAULT_HUMAN_MIN_ITEMS,
+    min_double_labelled: int = DEFAULT_HUMAN_MIN_DOUBLE_LABELLED,
+    min_raw_agreement: float = DEFAULT_HUMAN_MIN_RAW_AGREEMENT,
+    min_kappa: float = DEFAULT_HUMAN_MIN_KAPPA,
+    annotator_a_key: str = "label_a",
+    annotator_b_key: str = "label_b",
+    gold_key: str = "gold_route",
+) -> HumanCalibrationReadiness:
+    """Fail-closed readiness for ``source=human-labelled`` claims (plan §6.7).
+
+    Synthetic / unknown provenance rows block readiness. Dual-annotator agreement
+    and gold labels must clear floors. This is a local DoD gate — not a claim
+    that production traffic has been re-labelled.
+    """
+    reasons: list[str] = []
+    n = len(items)
+    n_human = 0
+    n_synthetic = 0
+    n_unknown = 0
+    missing_annotators = 0
+    missing_gold = 0
+
+    for item in items:
+        src = label_source_of(item)
+        if src == LABEL_SOURCE_HUMAN:
+            n_human += 1
+        elif src == LABEL_SOURCE_SYNTHETIC:
+            n_synthetic += 1
+        else:
+            n_unknown += 1
+
+        # Human rows need stable annotator identities (not only label_a/b values).
+        if src == LABEL_SOURCE_HUMAN:
+            ann_a = str(item.get("annotator_a") or "").strip()
+            ann_b = str(item.get("annotator_b") or "").strip()
+            if not ann_a or not ann_b:
+                missing_annotators += 1
+            if gold_key not in item or not str(item.get(gold_key) or "").strip():
+                missing_gold += 1
+
+    agreement = compute_agreement_report(
+        items,
+        annotator_a_key=annotator_a_key,
+        annotator_b_key=annotator_b_key,
+    )
+    n_double = int(agreement.get("n_double_labelled") or 0)
+    raw = agreement.get("raw_agreement")
+    kappa = agreement.get("cohens_kappa")
+    raw_f = float(raw) if raw is not None else None
+    kappa_f = float(kappa) if kappa is not None else None
+
+    if n < int(min_items):
+        reasons.append(f"n_items={n} < min_items={min_items}")
+    if n_synthetic > 0:
+        reasons.append(f"synthetic rows present: {n_synthetic}")
+    if n_unknown > 0:
+        reasons.append(f"unknown label_source rows present: {n_unknown}")
+    if n_human != n or n_human == 0:
+        reasons.append(f"not all rows are human-labelled (human={n_human}/{n})")
+    if missing_annotators > 0:
+        reasons.append(f"missing annotator_a/annotator_b on {missing_annotators} human rows")
+    if missing_gold > 0:
+        reasons.append(f"missing gold_route on {missing_gold} human rows")
+    if n_double < int(min_double_labelled):
+        reasons.append(
+            f"n_double_labelled={n_double} < min_double_labelled={min_double_labelled}"
+        )
+    if raw_f is None or raw_f < float(min_raw_agreement):
+        reasons.append(
+            f"raw_agreement={raw_f} < min_raw_agreement={min_raw_agreement}"
+        )
+    if kappa_f is None or kappa_f < float(min_kappa):
+        reasons.append(f"cohens_kappa={kappa_f} < min_kappa={min_kappa}")
+
+    ready = not reasons
+    return HumanCalibrationReadiness(
+        ready=ready,
+        n_items=n,
+        n_human=n_human,
+        n_synthetic=n_synthetic,
+        n_unknown=n_unknown,
+        n_double_labelled=n_double,
+        raw_agreement=raw_f,
+        cohens_kappa=kappa_f,
+        missing_annotators=missing_annotators,
+        missing_gold=missing_gold,
+        reasons=tuple(reasons),
+        min_items=int(min_items),
+        min_double_labelled=int(min_double_labelled),
+        min_raw_agreement=float(min_raw_agreement),
+        min_kappa=float(min_kappa),
+    )
+
+
+def reissue_calibration_from_labels(
+    items: Sequence[Mapping[str, Any]],
+    *,
+    thresholds: Mapping[str, Any] | None = None,
+    dataset_path: str | None = None,
+    model_versions: Mapping[str, Any] | None = None,
+    prompt_versions: Mapping[str, Any] | None = None,
+    labeling_rules: Mapping[str, Any] | None = None,
+    notes: str | None = None,
+    require_human: bool = False,
+    source: str | None = None,
+    min_items: int = DEFAULT_HUMAN_MIN_ITEMS,
+    min_double_labelled: int = DEFAULT_HUMAN_MIN_DOUBLE_LABELLED,
+    min_raw_agreement: float = DEFAULT_HUMAN_MIN_RAW_AGREEMENT,
+    min_kappa: float = DEFAULT_HUMAN_MIN_KAPPA,
+    created_at: datetime | None = None,
+) -> dict[str, Any]:
+    """Rebuild calibration artifact from labelled routes (plan §6.7).
+
+    Always recomputes agreement_report and cost_matrix from the sample.
+    When ``require_human`` is True, fail-closed unless readiness passes and
+    force ``source=human-labelled``. Synthetic samples may reissue only as
+    ``synthetic-fixture`` / ``bootstrap-defaults`` (never silently upgraded).
+    """
+    readiness = assess_human_calibration_readiness(
+        items,
+        min_items=min_items,
+        min_double_labelled=min_double_labelled,
+        min_raw_agreement=min_raw_agreement,
+        min_kappa=min_kappa,
+    )
+    if require_human and not readiness.ready:
+        raise CalibrationArtifactError(
+            "human calibration not ready: " + "; ".join(readiness.reasons)
+        )
+
+    if source is None:
+        source = SOURCE_HUMAN if readiness.ready else SOURCE_SYNTHETIC
+    source_norm = str(source).strip().lower()
+    if source_norm in {SOURCE_HUMAN, "human", "human_labelled"}:
+        source_norm = SOURCE_HUMAN
+    if source_norm == SOURCE_HUMAN and not readiness.ready:
+        raise CalibrationArtifactError(
+            "refusing source=human-labelled: " + "; ".join(readiness.reasons)
+        )
+    if source_norm not in {
+        SOURCE_HUMAN,
+        SOURCE_SYNTHETIC,
+        SOURCE_BOOTSTRAP,
+        "unit-test",
+        "defaults",
+    } and not source_norm.startswith("operator:"):
+        # Allow operator-tagged sources; still block bare human claim above.
+        pass
+
+    agreement = compute_agreement_report(items)
+    cost = compute_cost_matrix(items)
+    # Attach readiness snapshot for audit (not part of schema-critical fields).
+    agreement_out = dict(agreement)
+    agreement_out["human_readiness"] = {
+        "ready": readiness.ready,
+        "reasons": list(readiness.reasons),
+        "n_human": readiness.n_human,
+        "n_synthetic": readiness.n_synthetic,
+    }
+
+    default_notes = (
+        "Human-labelled calibration artifact (plan §6.7). Thresholds and "
+        "agreement/cost recomputed from dual-annotator sample."
+        if source_norm == SOURCE_HUMAN
+        else (
+            "Recalibrated from labelled routes that do not clear human-DoD "
+            "readiness (synthetic or incomplete). Not full production calibration."
+        )
+    )
+    artifact = build_calibration_artifact(
+        thresholds=thresholds,
+        labeling_rules=labeling_rules,
+        agreement_report=agreement_out,
+        cost_matrix=cost,
+        model_versions=model_versions
+        or {
+            "generator": "settings:ollama_model_name",
+            "judge": "settings:judge via provider registry",
+            "note": (
+                "pin concrete model ids at human re-calibration time"
+                if source_norm == SOURCE_HUMAN
+                else "bootstrap/synthetic — pin model ids when human re-calibrating"
+            ),
+        },
+        prompt_versions=prompt_versions
+        or {
+            "evaluate": "agent/prompts.py:evaluate",
+            "verify_facts": "agent/prompts.py:verify",
+        },
+        dataset_path=dataset_path,
+        source=source_norm,
+        notes=notes if notes is not None else default_notes,
+        created_at=created_at,
+    )
+    artifact["human_readiness"] = readiness.as_dict()
+    return artifact
+
+
+def write_labelled_routes(items: Sequence[Mapping[str, Any]], path: Path) -> Path:
+    """Persist labelled routes JSONL (UTF-8, LF, trailing newline)."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    lines = [json.dumps(dict(row), ensure_ascii=False, sort_keys=True) for row in items]
+    target.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    return target

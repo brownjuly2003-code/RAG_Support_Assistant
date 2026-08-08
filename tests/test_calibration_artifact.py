@@ -1,8 +1,10 @@
-"""Plan §6.4: routing calibration artifact + threshold resolution."""
+"""Plan §6.4 / §6.7: routing calibration artifact + human recalibration gate."""
 
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -11,13 +13,18 @@ import pytest
 from agent.calibration import (
     CALIBRATION_ARTIFACT_KIND,
     CALIBRATION_ARTIFACT_SCHEMA_VERSION,
+    SOURCE_HUMAN,
+    SOURCE_SYNTHETIC,
     CalibrationArtifactError,
+    assess_human_calibration_readiness,
     build_calibration_artifact,
     compute_agreement_report,
     compute_cost_matrix,
     default_routing_thresholds,
+    label_source_of,
     load_calibration_artifact,
     load_labelled_routes,
+    reissue_calibration_from_labels,
     resolve_routing_thresholds,
     thresholds_from_artifact,
     write_calibration_artifact,
@@ -226,3 +233,158 @@ def test_seed_artifact_reproducible_via_resolve() -> None:
     assert resolved.source == "artifact"
     assert resolved.min_quality == 80
     assert resolved.min_factuality == 80
+
+
+# ---------------------------------------------------------------------------
+# Plan §6.7: human calibration readiness + reissue (no silent upgrade)
+# ---------------------------------------------------------------------------
+
+
+def _human_rows(n: int = 10, *, disagree_one: bool = True) -> list[dict]:
+    """Build a minimal dual-annotator human sample that clears default floors."""
+    rows: list[dict] = []
+    for i in range(n):
+        # Mostly auto agreement; one intentional disagreement like the seed.
+        if disagree_one and i == 4:
+            label_a, label_b, gold = "auto", "human", "human"
+            predicted = "auto"
+        elif i % 2 == 0:
+            label_a = label_b = gold = predicted = "auto"
+        else:
+            label_a = label_b = gold = predicted = "human"
+        rows.append(
+            {
+                "case_id": f"human-{i:02d}",
+                "label_a": label_a,
+                "label_b": label_b,
+                "gold_route": gold,
+                "predicted_route": predicted,
+                "label_source": "human",
+                "annotator_a": "ann-a",
+                "annotator_b": "ann-b",
+                "labelled_at": "2026-08-08T12:00:00+00:00",
+            }
+        )
+    return rows
+
+
+def test_seed_labels_are_synthetic_and_not_human_ready() -> None:
+    items = load_labelled_routes(SEED_LABELS)
+    assert all(label_source_of(row) == "synthetic" for row in items)
+    readiness = assess_human_calibration_readiness(items)
+    assert readiness.ready is False
+    assert readiness.n_synthetic == len(items)
+    assert any("synthetic" in r for r in readiness.reasons)
+
+
+def test_seed_cannot_reissue_as_human_labelled() -> None:
+    items = load_labelled_routes(SEED_LABELS)
+    with pytest.raises(CalibrationArtifactError, match="human-labelled|human calibration"):
+        reissue_calibration_from_labels(items, require_human=True)
+    with pytest.raises(CalibrationArtifactError, match="refusing source=human-labelled"):
+        reissue_calibration_from_labels(items, source=SOURCE_HUMAN)
+
+
+def test_synthetic_reissue_keeps_synthetic_source(tmp_path: Path) -> None:
+    items = load_labelled_routes(SEED_LABELS)
+    artifact = reissue_calibration_from_labels(
+        items,
+        dataset_path=str(SEED_LABELS.as_posix()),
+        require_human=False,
+    )
+    assert artifact["source"] == SOURCE_SYNTHETIC
+    assert artifact["source"] != SOURCE_HUMAN
+    assert artifact["agreement_report"]["n_double_labelled"] == len(items)
+    assert artifact["cost_matrix"]["auto_when_human"] == 1
+    path = write_calibration_artifact(artifact, tmp_path / "syn.json")
+    loaded = load_calibration_artifact(path)
+    assert loaded["source"] == SOURCE_SYNTHETIC
+    assert loaded["thresholds"]["min_quality"] == 80
+
+
+def test_human_sample_readiness_and_reissue(tmp_path: Path) -> None:
+    items = _human_rows(10)
+    readiness = assess_human_calibration_readiness(items)
+    assert readiness.ready is True, readiness.reasons
+    artifact = reissue_calibration_from_labels(
+        items,
+        thresholds={"min_quality": 82, "min_factuality": 80, "min_relevance": 0.8},
+        require_human=True,
+        dataset_path="evaluation/calibration/human_labels.jsonl",
+    )
+    assert artifact["source"] == SOURCE_HUMAN
+    assert artifact["thresholds"]["min_quality"] == 82
+    assert artifact["human_readiness"]["ready"] is True
+    assert artifact["agreement_report"]["n_double_labelled"] == 10
+    path = write_calibration_artifact(artifact, tmp_path / "human.json")
+    loaded = load_calibration_artifact(path)
+    assert loaded["source"] == SOURCE_HUMAN
+    resolved = thresholds_from_artifact(loaded)
+    assert resolved.min_quality == 82
+    assert resolved.calibration_source == SOURCE_HUMAN
+
+
+def test_missing_annotators_blocks_human_ready() -> None:
+    items = _human_rows(10)
+    del items[0]["annotator_a"]
+    readiness = assess_human_calibration_readiness(items)
+    assert readiness.ready is False
+    assert readiness.missing_annotators >= 1
+
+
+def test_recalibrate_cli_readiness_on_seed() -> None:
+    script = PROJECT_ROOT / "scripts" / "recalibrate_routing.py"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--mode",
+            "readiness",
+            "--labels",
+            str(SEED_LABELS),
+            "--require-human",
+        ],
+        cwd=str(PROJECT_ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 1
+    assert "ready=False" in proc.stdout or "NOT_READY" in proc.stdout
+
+
+def test_recalibrate_cli_reissue_human_write(tmp_path: Path) -> None:
+    labels = tmp_path / "human.jsonl"
+    out = tmp_path / "out.json"
+    rows = _human_rows(10)
+    labels.write_text(
+        "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    script = PROJECT_ROOT / "scripts" / "recalibrate_routing.py"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--mode",
+            "reissue",
+            "--labels",
+            str(labels),
+            "--out",
+            str(out),
+            "--require-human",
+            "--write",
+            "--min-quality",
+            "81",
+        ],
+        cwd=str(PROJECT_ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert out.is_file()
+    loaded = load_calibration_artifact(out)
+    assert loaded["source"] == SOURCE_HUMAN
+    assert loaded["thresholds"]["min_quality"] == 81
