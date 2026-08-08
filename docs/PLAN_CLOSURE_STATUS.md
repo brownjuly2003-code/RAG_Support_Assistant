@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-08 (Update-117 after 4.6 outbox schedule)  
+**Date:** 2026-08-08 (Update-118 after 4.7 graph node SSE)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-117**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-118**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -21,7 +21,7 @@
 | **1** live multi-tenant / backup / RPO | partial chart/docs only | **OPEN** (opt-in live) | **yes** Gate A |
 | **2** index lifecycle | **2.1–2.6g local residual closed** | **OPEN** live PG/Redis/Celery/Chroma | yes for live index ops |
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
-| **4** unified pipeline + escalation | **4.1–4.6 local** | **OPEN** true graph tokens; parity default off | partial |
+| **4** unified pipeline + escalation | **4.1–4.7 local** | **OPEN** provider token stream; parity default off | partial |
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
@@ -65,7 +65,8 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 22 | §6.6 agentic LLM evaluate wire | **done** `69c6fdf` |
 | 23 | §6.7 human calibration readiness + CLI | **done** `c707c46` |
 | 24 | §4.6 outbox retry schedule | **done** `11acfec` |
-| 25 | **graph SSE tokens / human sample / live execute** | **← next pick** |
+| 25 | §4.7 graph node status SSE | **done** `6b91a35` |
+| 26 | **provider tokens / human sample / live execute** | **← next pick** |
 | 26 | §2/§3 residual if product needs | residual |
 | 27 | Astro 7 (clears DEP-01 moderate residual) | residual |
 | 28 | §1 + §10 | **opt-in live only** |
@@ -113,9 +114,10 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | 4.3 | `ad5e435` | durable idempotent escalation |
 | 4.4 | `0371971` | auto human-route on normal ask |
 | 4.5 | `6453530` | outbox retry without second ticket |
-| **4.6** | **`11acfec`** | Celery beat + CLI outbox schedule |
+| **4.6** | `11acfec` | Celery beat + CLI outbox schedule |
+| **4.7** | **`6b91a35`** | real LangGraph node status SSE |
 
-**Residual:** true node/token SSE; parity default off.
+**Residual:** provider token streaming through generate; parity default off.
 
 ---
 
@@ -254,9 +256,9 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-1. **True graph node/token SSE** (§4 residual)  
+1. **True provider token streaming** through generate (optional §4 residual)  
 2. **Collect real dual-annotator human sample** + `recalibrate_routing.py --require-human --write`  
 3. **Live provider execute** (`RAG_LIVE_PROVIDER_GATE` + secrets + `--execute`) — opt-in  
-4. **Astro 7** major when Starlight supports it (DEP-01 moderate residual)  
+4. **Astro 7** / product decision to default `STREAMING_RAG_PARITY=true`  
 
-**Do not re-select** 2.x–8.5, 4.1–4.6, 6.1–6.7, 7.1–7.7, DEP-01.
+**Do not re-select** 2.x–8.5, 4.1–4.7, 6.1–6.7, 7.1–7.7, DEP-01.

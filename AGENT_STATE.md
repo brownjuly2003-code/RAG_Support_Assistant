@@ -1,5 +1,84 @@
 # Agent State
 
+## 2026-08-08 Update-118 — 4.7 graph node status SSE ✅ START HERE
+
+> **Routing authority:** Update-118 supersedes Update-117 **only for
+> start-point routing**. Older Update blocks are **archival**. **Only the
+> first/topmost Update block is authoritative.**
+>
+> **Implementation this turn:** slice **4.7** — real LangGraph node status
+> events on streaming parity SSE. No push / deploy / live / migrate.
+> Does **not** claim true provider token streaming through generate, nor
+> parity default ON.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `6b91a35`
+>   (`feat(stream): emit real LangGraph node status events on parity SSE (4.7)`)
+> - Prior: `11acfec` **4.6** · `c707c46` **6.7** · `f1c846e` **4.2**
+> - Prior docs: `352ed7f` Update-117
+> - §4 path ends: `eaf41f3`…`11acfec` 4.6 · **`6b91a35` 4.7**
+> - Migrations on disk (not applied): **019–023**
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **4.1–4.7** | stream parity + escalation + outbox schedule + **graph node SSE** local |
+> | §4 residual | true **provider token** streaming through generate; parity default still **off** |
+> | Full plan / production | **NOT** claimed |
+>
+> ---
+>
+> ### Slice 4.7 contract
+>
+> - `agent/graph_stream.py` — `stream_graph_node_events` (updates+values)
+> - `iter_qa_pipeline_events` + `ConversationSession.iter_ask_events`
+> - Parity SSE prefers events path; status `{node, source: graph}`
+> - Tokens: `token_source=graph_answer_chunks` (finished answer UX chunks)
+> - `result.events_source=graph|ask`; `result.graph_nodes` listed
+> - No second generation; ask()-only doubles keep §4.2 fallback
+>
+> **Files:** `agent/graph_stream.py`, `agent/graph.py`,
+> `api/routers/conversation.py`, `tests/test_graph_node_sse.py`
+>
+> ---
+>
+> ### Known verification (4.7 turn)
+>
+> | Gate | Result |
+> |------|--------|
+> | graph node SSE + streaming parity | **12 passed** |
+> | stream capacity + graph error band | prior green this turn |
+> | Ruff | clean |
+> | Full suite / live / push | **not** run / **not** claimed |
+>
+> ---
+>
+> ### Open boundaries
+>
+> - **← next default:** true provider token stream on generate **or**
+>   human dual-annotator sample reissue **or** live execute (opt-in) **or**
+>   enable parity default (product decision) **or** Astro7
+> - multi-replica session; live multi-service + migrate 019–023
+>
+> **Do not re-select:** 2.x–3.x, **4.1–4.7**, 5.1–5.3, **6.1–6.7**, 7.1–7.7,
+> 8.1–8.5, DEP-01.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`  
+> Untracked: plan file, `_NEXT_SESSION.md`, pytest temps, presentations
+>
+> ### External gates (opt-in only)
+>
+> push · deploy · live multi-service · live provider execute · alembic 019–023
+
 ## 2026-08-08 Update-117 — 4.6 outbox retry schedule wire ✅ START HERE
 
 > **Routing authority:** Update-117 supersedes Update-116 **only for
