@@ -133,6 +133,37 @@ def test_regression_eval_runs_on_master_pushes_not_only_pull_requests() -> None:
     assert "refs/heads/master" in guard
 
 
+def test_regression_eval_wires_baseline_artifact_publish_and_require() -> None:
+    # Plan §7.5: CI must write, publish, and fail-closed-require the merge-base
+    # baseline artifact. Mock smoke remains non-release (§7.2): no --release-gate.
+    steps = _workflow("ci.yml")["jobs"]["regression-eval"]["steps"]
+    by_name = {step.get("name"): step for step in steps if step.get("name")}
+
+    write_step = by_name.get("Run regression eval (smoke, write baseline artifact)")
+    assert write_step is not None, "smoke write step must exist"
+    write_run = str(write_step.get("run", ""))
+    assert "--write-baseline-artifact" in write_run
+    assert "reports/regression/ci-baseline-artifact.json" in write_run
+    assert "--mock-experiment-runtime" in write_run
+    assert "--release-gate" not in write_run
+    assert "--require-baseline-artifact" not in write_run
+
+    upload_step = by_name.get("Upload regression baseline artifact")
+    assert upload_step is not None, "upload step must publish the baseline artifact"
+    assert "actions/upload-artifact@" in str(upload_step.get("uses", ""))
+    assert upload_step["with"]["path"] == "reports/regression/ci-baseline-artifact.json"
+    assert upload_step["with"]["if-no-files-found"] == "error"
+
+    require_step = by_name.get("Regression compare against baseline artifact (require wire)")
+    assert require_step is not None, "require-wire step must load the written artifact"
+    require_run = str(require_step.get("run", ""))
+    assert "--baseline-artifact" in require_run
+    assert "reports/regression/ci-baseline-artifact.json" in require_run
+    assert "--require-baseline-artifact" in require_run
+    assert "--mock-experiment-runtime" in require_run
+    assert "--release-gate" not in require_run
+
+
 def test_unit_tests_enforce_the_coverage_gate_on_one_matrix_leg() -> None:
     # Audit 2026-07-18 (N1): pyproject carried
     # [tool.coverage.report] fail_under = 70 while CI ran pytest without --cov,

@@ -362,7 +362,9 @@ jobs:
       # Smoke-only: mock expected-copy is NOT release evidence (plan §7.2).
       # Exit follows metrics smoke; do not pass --release-gate here.
       # Release evidence requires real pipeline/provider runs without mock.
-      - name: Run regression eval (smoke, non-release)
+      # Plan §7.5: publish a durable baseline artifact from this smoke run so the
+      # merge-base compare path is wired in CI (write → upload → require load).
+      - name: Run regression eval (smoke, write baseline artifact)
         if: steps.regression_changes.outputs.regression == 'true' && hashFiles('evaluation/curated_cases.jsonl')
         run: >
           python scripts/regression_eval.py
@@ -374,3 +376,30 @@ jobs:
           --seed 42
           --mock-experiment-runtime
           --no-persist
+          --write-baseline-artifact reports/regression/ci-baseline-artifact.json
+
+      - name: Upload regression baseline artifact
+        if: steps.regression_changes.outputs.regression == 'true' && hashFiles('evaluation/curated_cases.jsonl')
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-baseline-artifact
+          path: reports/regression/ci-baseline-artifact.json
+          if-no-files-found: error
+
+      # Plan §7.5: re-compare candidate against the written artifact with
+      # --require-baseline-artifact (fail-closed if missing/unusable).
+      # Still mock → still smoke; does not claim release PASS (plan §7.2).
+      - name: Regression compare against baseline artifact (require wire)
+        if: steps.regression_changes.outputs.regression == 'true' && hashFiles('evaluation/curated_cases.jsonl')
+        run: >
+          python scripts/regression_eval.py
+          --baseline merge-base
+          --candidate ${{ steps.regression_target.outputs.candidate }}
+          --dataset evaluation/curated_cases.jsonl
+          --tenant all
+          --max-cases 100
+          --seed 42
+          --mock-experiment-runtime
+          --no-persist
+          --baseline-artifact reports/regression/ci-baseline-artifact.json
+          --require-baseline-artifact
