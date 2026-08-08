@@ -1,7 +1,132 @@
 # Agent State
 
+## 2026-08-08 Update-120 — 4.8 provider token streaming through generate ✅ START HERE
+
+> **Routing authority:** Update-120 supersedes Update-119 **only for
+> start-point routing**. All older Update blocks below, including headings
+> that literally contain `✅ START HERE`, are **archival**. **Only the
+> first/topmost Update block in this file is authoritative.** Never select
+> work by grepping old `START HERE` markers.
+>
+> **Implementation this turn:** slice **4.8** — true provider token streaming
+> through graph generate on the parity SSE path. No push / deploy / live /
+> migrate. Does **not** claim parity default ON, live provider evidence, or
+> production readiness.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `fc7f07b`
+>   (`feat(stream): provider token streaming through graph generate (4.8)`)
+> - Prior impl: `6b91a35` **4.7** · `11acfec` **4.6** · `c707c46` **6.7**
+> - Prior docs: `18fbd18` Update-119
+> - §4 path: `eaf41f3`…`6b91a35` 4.7 · **`fc7f07b` 4.8**
+> - Migrations on disk (not applied): **019–023**
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **2.1–2.6g** | local residual closed at documented scopes |
+> | **3.1a–3.1i** | local at documented scopes |
+> | **4.1–4.8** | stream parity + escalation + outbox + node SSE + **provider tokens** local |
+> | **5.1–5.3** | grounding + citation-bound + grader fail-closed **local** |
+> | **6.1–6.7** | unmeasured → evaluate wire → human readiness gate **local** |
+> | **7.1–7.7** | eval fail-closed + mock≠PASS + baseline + CI + live scaffold + depth **local** |
+> | **8.1–8.5** | widget/edge security + Playwright E2E **local** |
+> | **DEP-01** | docs-site npm audit high=0 + dated exceptions **local** |
+> | Full plan §1–§10 | **NOT** complete |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+>
+> **Transparency maps:**
+> - [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) — full next-session capsule
+> - [`docs/PLAN_CLOSURE_STATUS.md`](docs/PLAN_CLOSURE_STATUS.md) — residual matrix
+> - [`_NEXT_SESSION.md`](_NEXT_SESSION.md) — pointer only (not SoT)
+>
+> ---
+>
+> ### Slice 4.8 contract
+>
+> - `agent/graph_stream.py` — `stream_mode` includes `custom`; relays tokens;
+>   `provider_token_stream_enabled` ContextVar
+> - `agent/graph.py` — generate prefers `generate_stream` / sync `.stream` when
+>   flag on; writes via LangGraph `get_stream_writer`
+>   (`token_source=provider_generate`)
+> - `iter_qa_pipeline_events` enables the flag for the SSE/events path only
+> - Parity SSE relays live tokens; **no** post-hoc `graph_answer_chunks` when
+>   provider tokens already streamed; fallback chunks still when stream N/A
+> - `result.token_source` = `provider_generate` | `graph_answer_chunks`
+> - Single generation only; parity default still **off**
+>
+> **Files:** `agent/graph_stream.py`, `agent/graph.py`,
+> `api/routers/conversation.py`, `tests/test_provider_token_stream.py`
+>
+> ---
+>
+> ### Known verification (4.8 turn)
+>
+> | Gate | Result |
+> |------|--------|
+> | provider token + graph node SSE + streaming parity | **16 passed** |
+> | Ruff on touched paths | clean |
+> | Full suite / live / push | **not** run / **not** claimed |
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next default pick one:**
+>   1. **real dual-annotator human sample** +
+>      `recalibrate_routing.py --require-human --write`
+>   2. **live provider execute** (opt-in + secrets + `--execute`)
+>   3. **Astro 7** / product decision `STREAMING_RAG_PARITY=true` default
+> - §4 residual after 4.8: parity default still **off** (product decision)
+> - §6 residual: production human labels not collected (seed synthetic)
+> - §7 residual: live execute evidence; mock≠release PASS
+> - §5 residual: live precision/recall/faithfulness ×3
+> - multi-replica durable session version
+> - DEP-01 residual: Astro 6 moderate until Astro 7; exceptions **2026-11-07**
+> - live multi-service + migrations **019–023** (**opt-in**)
+> - plan §9–§10; full suite / release / production
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> Named residual above — **one atomic** per user turn. Do not combine with
+> live drills without opt-in.
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–3.1i, **4.1–4.8**, 5.1–5.3,
+> **6.1–6.7**, 7.1–7.7, **8.1–8.5**, **DEP-01**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Do not touch/stage/remove without explicit request:
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+>   `_NEXT_SESSION.md` (**pointer only — not routing authority**),
+>   `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
+>   casually), architecture HTML, etc.
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push · deploy · live multi-service · live provider execute · alembic 019–023 ·
+> production claims · bulk plan checkbox edits
+
 ## 2026-08-08 Update-119 — docs-only full transparency after 4.7 / recent quality path ✅ START HERE
 
+> **Historical (superseded by Update-120 for start-point routing).**
+>
 > **Routing authority:** Update-119 is **docs-only / transparency-only** and
 > supersedes Update-118 **only for start-point routing**. All older Update
 > blocks below, including headings that literally contain `✅ START HERE`,
