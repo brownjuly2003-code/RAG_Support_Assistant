@@ -431,6 +431,42 @@ class Settings:
     quality_threshold: int = field(
         default_factory=lambda: int(os.getenv("QUALITY_THRESHOLD", "80"))
     )
+    # Plan §6.4: factuality / relevance floors for route=auto (overridable via
+    # calibration artifact; defaults match historical quality band).
+    min_factuality_for_auto: int = field(
+        default_factory=lambda: int(os.getenv("MIN_FACTUALITY_FOR_AUTO", "80") or 80)
+    )
+    min_relevance_for_auto: float = field(
+        default_factory=lambda: float(os.getenv("MIN_RELEVANCE_FOR_AUTO", "0.8") or 0.8)
+    )
+    # Versioned routing calibration artifact (plan §6.4). Empty path disables
+    # artifact load; when set, resolve_routing_thresholds prefers the file.
+    calibration_artifact_path: str = field(
+        default_factory=lambda: (
+            os.getenv("RAG_CALIBRATION_ARTIFACT", "").strip()
+            or str(
+                PROJECT_ROOT
+                / "evaluation"
+                / "calibration"
+                / "routing_calibration.v1.json"
+            )
+        )
+    )
+    # When True, missing/unusable calibration artifact fails closed (no silent
+    # hard-coded auto floors). Default True in production.
+    require_calibration_artifact: bool = field(
+        default_factory=lambda: (
+            os.getenv(
+                "RAG_REQUIRE_CALIBRATION_ARTIFACT",
+                "true"
+                if os.getenv("RAG_ENV", "development").strip().lower() == "production"
+                else "false",
+            )
+            .strip()
+            .lower()
+            in {"1", "true", "yes", "on"}
+        )
+    )
     # Plan §6.3: when True, quality judge must not share provider/model identity
     # with the answer generator. Missing independent judge → fail-closed
     # (unmeasured / not_verified), never same-model self-approval auto.

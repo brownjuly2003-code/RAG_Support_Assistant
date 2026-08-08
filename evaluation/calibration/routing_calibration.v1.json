@@ -1,0 +1,61 @@
+{
+  "agreement_report": {
+    "annotators": [
+      "label_a",
+      "label_b"
+    ],
+    "cohens_kappa": 0.8,
+    "n_double_labelled": 10,
+    "n_items": 10,
+    "raw_agreement": 0.9
+  },
+  "cost_matrix": {
+    "auto_when_auto": 3,
+    "auto_when_human": 1,
+    "human_when_auto": 1,
+    "human_when_human": 5,
+    "notes": "auto_when_human = false auto (high cost); human_when_auto = missed auto (caution cost).",
+    "skipped": 0
+  },
+  "created_at": "2026-08-08T00:52:26.593869+00:00",
+  "dataset_path": "evaluation/calibration/labelled_routes.jsonl",
+  "kind": "routing-calibration",
+  "labeling_rules": {
+    "annotator_guidance": "Given question, answer, citations, and retrieval context, label the desired terminal route as auto or human. Never label auto for unmeasured quality, missing citations on substantial claims, or judge outage. Prefer human on ambiguity (cost of false auto is higher).",
+    "auto_allowed_when": [
+      "quality_score >= min_quality",
+      "relevance_score >= min_relevance",
+      "grounding_status == verified",
+      "factuality_score >= min_factuality when claims exist",
+      "knowledge_gap is false",
+      "retrieval context present",
+      "judge_status not in unavailable/error/parse_failure",
+      "quality_source is measured (llm), not unmeasured/fixed"
+    ],
+    "human_required_when": [
+      "any auto_allowed_when condition fails",
+      "unmeasured agentic terminal without evaluate/grounding",
+      "PII refuse or prompt-injection refuse path",
+      "LLM budget exhaust / node error"
+    ],
+    "version": "1"
+  },
+  "model_versions": {
+    "generator": "settings:ollama_model_name",
+    "judge": "settings:judge via provider registry",
+    "note": "bootstrap — pin concrete model ids when re-calibrating live"
+  },
+  "notes": "Bootstrap calibration artifact for plan §6.4. Thresholds match historical QUALITY_THRESHOLD=80 / min_factuality=80 / min_relevance=0.8 / self_rag_min_quality=70. labelled_routes.jsonl is a synthetic dual-annotator fixture for contract tests; replace with human-labelled production sample before claiming full calibration DoD.",
+  "prompt_versions": {
+    "evaluate": "agent/prompts.py:evaluate",
+    "verify_facts": "agent/prompts.py:verify"
+  },
+  "schema_version": 1,
+  "source": "bootstrap-defaults",
+  "thresholds": {
+    "min_factuality": 80,
+    "min_quality": 80,
+    "min_relevance": 0.8,
+    "self_rag_min_quality": 70
+  }
+}

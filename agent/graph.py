@@ -1975,6 +1975,7 @@ def make_suggest_questions_node(llm: SupportsInvoke) -> Callable[[GraphState], G
 def make_route_or_retry_node(
     min_quality: int = 80,
     min_relevance: float = 0.8,
+    min_factuality: int | None = None,
 ) -> Callable[[GraphState], GraphState]:
     """Узел route_or_retry: финал / retry / human (plan §5.1 fail-closed).
 
@@ -1983,6 +1984,9 @@ def make_route_or_retry_node(
       (context, knowledge_gap=false, grounding_status=verified, factuality);
     - иначе retry при оставшихся итерациях, иначе human;
     - scores None → human (не auto).
+
+    Floors prefer plan §6.4 calibration artifact via resolve_routing_thresholds
+    when explicit min_factuality is omitted.
     """
 
     def node(state: GraphState) -> GraphState:
@@ -1990,6 +1994,7 @@ def make_route_or_retry_node(
             return state
         trace_id = state.get("trace_id", "unknown-trace-id")
         try:
+            from agent.calibration import resolve_routing_thresholds
             from agent.grounding import (
                 DEFAULT_MIN_FACTUALITY_FOR_AUTO,
                 grounding_allows_auto,
@@ -2001,17 +2006,14 @@ def make_route_or_retry_node(
             iteration = state.get("iteration", 0)
             max_iter = state.get("max_iterations", 2)
 
-            try:
-                min_fact = int(
-                    getattr(
-                        get_settings(),
-                        "min_factuality_for_auto",
-                        DEFAULT_MIN_FACTUALITY_FOR_AUTO,
-                    )
-                    or DEFAULT_MIN_FACTUALITY_FOR_AUTO
-                )
-            except Exception:
-                min_fact = DEFAULT_MIN_FACTUALITY_FOR_AUTO
+            if min_factuality is not None:
+                min_fact = int(min_factuality)
+            else:
+                try:
+                    thresholds = resolve_routing_thresholds(get_settings())
+                    min_fact = int(thresholds.min_factuality)
+                except Exception:
+                    min_fact = DEFAULT_MIN_FACTUALITY_FOR_AUTO
 
             scores_ok = (
                 q is not None
@@ -2241,11 +2243,20 @@ def build_support_graph(
                 ├─ (retry) → rewrite_query → retrieve → ...
                 └─ (end)   → log → END
     """
+    from agent.calibration import resolve_routing_thresholds
     from config.settings import get_settings
 
     settings = get_settings()
+    # Plan §6.4: floors from versioned calibration artifact when present.
+    try:
+        routing_thresholds = resolve_routing_thresholds(settings)
+    except Exception:
+        routing_thresholds = None
     if min_quality is None:
-        min_quality = getattr(settings, "quality_threshold", 80)
+        if routing_thresholds is not None:
+            min_quality = int(routing_thresholds.min_quality)
+        else:
+            min_quality = getattr(settings, "quality_threshold", 80)
 
     llm_fast: SupportsInvoke
     llm_strong: SupportsInvoke
@@ -2293,7 +2304,24 @@ def build_support_graph(
     # when independence is required and generator is fast, uses strong).
     # suggest_questions is cosmetic follow-up text — fast is enough there too.
     workflow.add_node("evaluate", make_evaluate_node(llm_fast, llm_strong))
-    workflow.add_node("route_or_retry", make_route_or_retry_node(min_quality=min_quality))
+    route_min_relevance = (
+        float(routing_thresholds.min_relevance)
+        if routing_thresholds is not None
+        else float(getattr(settings, "min_relevance_for_auto", 0.8) or 0.8)
+    )
+    route_min_factuality = (
+        int(routing_thresholds.min_factuality)
+        if routing_thresholds is not None
+        else int(getattr(settings, "min_factuality_for_auto", 80) or 80)
+    )
+    workflow.add_node(
+        "route_or_retry",
+        make_route_or_retry_node(
+            min_quality=min_quality,
+            min_relevance=route_min_relevance,
+            min_factuality=route_min_factuality,
+        ),
+    )
     workflow.add_node("response_safety", make_response_safety_node())
     workflow.add_node("suggest_questions", make_suggest_questions_node(llm_fast))
     workflow.add_node("rewrite_query", make_rewrite_query_node(llm_strong))
