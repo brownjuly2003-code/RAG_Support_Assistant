@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-08 (Update-113 after 7.7 deeper curated corpus)  
+**Date:** 2026-08-08 (Update-114 full transparency after 7.7)  
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-113**)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-114**)  
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -23,7 +23,7 @@
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.5 local** | **OPEN** true graph tokens; parity default off; schedule wiring | partial |
 | **5** grounding fail-closed | **5.1–5.3 local** | **OPEN** live metric thresholds ×3 runs | **yes** quality |
-| **6** judge / safety / agentic parity | **6.1–6.5 local** | OPEN (full human calibration; optional agentic LLM evaluate) | **yes** |
+| **6** judge / safety / agentic parity | **6.1–6.5 local** | OPEN (full human calibration; agentic LLM evaluate) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | partial + **DEP-01 local** | OPEN (Astro7 residual; cache/SLO) | soft |
@@ -138,11 +138,10 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **6.3** | **done local** | `d6e3a55` | independent judge; fail-closed on outage/parse |
 | **6.4** | **done local** | `a7cefc3` | routing calibration artifact + threshold resolve |
 | **6.5** | **done local** | `431893c` | measured grounding when agentic has KB docs |
-| 6.x | residual | — | full human recalibration; optional agentic LLM evaluate |
+| 6.x | residual | — | full human recalibration; **agentic LLM evaluate wire** |
 
 **6.4 residual:** seed is bootstrap-defaults (historical 80/80/0.8/70), not live
-human production labelling DoD. Replace labelled_routes + recompute agreement/cost
-before claiming full §6 calibration closed.
+human production labelling DoD.
 
 **6.5 residual:** KB path measures citation-bound grounding; quality stays
 unmeasured until a real llm/heuristic score is supplied — auto requires both.
@@ -165,18 +164,33 @@ Confirmation/order-only remain unmeasured by design.
 
 **7.2 residual:** CI still runs `--mock-experiment-runtime` as **smoke** (documented non-evidence).  
 **7.3 residual:** closed for local CLI; CI wire completed in **7.5** (smoke path only).  
-**7.4 residual:** coverage dimensions present; depth raised in **7.7**.  
 **7.5 residual:** artifact wire is smoke-only on PR path.  
 **7.6 residual:** scaffold only — real paid live evidence needs opt-in + secrets + `--execute`.  
 **7.7 residual:** still synthetic curated (not production human labels); optional deeper still.
 
-### §7 last-known verification (7.5 turn)
+### Dataset depth (7.7)
+
+| Slice | Count |
+|-------|------:|
+| multi_tenant | 3 |
+| multi_turn | 5 |
+| claim_citation | 3 |
+| no_answer | 3 |
+| tools | 3 |
+| streaming | 3 |
+| adversarial | 3 |
+| pii | 3 |
+| durable_escalation | 3 |
+| context_recall | 3 |
+| **total** | **67** |
+
+### §7 last-known verification (7.7 turn; not re-run in Update-114)
 
 | Slice | Gate | Result |
 |-------|------|--------|
-| **7.5** | workflow wire + baseline band + local write→require | **11 + 15 passed**; SMOKE_PASS |
-| **7.4** | dataset expansion + regression band | prior **44 passed** |
-| 7.3 | baseline artifact (included in band) | green in 7.4/7.5 turns |
+| **7.7** | curated expansion + depth floor | **8 passed** |
+| **7.6** | live-gate + workflows | prior **21 passed** |
+| **7.5** | workflow wire + baseline | prior green |
 
 ---
 
@@ -190,7 +204,7 @@ Confirmation/order-only remain unmeasured by design.
 | **8.4** | **done local** | `68a30b2` | placeholders rejected; ALLOW_DEV_ADMIN_LOGIN banned in production |
 | **8.5** | **done local** | `4d6be52` | Playwright cross-origin E2E; iframe Origin=API allowed; fail-closed empty/disallowed |
 
-### §8 last-known verification (prior turns; not re-run in Update-108)
+### §8 last-known verification (prior turns)
 
 | Slice | Gate | Result |
 |-------|------|--------|
@@ -220,10 +234,20 @@ Confirmation/order-only remain unmeasured by design.
 
 The plan is **closed** only when:
 
-1. Every section’s **Проверка** has fresh evidence artifacts, and  
-2. Gate A–D / §10 checklist is signed, and  
-3. `unverified auto-rate = 0` on the release gate, and  
-4. No production claim rests on graceful skip, fixed agentic scores, mock  
-   expected-copy, or self-judge without calibration.
+1. Every section §1–§10 meets its own **behavioral DoD + evidence**.  
+2. Unverified auto-rate is zero under live policy.  
+3. Restore/rollback/canary confirmed where required.  
+4. Production release does **not** rest on graceful skip, fixed agentic scores,  
+   mock release PASS, or self-judge without human calibration.
 
-Until then status remains **ACTIVE**.
+Local green slices alone **do not** close the plan.
+
+---
+
+## Next session pick (one only)
+
+1. **Agentic LLM evaluate wire** (measured quality on KB agentic terminals)  
+2. **Human-labelled recalibration** (replace bootstrap calibration seed)  
+3. **Live provider execute** (`RAG_LIVE_PROVIDER_GATE` + secrets + `--execute`) — opt-in  
+
+**Do not re-select** 2.x–8.5, 6.1–6.5, 7.1–7.7, DEP-01.

@@ -1,26 +1,41 @@
 # Agent State
 
-## 2026-08-08 Update-113 — completed slice 7.7 deeper curated corpus @ `47e255a` ✅ START HERE
+## 2026-08-08 Update-114 — docs-only full transparency after 7.7 / Update-113 ✅ START HERE
 
-> **Routing authority:** Update-113 supersedes Update-112 **only for start-point
-> routing**. All older Update blocks below, including headings that literally
-> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
-> block in this file is authoritative.** Never select work by grepping old
-> `START HERE` markers.
+> **Routing authority:** Update-114 is **docs-only / transparency-only** and
+> supersedes Update-113 **only for start-point routing**. All older Update
+> blocks below, including headings that literally contain `✅ START HERE`,
+> are **archival**. **Only the first/topmost Update block in this file is
+> authoritative.** Never select work by grepping old `START HERE` markers.
+>
+> **No new implementation in this docs turn.** Code, tests, plan checkboxes,
+> backlog, README, audit, settings, API, docs-site lock, and dataset content
+> were **not** edited here. Project tests were **not** re-run. Protected dirty
+> files were not staged.
 >
 > **Known lineage (actual Git wins over any embedded hash):**
 > - Latest implementation: `47e255a`
 >   (`feat(eval): deepen curated dataset to 3+ cases per required slice (7.7)`)
 >   - slice **7.7**
-> - Previous impl: `d1ae4d6` — **7.6**; docs Update-112 `c79f975`
-> - §7 chain: `94ac64e` 7.1 · `25788ee` 7.2 · `0d34be2` 7.3 · `8f4269f` 7.4 ·
->   `4eceed3` 7.5 · `d1ae4d6` 7.6 · **`47e255a` 7.7**
+> - Latest impl docs before this turn: `10da548` (Update-113)
+> - Quality path (impl SHAs, recent):
+>   - 5: `7c53bdb` 5.1 · `50bb220` 5.2 · `1cdecb2` **5.3**
+>   - 6: `b3494a0` 6.1 · `d0317e9` 6.2 · `d6e3a55` 6.3 · `a7cefc3` 6.4 ·
+>     `431893c` **6.5**
+>   - 7: `94ac64e` 7.1 · `25788ee` 7.2 · `0d34be2` 7.3 · `8f4269f` 7.4 ·
+>     `4eceed3` 7.5 · `d1ae4d6` 7.6 · **`47e255a` 7.7**
+>   - 8: `0bee13e` 8.1 · `756562e` 8.2 · `13a9a5b` 8.3 · `68a30b2` 8.4 ·
+>     `4d6be52` **8.5**
+>   - DEP-01: **`f622d58`**
+> - 4 chain ends: `6453530` **4.5**
+> - 3 chain ends: `fe2f0aa` **3.1i**
+> - 2 fault-injection last: `f347feb` (**2.6g**)
 > - Migrations on disk (not applied): **019–023**
-> - This Update-113 docs commit SHA is **unknown inside its own content**;
+> - This Update-114 docs commit SHA is **unknown inside its own content**;
 >   next session: `git log -5 --oneline`
 >
 > **Branch advisory (refresh mandatory):** last observed
-> `master...origin/master [ahead 200]` after impl (before this docs commit).
+> `master...origin/master [ahead 201]` before this docs commit.
 >
 > **Active writer / WIP:** **none**.
 >
@@ -30,44 +45,89 @@
 >
 > | Band | Status |
 > |------|--------|
-> | **6.1–6.5** | local |
-> | **7.1–7.7** | eval gate + baseline + dataset depth + CI wire + live scaffold local |
-> | **8.1–8.5** + **DEP-01** | local |
-> | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
+> | **2.1–2.6g** | local residual closed at documented scopes |
+> | **3.1a–3.1i** | local at documented scopes |
+> | **4.1–4.5** | stream parity + durable escalation **local** |
+> | **5.1–5.3** | grounding + citation-bound + grader fail-closed **local** |
+> | **6.1–6.5** | unmeasured agentic + safety + judge + calibration + measured KB **local** |
+> | **7.1–7.7** | eval fail-closed + mock≠PASS + baseline + CI wire + live scaffold + **depth≥3** local |
+> | **8.1–8.5** | widget/edge security + Playwright E2E **local** |
+> | **DEP-01** | docs-site npm audit high=0 + dated exceptions **local** |
+> | Full plan §1–§10 | **NOT** complete (live DoD / human cal / Gate A open) |
+> | Project / release / production | **NOT** claimed |
+>
+> **Plan source:** untracked `rag-remediation-plan-2026-08-03.md`.
+> Checkboxes stay open until full DoD — **do not** edit them casually from docs.
+>
+> **Transparency maps:**
+> - [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) — full next-session capsule
+> - [`docs/PLAN_CLOSURE_STATUS.md`](docs/PLAN_CLOSURE_STATUS.md) — residual matrix
+> - [`_NEXT_SESSION.md`](_NEXT_SESSION.md) — pointer only (not SoT)
 >
 > ---
 >
-> ### 7.7 contract (local)
+> ### Recent quality path (impl SHAs)
 >
-> - `MIN_CASES_PER_REQUIRED_SLICE = 3` (was effective floor 1 in §7.4)
-> - Dataset **47 → 67** cases; every required slice has ≥3 cases
-> - multi_turn: 5 (two sessions); multi_tenant: 3 tenants (acme/beta/gamma)
-> - Manifest `min_cases_per_slice: 3`, plan_slice `7.7`
-> - Files: `evaluation/curated_cases.jsonl`, manifest, `scripts/regression_eval.py`,
->   `tests/test_curated_dataset_expansion.py`
+> | Slice | SHA | One-line |
+> |-------|-----|----------|
+> | 5.3 | `1cdecb2` | grader fail-closed |
+> | 6.1 | `b3494a0` | agentic unmeasured |
+> | 6.2 | `d0317e9` | PII + injection pre-response |
+> | 6.3 | `d6e3a55` | independent judge |
+> | 6.4 | `a7cefc3` | routing calibration artifact |
+> | **6.5** | **`431893c`** | measured agentic when KB docs |
+> | 7.1 | `94ac64e` | eval gate skip/infra FAIL |
+> | 7.2 | `25788ee` | mock SMOKE only |
+> | 7.3 | `0d34be2` | merge-base baseline artifact |
+> | 7.4 | `8f4269f` | curated slices (47) |
+> | 7.5 | `4eceed3` | CI baseline write/upload/require |
+> | 7.6 | `d1ae4d6` | live provider gate scaffold |
+> | **7.7** | **`47e255a`** | depth ≥3/slice; **67** cases |
+> | 8.1–8.5 | `0bee13e`…`4d6be52` | widget → Playwright E2E |
+> | **DEP-01** | **`f622d58`** | docs-site high=0 audit gate |
 >
-> **Verification:** curated expansion suite **8 passed**; Ruff clean. Full suite /
-> live / push **not** claimed.
+> ---
+>
+> ### Known verification (last impl 7.7; not re-run this docs turn)
+>
+> | Slice | Last known gate |
+> |-------|-----------------|
+> | **7.7** | 8 passed (curated expansion); Ruff clean; coverage all slices ≥3 |
+> | **7.6** | 21 passed (live-gate + workflows); readiness `SKIPPED_NO_OPT_IN` |
+> | **6.5** | 21 passed (agentic measure + tools) |
+> | **6.4** | 12 + 43 band; calibration seed bootstrap-defaults |
+> | **7.5** | 11 workflow + 15 baseline band; smoke write→require |
+> | **DEP-01** | npm audit high=0; audit:deps PASS |
+> | **8.5** | 16 passed (widget bootstrap + Playwright E2E) |
+>
+> Full suite / live multi-service / migrate / push / deploy / live provider
+> execute **not** run / **not** claimed.
 >
 > ---
 >
 > ### Open boundaries (honest)
 >
-> - **← next default pick one:** agentic LLM evaluate wire **or** human
->   recalibration **or** live execute with secrets (**opt-in**)
-> - 7 residual: live execute; optional further depth; mock≠release on PR path
-> - 6 residual: full human calibration; optional agentic LLM evaluate
+> - **← next default pick one:** agentic LLM evaluate wire **or** real
+>   human-labelled recalibration **or** live provider execute (**opt-in** +
+>   secrets + `--execute`)
+> - 7 residual after 7.7: live execute evidence; mock still not release PASS;
+>   optional further corpus depth
+> - 6 residual: full human calibration DoD (seed is bootstrap); agentic path
+>   quality still unmeasured until LLM evaluate score supplied
 > - 5 residual: live precision/recall/faithfulness ×3
-> - 4 residual: graph SSE; parity default off; outbox schedule
-> - DEP-01 residual: Astro7; exceptions expire **2026-11-07**
+> - 4 residual: true graph SSE tokens; parity default off; outbox schedule
+> - multi-replica durable session version
+> - DEP-01 residual: Astro 6 moderate until Astro 7; exceptions expire **2026-11-07**
 > - live multi-service + migrations **019–023** (**opt-in**)
+> - plan 9–10; full suite / release / production
 >
 > ---
 >
 > ### Next candidate only (not started) — default
 >
 > named **agentic LLM evaluate wire** **or** **human recalibration** **or**
-> **live execute (opt-in)** — one atomic residual.
+> **live provider execute (opt-in)** — one atomic residual; do not combine
+> with live drills without opt-in.
 >
 > **Do not re-select:** 2.1–2.6g, 3.1a–3.1i, 4.1–4.5, 5.1–5.3, 6.1–6.5,
 > 7.1–7.7, **8.1–8.5**, **DEP-01**.
@@ -80,20 +140,33 @@
 > - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
 >   `plan_sol_23_07_26`
 > - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
->   `_NEXT_SESSION.md`, `rag-remediation-plan-2026-08-03.md`
+>   `_NEXT_SESSION.md` (**pointer only — not routing authority**),
+>   `rag-remediation-plan-2026-08-03.md` (active plan — **no checkbox edits**
+>   casually), architecture HTML, etc.
 >
 > ---
 >
 > ### External gates (not authorized without opt-in)
 >
-> push, deploy, live PostgreSQL/Redis/Celery/Chroma, live provider execute,
-> `alembic upgrade` (019–023), destructive Git, production claims.
+> push, deploy, live PostgreSQL/Redis/Celery/Chroma drills, `alembic upgrade`
+> (incl. **019–023**), live provider execute with secrets, destructive Git,
+> production-readiness claims.
 >
 > **Standing preference:** one user turn = one named atomic slice; local commit
 > only; quality > speed.
 >
 > **Git advisory:** refresh `git status --short --branch` and
 > `git log -12 --oneline` at session start — **actual Git wins**.
+
+
+## 2026-08-08 Update-113 — completed slice 7.7 deeper curated corpus @ `47e255a` ✅ START HERE
+
+> **Historical handoff (superseded by Update-114 for start-point routing).**
+> Recorded **7.7** @ `47e255a`; docs `10da548`. Full transparency under Update-114.
+>
+> **Original routing note (archival):** Update-113 supersedes Update-112 **only for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**.
 
 
 ## 2026-08-08 Update-112 — completed slice 7.6 live provider gate scaffold @ `d1ae4d6` ✅ START HERE

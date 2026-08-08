@@ -1,7 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-08 — **Update-113** (slice **7.7** deeper curated corpus  
-@ `47e255a`; supersedes Update-112 for start-point routing).  
+**Обновлено:** 2026-08-08 — **Update-114** (docs-only full transparency after  
+**7.7** @ `47e255a` + docs Update-113 `10da548`).  
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей  
 истории `AGENT_STATE.md`.
 
@@ -12,11 +12,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-113**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-114**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-113; dirty  
+**Не использовать:** старые `✅ START HERE` ниже Update-114; dirty  
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` как единственный SoT  
 (это pointer only).
 
@@ -29,9 +29,9 @@
 | Факт | Значение |
 |------|----------|
 | Latest **implementation** | `47e255a` — **7.7** deeper curated corpus (67 cases, ≥3/slice) |
-| Latest **docs before this Update** | `c79f975` — Update-112 |
-| This Update-113 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | `master...origin/master [ahead 200]` after impl — **refresh mandatory** |
+| Latest **docs before this Update** | `10da548` — Update-113 |
+| This Update-114 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | `master...origin/master [ahead 201]` before this docs commit — **refresh mandatory** |
 | Active writer / WIP | **none** |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.5** + **5.1–5.3** + **6.1–6.5** + **7.1–7.7** + **8.1–8.5** + **DEP-01** |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
@@ -39,8 +39,29 @@
 | Next ordered (default) | agentic LLM evaluate **or** human recalibration **or** live execute (opt-in) |
 | Gates | **no** push / deploy / live multi-service / live provider execute / migrate 019–023 without **explicit opt-in** |
 
-**Last known verification (7.7):** curated expansion **8 passed**; Ruff clean.  
-Full suite / live execute / push **not** claimed.
+**This Update-114 is docs-only:** no code/test/plan-checkbox change; project  
+tests **not** re-run here. Implementation state unchanged after `47e255a`.
+
+**Last known verification (7.7; not re-run this docs turn):** curated expansion  
+**8 passed**; all required slices ≥3; Ruff clean. Full suite / live / push  
+**not** claimed.
+
+### Dataset snapshot (7.7)
+
+| Slice | Count |
+|-------|------:|
+| multi_tenant | 3 (acme/beta/gamma) |
+| multi_turn | 5 (2 sessions) |
+| claim_citation | 3 |
+| no_answer | 3 |
+| tools | 3 |
+| streaming | 3 |
+| adversarial | 3 |
+| pii | 3 |
+| durable_escalation | 3 |
+| context_recall | 3 |
+| **total cases** | **67** |
+| `MIN_CASES_PER_REQUIRED_SLICE` | **3** |
 
 ---
 
@@ -51,7 +72,7 @@ Full suite / live execute / push **not** claimed.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-113 in AGENT_STATE.md + this file §1–§11
+5. Read ONLY top Update-114 in AGENT_STATE.md + this file §1–§11
 6. Default work: agentic LLM evaluate OR human cal OR live execute opt-in. Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
@@ -72,7 +93,7 @@ destructive Git, production claims, bulk plan checkbox edits.
 | **3** execution / session / budget | **3.1a–3.1i** local | multi-replica durable session version |
 | **4** pipeline + escalation | **4.1–4.5** local | true graph tokens; parity default **off**; outbox Celery/cron |
 | **5** grounding fail-closed | **5.1–5.3** local | live metrics DoD ×3; relevance≠quality residual |
-| **6** judge / safety / agentic | **6.1–6.5** local | full human calibration; optional agentic LLM evaluate |
+| **6** judge / safety / agentic | **6.1–6.5** local | full human calibration; **agentic LLM evaluate wire** |
 | **7** eval gate | **7.1–7.7** local | live execute with secrets; mock≠release; optional more depth |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
 | **9** cache / architecture / SLO | partial + **DEP-01 local** | Astro7 residual; cache/SLO |
@@ -94,32 +115,36 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | **7.1** | `94ac64e` | infra/skip/empty → FAIL |
 | **7.2** | `25788ee` | mock → `SMOKE_PASS` only; `--release-gate` needs evidence |
 | **7.3** | `0d34be2` | merge-base baseline artifact load/write/require |
-| **7.4** | `8f4269f` | required slices + min_context_recall; **47** cases |
+| **7.4** | `8f4269f` | required slices + min_context_recall; 47 cases |
 | **7.5** | `4eceed3` | CI write + upload + require-wire of baseline artifact |
 | **7.6** | `d1ae4d6` | scheduled live provider gate scaffold (opt-in) |
-| **7.7** | **`47e255a`** | min 3 cases/required slice; 67 total cases |
+| **7.7** | **`47e255a`** | min 3 cases/required slice; **67** total cases |
+
+### §6 judge / safety / agentic
+
+| Slice | SHA | Surface |
+|-------|-----|---------|
+| **6.1** | `b3494a0` | unmeasured agentic; never fixed 80/85/90 |
+| **6.2** | `d0317e9` | pre-response PII + prompt-injection |
+| **6.3** | `d6e3a55` | independent judge fail-closed |
+| **6.4** | `a7cefc3` | routing calibration artifact (bootstrap-defaults) |
+| **6.5** | `431893c` | measured grounding when agentic has KB docs |
 
 ### §8 widget / edge
 
 | Slice | SHA | Surface |
 |-------|-----|---------|
-| **8.1** | `0bee13e` | widget bootstrap JWT, origins, frame-ancestors, session/token JS |
-| **8.2** | `756562e` | ASGI received-byte body limits; upload stream temp + exclusive/atomic place |
-| **8.3** | `13a9a5b` | OIDC email_verified; identity (issuer, subject); no rebind; shared tenant map |
-| **8.4** | `68a30b2` | production placeholders rejected; `ALLOW_DEV_ADMIN_LOGIN` banned |
-| **8.5** | `4d6be52` | Playwright cross-origin E2E; iframe Origin=API allow; fail-closed paths |
+| **8.1** | `0bee13e` | widget bootstrap JWT, origins, frame-ancestors |
+| **8.2** | `756562e` | ASGI received-byte body limits; upload stream/atomic place |
+| **8.3** | `13a9a5b` | OIDC email_verified; (issuer, subject); no rebind |
+| **8.4** | `68a30b2` | production placeholders rejected; no dev-admin |
+| **8.5** | `4d6be52` | Playwright cross-origin E2E; iframe Origin=API |
 
-### DEP-01
-
-| Slice | SHA | Surface |
-|-------|-----|---------|
-| **DEP-01** | `f622d58` | docs-site high=0; dated exceptions; fail-closed audit gate |
-
-### §6 / §5 / §4 / §3 / §2 (summary)
+### DEP-01 / §5 / §4 / §3 / §2
 
 | Band | Ends at SHA | Note |
 |------|-------------|------|
-| §6 | `431893c` **6.5** | measured agentic KB; residual human cal + optional LLM evaluate |
+| DEP-01 | `f622d58` | docs-site high=0; exceptions → **2026-11-07** |
 | §5 | `1cdecb2` **5.3** | grader fail-closed |
 | §4 | `6453530` **4.5** | outbox retry API |
 | §3 | `fe2f0aa` **3.1i** | runtime/session/budget band |
@@ -143,77 +168,42 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 - `scripts/live_provider_gate.py` readiness/command/live
 - Default readiness: no live calls; `SKIPPED_NO_OPT_IN`; never release PASS
 - Live: `RAG_LIVE_PROVIDER_GATE` + provider keys; fail-closed without keys
-- Live argv: `--release-gate --allow-paid-apis`; forbids mock
+- Live argv: `--release-gate --allow-paid-apis`; **forbids** mock
 - Workflow: `.github/workflows/live-provider-gate.yml` (schedule + dispatch)
 - Tests: `tests/test_live_provider_gate.py`
 
 ### 6.5 @ `431893c`
 
-- `search_kb_docs` returns (text, raw docs) for measured terminal
-- KB + `[N]` citations → citation-bound grounding measured; context attached
-- `route=auto` only with measured quality (llm/heuristic) + floors; fixed rejected
-- Confirmation / order-only / no-KB → still unmeasured (6.1)
-- Files: `agent/agentic_measure.py`, `agent/tools.py`, `agent/graph.py`,
-  `tests/test_agentic_measure.py`, `tests/test_agent_tools.py`
+- `search_kb_docs` → (text, raw docs)
+- KB + `[N]` citations → citation-bound grounding measured
+- `route=auto` only with measured quality (llm/heuristic) + floors
+- Confirmation / order-only / no-KB → unmeasured (6.1)
+- Residual: no auto-run of LLM evaluate on every KB hit
 
 ### 6.4 @ `a7cefc3`
 
-- Artifact `kind=routing-calibration` schema v1; seed bootstrap-defaults
-- Thresholds: min_quality 80 / min_factuality 80 / min_relevance 0.8 /
-  self_rag_min_quality 70 (historical band; not full human DoD)
-- Labeling rules + Cohen's κ agreement + auto/human cost matrix
+- Artifact `kind=routing-calibration` schema v1; seed **bootstrap-defaults**
+- Thresholds 80 / 80 / 0.8 / 70 (historical band; not full human DoD)
 - `resolve_routing_thresholds` → `route_or_retry` / `build_support_graph`
-- Settings: `calibration_artifact_path`, `require_calibration_artifact` (prod)
-- Files: `agent/calibration.py`, `evaluation/calibration/*`,
-  `tests/test_calibration_artifact.py`, `agent/graph.py`, `config/settings.py`
+- Residual: replace synthetic `labelled_routes` with human labels for full DoD
 
 ### 7.5 @ `4eceed3`
 
-- CI smoke: `--write-baseline-artifact reports/regression/ci-baseline-artifact.json`
-- Publish: `actions/upload-artifact@v4` → `regression-baseline-artifact`
-  (`if-no-files-found: error`)
-- Require wire: second step `--baseline-artifact` + `--require-baseline-artifact`
-- Still mock → still **SMOKE only**; **no** `--release-gate` (plan §7.2)
-- Files: `.github/workflows/ci.yml`, `tests/test_github_workflows.py`
+- CI smoke write/upload/require baseline artifact
+- Still mock → **SMOKE only**; no `--release-gate` on PR path
 
-### 7.4 @ `8f4269f`
+### 7.4–7.1 / 8.5–8.1 / DEP-01 (one-liners)
 
-- Schema: `slices` / `tags` / `session_id` / `turn_index`; `min_context_recall`
-- Coverage: `validate_dataset_slice_coverage` + `REQUIRED_DATASET_SLICES` (10)
-- Dataset 35 → **47** cases; multi-tenant (acme/beta) + multi-turn session
-- Manifest: `evaluation/curated_cases.manifest.json` (schema v2)
-- Files: `scripts/regression_eval.py`, `evaluation/curated_cases.jsonl`,
-  `tests/test_curated_dataset_expansion.py`
-
-### DEP-01 @ `f622d58`
-
-- `docs-site`: astro `^6.4.8`, sharp `^0.35.3`; lock → **high=0 critical=0**
-- Residual moderate/low: dated exceptions to **2026-11-07** in
-  `docs-site/npm-audit-exceptions.json`
-- Gate: `npm audit --audit-level=high` + `npm run audit:deps` (no `|| true`)
-- Files: `docs-site/scripts/check-npm-audit.mjs`, `.github/workflows/docs-site.yml`,
-  `tests/test_docs_site_npm_audit.py`
-
-### 7.3 @ `0d34be2`
-
-- Artifact schema: `kind=regression-baseline`, `schema_version=1`, per-case map
-- API: `build_baseline_artifact` / `write` / `load` / `baseline_artifact_from_report`
-- Runner: `baseline_case_results` skips baseline executor; missing case → infra FAIL
-- CLI: `--baseline-artifact`, `--write-baseline-artifact`, `--require-baseline-artifact`
-
-### 8.5 @ `4d6be52` (summary)
-
-- API Origin allowed on iframe bootstrap; third-party Origin must match parent
-- Playwright: allowlisted handshake + JWT + session reuse; empty/disallowed fail-closed
-
-### 8.4–8.1 / 7.2–7.1 (one-liners)
-
-- **8.4** production secrets + ban `ALLOW_DEV_ADMIN_LOGIN`
-- **8.3** OIDC email_verified + (issuer, subject)
-- **8.2** ASGI received-byte limits + upload stream/atomic place
-- **8.1** widget bootstrap JWT + frame-ancestors
+- **7.4** slices + `min_context_recall` schema
+- **7.3** merge-base baseline artifact CLI
 - **7.2** mock → `SMOKE_PASS` only
 - **7.1** infra/skip/empty → FAIL
+- **8.5** Playwright cross-origin E2E
+- **8.4** production secrets / no dev-admin
+- **8.3** OIDC email_verified + (issuer, subject)
+- **8.2** ASGI body limits + upload stream
+- **8.1** widget bootstrap JWT + frame-ancestors
+- **DEP-01** docs-site high=0; dated exceptions
 
 ---
 
@@ -221,30 +211,24 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 
 | Path | Slices | Role |
 |------|--------|------|
-| `agent/agentic_measure.py` | **6.5** | measured agentic terminal when KB docs |
-| `agent/tools.py` | **6.5** | `search_kb_docs` |
-| `tests/test_agentic_measure.py` | **6.5** | measure contract |
-| `agent/calibration.py` | **6.4** | routing calibration artifact + threshold resolve |
-| `evaluation/calibration/` | **6.4** | seed artifact + labelled_routes fixture |
-| `tests/test_calibration_artifact.py` | **6.4** | calibration contract |
-| `scripts/regression_eval.py` | **7.1–7.4** | gate + evidence + baseline artifact + slices |
-| `.github/workflows/ci.yml` | **7.5** | write + upload + require-wire baseline artifact |
-| `tests/test_github_workflows.py` | **7.5** | CI wire contract lock |
-| `scripts/live_provider_gate.py` | **7.6** | live gate scaffold policy + readiness |
-| `.github/workflows/live-provider-gate.yml` | **7.6** | scheduled/opt-in live gate |
+| `evaluation/curated_cases.jsonl` | **7.4 / 7.7** | curated corpus (**67**) |
+| `evaluation/curated_cases.manifest.json` | **7.7** | required slices; min 3 |
+| `tests/test_curated_dataset_expansion.py` | **7.4 / 7.7** | coverage + depth |
+| `scripts/regression_eval.py` | **7.1–7.4 / 7.7** | gate + slices + depth floor |
+| `scripts/live_provider_gate.py` | **7.6** | live gate scaffold |
+| `.github/workflows/live-provider-gate.yml` | **7.6** | schedule + opt-in dispatch |
 | `tests/test_live_provider_gate.py` | **7.6** | live gate contract |
-| `evaluation/curated_cases.jsonl` | **7.4** | regression curated corpus (47) |
-| `evaluation/curated_cases.manifest.json` | **7.4** | required slices register |
-| `tests/test_curated_dataset_expansion.py` | **7.4** | slice coverage + context_recall |
-| `tests/test_regression_baseline_artifact.py` | **7.3** | merge-base artifact contract |
-| `docs-site/package.json` + lock | **DEP-01** | npm dependency posture |
-| `docs-site/npm-audit-exceptions.json` | **DEP-01** | dated reachability exceptions |
-| `docs-site/scripts/check-npm-audit.mjs` | **DEP-01** | fail-closed audit checker |
-| `api/routers/widget.py` | **8.1 / 8.5** | bootstrap + iframe Origin fix |
-| `tests/test_widget_e2e_playwright.py` | **8.5** | Chromium cross-origin embed E2E |
-| `config/settings.py` | **8.4** | production secret / dev-admin gates |
-| `auth/oidc.py` | **8.3** | email_verified, issuer/subject |
-| `api/body_limit.py` | **8.2** | received-byte receive wrapper |
+| `.github/workflows/ci.yml` | **7.5** | baseline write/upload/require |
+| `tests/test_github_workflows.py` | **7.5** | CI wire lock |
+| `agent/agentic_measure.py` | **6.5** | measured agentic KB gate |
+| `agent/tools.py` | **6.5** | `search_kb_docs` |
+| `agent/calibration.py` | **6.4** | routing calibration |
+| `evaluation/calibration/` | **6.4** | seed artifact + labelled_routes |
+| `agent/judge_policy.py` | **6.3** | independent judge |
+| `agent/response_safety.py` | **6.2** | PII / injection |
+| `agent/grounding.py` | **5.1–5.2** | factuality / citations |
+| `docs-site/*` | **DEP-01** | npm audit posture |
+| `api/routers/widget.py` | **8.1 / 8.5** | widget bootstrap |
 | job-object / index stack | 2.1–2.6g | **do not re-select** |
 
 ---
@@ -319,28 +303,6 @@ python -m pytest tests/test_github_workflows.py tests/test_regression_baseline_a
 python -m ruff check tests/test_github_workflows.py
 ```
 
-### §7.4 band
-
-```powershell
-python -m pytest tests/test_curated_dataset_expansion.py tests/test_regression_runner.py tests/test_regression_baseline_artifact.py tests/test_regression_evidence_policy.py tests/test_regression_gate_fail_closed.py -q -p no:cacheprovider -p no:schemathesis
-python -m ruff check scripts/regression_eval.py tests/test_curated_dataset_expansion.py
-```
-
-### DEP-01 band
-
-```powershell
-cd docs-site; npm audit --audit-level=high; npm run audit:deps
-cd ..
-python -m pytest tests/test_docs_site_npm_audit.py tests/test_github_workflows.py::test_docs_site_workflow_audits_npm_dependencies_before_build -q -p no:cacheprovider
-```
-
-### §8.5 band
-
-```powershell
-python -m pytest tests/test_widget_bootstrap.py tests/test_widget_e2e_playwright.py -q -p no:cacheprovider -p no:schemathesis
-python -m ruff check api/routers/widget.py tests/test_widget_bootstrap.py tests/test_widget_e2e_playwright.py
-```
-
 Full suite / live / migrate — **not** the default gate for a single slice.
 
 ---
@@ -349,9 +311,13 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 **Default picks (one only):**
 
-1. **Agentic LLM evaluate wire** (supply measured quality on KB terminals)  
-2. **Real human-labelled recalibration** (replace synthetic labelled_routes)  
-3. **Live provider execute** with secrets + `--execute` (**explicit opt-in only**)  
+1. **Agentic LLM evaluate wire** — supply real `quality_source=llm` on KB agentic  
+   terminals so auto can clear floors without inventing scores  
+2. **Real human-labelled recalibration** — replace synthetic  
+   `evaluation/calibration/labelled_routes.jsonl`; recompute agreement/cost;  
+   re-issue calibration artifact (not bootstrap-defaults)  
+3. **Live provider execute** with secrets + `RAG_LIVE_PROVIDER_GATE` +  
+   `--execute` (**explicit opt-in only**)  
 4. **Astro 7** major when Starlight supports it (clears DEP-01 moderate residual)  
 
 ### Out without opt-in
@@ -359,30 +325,31 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 - live multi-service / migrate / push / deploy / live provider execute  
 - re-select through **8.5** / **6.1–6.5** / **7.1–7.7** / **DEP-01**  
 - OIDC live IdP drill; full browser matrix expansion  
+- bulk plan checkbox edits; production claims  
 
 ### Alternates (only if user prioritizes)
 
 - live §1 / migrate 019–023 (**explicit opt-in only**)  
 - §4 graph tokens / stream parity default  
+- further corpus depth beyond 3/slice  
 
 ---
 
-## 10. Protected dirty / untracked
+## 10. Protected dirty / untracked (do not touch)
 
-**Dirty tracked (do not stage without request):**  
+**Dirty tracked (leave alone):**  
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Untracked (do not treat as queue):**  
-`rag-remediation-plan-2026-08-03.md` (active plan), `_NEXT_SESSION.md` (pointer),  
-`.pytest_tmp*/`, presentations, architecture HTML, `.grok-prompts/`, etc.
+**Untracked (examples):**  
+`.grok-prompts/`, `.pytest_tmp*/`, presentations, `_NEXT_SESSION.md` (pointer),  
+`rag-remediation-plan-2026-08-03.md` (active plan — DoD source, no casual  
+checkbox edits), architecture HTML, etc.
 
 ---
 
-## 11. Do not
+## 11. Cycle budget (workspace rules)
 
-- Grep old `✅ START HERE` for work selection  
-- Re-select **2.1–2.6g**, **3.1a–3.1i**, **4.1–4.5**, **5.1–5.3**, **6.1–6.3**,  
-  **7.1–7.4**, **8.1–8.5**, **DEP-01**  
-- Claim plan closed / production ready  
-- Push / deploy / live / migrate without opt-in  
-- Edit plan checkboxes casually without full DoD evidence  
+- One user turn = **one** named atomic implementation slice + verify + status docs  
+- After slice committed or blocked → **yield** to user  
+- No push / deploy / live / migrate without explicit opt-in  
+- Quality > speed; actual Git wins over embedded SHAs  
