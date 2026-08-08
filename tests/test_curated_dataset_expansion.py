@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from scripts.regression_eval import (
+    MIN_CASES_PER_REQUIRED_SLICE,
     REQUIRED_DATASET_SLICES,
     CaseExpectation,
     CaseRunResult,
@@ -32,17 +33,19 @@ def test_manifest_lists_required_slices() -> None:
     assert raw["schema_version"] == 2
     assert set(raw["required_slices"]) == set(REQUIRED_DATASET_SLICES)
     assert raw["dataset"] == "curated_cases.jsonl"
-    assert raw["min_cases_per_slice"] >= 1
+    # Plan §7.7 depth floor.
+    assert raw["min_cases_per_slice"] >= MIN_CASES_PER_REQUIRED_SLICE
+    assert MIN_CASES_PER_REQUIRED_SLICE >= 3
 
 
 def test_curated_dataset_loads_and_covers_required_slices() -> None:
     cases = load_curated_cases(DATASET)
-    assert len(cases) >= 45
+    assert len(cases) >= 60
     report = validate_dataset_slice_coverage(cases)
     assert report["ok"] is True, report["reasons"]
     assert report["missing_slices"] == []
     for name in REQUIRED_DATASET_SLICES:
-        assert report["slice_counts"][name] >= 1
+        assert report["slice_counts"][name] >= MIN_CASES_PER_REQUIRED_SLICE
 
 
 def test_multi_tenant_and_multi_turn_structure() -> None:
@@ -70,6 +73,24 @@ def test_validate_dataset_reports_missing_slice() -> None:
         )
     ]
     report = validate_dataset_slice_coverage(cases)
+    assert report["ok"] is False
+    assert "multi_tenant" in report["missing_slices"]
+
+
+def test_validate_dataset_reports_shallow_slice_depth() -> None:
+    """Plan §7.7: a single case per slice is no longer enough."""
+    cases = [
+        CuratedCase(
+            case_id=f"mt-{i}",
+            tenant_id="acme" if i == 0 else "beta",
+            query="q",
+            slices=["multi_tenant"],
+            expected=CaseExpectation(),
+        )
+        for i in range(2)
+    ]
+    # Explicit floor 3; two multi_tenant cases → missing depth.
+    report = validate_dataset_slice_coverage(cases, min_cases_per_slice=3)
     assert report["ok"] is False
     assert "multi_tenant" in report["missing_slices"]
 
