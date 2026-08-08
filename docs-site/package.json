@@ -11,25 +11,32 @@
     "check": "astro check",
     "build": "astro build",
     "preview": "astro preview --port 8010",
-    "astro": "astro"
+    "astro": "astro",
+    "audit:deps": "node scripts/check-npm-audit.mjs"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.39.1",
-    "@fontsource-variable/geist": "^5.2.9",
-    "@fontsource-variable/geist-mono": "^5.2.8",
-    "astro": "^6.3.0",
-    "sharp": "^0.34.5",
+    "@astrojs/starlight": "^0.39.3",
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
+    "astro": "^6.4.8",
+    "sharp": "^0.35.3",
     "yaml": "^2.8.4"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.9",
-    "playwright": "^1.60.0",
+    "@astrojs/check": "^0.9.10",
+    "playwright": "^1.62.1",
     "rehype-mermaid": "^3.0.0",
     "typescript": "^6.0.3"
   },
   "overrides": {
     "yaml-language-server": {
       "yaml": "^2.8.4"
-    }
+    },
+    "sharp": "^0.35.3",
+    "js-yaml": "^4.1.1",
+    "nanoid": "^3.3.11",
+    "postcss": "^8.5.6",
+    "dompurify": "^3.4.13",
+    "fast-uri": "^3.1.5"
   }
 }
