@@ -1,5 +1,101 @@
 # Agent State
 
+## 2026-08-08 Update-113 — completed slice 7.7 deeper curated corpus @ `47e255a` ✅ START HERE
+
+> **Routing authority:** Update-113 supersedes Update-112 **only for start-point
+> routing**. All older Update blocks below, including headings that literally
+> contain `✅ START HERE`, are **archival**. **Only the first/topmost Update
+> block in this file is authoritative.** Never select work by grepping old
+> `START HERE` markers.
+>
+> **Known lineage (actual Git wins over any embedded hash):**
+> - Latest implementation: `47e255a`
+>   (`feat(eval): deepen curated dataset to 3+ cases per required slice (7.7)`)
+>   - slice **7.7**
+> - Previous impl: `d1ae4d6` — **7.6**; docs Update-112 `c79f975`
+> - §7 chain: `94ac64e` 7.1 · `25788ee` 7.2 · `0d34be2` 7.3 · `8f4269f` 7.4 ·
+>   `4eceed3` 7.5 · `d1ae4d6` 7.6 · **`47e255a` 7.7**
+> - Migrations on disk (not applied): **019–023**
+> - This Update-113 docs commit SHA is **unknown inside its own content**;
+>   next session: `git log -5 --oneline`
+>
+> **Branch advisory (refresh mandatory):** last observed
+> `master...origin/master [ahead 200]` after impl (before this docs commit).
+>
+> **Active writer / WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **6.1–6.5** | local |
+> | **7.1–7.7** | eval gate + baseline + dataset depth + CI wire + live scaffold local |
+> | **8.1–8.5** + **DEP-01** | local |
+> | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
+>
+> ---
+>
+> ### 7.7 contract (local)
+>
+> - `MIN_CASES_PER_REQUIRED_SLICE = 3` (was effective floor 1 in §7.4)
+> - Dataset **47 → 67** cases; every required slice has ≥3 cases
+> - multi_turn: 5 (two sessions); multi_tenant: 3 tenants (acme/beta/gamma)
+> - Manifest `min_cases_per_slice: 3`, plan_slice `7.7`
+> - Files: `evaluation/curated_cases.jsonl`, manifest, `scripts/regression_eval.py`,
+>   `tests/test_curated_dataset_expansion.py`
+>
+> **Verification:** curated expansion suite **8 passed**; Ruff clean. Full suite /
+> live / push **not** claimed.
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next default pick one:** agentic LLM evaluate wire **or** human
+>   recalibration **or** live execute with secrets (**opt-in**)
+> - 7 residual: live execute; optional further depth; mock≠release on PR path
+> - 6 residual: full human calibration; optional agentic LLM evaluate
+> - 5 residual: live precision/recall/faithfulness ×3
+> - 4 residual: graph SSE; parity default off; outbox schedule
+> - DEP-01 residual: Astro7; exceptions expire **2026-11-07**
+> - live multi-service + migrations **019–023** (**opt-in**)
+>
+> ---
+>
+> ### Next candidate only (not started) — default
+>
+> named **agentic LLM evaluate wire** **or** **human recalibration** **or**
+> **live execute (opt-in)** — one atomic residual.
+>
+> **Do not re-select:** 2.1–2.6g, 3.1a–3.1i, 4.1–4.5, 5.1–5.3, 6.1–6.5,
+> 7.1–7.7, **8.1–8.5**, **DEP-01**.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Do not touch/stage/remove without explicit request:
+> - **Dirty tracked:** `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+>   `plan_sol_23_07_26`
+> - **Untracked (incl.):** `.grok-prompts/`, `.pytest_tmp*/`, presentations,
+>   `_NEXT_SESSION.md`, `rag-remediation-plan-2026-08-03.md`
+>
+> ---
+>
+> ### External gates (not authorized without opt-in)
+>
+> push, deploy, live PostgreSQL/Redis/Celery/Chroma, live provider execute,
+> `alembic upgrade` (019–023), destructive Git, production claims.
+>
+> **Standing preference:** one user turn = one named atomic slice; local commit
+> only; quality > speed.
+>
+> **Git advisory:** refresh `git status --short --branch` and
+> `git log -12 --oneline` at session start — **actual Git wins**.
+
+
 ## 2026-08-08 Update-112 — completed slice 7.6 live provider gate scaffold @ `d1ae4d6` ✅ START HERE
 
 > **Routing authority:** Update-112 supersedes Update-111 **only for start-point
