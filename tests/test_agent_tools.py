@@ -103,12 +103,14 @@ def test_agentic_multi_step_flow_combines_kb_and_order_status(
         "config.settings.get_settings",
         lambda: SimpleNamespace(
             agentic_mode=True,
+            agentic_quality_eval=True,
             calibration_artifact_path="",
             require_calibration_artifact=False,
             quality_threshold=80,
             min_factuality_for_auto=80,
             min_relevance_for_auto=0.8,
             self_rag_min_quality=70,
+            judge_independence_required=False,
         ),
     )
     monkeypatch.setattr(agent_graph, "build_provider_runtime", None)
@@ -138,8 +140,8 @@ def test_agentic_multi_step_flow_combines_kb_and_order_status(
     assert result["tool_calls"] == ["search_kb", "check_order_status"]
     assert "500" in result["answer"]
     assert "в пути" in result["answer"]
-    # Plan §6.5: KB context → measured grounding; quality still unmeasured
-    # without evaluate → never invent fixed scores; not auto without quality floors.
+    # Plan §6.5/§6.6: KB context → measured grounding; without judge LLM
+    # evaluate stays unmeasured (fail-closed) → never invent fixed scores.
     assert result.get("grounding_status") == "verified"
     assert result.get("fact_verification_skipped") is False
     assert result.get("agentic_measure") == "kb_grounding"
@@ -149,6 +151,133 @@ def test_agentic_multi_step_flow_combines_kb_and_order_status(
     assert result.get("quality_score") not in {80, 85, 90}
     assert result.get("quality_source") != "fixed"
     assert result["route"] == "agentic"
+    # §6.6 attempted evaluate with no judge candidates.
+    assert result.get("judge_status") in {"unavailable", None} or result.get(
+        "judge_reason"
+    ) in {"no_judge_candidate", "no_kb_context", None}
+
+
+def test_agentic_kb_terminal_llm_evaluate_can_auto(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Plan §6.6: real judge score + KB grounding unlocks route=auto."""
+    from unittest.mock import MagicMock
+
+    judge = MagicMock()
+    judge.provider_id = "mistral"
+    judge.model_name = "fast-judge"
+    judge.invoke.return_value = "91"
+
+    monkeypatch.setattr(
+        "config.settings.get_settings",
+        lambda: SimpleNamespace(
+            agentic_mode=True,
+            agentic_quality_eval=True,
+            calibration_artifact_path="",
+            require_calibration_artifact=False,
+            quality_threshold=80,
+            min_factuality_for_auto=80,
+            min_relevance_for_auto=0.8,
+            self_rag_min_quality=70,
+            judge_independence_required=False,
+        ),
+    )
+    monkeypatch.setattr(agent_graph, "build_provider_runtime", None)
+    monkeypatch.setattr(
+        agent_tools,
+        "search_kb_docs",
+        lambda query, tenant_id, retriever=None: (
+            "[1] доставка в Москву стоит 500 ₽.",
+            [{"page_content": "доставка в Москву стоит 500 ₽."}],
+        ),
+    )
+    monkeypatch.setattr(
+        agent_tools,
+        "check_order_status",
+        lambda order_id, tenant_id: "Заказ #42: статус 'в пути'.",
+    )
+
+    # Force answer text to include a citation so grounding verifies.
+    original_fields = agent_graph._agentic_terminal_fields_with_eval
+
+    def _eval_with_cited_answer(**kwargs):
+        answer = str(kwargs.get("answer") or "")
+        if "[1]" not in answer and "500" in answer:
+            kwargs = {**kwargs, "answer": f"{answer} [1]"}
+        return original_fields(**kwargs)
+
+    monkeypatch.setattr(
+        agent_graph, "_agentic_terminal_fields_with_eval", _eval_with_cited_answer
+    )
+
+    session = agent_graph.ConversationSession(retriever=object(), llm=judge)
+    result = session.ask(
+        "Сколько стоит доставка в Москву для заказа #42?",
+        tenant_id="acme",
+        user_id="agent-1",
+        session_id="session-eval",
+    )
+
+    assert result.get("quality_source") == "llm"
+    assert int(result.get("quality_score") or 0) == 91
+    assert result.get("grounding_status") == "verified"
+    assert result.get("agentic_measure") == "kb_grounding+quality"
+    assert result.get("route") == "auto"
+    assert result.get("judge_status") == "ok"
+    assert result.get("quality_source") != "fixed"
+
+
+def test_agentic_quality_eval_disabled_skips_llm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from unittest.mock import MagicMock
+
+    judge = MagicMock()
+    judge.provider_id = "mistral"
+    judge.model_name = "fast-judge"
+    judge.invoke.return_value = "95"
+
+    monkeypatch.setattr(
+        "config.settings.get_settings",
+        lambda: SimpleNamespace(
+            agentic_mode=True,
+            agentic_quality_eval=False,
+            calibration_artifact_path="",
+            require_calibration_artifact=False,
+            quality_threshold=80,
+            min_factuality_for_auto=80,
+            min_relevance_for_auto=0.8,
+            self_rag_min_quality=70,
+            judge_independence_required=False,
+        ),
+    )
+    monkeypatch.setattr(agent_graph, "build_provider_runtime", None)
+    monkeypatch.setattr(
+        agent_tools,
+        "search_kb_docs",
+        lambda query, tenant_id, retriever=None: (
+            "[1] доставка в Москву стоит 500 ₽.",
+            [{"page_content": "доставка в Москву стоит 500 ₽."}],
+        ),
+    )
+    monkeypatch.setattr(
+        agent_tools,
+        "check_order_status",
+        lambda order_id, tenant_id: "Заказ #42: статус 'в пути'.",
+    )
+
+    session = agent_graph.ConversationSession(retriever=object(), llm=judge)
+    result = session.ask(
+        "Сколько стоит доставка в Москву для заказа #42?",
+        tenant_id="acme",
+        user_id="agent-1",
+        session_id="session-no-eval",
+    )
+
+    judge.invoke.assert_not_called()
+    assert result.get("quality_source") == "unmeasured"
+    assert result.get("route") != "auto"
+    assert result.get("quality_score") not in {80, 85, 90, 95}
 
 
 def test_agentic_ticket_flow_requires_confirmation(

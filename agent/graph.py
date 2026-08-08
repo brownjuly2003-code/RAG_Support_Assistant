@@ -849,6 +849,130 @@ def _agentic_terminal_fields(
     )
 
 
+def _agentic_judge_candidates(
+    generator_llm: Any | None = None,
+    *,
+    settings: Any | None = None,
+) -> tuple[Any | None, Any | None, Any | None]:
+    """Resolve (fast, strong, generator) for agentic quality evaluate (§6.6)."""
+    fast: Any | None = None
+    strong: Any | None = None
+    generator = generator_llm
+    try:
+        if build_provider_runtime is not None:
+            runtime_settings = settings
+            if runtime_settings is None:
+                try:
+                    from config.settings import get_settings as _gs
+
+                    runtime_settings = _gs()
+                except Exception:
+                    runtime_settings = None
+            if runtime_settings is not None:
+                runtime = build_provider_runtime(runtime_settings)
+                fast = getattr(runtime, "fast", None)
+                strong = getattr(runtime, "strong", None)
+    except Exception:
+        fast = None
+        strong = None
+    if generator is None:
+        generator = strong or fast
+    if fast is None:
+        fast = generator
+    if strong is None:
+        strong = generator
+    return fast, strong, generator
+
+
+def _agentic_terminal_fields_with_eval(
+    *,
+    question: str,
+    answer: str,
+    kb_docs: list[Any] | None = None,
+    generator_llm: Any | None = None,
+    quality_score: int | None = None,
+    relevance_score: float | None = None,
+    quality_source: str | None = None,
+) -> dict[str, Any]:
+    """Plan §6.6: optional LLM evaluate on KB agentic terminals, then §6.5 gate.
+
+    When ``agentic_quality_eval`` is enabled and KB docs exist, run the
+    independent-judge self-eval. Measured ``quality_source=llm`` is passed
+    into the §6.5 gate so ``route=auto`` can clear floors. Judge failure is
+    fail-closed for quality (stays unmeasured) without inventing scores and
+    without wiping citation-bound grounding.
+    """
+    from agent.agentic_evaluate import (
+        agentic_quality_eval_enabled,
+        evaluate_agentic_answer,
+    )
+    from agent.agentic_measure import has_kb_context
+
+    # Local import so tests can monkeypatch config.settings.get_settings
+    # (same pattern as ConversationSession.ask).
+    try:
+        from config.settings import get_settings as _get_settings
+    except ImportError:
+        _get_settings = None  # type: ignore[assignment]
+
+    judge_fields: dict[str, Any] = {}
+    q_score = quality_score
+    r_score = relevance_score
+    q_source = quality_source
+
+    settings = None
+    try:
+        if _get_settings is not None:
+            settings = _get_settings()
+    except Exception:
+        settings = None
+
+    if (
+        has_kb_context(kb_docs)
+        and agentic_quality_eval_enabled(settings)
+        and q_source not in {"llm", "heuristic"}
+    ):
+        require_independence = False
+        if settings is not None:
+            require_independence = bool(
+                getattr(settings, "judge_independence_required", False)
+            )
+        fast, strong, generator = _agentic_judge_candidates(
+            generator_llm, settings=settings
+        )
+
+        def _invoke(llm: Any, prompt: str) -> str:
+            return _invoke_llm(llm, prompt, role="evaluate")
+
+        eval_result = evaluate_agentic_answer(
+            question=question,
+            answer=answer,
+            context_docs=kb_docs,
+            candidate_fast=fast,
+            candidate_strong=strong,
+            generator_llm=generator,
+            require_independence=require_independence,
+            invoke=_invoke,
+        )
+        judge_fields = eval_result.as_state_fields()
+        measure_kwargs = eval_result.as_measure_kwargs()
+        if measure_kwargs:
+            q_score = measure_kwargs.get("quality_score")
+            r_score = measure_kwargs.get("relevance_score")
+            q_source = measure_kwargs.get("quality_source")
+
+    fields = _agentic_terminal_fields(
+        answer=answer,
+        kb_docs=kb_docs,
+        quality_score=q_score,
+        relevance_score=r_score,
+        quality_source=q_source,
+    )
+    if judge_fields:
+        fields = {**fields, **judge_fields}
+    return fields
+
+
 def _finalize_agentic_terminal(state: GraphState) -> GraphState:
     """Apply §6.2 pre-response safety on agentic terminals before delivery."""
     return cast(GraphState, apply_pre_response_safety(state))
@@ -2956,7 +3080,12 @@ class ConversationSession:
                 final_state: GraphState = {
                     **state,
                     "answer": answer,
-                    **_agentic_terminal_fields(answer=answer, kb_docs=kb_docs_acc),
+                    **_agentic_terminal_fields_with_eval(
+                        question=question,
+                        answer=answer,
+                        kb_docs=kb_docs_acc,
+                        generator_llm=tool_llm,
+                    ),
                     "tool_calls": tool_calls,
                     "requires_confirmation": False,
                     "action_summary": "",
@@ -3032,7 +3161,12 @@ class ConversationSession:
         fallback_state: GraphState = {
             **state,
             "answer": fallback_answer,
-            **_agentic_terminal_fields(answer=fallback_answer, kb_docs=kb_docs_acc),
+            **_agentic_terminal_fields_with_eval(
+                question=question,
+                answer=fallback_answer,
+                kb_docs=kb_docs_acc,
+                generator_llm=tool_llm,
+            ),
             "tool_calls": tool_calls,
             "requires_confirmation": False,
             "action_summary": "",
@@ -3200,7 +3334,12 @@ class ConversationSession:
         state.update(
             {
                 "answer": terminal_answer,
-                **_agentic_terminal_fields(answer=terminal_answer, kb_docs=kb_docs),
+                **_agentic_terminal_fields_with_eval(
+                    question=question,
+                    answer=terminal_answer,
+                    kb_docs=kb_docs,
+                    generator_llm=self._llm,
+                ),
                 "tool_calls": tool_calls,
                 "requires_confirmation": False,
                 "action_summary": "",

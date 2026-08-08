@@ -611,6 +611,16 @@ class Settings:
             "RAG_AGENTIC_MODE", "false"
         ).strip().lower() in ("1", "true", "yes")
     )
+    # Plan §6.6: when agentic terminals have KB docs, run one independent-judge
+    # self-eval so quality_source=llm can unlock route=auto with grounding.
+    # Default ON (parity with streaming_quality_eval). Rollback:
+    # RAG_AGENTIC_QUALITY_EVAL=false keeps KB grounding-only (6.5 residual).
+    agentic_quality_eval: bool = field(
+        default_factory=lambda: os.getenv(
+            "RAG_AGENTIC_QUALITY_EVAL", "true"
+        ).strip().lower()
+        in ("1", "true", "yes")
+    )
 
     # --- HyDE (Hypothetical Document Embeddings) ---
     hyde: bool = field(
