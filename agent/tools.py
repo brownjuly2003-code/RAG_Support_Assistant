@@ -32,13 +32,7 @@ def _load_docs(query: str, tenant_id: str, retriever: Any | None = None) -> list
     return list(docs or [])[:3]
 
 
-@tool
-def search_kb(query: str, tenant_id: str, retriever: Any | None = None) -> str:
-    """Search the knowledge base for document excerpts relevant to the query."""
-    docs = _load_docs(query, tenant_id=tenant_id, retriever=retriever)
-    if not docs:
-        return "По базе знаний ничего не найдено."
-
+def _format_kb_chunks(docs: list[Any]) -> str:
     chunks: list[str] = []
     for index, doc in enumerate(docs, start=1):
         if isinstance(doc, dict):
@@ -47,6 +41,27 @@ def search_kb(query: str, tenant_id: str, retriever: Any | None = None) -> str:
             content = str(getattr(doc, "page_content", ""))
         chunks.append(f"[{index}] {content[:240]}")
     return "\n\n".join(chunks)
+
+
+def search_kb_docs(
+    query: str, tenant_id: str, retriever: Any | None = None
+) -> tuple[str, list[Any]]:
+    """Search KB and return (formatted text, raw docs) for measured agentic gate.
+
+    Plan §6.5: agentic terminals with real retrieval context must keep the docs
+    so grounding/evaluate can run — not only a string dump.
+    """
+    docs = _load_docs(query, tenant_id=tenant_id, retriever=retriever)
+    if not docs:
+        return "По базе знаний ничего не найдено.", []
+    return _format_kb_chunks(docs), docs
+
+
+@tool
+def search_kb(query: str, tenant_id: str, retriever: Any | None = None) -> str:
+    """Search the knowledge base for document excerpts relevant to the query."""
+    text, _docs = search_kb_docs(query, tenant_id=tenant_id, retriever=retriever)
+    return text
 
 
 @tool

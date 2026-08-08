@@ -805,15 +805,48 @@ def _agentic_unmeasured_gate(
     never claim ``route=auto`` until a real measured gate runs. Tool results and
     confirmation UX stay deliverable as ``route=agentic`` with honest provenance.
     """
-    return {
-        "route": route,
-        "quality_score": 0,
-        "relevance_score": 0.0,
-        "quality_source": "unmeasured",
-        "grounding_status": "not_verified",
-        "fact_verification_skipped": True,
-        "factuality_score": 0,
-    }
+    from agent.agentic_measure import unmeasured_agentic_fields
+
+    return unmeasured_agentic_fields(route=route)
+
+
+def _agentic_terminal_fields(
+    *,
+    answer: str,
+    kb_docs: list[Any] | None = None,
+    quality_score: int | None = None,
+    relevance_score: float | None = None,
+    quality_source: str | None = None,
+) -> dict[str, Any]:
+    """Plan §6.5: measured gate when KB docs exist; else §6.1 unmeasured."""
+    from agent.agentic_measure import has_kb_context, measure_agentic_terminal
+    from agent.calibration import resolve_routing_thresholds
+
+    if not has_kb_context(kb_docs):
+        return _agentic_unmeasured_gate()
+
+    min_quality = 80
+    min_factuality = 80
+    min_relevance = 0.8
+    try:
+        if get_settings is not None:
+            thr = resolve_routing_thresholds(get_settings())
+            min_quality = int(thr.min_quality)
+            min_factuality = int(thr.min_factuality)
+            min_relevance = float(thr.min_relevance)
+    except Exception:
+        pass
+
+    return measure_agentic_terminal(
+        answer=answer,
+        kb_docs=kb_docs,
+        quality_score=quality_score,
+        relevance_score=relevance_score,
+        quality_source=quality_source,
+        min_quality=min_quality,
+        min_factuality=min_factuality,
+        min_relevance=min_relevance,
+    )
 
 
 def _finalize_agentic_terminal(state: GraphState) -> GraphState:
@@ -2876,6 +2909,7 @@ class ConversationSession:
         ]
         tool_calls: list[str] = []
         usage = _new_llm_usage("agentic")
+        kb_docs_acc: list[Any] = []
 
         for _ in range(max_loops):
             prompt = "\n\n".join(
@@ -2914,6 +2948,7 @@ class ConversationSession:
                 duration_ms=(time.monotonic() - t0) * 1000,
                 tool_calls=traced_tool_calls,
             )
+
             if not raw_tool_calls:
                 answer = str(response.text or "").strip()
                 if not answer:
@@ -2921,7 +2956,7 @@ class ConversationSession:
                 final_state: GraphState = {
                     **state,
                     "answer": answer,
-                    **_agentic_unmeasured_gate(),
+                    **_agentic_terminal_fields(answer=answer, kb_docs=kb_docs_acc),
                     "tool_calls": tool_calls,
                     "requires_confirmation": False,
                     "action_summary": "",
@@ -2945,11 +2980,13 @@ class ConversationSession:
                 if not tool_name:
                     continue
                 if tool_name == "search_kb":
-                    result = agent_tools.search_kb(
+                    result, found_docs = agent_tools.search_kb_docs(
                         str(arguments.get("query") or question),
                         tenant_id,
                         retriever=self._retriever,
                     )
+                    if found_docs:
+                        kb_docs_acc.extend(found_docs)
                 elif tool_name == "check_order_status":
                     order_id = str(arguments.get("order_id") or _extract_order_id(question) or "")
                     result = agent_tools.check_order_status(order_id, tenant_id)
@@ -2991,10 +3028,11 @@ class ConversationSession:
         ]
         if not answer_parts:
             return None
+        fallback_answer = "\n\n".join(answer_parts)
         fallback_state: GraphState = {
             **state,
-            "answer": "\n\n".join(answer_parts),
-            **_agentic_unmeasured_gate(),
+            "answer": fallback_answer,
+            **_agentic_terminal_fields(answer=fallback_answer, kb_docs=kb_docs_acc),
             "tool_calls": tool_calls,
             "requires_confirmation": False,
             "action_summary": "",
@@ -3131,15 +3169,18 @@ class ConversationSession:
 
         tool_calls: list[str] = []
         answer_parts: list[str] = []
+        kb_docs: list[Any] = []
 
         if any(marker in normalized for marker in ("достав", "стоит", "москв")):
-            kb_result = agent_tools.search_kb(
+            kb_result, found_docs = agent_tools.search_kb_docs(
                 _build_agentic_search_query(question),
                 tenant_id,
                 retriever=self._retriever,
             )
             tool_calls.append("search_kb")
             answer_parts.append(kb_result)
+            if found_docs:
+                kb_docs.extend(found_docs)
             log_step(
                 active_trace_id,
                 "search_kb",
@@ -3155,10 +3196,11 @@ class ConversationSession:
             {**state, "tool_calls": list(tool_calls), "tool_output": order_result},
         )
 
+        terminal_answer = "\n\n".join(part for part in answer_parts if part)
         state.update(
             {
-                "answer": "\n\n".join(part for part in answer_parts if part),
-                **_agentic_unmeasured_gate(),
+                "answer": terminal_answer,
+                **_agentic_terminal_fields(answer=terminal_answer, kb_docs=kb_docs),
                 "tool_calls": tool_calls,
                 "requires_confirmation": False,
                 "action_summary": "",

@@ -63,10 +63,26 @@ def test_search_kb_formats_top_three_docs_from_callable_retriever() -> None:
     assert "Четвертый" not in result
 
 
+def test_search_kb_docs_returns_raw_docs() -> None:
+    docs = [{"page_content": "Первый документ про возврат."}]
+    text, raw = agent_tools.search_kb_docs(
+        "возврат",
+        "acme",
+        retriever=lambda query: docs,
+    )
+    assert "[1] Первый документ про возврат." in text
+    assert raw == docs
+
+
 def test_search_kb_reports_empty_result() -> None:
     result = agent_tools.search_kb("unknown", "acme", retriever=lambda query: [])
 
     assert result == "По базе знаний ничего не найдено."
+    text, raw = agent_tools.search_kb_docs(
+        "unknown", "acme", retriever=lambda query: []
+    )
+    assert text == "По базе знаний ничего не найдено."
+    assert raw == []
 
 
 def _assert_agentic_unmeasured_fail_closed(result: dict) -> None:
@@ -85,13 +101,24 @@ def test_agentic_multi_step_flow_combines_kb_and_order_status(
 ) -> None:
     monkeypatch.setattr(
         "config.settings.get_settings",
-        lambda: SimpleNamespace(agentic_mode=True),
+        lambda: SimpleNamespace(
+            agentic_mode=True,
+            calibration_artifact_path="",
+            require_calibration_artifact=False,
+            quality_threshold=80,
+            min_factuality_for_auto=80,
+            min_relevance_for_auto=0.8,
+            self_rag_min_quality=70,
+        ),
     )
     monkeypatch.setattr(agent_graph, "build_provider_runtime", None)
     monkeypatch.setattr(
         agent_tools,
-        "search_kb",
-        lambda query, tenant_id, retriever=None: "KB: доставка в Москву стоит 500 ₽.",
+        "search_kb_docs",
+        lambda query, tenant_id, retriever=None: (
+            "[1] доставка в Москву стоит 500 ₽.",
+            [{"page_content": "доставка в Москву стоит 500 ₽."}],
+        ),
     )
     monkeypatch.setattr(
         agent_tools,
@@ -111,7 +138,16 @@ def test_agentic_multi_step_flow_combines_kb_and_order_status(
     assert result["tool_calls"] == ["search_kb", "check_order_status"]
     assert "500" in result["answer"]
     assert "в пути" in result["answer"]
-    _assert_agentic_unmeasured_fail_closed(result)
+    # Plan §6.5: KB context → measured grounding; quality still unmeasured
+    # without evaluate → never invent fixed scores; not auto without quality floors.
+    assert result.get("grounding_status") == "verified"
+    assert result.get("fact_verification_skipped") is False
+    assert result.get("agentic_measure") == "kb_grounding"
+    assert result.get("context_docs")
+    assert result.get("quality_source") == "unmeasured"
+    assert result.get("quality_score") == 0
+    assert result.get("quality_score") not in {80, 85, 90}
+    assert result.get("quality_source") != "fixed"
     assert result["route"] == "agentic"
 
 
@@ -328,12 +364,24 @@ def test_agentic_provider_tool_loop_uses_unified_generate_with_tools(
 
     monkeypatch.setattr(
         "config.settings.get_settings",
-        lambda: SimpleNamespace(agentic_mode=True, agent_max_tool_loops=3),
+        lambda: SimpleNamespace(
+            agentic_mode=True,
+            agent_max_tool_loops=3,
+            calibration_artifact_path="",
+            require_calibration_artifact=False,
+            quality_threshold=80,
+            min_factuality_for_auto=80,
+            min_relevance_for_auto=0.8,
+            self_rag_min_quality=70,
+        ),
     )
     monkeypatch.setattr(
         agent_tools,
-        "search_kb",
-        lambda query, tenant_id, retriever=None: f"KB:{query}:{tenant_id}",
+        "search_kb_docs",
+        lambda query, tenant_id, retriever=None: (
+            f"KB:{query}:{tenant_id}",
+            [{"page_content": f"KB:{query}:{tenant_id}"}],
+        ),
     )
     monkeypatch.setattr(
         agent_tools,
@@ -356,6 +404,9 @@ def test_agentic_provider_tool_loop_uses_unified_generate_with_tools(
     assert result["answer"] == "Синтезированный ответ от LLM."
     assert any(item["content"] == "KB:правила возврата:acme" for item in tool_messages)
     assert any(item["content"] == "ORDER:42:acme" for item in tool_messages)
+    # Final LLM answer has no [N] citations → KB context attached but not auto.
+    assert result.get("route") != "auto"
+    assert result.get("quality_source") in {"unmeasured", "llm", "heuristic"}
 
 
 def test_agentic_provider_tool_loop_traces_tool_call_metadata(
@@ -397,9 +448,22 @@ def test_agentic_provider_tool_loop_traces_tool_call_metadata(
 
     monkeypatch.setattr(
         "config.settings.get_settings",
-        lambda: SimpleNamespace(agentic_mode=True, agent_max_tool_loops=2),
+        lambda: SimpleNamespace(
+            agentic_mode=True,
+            agent_max_tool_loops=2,
+            calibration_artifact_path="",
+            require_calibration_artifact=False,
+            quality_threshold=80,
+            min_factuality_for_auto=80,
+            min_relevance_for_auto=0.8,
+            self_rag_min_quality=70,
+        ),
     )
-    monkeypatch.setattr(agent_tools, "search_kb", lambda query, tenant_id, retriever=None: "KB")
+    monkeypatch.setattr(
+        agent_tools,
+        "search_kb_docs",
+        lambda query, tenant_id, retriever=None: ("KB", [{"page_content": "KB"}]),
+    )
     monkeypatch.setattr(
         agent_graph,
         "start_trace",
