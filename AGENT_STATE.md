@@ -1,5 +1,56 @@
 # Agent State
 
+## 2026-08-09 Update-133 — authoritative open-problem ledger ⚠ START HERE
+
+> **Read this block first.** Actual Git overrides every embedded SHA, branch
+> count, process ID, listener, and worktree statement. Older Update blocks are
+> archival evidence and may describe state superseded by Update-133.
+>
+> **Purpose:** this is a docs-only transparency update. The authoritative
+> compact problem ledger is `docs/SESSION_HANDOFF.md` §1C; the synchronized
+> plan-level matrix is `docs/PLAN_CLOSURE_STATUS.md`. Do not reconstruct current
+> work from old `START HERE` blocks, dirty `BACKLOG.md`, or the untracked active
+> plan. The previous committed docs state is `b391028` (Update-132); the SHA of
+> this Update is the commit containing these three docs if present in Actual
+> Git.
+>
+> **Product/quality truth:** QG-01 (`c3ae4f4`) and QG-02 (`1304ff4`) are locally
+> fixed but have no live replay. The saved vector-only seed-42 run still fails
+> release quality. Two distinct regressions remain without root-cause closure:
+> `error-e20-filter-or-pump` (fallback/escalation outcome; original error node
+> absent) and `error-e30` (empty generation context; grade outcome absent).
+> Seeds 43–44 and passing 3×20 evidence do not exist.
+>
+> **Verification/operations truth:** QG-02 focused and adjacent gates are green,
+> but no full suite or locked CI gate followed the QG fixes. Full-import local
+> Mypy is blocked before project checking by unlocked `numpy 2.5.1` stubs under
+> the Python-3.11 target; changed-file Mypy passed only with
+> `--follow-imports=skip`. `PythonMemoryGuard` was read-only verified
+> **Disabled** in this Update. Port `8011` still listens under PID 3048; `8012`
+> is closed. Do not infer live protection or that listener `8011` serves the
+> external GraceKelly fix.
+>
+> **Release truth:** plan §1 live tenant/backup/restore evidence, §2 live
+> lifecycle drills and migrations 019–023, production human calibration,
+> formal live provider evidence, live IdP/origin configuration, cache/SLO work,
+> and §10 full verification/canary remain open. Streaming parity still defaults
+> off; multi-replica durable session state remains deferred without an SLA.
+> Project closure and production readiness are **not** claimable.
+>
+> **Workspace truth before this docs edit:** `master...origin/master [ahead
+> 231]`; no push. Preserve unrelated tracked changes in `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`. The active DoD
+> plan `rag-remediation-plan-2026-08-03.md` is untracked, as are numerous test
+> and presentation artifacts; none are owned by this Update. External
+> `D:\GraceKelly` remains `main...origin/main [ahead 1]` at `886b277`, with
+> untracked `issues.md` and no push.
+>
+> **Next routing:** no implementation WIP or active writer is known. If the
+> owner later says continue, take exactly one offline RCA in deterministic
+> order: QG-03 `error-e20-filter-or-pump`, then QG-04 `error-e30`. Do not use a
+> paid live rerun as the diagnostic tool. Live/provider/migration/deploy/push or
+> Task Scheduler changes still require fresh explicit authorization.
+
 ## 2026-08-09 Update-132 — QG-02 generation failure routing ✅ START HERE
 
 > **Read this block first.** Actual Git overrides every embedded SHA, branch

@@ -1,9 +1,15 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-125 after OpenCode Zen provider integration)
+**Date:** 2026-08-09 (Update-133 authoritative problem-ledger sync)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-125**)
-**Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-133**)
+**Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
+authoritative open-problem ledger in §1C.
+
+> Actual Git note: the active plan file was observed **untracked** before
+> Update-133. Preserve it as DoD input, but use Actual Git + the committed
+> handoff for next-session routing; do not casually stage or bulk-check its
+> historical checkboxes.
 
 **Rules:**
 
@@ -22,7 +28,7 @@
 | **2** index lifecycle | **2.1–2.6g local residual closed** | **OPEN** live PG/Redis/Celery/Chroma | yes for live index ops |
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.8 local** | **OPEN** parity default still off (product) | partial |
-| **5** grounding fail-closed | **5.1–5.7 local** | **OPEN** actual live ×3 evidence | **yes** quality |
+| **5** grounding fail-closed | **5.1–5.7 + QG-01/QG-02 local** | **OPEN** one valid seed-42 run exists but **FAILS**; QG-03/QG-04 and passing ×3 evidence remain open | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
@@ -46,6 +52,34 @@ This changes **none** of the §1–§10 rows above: no Zen or other live provide
 call ran, no quality evidence was collected, and no production claim is made.
 The provider documents the free endpoint as temporary/logged trial service;
 use only non-sensitive test data and recheck external terms before enabling it.
+
+---
+
+## Current live-quality incident (Update-133)
+
+The native vector-only run produced valid child evidence for seed 42 but failed
+the quality gate: candidate pass 65% (baseline 70%, required ≥85%), four
+regressions, context precision 0.1499, context recall 0.65, FULL 0.60, MISS 6,
+faithfulness 0.30, and answer relevancy 0.4855. Seeds 43–44 did not run, so no
+valid three-run aggregate or release evidence exists.
+
+| Incident slice | Local status | Live status |
+|----------------|--------------|-------------|
+| **QG-01** `warranty-receipt-storage` | fixed at `c3ae4f4` | not replayed; no live recovery claim |
+| **QG-02** `error-e20-hose-kink` | fixed at `1304ff4` (routing-test baseline `c157796`) | not replayed; no live recovery claim |
+| **QG-03** `error-e20-filter-or-pump` | **OPEN**; fallback result, original error node absent | no new live run authorized |
+| **QG-04** `error-e30` | **OPEN**; empty generation context, grade outcome absent | no new live run authorized |
+
+The active collection remains dimension 3 while the remote embedding lane is
+dimension 1024. The successful diagnostic run used a retained six-document
+compatible copy and vector-only retrieval. It does not prove default hybrid
+quality. An earlier hybrid attempt loaded the default reranker after an empty
+environment value failed to propagate and reached about 2.12 GiB; the
+`PythonMemoryGuard` task was read-only verified **Disabled** in Update-133.
+
+Detailed defect, environment, release, workspace, and external-boundary facts
+are maintained in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §1C. Do not
+duplicate or reinterpret them as closed plan checkboxes.
 
 ---
 
@@ -73,10 +107,13 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 28 | §5.5 live quality metrics gate scaffold | **done** `a901692` |
 | 29 | §5.6 exact live child report → DoD wire | **done** `fb72dd2` |
 | 30 | §5.7 producer emits all 7 canonical metrics | **done** `13bf255` |
-| 31 | human sample / opt-in live evidence | **next; external/data authority required** |
-| 32 | §2/§3 residual if product needs | residual |
-| 33 | Astro 7 (clears DEP-01 moderate residual) | residual |
-| 34 | §1 + §10 | **opt-in live only** |
+| 31 | QG-01 vector parent expansion | **done local** `c3ae4f4`; no live replay |
+| 32 | QG-02 generation failure routing | **done local** `1304ff4`; no live replay |
+| 33 | QG-03 then QG-04 single-cause offline RCAs | **next local order; one per turn** |
+| 34 | human sample / opt-in live ×3 evidence | **external/data authority required** |
+| 35 | §2/§3 residual if product needs | residual |
+| 36 | Astro 7 (clears DEP-01 moderate residual) | residual |
+| 37 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -148,13 +185,16 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **5.5** | **done local** | `a901692` live quality metrics gate scaffold |
 | **5.6** | **done local** | `fb72dd2` exact child report parse + release-honest DoD wire |
 | **5.7** | **done local** | `13bf255` canonical metric producer + completeness provenance |
-| Live DoD evidence | **open** | actual ×3 runs still opt-in |
+| Live DoD evidence | **open / failing** | one valid seed-42 run fails; seeds 43–44 and passing ×3 remain opt-in |
 
 **Residual after 5.7:** the producer emits all seven canonical metrics with
 candidate-only provenance and fails real release runs closed on incomplete
-measurement. Actual live precision/recall/faithfulness ×3 evidence remains
-explicit opt-in; no paid/live run occurred here. Relevance is **not**
-quality/100, and §5 metrics are not substituted from legacy scores/counts.
+measurement. A later authorized vector-only seed-42 run produced valid child
+evidence but failed the thresholds recorded above; QG-01/QG-02 are local-only
+repairs and QG-03/QG-04 remain open. Actual passing
+precision/recall/faithfulness ×3 evidence remains explicit opt-in. Relevance is
+**not** quality/100, and §5 metrics are not substituted from legacy
+scores/counts.
 
 ---
 
@@ -257,23 +297,30 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-There is **no ungated default local-only plan candidate** after 5.7. The
-off-plan Zen integration is complete locally and is not a new plan step.
+There is no implementation WIP. If the owner says continue without granting a
+live gate, use this deterministic local-only order and stop after one item:
 
-1. Run live provider / quality evidence ×3 (explicit opt-in + secrets +
-   `--execute`) and retain exact sidecars.
-2. Collect a real dual-annotator human sample +
-   `recalibrate_routing.py --require-human --write`.
-3. **Astro 7** / product decision to default `STREAMING_RAG_PARITY=true`.
+1. **QG-03** `error-e20-filter-or-pump`: offline single-cause RCA + focused
+   failing test; the saved sidecar lacks the original error node.
+2. **QG-04** `error-e30`: separate offline retrieval/grade RCA; the saved
+   generation context is empty and grade evidence is absent.
+
+Gated alternatives remain: live provider/quality ×3 (`--execute` + secrets +
+fresh opt-in), a real dual-annotator human sample, Astro 7, or the product
+decision to default `STREAMING_RAG_PARITY=true`. Do not use a paid rerun to
+discover the QG-03/QG-04 cause.
 
 **Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, DEP-01.
 
 ---
 
-## Last-known verification snapshot (Update-125)
+## Last-known verification snapshot (Update-133)
 
 | Band | Last known |
 |------|------------|
+| **QG-02** | TDD red 1 failed → green 1 passed; final focused **1 passed**; adjacent provider graph/error/model-routing/judge **31 passed**; Ruff + changed-file Mypy (`--follow-imports=skip`) + diff clean; no full locked-Mypy claim |
+| **QG-01** | TDD red 2 failed / 9 passed → focused **11 passed**; independent parent/base/reranker **34 passed**; scoped Ruff + changed-file Mypy + diff clean; broader `vectordb` Mypy last had one unchanged-file error |
+| **Native live quality** | seed 42 valid child evidence but quality **FAIL**; seeds 43–44 not run; no valid ×3 aggregate |
 | **OpenCode Zen** | **155 passed**; Ruff, scoped Mypy, Helm Secret render, scoped diff clean; no live call |
 | **5.7** | independent regression/quality band **83 passed**; Ruff + scoped diff clean |
 | **5.6** | Grok focused 25 passed; independent quality/provider/workflow **46 passed**; Ruff + scoped diff clean |
@@ -284,4 +331,5 @@ off-plan Zen integration is complete locally and is not a new plan step.
 | **7.7** | 8 passed (depth) |
 | **DEP-01** | npm audit high=0 |
 
-Full suite / live / migrate / push / deploy: **not** claimed.
+Full suite / locked CI Mypy / passing live ×3 / migrate / push / deploy:
+**not** claimed.
