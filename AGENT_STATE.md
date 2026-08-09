@@ -1,5 +1,85 @@
 # Agent State
 
+## 2026-08-09 Update-130 — native live quality gate seed 42 FAIL ⚠ START HERE
+
+> **Read this block first.** Actual Git overrides every embedded SHA, branch
+> count, process ID, and worktree statement. Older Update blocks are archival
+> evidence and may describe state superseded by Update-130.
+>
+> **Git truth before this docs update:** `HEAD=79379a6` (`docs: reconcile
+> GraceKelly smoke handoff (Update-129)`), branch
+> `master...origin/master [ahead 225]`. Latest committed implementation remains
+> `99c6be5`; the live gate changed no product code and created no commit.
+>
+> **Owner/runtime contract used:** native Windows only. Docker and WSL were not
+> started. PostgreSQL, Redis, Celery, Ollama, and the heavy multi-service stack
+> were not used. The baseline was `ministral-3b-latest`; the candidate was
+> `gracekelly-mixed` through a temporary updated GraceKelly listener on port
+> `8012`.
+>
+> **Three attempt chronology (do not raw-retry):**
+>
+> 1. The original active `data/vectordb/chroma/rag_docs_default` collection had
+>    embedding dimension 3. The first live child therefore finished with 20
+>    infrastructure failures (`vector store is not initialized`) and no
+>    effective cases.
+> 2. A compatible retained index was prepared at
+>    `.tmp/live-quality-native-index-20260809/chroma` (collection
+>    `rag_docs_default`, 6 documents, dimension 1024; source collection
+>    `rag_eval_20260530t0835_default`). On Windows an empty
+>    `RAG_RERANKER_MODEL` did not propagate to the child, so the default
+>    `BAAI/bge-reranker-v2-m3` reranker loaded. The child reached about
+>    2.12 GiB and was terminated narrowly. The scheduled task
+>    `PythonMemoryGuard` was unexpectedly `Disabled` and did not enforce the
+>    documented 1 GiB limit. Do not repeat this hybrid command.
+> 3. The single diagnostic retry used the compatible index, remote Mistral
+>    embeddings, and `RAG_RETRIEVAL_STRATEGY=vector`. It completed seed 42
+>    after about 2 h 9 min. It was slow, not hung: average latency was
+>    81,878.8 ms for the baseline and 304,456.7 ms for the candidate; a
+>    liveness sample showed a responding process with increasing CPU before
+>    normal report creation and exit.
+>
+> **Authoritative live result:** child run
+> `20260809T172531Z-6bf6280c` processed 20/20 effective cases with zero
+> infrastructure failures and emitted complete Section 5 metrics. Its evidence
+> is valid, but its release gate is **FAIL**: candidate pass rate 65% versus
+> baseline 70% and minimum 85%; regressions 4 versus maximum 2; new passes 3.
+> Metrics were precision 0.1499, recall 0.65, full rate 0.60, miss count 6,
+> faithfulness 0.30, answer relevancy 0.4855, and unverified-auto rate 0.
+> Regressions: `error-e20-filter-or-pump`, `error-e20-hose-kink`, `error-e30`,
+> and `warranty-receipt-storage`.
+> This evidence is authoritative for the executed **vector-only** retrieval
+> configuration. It does not prove that the unexecuted default hybrid path
+> would produce the same quality result; that path exceeded the memory limit.
+>
+> **Evidence distinction:** the child report
+> `reports/regression/20260809T172531Z-ministral-3b-latest-vs-gracekelly-mixed.json`
+> has `evidence_valid=true` and `exit_code=1` because quality thresholds failed.
+> The outer report
+> `reports/regression/live-quality-metrics-gate-result-native-2026-08-09-retry-vector.json`
+> has `evidence_valid=false` / `LIVE_EXECUTED_FAIL` because fail-fast stopped
+> after seed 42; seeds 43 and 44 were never executed. Formal live ×3 evidence
+> and Section 5 DoD therefore remain open.
+>
+> **Cleanup/current operations:** the gate child exited. The temporary listener
+> on port `8012` was verified and stopped; port `8012` is closed. The
+> pre-existing listener on `8011` remains PID 3048 and was not touched; do not
+> assume it serves GraceKelly commit `886b277`. The compatible temporary index
+> remains on disk for diagnostics. `PythonMemoryGuard` was still `Disabled`
+> when Update-130 was prepared; changing system task state was not authorized.
+>
+> **Next named slice:** do not launch another paid 3×20 gate. First use the
+> saved sidecar to separate GraceKelly/orchestration fallbacks from retrieval
+> misses, select one root cause, add a focused failing local regression test,
+> make the smallest fix, and run only proportional local verification. A new
+> paid live retry requires fresh explicit opt-in after that local slice is
+> green.
+>
+> **Dirty-file boundary:** preserve unrelated tracked changes in `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`, plus unrelated
+> untracked artifacts. `AGENT_STATE.md` and `docs/SESSION_HANDOFF.md` are the
+> only owned paths in this docs-only Update-130 slice.
+
 ## 2026-08-09 Update-129 — reconciled next-session handoff ✅ START HERE
 
 > **Read this block first.** Actual Git overrides every embedded SHA, branch

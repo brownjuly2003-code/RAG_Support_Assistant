@@ -1,7 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-09 — **Update-129** (next-session state reconciled after
-lightweight GraceKelly RAG smoke commit `99c6be5`).
+**Обновлено:** 2026-08-09 — **Update-130** (native live quality gate executed;
+seed 42 produced valid evidence but failed quality thresholds).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -12,11 +12,11 @@ lightweight GraceKelly RAG smoke commit `99c6be5`).
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-129**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-130**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-129; dirty
+**Не использовать:** старые `START HERE` ниже Update-130; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -30,27 +30,28 @@ lightweight GraceKelly RAG smoke commit `99c6be5`).
 |------|----------|
 | Latest **committed implementation** | `99c6be5` — lightweight GraceKelly RAG smoke + regression tests |
 | Prior implementations (recent) | `faaa815` OpenCode Zen · `13bf255` **5.7** · `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** |
-| Latest **committed docs before this Update** | `ddb721c` — Update-125 |
-| This Update-129 docs SHA | Commit containing this file if present; otherwise owned docs WIP — resolve through Actual Git |
-| Branch advisory | base observed `master...origin/master [ahead 224]` at `99c6be5` before the Update-129 docs commit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; lightweight smoke files are committed; no smoke WIP remains |
+| Latest **committed docs before this Update** | `79379a6` — Update-129 |
+| This Update-130 docs SHA | Commit containing this file if present; otherwise owned docs WIP — resolve through Actual Git |
+| Branch advisory | observed `master...origin/master [ahead 225]` at `79379a6` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; live gate finished; temporary listener `8012` stopped; only Update-130 docs WIP may remain |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | No active implementation WIP and no ungated default after 5.7; await explicit owner priority |
-| Gates | **no Docker/WSL**; no push / deploy / live multi-service / unrelated live provider·quality execute / migrate 019–023 without **explicit opt-in** |
+| Next ordered | **QG-01:** offline/focused diagnosis of the four seed-42 regressions and candidate latency; no paid 3×20 retry before a tested local fix |
+| Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-129 is docs-only:** it reconciles stale lower sections with
-`99c6be5`, the successful live smoke, and the current external GraceKelly
-state. It changes no code, test, workflow, migration, or plan checkbox; it
-makes no paid call and performs no push or deploy.
+**Update-130 is docs-only:** it records the completed native live quality
+attempt and its fail-closed result. It changes no code, test, workflow,
+migration, or plan checkbox; it makes no paid call and performs no push or
+deploy.
 
 **Last known verification (not re-run this docs turn):**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **Native §5 live quality attempt** | seed 42: 20/20 effective, infrastructure failures 0, child evidence valid, gate **FAIL**; candidate pass 65%, baseline 70%, minimum 85%, regressions 4; seeds 43–44 not run |
 | **Lightweight GraceKelly/Sonnet 5 smoke** | local **16 passed** + Ruff/Mypy clean; live `claude-sonnet-5` smoke **PASS**; SQLite row verified |
 | **OpenCode Zen** | 155 provider/settings/workflow/Helm tests; Ruff + scoped Mypy + Helm render + diff clean |
 | **5.7** | independent regression + quality band **83 passed**; Ruff + scoped diff clean |
@@ -65,8 +66,9 @@ makes no paid call and performs no push or deploy.
 | **8.5** | 16 passed (widget + Playwright) |
 | **DEP-01** | npm audit high=0 |
 
-Full suite / live multi-service / migrate / push / deploy / live provider
-or quality execute **not** run / **not** claimed.
+Full suite / live multi-service / migrate / push / deploy / formal live
+provider gate were **not** run. The live quality gate was attempted only
+through failing seed 42; live ×3 / release / production are **not** claimed.
 
 ### 1A. Lightweight GraceKelly + SQLite smoke
 
@@ -119,6 +121,115 @@ serving the fix.
 acceptance is already green. Await an explicit owner priority for remaining
 gated work; do not repeat the paid request without new authorization/evidence.
 
+### 1B. Native live quality gate attempt (2026-08-09)
+
+This is separate from the lightweight one-call smoke above. The owner
+authorized a native live quality attempt without Docker or WSL. The requested
+gate was baseline `ministral-3b-latest` versus candidate
+`gracekelly-mixed`, 3 runs × 20 cases, seeds 42–44. PostgreSQL, Redis, Celery,
+Ollama, and the heavy multi-service stack were not started.
+
+**Prepared native runtime:**
+
+- Remote Mistral embeddings used `mistral-embed`; no secret value was logged.
+- The original active `data/vectordb/chroma/rag_docs_default` collection is
+  dimension 3 and was left unchanged.
+- A compatible retained copy exists at
+  `.tmp/live-quality-native-index-20260809/chroma`, collection
+  `rag_docs_default`, 6 documents, dimension 1024. Its source was the existing
+  collection `rag_eval_20260530t0835_default`.
+- The updated external GraceKelly checkout was served temporarily from
+  `D:\GraceKelly@886b277` on `127.0.0.1:8012`. The pre-existing listener on
+  `8011` was not restarted or modified.
+
+**Attempt chronology:**
+
+1. The first run used the original dimension-3 active collection. The child
+   produced 20 infrastructure failures, 0 effective cases, and
+   `vector store is not initialized`. Evidence:
+   [`live-quality-metrics-gate-result-native-2026-08-09.json`](../reports/regression/live-quality-metrics-gate-result-native-2026-08-09.json)
+   and
+   [`20260809T165258Z-ministral-3b-latest-vs-gracekelly-mixed.json`](../reports/regression/20260809T165258Z-ministral-3b-latest-vs-gracekelly-mixed.json).
+2. The compatible index fixed initialization, but an empty
+   `RAG_RERANKER_MODEL` environment value did not propagate to the Windows
+   child. The resolved default `BAAI/bge-reranker-v2-m3` loaded and the child
+   reached about 2.12 GiB. Only that verified regression child was stopped.
+   The outer exit was `4294967295`; see
+   [`live-quality-metrics-gate-result-native-2026-08-09-retry.json`](../reports/regression/live-quality-metrics-gate-result-native-2026-08-09-retry.json).
+   The installed `PythonMemoryGuard` scheduled task was `Disabled`, so it did
+   not enforce the documented 1 GiB limit. Do not repeat this hybrid command.
+3. One narrowed retry set `RAG_RETRIEVAL_STRATEGY=vector`, keeping remote
+   embeddings and the compatible index while bypassing local hybrid/reranker
+   components. Seed 42 completed after about 2 h 9 min and failed quality
+   thresholds. Fail-fast correctly prevented seeds 43 and 44 from making more
+   paid calls.
+
+Interpretation boundary: the seed-42 evidence is authoritative for the
+executed **vector-only** retrieval configuration. It does not prove that the
+unexecuted default hybrid path would produce the same quality result; that
+path exceeded the local memory limit.
+
+The long run was not a hard hang. A bounded sample showed the regression
+process responding with increasing CPU and stable memory around 427 MiB. It
+later exited and wrote both reports. The measured average latency explains the
+wall time: baseline 81,878.8 ms versus candidate 304,456.7 ms per case.
+
+**Authoritative seed-42 result:**
+
+| Measure | Result | Required | Status |
+|---------|-------:|---------:|--------|
+| Effective cases | 20/20 | >0 | valid |
+| Infrastructure failures | 0 | 0 | pass |
+| Candidate pass rate | 65% | ≥85% and ≥baseline 70% | **fail** |
+| Regressions | 4 | ≤2 | **fail** |
+| Context precision | 0.1499 | ≥0.63 | **fail** |
+| Context recall | 0.65 | ≥0.97 | **fail** |
+| Full rate | 0.60 | ≥0.97 | **fail** |
+| Miss count | 6 | ≤1 | **fail** |
+| Faithfulness | 0.30 | ≥0.90 | **fail** |
+| Answer relevancy | 0.4855 | ≥0.92 | **fail** |
+| Unverified auto rate | 0 | 0 | pass |
+
+The candidate gained three new passes but introduced four regressions:
+
+| Case | Observed candidate outcome |
+|------|----------------------------|
+| `error-e20-filter-or-pump` | returned escalation-registration fallback; omitted E20 and the requested components |
+| `error-e20-hose-kink` | returned a generic internal-error answer; omitted E20, hose, and kink |
+| `error-e30` | claimed the KB lacked E30 guidance; omitted the required disconnect instruction |
+| `warranty-receipt-storage` | claimed no exact retention period; omitted 12 months |
+
+Do not collapse these into one assumed cause. The first two look like
+orchestration/fallback outcomes; the latter two look like missing or rejected
+retrieval context. Those are diagnostic hypotheses, not established root
+causes.
+
+**Evidence semantics and artifacts:**
+
+- The exact child sidecar
+  [`20260809T172531Z-ministral-3b-latest-vs-gracekelly-mixed.json`](../reports/regression/20260809T172531Z-ministral-3b-latest-vs-gracekelly-mixed.json)
+  has `evidence_valid=true`, complete Section 5 metrics, `exit_code=1`, and
+  `release_passed=false`. Its quality verdict is genuinely **FAIL**.
+- The outer report
+  [`live-quality-metrics-gate-result-native-2026-08-09-retry-vector.json`](../reports/regression/live-quality-metrics-gate-result-native-2026-08-09-retry-vector.json)
+  has `LIVE_EXECUTED_FAIL` and `evidence_valid=false` because only 1 of the
+  required 3 runs completed. It is not a valid ×3 aggregate.
+- Therefore formal Section 5 live ×3 evidence remains open. Neither release
+  nor production readiness is claimable.
+
+**Cleanup and current boundary:** the regression child exited; the temporary
+listener on `8012` was verified and stopped, and the port is closed. Port
+`8011` still belongs to the pre-existing PID 3048 and was untouched. The
+compatible temporary index remains for offline diagnostics. At handoff time,
+`PythonMemoryGuard` remained `Disabled`; changing Task Scheduler state was not
+authorized.
+
+**Next named slice — QG-01:** use the saved sidecar first. Classify the four
+regressions, select one root cause, write a focused failing local test, make
+the smallest fix, and run proportional local verification. Do not run another
+paid 3×20 gate merely to reproduce this evidence. A paid retry requires fresh
+explicit opt-in after a focused local fix is green.
+
 ### Dataset snapshot (7.7)
 
 | Slice | Count |
@@ -145,17 +256,18 @@ gated work; do not repeat the paid request without new authorization/evidence.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-129 in AGENT_STATE.md + this file §1–§12
-6. Confirm there is no active implementation WIP; never reopen the closed smoke
-7. No ungated default remains: wait for an explicit owner priority
-8. Optional handoff refresh; STOP after one slice
+5. Read ONLY top Update-130 in AGENT_STATE.md + this file §1–§12
+6. Confirm there is no active writer; read §1B before touching live-quality code
+7. Start QG-01 from the saved seed-42 sidecar; select one root cause only
+8. Add one focused failing test, make the smallest local fix, verify, then STOP
 ```
 
 **Not authorized without opt-in:** push, deploy, live PostgreSQL/Redis/Celery,
 unrelated live provider/quality execute with secrets, `alembic upgrade`
 (incl. **019–023**), destructive Git, production claims, bulk plan checkbox
-edits. The authorization for the recorded one-call GraceKelly/Sonnet 5 smoke
-has been consumed; do not infer permission for another paid call.
+edits. The authorizations for the recorded one-call GraceKelly/Sonnet 5 smoke
+and the completed seed-42 quality attempt have been consumed; do not infer
+permission for another paid call.
 
 ---
 
@@ -167,7 +279,7 @@ has been consumed; do not infer permission for another paid call.
 | **2** index lifecycle | **2.1–2.6g** local residual closed | live PG/Redis/Celery/Chroma + migrate drills |
 | **3** execution / session / budget | **3.1a–3.1i** local | multi-replica durable session (**DEFER** without SLA; design exists) |
 | **4** pipeline + escalation | **4.1–4.8** local | parity default still **off** (product decision) |
-| **5** grounding fail-closed | **5.1–5.7** local | **actual** live ×3 evidence still open |
+| **5** grounding fail-closed | **5.1–5.7** local | one valid live seed-42 report exists but **FAILS** quality; seeds 43–44 and passing ×3 evidence remain open |
 | **6** judge / safety / agentic | **6.1–6.7** local | production human dual-annotator sample |
 | **7** eval gate | **7.1–7.7** local | live execute with secrets; mock≠release; optional more depth |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
@@ -186,6 +298,10 @@ evidence and closes no plan DoD.
 `99c6be5` adds a separate lightweight operational smoke for existing Chroma +
 native GraceKelly + SQLite. Its one-call live acceptance does not substitute
 for the formal §5 quality ×3 or §7.6 provider-gate evidence.
+
+The Update-130 seed-42 quality sidecar is formal live §5 evidence, but it is a
+failed single run rather than a passing ×3 aggregate. It closes neither §5 DoD
+nor release readiness.
 
 ---
 
@@ -402,15 +518,23 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 There is **no active implementation WIP**. The lightweight GraceKelly/Sonnet 5
 smoke is closed at `99c6be5`; do not reopen or re-run it as a default action.
 
-There is also **no ungated default local-only plan candidate** after 5.7. The
-off-plan Zen integration is complete locally. Remaining choices require an
-explicit owner priority and their corresponding authority:
+The owner-authorized live attempt supplied a concrete local-only next slice:
+**QG-01 — diagnose and fix one seed-42 candidate regression cause**.
 
-1. Run provider/quality evidence ×3 with secrets + explicit opt-in +
-   `--execute`; retain exact sidecars and the aggregate report.
-2. Collect a real dual-annotator human sample, then run recalibration with
-   `--require-human --write`.
-3. Astro 7 major or product decision to default `STREAMING_RAG_PARITY=true`.
+1. Read §1B and the saved child sidecar; make no provider call.
+2. Classify the four regressions into orchestration/fallback versus retrieval
+   context loss. Treat that split as a hypothesis until code/trace evidence
+   confirms it.
+3. Select exactly one root cause and identify its narrow owning surface.
+4. Write and run one focused failing test before implementation.
+5. Make the smallest local fix and run the focused test plus one proportional
+   independent local gate.
+6. Stop after the local slice. A new paid seed or 3×20 retry needs fresh owner
+   opt-in; do not use a live rerun as the diagnostic tool.
+
+If QG-01 is blocked by unavailable local evidence, report the exact missing
+artifact rather than switching automatically to the human-sample, migration,
+Astro 7, parity-default, or another live gate track.
 
 ### Out without opt-in
 
@@ -434,7 +558,7 @@ explicit owner priority and their corresponding authority:
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths:** `AGENT_STATE.md` and this file belong to Update-129.
+**Owned handoff paths:** `AGENT_STATE.md` and this file belong to Update-130.
 Actual Git decides whether their docs-only commit has already closed the diff;
 never stage the protected tracked files with them.
 
@@ -443,6 +567,10 @@ never stage the protected tracked files with them.
 untracked pointer; never routing authority),
 `rag-remediation-plan-2026-08-03.md` (active plan — DoD source, no casual
 checkbox edits), architecture HTML, etc. Preserve these unrelated artifacts.
+
+`.tmp/live-quality-native-index-20260809/chroma` is retained diagnostic
+evidence, not implementation WIP. It contains the compatible dimension-1024
+collection used by seed 42; do not rebuild, stage, or delete it casually.
 
 There is no owned untracked implementation WIP. The smoke script and test are
 tracked in `99c6be5`; if they appear untracked, stop and reconcile Actual Git
@@ -496,7 +624,9 @@ Never log secret values.
 | 12 | docs | `ddb721c` | Update-125 full transparency after Zen integration |
 | 13 | external fix | `D:\GraceKelly@886b277` | Playwright editor focus; local/unpushed |
 | 14 | lightweight smoke | `99c6be5` | RAG script + regressions; local/live acceptance green |
-| 15 | docs | **this Update-129 commit, if present in Actual Git** | reconciled next-session state |
+| 15 | docs | `79379a6` | Update-129 reconciled GraceKelly smoke handoff |
+| 16 | live quality evidence | no code SHA | native seed 42 completed: valid child evidence, quality **FAIL**, seeds 43–44 not run |
+| 17 | docs | **this Update-130 commit, if present in Actual Git** | full transparency after the native live quality attempt |
 
 ---
 
@@ -517,8 +647,8 @@ Never log secret values.
 | Relevance ≠ quality/100? | **Yes local** (5.4) |
 | Child report → §5 DoD wire? | **Yes local** (5.6; exact sidecar, fail-closed) |
 | Current child producer emits all 7 metrics? | **Yes local** (5.7; complete/provenanced or release fails closed) |
-| Live quality metrics ×3 evidence? | **No formal ×3 evidence**; the separate one-call lightweight paid smoke does not satisfy it |
+| Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; check Actual Git for Update-129 docs state |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; only Update-130 docs WIP may remain — check Actual Git |
