@@ -1,5 +1,38 @@
 # Agent State
 
+## 2026-08-09 Update-138 — next-session transparency reconciliation ✅ START HERE
+
+> **Purpose:** docs-only reconciliation after Update-137. No project code,
+> configuration, service, scheduler, migration, provider, or live-quality state
+> changed in this Update. Actual Git remains authoritative over this snapshot.
+>
+> **Verified start snapshot:** before this docs edit, `HEAD` was `4acdd32`
+> (`docs: record hybrid child env closure`) on
+> `master...origin/master [ahead 240]`. The latest implementation remains
+> `3c90368`; active writer **none**; implementation WIP **none**; all five
+> Update-137 implementation/handoff paths were clean. The unrelated tracked
+> changes in `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and
+> `plan_sol_23_07_26` retained the exact SHA-256 values recorded in
+> `docs/SESSION_HANDOFF.md` §8.
+>
+> **What is proved:** `--disable-child-reranker` explicitly sends
+> `RAG_RERANKER_MODEL=""` to live-quality child processes; focused tests, the
+> 57-test regression band, Ruff, scoped Mypy, and a real lightweight Windows
+> child verified that contract. **What is not proved:** default hybrid quality,
+> passing live 3×20 evidence, seeds 43–44, production readiness, or memory-guard
+> enforcement. The saved vector-only seed-42 quality result remains **FAIL**.
+>
+> **Operational gate:** `PythonMemoryGuard` is still last known **Disabled**.
+> Never raw-retry the prior hybrid command. Enabling/changing the scheduled task,
+> rebuilding/publishing an index, running a model/provider quality attempt,
+> migrations, push, or deploy all require fresh explicit owner authority.
+>
+> **Next-session entrypoint:** run `git status --short --branch` and
+> `git log -12 --oneline`, then read only this block and
+> `docs/SESSION_HANDOFF.md` §0/§1C/§2/§8. Ignore the untracked stale
+> `_NEXT_SESSION.md`. Select one atomic slice only from a new explicit owner
+> request or a documented ungated residual; none is pre-authorized here.
+
 ## 2026-08-09 Update-137 — HYBRID-MEM child environment propagation ✅ START HERE
 
 > **Read this block first.** Actual Git overrides every embedded SHA, branch

@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-137 HYBRID-MEM child environment sync)
+**Date:** 2026-08-09 (Update-138 next-session transparency reconciliation)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-137**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-138**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-137. Preserve it as DoD input, but use Actual Git + the committed
+> Update-138. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -55,7 +55,7 @@ use only non-sensitive test data and recheck external terms before enabling it.
 
 ---
 
-## Current live-quality incident (Update-137)
+## Current live-quality incident (Update-138)
 
 The native vector-only run produced valid child evidence for seed 42 but failed
 the quality gate: candidate pass 65% (baseline 70%, required ≥85%), four
@@ -313,11 +313,16 @@ fresh opt-in), memory-guard enablement plus a bounded hybrid attempt, a real
 dual-annotator human sample, Astro 7, or the product decision to default
 `STREAMING_RAG_PARITY=true`.
 
+This list is not authorization. The executable boundary and current facts are
+spelled out in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §2A. With no new
+owner request, the correct action is reconciliation and stop—not a speculative
+live retry, scheduler change, index mutation, or another QG fix.
+
 **Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, DEP-01.
 
 ---
 
-## Last-known verification snapshot (Update-137)
+## Last-known verification snapshot (Update-138)
 
 | Band | Last known |
 |------|------------|
