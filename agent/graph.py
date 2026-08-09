@@ -1742,8 +1742,7 @@ def make_generate_node(
                         tool_calls=state.get("tool_calls") or None,
                     )
                 except Exception as exc:
-                    logger.warning("[generate] LLM error: %s", exc, extra={"trace_id": trace_id})
-                    answer = "Извините, при обработке запроса произошла внутренняя ошибка."
+                    return _make_error_state(state, "generate", exc)
                 span.set_attribute("rag.answer_length", len(str(answer or "")))
 
             citations: list[dict[str, Any]] = []

@@ -94,6 +94,42 @@ def test_make_generate_node_copies_provider_response_metadata_into_state(
     assert result["usage_metadata"]["output_tokens"] == 6
 
 
+def test_make_generate_node_marks_provider_failure_as_graph_error(
+    monkeypatch,
+) -> None:
+    import agent.graph as graph
+
+    class _FailingLLM:
+        provider_id = "fake"
+        model_name = "fake-model"
+
+        def invoke(self, prompt: str) -> str:
+            raise RuntimeError("provider unavailable")
+
+    monkeypatch.setattr(graph, "trace_llm_call", lambda **kwargs: None)
+    monkeypatch.setattr(graph, "log_step", lambda trace_id, node_name, state: None)
+
+    llm = _FailingLLM()
+    node = graph.make_generate_node(llm, llm)
+    state = create_initial_state(question="Может ли E20 появиться из-за перегиба?", trace_id="trace-generate-error")
+    state["complexity"] = "simple"
+    state["graded_docs"] = [
+        {
+            "page_content": "E20 может возникнуть из-за перегиба сливного шланга.",
+            "metadata": {"source": "errors_e10_e30.md"},
+        }
+    ]
+
+    result = node(state)
+
+    assert result["error"] is True
+    assert result["error_node"] == "generate"
+    assert result["route"] == "error"
+    assert "RuntimeError: provider unavailable" in (result["error_message"] or "")
+    assert result.get("answer") != "Извините, при обработке запроса произошла внутренняя ошибка."
+    assert graph._route_after_generate(result) == "error"
+
+
 def test_classify_complexity_node_uses_generate_with_schema_when_available(
     monkeypatch,
 ) -> None:
