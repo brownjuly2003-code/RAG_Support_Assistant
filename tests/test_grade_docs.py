@@ -174,6 +174,87 @@ def test_grade_docs_uses_same_source_content_when_only_context_header_is_relevan
     assert result["doc_grade_reason"] == "Kept 1/2, filtered 1"
 
 
+def test_grade_docs_e30_saved_five_document_verdict_keeps_disconnect_instruction(
+    monkeypatch,
+) -> None:
+    """QG-04: replay the retained header-only verdict among five documents."""
+    import agent.graph as graph
+
+    class _SavedE30VerdictLLM:
+        provider_id = "mistral"
+        model_name = "ministral-3b-latest"
+        supports_structured_output = True
+
+        def generate_with_schema(self, messages, schema, **kwargs):
+            _ = messages, schema, kwargs
+            payload = {
+                "grades": [
+                    {"index": 1, "relevant": False},
+                    {"index": 2, "relevant": True},
+                    {"index": 3, "relevant": False},
+                    {"index": 4, "relevant": False},
+                    {"index": 5, "relevant": False},
+                ]
+            }
+            return LLMResponse(
+                text=str(payload),
+                provider=self.provider_id,
+                model=self.model_name,
+                structured_output=payload,
+            )
+
+    monkeypatch.setattr(graph, "trace_llm_call", lambda **kwargs: None)
+    monkeypatch.setattr(graph, "log_step", lambda trace_id, node_name, state: None)
+
+    errors_metadata = {
+        "source": "errors_e10_e30.md",
+        "content_hash": "errors-document",
+        "contextual_header": "Из документа errors_e10_e30.md",
+        "has_context_header": True,
+    }
+    errors_header = {
+        "page_content": "[Контекст: Из документа errors_e10_e30.md]\n",
+        "metadata": dict(errors_metadata),
+    }
+    errors_body = {
+        "page_content": (
+            "[Контекст: Из документа errors_e10_e30.md]\n"
+            "E30 — критическая системная ошибка. "
+            "Отключите устройство от сети и обратитесь в сервисный центр."
+        ),
+        "metadata": dict(errors_metadata),
+    }
+    state = create_initial_state(
+        question=(
+            "При ошибке E30 можно продолжать пользоваться устройством "
+            "или нужно отключить его от сети?"
+        ),
+        trace_id="trace-grade-e30-five-doc-replay",
+    )
+    state["context_docs"] = [
+        {
+            "page_content": "[Контекст: Из документа returns_policy.md]\n",
+            "metadata": {"source": "returns_policy.md", "content_hash": "returns"},
+        },
+        errors_header,
+        errors_body,
+        {
+            "page_content": "Правила возврата товара.",
+            "metadata": {"source": "returns_policy.md", "content_hash": "returns"},
+        },
+        {
+            "page_content": "Порядок гарантийного обращения.",
+            "metadata": {"source": "warranty.md", "content_hash": "warranty"},
+        },
+    ]
+
+    result = graph.make_grade_docs_node(_SavedE30VerdictLLM())(state)
+
+    assert result["graded_docs"] == [errors_body]
+    assert "Отключите устройство от сети" in result["graded_docs"][0]["page_content"]
+    assert result["doc_grade_reason"] == "Kept 1/5, filtered 4"
+
+
 def test_grade_docs_batches_multiple_documents_with_schema(
     monkeypatch,
 ) -> None:
