@@ -69,13 +69,23 @@ def _instantiate_provider(settings: Any, provider_id: str, model_name: str) -> A
         ollama_provider.supports_streaming = provider_config.capabilities.supports_streaming
         ollama_provider.supports_batch = provider_config.capabilities.supports_batch
         return ollama_provider
-    if provider_id == "mistral":
+    if provider_id in {"mistral", "opencode-zen"}:
+        is_opencode_zen = provider_id == "opencode-zen"
+        if is_opencode_zen and not model_pricing_name.endswith("-free"):
+            raise RuntimeError("OpenCode Zen runtime only allows models ending in '-free'")
         mistral_provider = MistralProvider(
             api_key_env=str(provider_config.api_key_env or ""),
             model_name=model_pricing_name,
             input_price_per_1m_tokens=input_price,
             output_price_per_1m_tokens=output_price,
             timeout_sec=timeout_sec,
+            base_url=(
+                "https://opencode.ai/zen/v1"
+                if is_opencode_zen
+                else "https://api.mistral.ai/v1"
+            ),
+            provider_id=provider_id,
+            provider_label=provider_config.label,
         )
         mistral_provider.supports_tool_use = provider_config.capabilities.supports_tool_use
         mistral_provider.supports_structured_output = provider_config.capabilities.supports_structured_output

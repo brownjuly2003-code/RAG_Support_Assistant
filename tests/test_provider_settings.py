@@ -80,6 +80,34 @@ def test_settings_validate_requires_mistral_api_key_for_external_mistral_profile
     assert "LLM_PROVIDER_PROFILE=local-first" in str(exc_info.value)
 
 
+@pytest.mark.parametrize("api_key", [None, "changeme", "change-me", "change_me"])
+def test_settings_validate_requires_opencode_zen_api_key_for_free_profile(
+    monkeypatch: pytest.MonkeyPatch,
+    api_key: str | None,
+) -> None:
+    from config.settings import Settings
+
+    calls: list[object] = []
+
+    def _fail_if_network_is_probed(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise urllib.error.URLError("offline")
+
+    monkeypatch.setenv("LLM_PROVIDER_PROFILE", "opencode-zen-free")
+    if api_key is None:
+        monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
+    else:
+        monkeypatch.setenv("OPENCODE_ZEN_API_KEY", api_key)
+    monkeypatch.setattr("urllib.request.urlopen", _fail_if_network_is_probed)
+
+    settings = Settings()
+
+    with pytest.raises(RuntimeError, match="OPENCODE_ZEN_API_KEY"):
+        settings.validate()
+
+    assert calls == []
+
+
 def test_settings_validate_requires_mistral_api_key_for_mixed_paid_fast_profile(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

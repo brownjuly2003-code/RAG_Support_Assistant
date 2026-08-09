@@ -17,6 +17,7 @@ from scripts.live_quality_metrics_gate import (
     aggregate_metric_runs,
     assess_readiness,
     build_live_metrics_commands,
+    detect_provider_secrets,
     evaluate_aggregate_against_dod,
     is_live_opt_in,
     main,
@@ -92,7 +93,12 @@ def _child_summary_stdout(report_json: str, *, extra_lines: list[str] | None = N
 def _enable_live_env(monkeypatch) -> None:
     monkeypatch.setenv(OPT_IN_ENV, "1")
     monkeypatch.setenv("MISTRAL_API_KEY", "test-not-changeme")
-    for key in ("GRACEKELLY_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"):
+    for key in (
+        "GRACEKELLY_API_KEY",
+        "OPENCODE_ZEN_API_KEY",
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+    ):
         monkeypatch.delenv(key, raising=False)
 
 
@@ -160,6 +166,12 @@ def test_opt_in_env_and_cli() -> None:
     assert is_live_opt_in(env={OPT_IN_ENV: "1"}, cli_live=False) is True
     assert is_live_opt_in(env={}, cli_live=True) is True
     assert is_live_opt_in(env={OPT_IN_ENV: "false"}, cli_live=False) is False
+
+
+def test_detect_provider_secrets_accepts_opencode_zen_key() -> None:
+    assert detect_provider_secrets({"OPENCODE_ZEN_API_KEY": "zen-test-key"}) == [
+        "OPENCODE_ZEN_API_KEY"
+    ]
 
 
 def test_aggregate_requires_min_runs() -> None:
@@ -297,6 +309,7 @@ def test_main_mode_live_fail_closed_without_keys(
     for key in (
         "MISTRAL_API_KEY",
         "GRACEKELLY_API_KEY",
+        "OPENCODE_ZEN_API_KEY",
         "OPENAI_API_KEY",
         "ANTHROPIC_API_KEY",
         OPT_IN_ENV,
@@ -323,6 +336,9 @@ def test_workflow_exists_and_defaults_to_readiness() -> None:
     assert "live_quality_metrics_gate.py" in text
     assert "--mode readiness" in text
     assert "RAG_LIVE_QUALITY_METRICS_GATE" in text
+    steps = data["jobs"]["live-quality-metrics-gate"]["steps"]
+    live = next(step for step in steps if step.get("name") == "Quality metrics gate opt-in attempt")
+    assert "OPENCODE_ZEN_API_KEY" in (live.get("env") or {})
 
 
 def test_live_execute_three_passing_sidecars_dod_pass(

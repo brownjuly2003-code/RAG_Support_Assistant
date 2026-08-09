@@ -29,6 +29,7 @@ Copy `.env.example` to `.env`, then adjust only what your deployment needs.
 | `LLM_BENCHMARK_ALLOW_PAID_APIS` | `false` | Backward-compatible flag that allows live external-provider calls in provider benchmarks |
 | `DAILY_COST_LIMIT_USD` | `5.0` | Fail fast when tracked direct-provider spend for the current UTC day reaches this limit |
 | `MISTRAL_API_KEY` | `changeme` | Direct Mistral API key; placeholder values are treated as missing |
+| `OPENCODE_ZEN_API_KEY` | `changeme` | OpenCode Zen API key for the explicit `opencode-zen-free` trial profile; placeholder values are treated as missing |
 | `GRACEKELLY_BASE_URL` | `http://127.0.0.1:8011` | Base URL for the local GraceKelly orchestrator |
 | `GRACEKELLY_API_KEY` | `-` | Optional GraceKelly bearer token for non-public endpoints |
 | `GRACEKELLY_API_KEY_ENV` | `GRACEKELLY_API_KEY` | Env var name used by the runtime to look up the optional GraceKelly API key |
@@ -247,10 +248,10 @@ Resilience layers apply in this order:
 
 Provider routing is configured through `config/providers.yml`, which defines:
 
-- enabled providers (`ollama`, `gracekelly`, `mistral`)
-- model aliases such as `ollama-small`, `gk-fast`, and `mistral-small-latest`
+- enabled providers (`ollama`, `gracekelly`, `mistral`, `opencode-zen`)
+- model aliases such as `ollama-small`, `gk-fast`, `mistral-small-latest`, and `zen-free`
 - per-model input/output pricing, rate limits, and capability flags
-- routing profiles `local-first`, `gracekelly-primary`, `gracekelly-mixed`, and `external-mistral`
+- routing profiles `local-first`, `gracekelly-primary`, `gracekelly-mixed`, `external-mistral`, and `opencode-zen-free`
 
 Runtime behavior:
 
@@ -260,6 +261,7 @@ Runtime behavior:
 - `gracekelly-primary` falls back only to the declared Ollama fallback when GraceKelly is unavailable and failover is enabled.
 - `gracekelly-mixed` keeps browser-backed strong answer generation on GraceKelly while routing fast helper/evaluator calls through direct Mistral; use it only for explicit live benchmark runs.
 - `external-mistral` uses the direct Mistral API with the user's own `MISTRAL_API_KEY`.
+- `opencode-zen-free` uses only `nemotron-3-ultra-free` through OpenCode Zen with the user's own `OPENCODE_ZEN_API_KEY`; it has no paid-model fallback.
 - Startup validation loads the registry, verifies `LLM_PROVIDER_PROFILE`, and treats placeholder credentials such as `changeme` as missing.
 - Each traced LLM step now records `provider_name`, `model_name`, token usage, and cost; Prometheus exports `llm_cost_usd_total{provider,model,tenant}`.
 - Automatic failover events are exported as `llm_provider_fallback_total{from_provider,to_provider,reason}`.
@@ -279,3 +281,9 @@ Runtime behavior:
 - The provider uses `POST https://api.mistral.ai/v1/chat/completions` with OpenAI-compatible chat payloads and reads token usage from `usage.prompt_tokens` / `usage.completion_tokens`.
 - Placeholder `MISTRAL_API_KEY=changeme` is treated as missing both in startup validation and in the provider constructor.
 - `DAILY_COST_LIMIT_USD` applies to the direct Mistral profile and blocks new runtime creation after the current UTC-day spend is exhausted.
+
+### OpenCode Zen free provider
+
+- `opencode-zen-free` is an explicit trial profile that sends OpenAI-compatible chat requests to `https://opencode.ai/zen/v1/chat/completions`.
+- The runtime accepts only model IDs ending in `-free`, and the profile declares no fallback. Free availability is temporary and is not a production SLA or a permanent zero-cost guarantee.
+- OpenCode documents the Nemotron free endpoint as trial-only and logged. Do not send personal, confidential, or production support data through this profile. Review the current [OpenCode Zen terms and model list](https://opencode.ai/docs/zen) before enabling it.

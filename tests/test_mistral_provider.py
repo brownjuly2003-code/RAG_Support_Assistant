@@ -122,6 +122,43 @@ def test_mistral_provider_returns_llm_response_with_usage_and_cost(
     assert response.metadata["rate_limit_remaining_tokens"] == "499000"
 
 
+def test_mistral_provider_supports_custom_openai_compatible_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from llm.providers.mistral import MistralProvider
+
+    captured: dict[str, Any] = {}
+
+    def _fake_post(url: str, *, headers: dict[str, str], json: dict[str, Any], timeout: float):
+        captured["url"] = url
+        return _FakeResponse(
+            payload={
+                "choices": [{"message": {"content": "free response"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+            }
+        )
+
+    monkeypatch.setenv("OPENCODE_ZEN_API_KEY", "zen-test-key")
+    monkeypatch.setattr("httpx.post", _fake_post)
+
+    provider = MistralProvider(
+        model_name="nemotron-3-ultra-free",
+        api_key_env="OPENCODE_ZEN_API_KEY",
+        timeout_sec=15.0,
+        input_price_per_1m_tokens=0.0,
+        output_price_per_1m_tokens=0.0,
+        base_url="https://opencode.ai/zen/v1",
+        provider_id="opencode-zen",
+        provider_label="OpenCode Zen",
+    )
+    response = provider.generate([{"role": "user", "content": "hello"}])
+
+    assert captured["url"] == "https://opencode.ai/zen/v1/chat/completions"
+    assert response.provider == "opencode-zen"
+    assert response.model == "nemotron-3-ultra-free"
+    assert response.cost_usd == 0.0
+
+
 def test_mistral_provider_falls_back_to_estimated_output_tokens(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

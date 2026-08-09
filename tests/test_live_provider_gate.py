@@ -13,6 +13,7 @@ from scripts.live_provider_gate import (
     REQUIRED_LIVE_FLAGS,
     assess_readiness,
     build_live_regression_command,
+    detect_provider_secrets,
     is_live_opt_in,
     main,
     validate_live_command,
@@ -40,6 +41,12 @@ def test_opt_in_env_and_cli() -> None:
     assert is_live_opt_in(env={OPT_IN_ENV: "1"}, cli_live=False) is True
     assert is_live_opt_in(env={}, cli_live=True) is True
     assert is_live_opt_in(env={OPT_IN_ENV: "false"}, cli_live=False) is False
+
+
+def test_detect_provider_secrets_accepts_opencode_zen_key() -> None:
+    assert detect_provider_secrets({"OPENCODE_ZEN_API_KEY": "zen-test-key"}) == [
+        "OPENCODE_ZEN_API_KEY"
+    ]
 
 
 def test_readiness_without_opt_in_is_skipped_not_release_pass(
@@ -123,6 +130,7 @@ def test_main_mode_live_implies_opt_in_and_fail_closed_without_keys(
     # --mode live requests live; without keys → fail-closed (not silent PASS).
     monkeypatch.delenv("MISTRAL_API_KEY", raising=False)
     monkeypatch.delenv("GRACEKELLY_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv(OPT_IN_ENV, raising=False)
@@ -139,6 +147,7 @@ def test_main_live_opt_in_no_keys_exits_nonzero(
 ) -> None:
     monkeypatch.delenv("MISTRAL_API_KEY", raising=False)
     monkeypatch.delenv("GRACEKELLY_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setenv(OPT_IN_ENV, "1")
@@ -175,6 +184,7 @@ def test_workflow_scaffold_exists_and_is_opt_in() -> None:
     assert "--mock-experiment-runtime" not in live_run
     env = live.get("env") or {}
     assert env.get("RAG_LIVE_PROVIDER_GATE") == "1"
+    assert "OPENCODE_ZEN_API_KEY" in env
 
     upload = by_name["Upload live gate reports"]
     assert "actions/upload-artifact@" in str(upload.get("uses", ""))

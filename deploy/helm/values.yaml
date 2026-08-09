@@ -70,6 +70,7 @@ secrets:
   DB_ENCRYPTION_KEY: ""
   # Optional — only added to Secret when non-empty.
   MISTRAL_API_KEY: ""
+  OPENCODE_ZEN_API_KEY: ""
   ANTHROPIC_API_KEY: ""
   OPENAI_API_KEY: ""
   SMTP_PASSWORD: ""

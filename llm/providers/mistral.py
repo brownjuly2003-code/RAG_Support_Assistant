@@ -40,9 +40,14 @@ class MistralProvider:
         timeout_sec: float,
         input_price_per_1m_tokens: float,
         output_price_per_1m_tokens: float,
+        base_url: str = "https://api.mistral.ai/v1",
+        provider_id: str = "mistral",
+        provider_label: str = "Mistral",
     ) -> None:
-        self.provider_id = "mistral"
+        self.provider_id = provider_id
         self.model_name = model_name
+        self._provider_label = provider_label
+        self._chat_completions_url = f"{base_url.rstrip('/')}/chat/completions"
         self._api_key_env = api_key_env
         self._api_key = self._load_api_key()
         self._timeout_sec = timeout_sec
@@ -56,12 +61,14 @@ class MistralProvider:
     def _load_api_key(self) -> str:
         api_key = (os.getenv(self._api_key_env, "") or "").strip()
         if not api_key or api_key.lower() in _PLACEHOLDER_API_KEYS:
-            raise RuntimeError(f"{self._api_key_env} is required for Mistral provider")
+            raise RuntimeError(
+                f"{self._api_key_env} is required for {self._provider_label} provider"
+            )
         return api_key
 
     def _post_chat_completion(self, payload: dict[str, Any]) -> httpx.Response:
         response = httpx.post(
-            "https://api.mistral.ai/v1/chat/completions",
+            self._chat_completions_url,
             headers={
                 "Authorization": f"Bearer {self._api_key}",
                 "Content-Type": "application/json",
@@ -73,7 +80,7 @@ class MistralProvider:
             retry_after = response.headers.get("retry-after")
             detail = response.json() if hasattr(response, "json") else {}
             raise ResponseError(
-                f"Mistral rate limit exceeded for model '{self.model_name}'",
+                f"{self._provider_label} rate limit exceeded for model '{self.model_name}'",
                 status_code=429,
                 retry_after=retry_after or str(detail.get("retry_after") or ""),
             )
@@ -207,7 +214,7 @@ class MistralProvider:
         async with httpx.AsyncClient(timeout=self._timeout_sec) as client:
             async with client.stream(
                 "POST",
-                "https://api.mistral.ai/v1/chat/completions",
+                self._chat_completions_url,
                 headers={
                     "Authorization": f"Bearer {self._api_key}",
                     "Content-Type": "application/json",

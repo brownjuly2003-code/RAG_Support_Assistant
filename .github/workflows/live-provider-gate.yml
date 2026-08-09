@@ -70,6 +70,7 @@ jobs:
           RAG_LIVE_PROVIDER_GATE: "1"
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
           GRACEKELLY_API_KEY: ${{ secrets.GRACEKELLY_API_KEY }}
+          OPENCODE_ZEN_API_KEY: ${{ secrets.OPENCODE_ZEN_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |

@@ -94,6 +94,29 @@ providers:
         input_price_per_1m_tokens: 2.00
         output_price_per_1m_tokens: 6.00
 
+  - id: opencode-zen
+    label: OpenCode Zen
+    kind: free
+    enabled: true
+    api_key_env: OPENCODE_ZEN_API_KEY
+    default_models:
+      fast: nemotron-3-ultra-free
+      strong: nemotron-3-ultra-free
+    capabilities:
+      supports_tool_use: true
+      supports_structured_output: true
+      supports_streaming: true
+      supports_batch: false
+      supports_vision: false
+    rate_limits:
+      requests_per_minute: 0
+      tokens_per_minute: 0
+    models:
+      - name: nemotron-3-ultra-free
+        aliases: [zen-free, zen-nemotron, nemotron-ultra-free]
+        input_price_per_1m_tokens: 0.0
+        output_price_per_1m_tokens: 0.0
+
 routing_profiles:
   local-first:
     description: Explicit local-only Ollama routing, zero paid spend.
@@ -124,6 +147,15 @@ routing_profiles:
     strong:
       provider: mistral
       model: mistral-small-latest
+
+  opencode-zen-free:
+    description: OpenCode Zen Nemotron Ultra trial/free routing with no paid fallback; non-sensitive data only.
+    fast:
+      provider: opencode-zen
+      model: nemotron-3-ultra-free
+    strong:
+      provider: opencode-zen
+      model: nemotron-3-ultra-free
 
   gracekelly-mixed:
     description: Mixed routing — Mistral API for fast tier (classify/transform/grade_docs/verify_facts/extract_claims/online_evaluators), GraceKelly browser for strong tier (final answer + suggest_questions). Reduces browser submits per case from 4-7 to ~3 while keeping full Self-RAG / Corrective RAG / auto-route intact. Also a valid production routing for single-user local deploys with both Mistral key and GraceKelly available.

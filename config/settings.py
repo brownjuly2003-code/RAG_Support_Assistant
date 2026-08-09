@@ -1315,7 +1315,7 @@ class Settings:
         active_profile = provider_registry.get_profile(self.llm_provider_profile)
         for target in (active_profile.fast, active_profile.strong):
             provider = provider_registry.get_provider(target.provider)
-            if provider is None or provider.kind != "paid":
+            if provider is None or provider.kind not in {"paid", "free"}:
                 continue
             raw_api_key = (os.getenv(provider.api_key_env or "", "") or "").strip()
             if provider.api_key_env and (
@@ -1327,7 +1327,7 @@ class Settings:
         if required_env_vars:
             missing = ", ".join(sorted(set(required_env_vars)))
             raise RuntimeError(
-                f"\nERROR: LLM provider profile '{self.llm_provider_profile}' requires paid provider credentials.\n"
+                f"\nERROR: LLM provider profile '{self.llm_provider_profile}' requires external provider credentials.\n"
                 f"       Missing env vars: {missing}\n"
                 "       Set the required keys in .env or switch to LLM_PROVIDER_PROFILE=local-first."
             )

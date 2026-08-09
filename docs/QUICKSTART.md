@@ -44,8 +44,13 @@ Open `.env` and fill in the required values. Minimal scenarios:
 | **External user: Mistral + remote embeddings (no HF download)** | See **Scenario A** below |
 | **Local-only Ollama** (repo default for owner) | Start Ollama and pull `qwen2.5:7b`; `LLM_PROVIDER_PROFILE=local-first` is implied |
 | **Direct Mistral (generation only)** | `MISTRAL_API_KEY=<your-key>` + `LLM_PROVIDER_PROFILE=external-mistral` (local embeddings/reranker still follow other defaults unless overridden) |
+| **OpenCode Zen trial/free** (non-sensitive test data only) | `OPENCODE_ZEN_API_KEY=<your-key>` + `LLM_PROVIDER_PROFILE=opencode-zen-free`; no paid-model fallback |
 | **GraceKelly primary** (owner/internal) | GraceKelly base URL + `LLM_PROVIDER_PROFILE=gracekelly-primary` |
 | **GraceKelly mixed routing** (owner/internal) | `MISTRAL_API_KEY=<your-key>` + `LLM_PROVIDER_PROFILE=gracekelly-mixed` + `GRACEKELLY_REQUEST_TIMEOUT_SEC=120` |
+
+`opencode-zen-free` uses OpenCode's temporary Nemotron free trial. OpenCode
+states that the endpoint is logged and must not receive personal or
+confidential data, so do not use this profile for production support traffic.
 
 Full list of variables — see `docs/CONFIGURATION.md` and `README.md`.
 

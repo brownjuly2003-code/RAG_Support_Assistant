@@ -36,6 +36,21 @@ def test_build_provider_runtime_resolves_local_first_profile() -> None:
     assert runtime.fast.model_name == "qwen2.5:7b"
 
 
+def test_build_provider_runtime_resolves_opencode_zen_free_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from llm.providers import build_provider_runtime
+
+    monkeypatch.setenv("OPENCODE_ZEN_API_KEY", "zen-test-key")
+
+    runtime = build_provider_runtime(settings=_settings("opencode-zen-free"))
+
+    assert runtime.profile_name == "opencode-zen-free"
+    assert runtime.fast.provider_id == "opencode-zen"
+    assert runtime.strong.provider_id == "opencode-zen"
+    assert runtime.fast.model_name == "nemotron-3-ultra-free"
+
+
 def test_provider_backed_llm_invoke_tracks_last_response() -> None:
     from llm.providers import LLMProvider, LLMResponse, ProviderBackedLLM
 

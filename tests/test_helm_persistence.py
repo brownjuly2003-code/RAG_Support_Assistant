@@ -112,6 +112,13 @@ def test_values_define_security_contexts() -> None:
     assert container.get("readOnlyRootFilesystem") is not True
 
 
+def test_helm_secret_supports_opencode_zen_api_key() -> None:
+    values = _load_values()
+    assert values["secrets"]["OPENCODE_ZEN_API_KEY"] == ""
+    secret_template = _read(TEMPLATES / "secret.yaml")
+    assert '"OPENCODE_ZEN_API_KEY"' in secret_template
+
+
 def test_helpers_define_claim_name_functions() -> None:
     helpers = _read(TEMPLATES / "_helpers.tpl")
     for name in (

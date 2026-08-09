@@ -15,7 +15,12 @@ def test_load_provider_registry_from_yaml() -> None:
     )
 
     assert registry.default_profile == "local-first"
-    assert set(registry.provider_ids()) == {"gracekelly", "mistral", "ollama"}
+    assert set(registry.provider_ids()) == {
+        "gracekelly",
+        "mistral",
+        "ollama",
+        "opencode-zen",
+    }
     assert registry.get_profile("gracekelly-primary").strong.provider == "gracekelly"
     assert registry.get_provider("ollama").default_models.fast == "qwen2.5:7b"
     assert registry.get_provider("mistral").default_models.fast == "ministral-3b-latest"
@@ -34,6 +39,28 @@ def test_provider_registry_resolves_model_alias_and_pricing() -> None:
     assert resolved.model == "sonar-2"
     assert resolved.input_price_per_1m_tokens == 0.0
     assert resolved.output_price_per_1m_tokens == 0.0
+
+
+def test_opencode_zen_profile_is_free_only_without_fallback() -> None:
+    from config.provider_schema import load_provider_registry
+
+    registry_path = Path(__file__).resolve().parent.parent / "config" / "providers.yml"
+    registry = load_provider_registry(registry_path)
+    provider = registry.get_provider("opencode-zen")
+    profile = registry.get_profile("opencode-zen-free")
+    raw = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+    raw_profile = raw["routing_profiles"]["opencode-zen-free"]
+
+    assert provider is not None
+    assert provider.kind == "free"
+    assert provider.api_key_env == "OPENCODE_ZEN_API_KEY"
+    assert provider.models
+    assert all(model.name.endswith("-free") for model in provider.models)
+    assert all(model.input_price_per_1m_tokens == 0.0 for model in provider.models)
+    assert all(model.output_price_per_1m_tokens == 0.0 for model in provider.models)
+    assert profile.fast.model == "nemotron-3-ultra-free"
+    assert profile.strong.model == "nemotron-3-ultra-free"
+    assert "fallback" not in raw_profile
 
 
 def test_default_gracekelly_profile_uses_current_browser_model_contract() -> None:
