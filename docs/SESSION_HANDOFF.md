@@ -1,7 +1,8 @@
 # Session handoff
 
-**Обновлено:** 2026-08-09 — **Update-124** (docs-only full transparency after
-**5.7** @ `13bf255`; latest prior docs Update-123 `33949b1`).
+**Обновлено:** 2026-08-09 — **Update-125** (docs-only full transparency after
+OpenCode Zen provider integration @ `faaa815`; latest prior docs Update-124
+`336b08e`).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -12,11 +13,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-124**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-125**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-124; dirty
+**Не использовать:** старые `✅ START HERE` ниже Update-125; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -28,27 +29,29 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **implementation** | `13bf255` — **5.7** canonical §5 metric producer |
-| Prior implementations (recent) | `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** · `c707c46` **6.7** · `47e255a` **7.7** |
-| Latest **docs before this Update** | `33949b1` — Update-123 |
-| This Update-124 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | last observed `master...origin/master [ahead 220]` before this docs commit — **refresh mandatory** |
+| Latest **implementation** | `faaa815` — OpenCode Zen trial/free provider integration |
+| Prior implementations (recent) | `13bf255` **5.7** · `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** |
+| Latest **docs before this Update** | `336b08e` — Update-124 |
+| This Update-125 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | last observed `master...origin/master [ahead 222]` before this docs commit — **refresh mandatory** |
 | Active writer / WIP | **none** |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** |
+| Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | **No ungated local default**; choose opt-in live ×3 evidence, human sample, or Astro7/parity decision |
+| Next ordered | **No ungated local plan default**; choose opt-in live ×3 evidence, human sample, or Astro7/parity decision |
 | Gates | **no** push / deploy / live multi-service / live provider·quality execute / migrate 019–023 without **explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**This Update-124 is docs-only:** no code/test/workflow/plan-checkbox change;
+**This Update-125 is docs-only:** no code/test/workflow/plan-checkbox change;
 project tests are not re-run in this docs turn. Implementation state remains
-`13bf255`; latest prior docs remain `33949b1`.
+`faaa815`; latest prior docs remain `336b08e`.
 
 **Last known verification (not re-run this docs turn):**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **OpenCode Zen** | 155 provider/settings/workflow/Helm tests; Ruff + scoped Mypy + Helm render + diff clean |
 | **5.7** | independent regression + quality band **83 passed**; Ruff + scoped diff clean |
 | **5.6** | Grok focused **25 passed**; independent quality + provider + workflow gate **46 passed**; Ruff and scoped diff clean |
 | **5.5** | 33 passed (quality-metrics + provider-gate + workflows); readiness `SKIPPED_NO_OPT_IN`; Ruff clean |
@@ -90,7 +93,7 @@ or quality execute **not** run / **not** claimed.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-124 in AGENT_STATE.md + this file §1–§12
+5. Read ONLY top Update-125 in AGENT_STATE.md + this file §1–§12
 6. Default work: ONE of next picks below. Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
@@ -122,9 +125,19 @@ Chroma, live provider/quality execute with secrets, `alembic upgrade`
 
 Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 
+**Off-plan capability (does not change the table):** `faaa815` adds explicit
+`opencode-zen-free` routing for non-sensitive trial data. It produced no live
+evidence and closes no plan DoD.
+
 ---
 
 ## 4. Implementation ledgers (impl SHAs only)
+
+### Provider capability outside plan order
+
+| Slice | SHA | Surface |
+|-------|-----|---------|
+| OpenCode Zen trial/free | `faaa815` | fixed free model/profile, endpoint identity, fail-fast key, live-gate/workflow/Helm plumbing, safety docs |
 
 ### §5 grounding / quality (recent focus)
 
@@ -189,6 +202,20 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 
 ## 5. Contracts (recent complete slices — read before touching)
 
+### OpenCode Zen @ `faaa815` (off-plan capability)
+
+- `opencode-zen-free` fixes both routing lanes to
+  `nemotron-3-ultra-free`; the runtime rejects non-`-free` canonical IDs and
+  the profile declares no fallback.
+- OpenAI-compatible requests use
+  `https://opencode.ai/zen/v1/chat/completions` with server-side
+  `OPENCODE_ZEN_API_KEY`; missing/placeholders fail during startup validation.
+- `.env.example`, live-gate detectors, opt-in workflows, and optional Helm
+  Secret rendering carry the key name only; no credential value is checked in.
+- OpenCode documents the endpoint as temporary/logged trial service. Use only
+  non-sensitive test data; availability/pricing/terms are external and mutable.
+- No live call, quality result, production claim, or plan checkbox followed.
+
 ### 5.7 @ `13bf255`
 
 - `regression_eval` emits all seven canonical §5 metrics from candidate
@@ -213,9 +240,10 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
   copied into the gate report.
 - Valid rows use the existing aggregate + DoD evaluator and produce
   `DOD_PASS` / `DOD_FAIL`; readiness/command remain non-live and never pass.
-- **Current limitation:** `scripts/regression_eval.py` sidecars do not yet emit
-  all seven metrics, so current real execute fails closed. Never substitute
-  `quality_score`, `factuality_score`, `candidate_pass_rate`, or counts.
+- **Historical 5.6 limitation, closed by 5.7:** sidecars did not yet emit all
+  seven metrics. `13bf255` added that producer; real execute still needs
+  opt-in evidence. Never substitute `quality_score`, `factuality_score`,
+  `candidate_pass_rate`, or counts.
 - Files: `scripts/live_quality_metrics_gate.py`,
   `tests/test_live_quality_metrics_gate.py`.
 
@@ -298,8 +326,9 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 ## 7. Next named candidate (not started)
 
-There is **no ungated default local-only candidate** after 5.7. Choose one only
-with the required authority:
+There is **no ungated default local-only plan candidate** after 5.7. The
+off-plan Zen integration is complete locally. Choose one only with the required
+authority:
 
 1. Run provider/quality evidence ×3 with secrets + explicit opt-in +
    `--execute`; retain exact sidecars and the aggregate report.
@@ -334,6 +363,12 @@ untracked pointer; never routing authority),
 `rag-remediation-plan-2026-08-03.md` (active plan — DoD source, no casual
 checkbox edits), architecture HTML, etc.
 
+Zen verification created
+`.pytest_tmp_codex_opencode_{baseline,red,green,gate}/`; cleanup was blocked by
+execution policy. They are not WIP and must never be staged; removal is safe
+only when local policy permits. Docs-verification basetemps self-cleaned and
+are absent.
+
 ---
 
 ## 9. Cycle budget (workspace rule)
@@ -352,7 +387,7 @@ checkbox edits), architecture HTML, etc.
 | Streaming parity | `STREAMING_RAG_PARITY` | **false** |
 | Live provider gate | `RAG_LIVE_PROVIDER_GATE` | off |
 | Live quality metrics gate | `RAG_LIVE_QUALITY_METRICS_GATE` | off |
-| Provider keys (presence only) | `MISTRAL_API_KEY`, `GRACEKELLY_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` | unset |
+| Provider keys (presence only) | `MISTRAL_API_KEY`, `GRACEKELLY_API_KEY`, `OPENCODE_ZEN_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` | unset |
 
 Never log secret values.
 
@@ -371,7 +406,9 @@ Never log secret values.
 | 7 | **5.6** | `fb72dd2` | exact child report → §5 DoD wire |
 | 8 | docs | `33949b1` | Update-123 full transparency after 5.6 |
 | 9 | **5.7** | `13bf255` | canonical metric producer + provenance |
-| 10 | docs | **this** | Update-124 full transparency after 5.7 |
+| 10 | docs | `336b08e` | Update-124 full transparency after 5.7 |
+| 11 | provider | `faaa815` | OpenCode Zen trial/free integration |
+| 12 | docs | **this** | Update-125 full transparency after Zen integration |
 
 ---
 
@@ -384,6 +421,7 @@ Never log secret values.
 | Local quality path deep? | **Yes** (4.1–4.8, 5.1–5.7, 6.1–6.7, 7.1–7.7, 8.x, DEP-01) |
 | Graph node SSE? | **Yes local** (4.7) |
 | Provider token stream? | **Yes local** (4.8; parity on + stream-capable LLM) |
+| OpenCode Zen profile? | **Yes local** (`faaa815`); trial/non-sensitive only; no live evidence |
 | Relevance ≠ quality/100? | **Yes local** (5.4) |
 | Child report → §5 DoD wire? | **Yes local** (5.6; exact sidecar, fail-closed) |
 | Current child producer emits all 7 metrics? | **Yes local** (5.7; complete/provenanced or release fails closed) |

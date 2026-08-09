@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-124 after 5.7 canonical metric producer)
+**Date:** 2026-08-09 (Update-125 after OpenCode Zen provider integration)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-124**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-125**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -32,6 +32,20 @@
 **Project / production release: NOT claimed.**
 
 Not claimable until §1 live evidence + §5 live quality metrics + §6–8 residual + §10.
+
+---
+
+## Off-plan provider capability (no closure credit)
+
+`faaa815` adds the explicit `opencode-zen-free` trial profile, fixed to
+`nemotron-3-ultra-free` with no declared fallback. Local startup/key,
+OpenAI-compatible endpoint, live-gate/workflow, Helm Secret, documentation,
+and regression contracts are verified.
+
+This changes **none** of the §1–§10 rows above: no Zen or other live provider
+call ran, no quality evidence was collected, and no production claim is made.
+The provider documents the free endpoint as temporary/logged trial service;
+use only non-sensitive test data and recheck external terms before enabling it.
 
 ---
 
@@ -243,7 +257,8 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-There is **no ungated default local-only candidate** after 5.7.
+There is **no ungated default local-only plan candidate** after 5.7. The
+off-plan Zen integration is complete locally and is not a new plan step.
 
 1. Run live provider / quality evidence ×3 (explicit opt-in + secrets +
    `--execute`) and retain exact sidecars.
@@ -255,10 +270,11 @@ There is **no ungated default local-only candidate** after 5.7.
 
 ---
 
-## Last-known verification snapshot (5.7 turn)
+## Last-known verification snapshot (Update-125)
 
 | Band | Last known |
 |------|------------|
+| **OpenCode Zen** | **155 passed**; Ruff, scoped Mypy, Helm Secret render, scoped diff clean; no live call |
 | **5.7** | independent regression/quality band **83 passed**; Ruff + scoped diff clean |
 | **5.6** | Grok focused 25 passed; independent quality/provider/workflow **46 passed**; Ruff + scoped diff clean |
 | **5.5** | 33 passed (quality-metrics + provider-gate + workflows) |

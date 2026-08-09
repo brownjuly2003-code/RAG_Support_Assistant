@@ -1,5 +1,121 @@
 # Agent State
 
+## 2026-08-09 Update-125 — OpenCode Zen trial/free provider ✅ START HERE
+
+> **Routing authority:** Update-125 supersedes Update-124 **only for
+> start-point routing**. All older Update blocks below, including headings
+> that contain `✅ START HERE`, are archival. **Only this first/topmost block
+> is authoritative.** Actual Git wins over every embedded SHA or branch count.
+>
+> **Documentation this turn:** records already committed provider integration
+> `faaa815`. This Update changes status/handoff documentation only. It makes no
+> provider call, migration, push, deploy, plan-checkbox, production, or release
+> claim.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `faaa815`
+>   (`feat(llm): add OpenCode Zen free provider`)
+> - Prior implementation: `13bf255` **5.7** · `fb72dd2` **5.6** ·
+>   `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8**
+> - Latest docs before this Update: `336b08e` **Update-124**
+> - This Update-125 docs commit SHA is unknown inside its own content; use
+>   `git log -3 --oneline` next session.
+> - Branch observed before this docs commit:
+>   `master...origin/master [ahead 222]`; refresh mandatory.
+> - Migrations on disk (not applied): **019–023**
+>
+> **Active writer / implementation WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | OpenCode Zen `opencode-zen-free` profile | **done local** @ `faaa815` |
+> | Zen endpoint/key/startup/Helm/workflow plumbing | **done local** |
+> | Paid-model fallback in that profile | **none by contract** |
+> | Real Zen/provider call or quality evidence | **NOT run / NOT claimed** |
+> | Existing §2–§8 local ledgers | unchanged from Update-124 |
+> | Full plan / production | **NOT complete / NOT claimed** |
+>
+> The Zen integration is an **off-plan provider capability**. It closes no
+> checkbox or live DoD in `rag-remediation-plan-2026-08-03.md`.
+>
+> ---
+>
+> ### OpenCode Zen contract @ `faaa815`
+>
+> - Registry/profile: `opencode-zen` + `opencode-zen-free`, both fast and
+>   strong lanes fixed to `nemotron-3-ultra-free`; prices are `0.0`; no
+>   fallback is declared.
+> - Runtime: the existing OpenAI-compatible provider supports a configurable
+>   base URL/provider identity; Zen uses
+>   `https://opencode.ai/zen/v1/chat/completions` and rejects canonical model
+>   IDs that do not end in `-free`.
+> - Credentials: `OPENCODE_ZEN_API_KEY` is server-side only; missing or
+>   placeholder values fail during `Settings.validate()` and provider
+>   construction. No secret value is stored in docs, config, tests, or output.
+> - Plumbing: `.env.example`, both live-gate secret detectors, both opt-in
+>   GitHub workflows, and the optional Helm Secret path include the new key.
+> - Safety boundary: OpenCode describes this model as a temporary, logged
+>   trial. The profile is for **non-sensitive test data only**; do not send
+>   personal, confidential, or production support traffic. External pricing,
+>   availability, and terms remain mutable and must be rechecked before use.
+>
+> **Files:** `config/providers.yml`, `config/settings.py`,
+> `llm/providers/mistral.py`, `llm/providers/runtime.py`, `.env.example`,
+> `.github/workflows/live-*-gate.yml`, `deploy/helm/{values.yaml,templates/secret.yaml}`,
+> `scripts/live_*_gate.py`, `docs/{CONFIGURATION,QUICKSTART}.md`, and focused
+> provider/settings/workflow/Helm tests.
+>
+> ---
+>
+> ### Known verification (Zen turn)
+>
+> | Gate | Result |
+> |------|--------|
+> | test-first gap proof | expected **8 failed**, **62 passed** |
+> | focused correction | **70 passed** |
+> | independent provider/settings/workflow/Helm band | **155 passed**, 2 dependency warnings |
+> | Ruff on changed Python/test paths | clean |
+> | scoped Mypy (`--follow-imports=skip`) | clean, 5 source files |
+> | Helm render with optional Zen key | key rendered in Secret |
+> | scoped/staged `git diff --check` | clean |
+>
+> Full suite, real provider calls, live multi-service, migration, push, and
+> deploy were **not** run and are **not** claimed.
+>
+> ---
+>
+> ### Open boundaries / next routing
+>
+> - There is still **no ungated default local-only plan candidate** after 5.7.
+> - Ordered choices remain: explicit opt-in live ×3 evidence; real
+>   dual-annotator sample; Astro 7 / parity-default product decision.
+> - `opencode-zen-free` is not production evidence and must not be used with
+>   sensitive support data. A configured key proves readiness only, not a
+>   successful or policy-safe live run.
+> - Do not re-select 2.x–3.x, 4.1–4.8, 5.1–5.7, 6.1–6.7, 7.1–7.7, 8.1–8.5,
+>   or DEP-01.
+>
+> ### Protected dirty / untracked
+>
+> - Existing dirty tracked, unchanged by Zen/docs work: `BACKLOG.md`,
+>   `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`.
+> - Existing protected untracked artifacts remain untouched, including
+>   `.grok-prompts/`, `_NEXT_SESSION.md` (stale, not routing authority), active
+>   plan/presentation/architecture files, and prior pytest temp directories.
+> - `.pytest_tmp_codex_opencode_{baseline,red,green,gate}/` were generated by
+>   Zen verification and are safe to remove if local policy permits; cleanup
+>   was blocked by the execution policy. Never stage them. Docs-verification
+>   basetemps self-cleaned and are absent.
+>
+> ### External gates (explicit opt-in only)
+>
+> push · deploy · live multi-service · live provider/quality execute ·
+> alembic 019–023 · production claims
+
 ## 2026-08-09 Update-124 — 5.7 canonical metric producer ✅ START HERE
 
 > **Routing authority:** Update-124 supersedes Update-123 **only for
