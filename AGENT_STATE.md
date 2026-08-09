@@ -1,5 +1,222 @@
 # Agent State
 
+## 2026-08-09 Update-129 — reconciled next-session handoff ✅ START HERE
+
+> **Read this block first.** Actual Git overrides every embedded SHA, branch
+> count, process ID, and worktree statement. Older Update blocks are archival
+> evidence and may describe WIP that Update-129 has already closed.
+>
+> **RAG repository truth:** latest committed implementation is `99c6be5`
+> (`feat(smoke): add lightweight GraceKelly RAG check`). The repository base
+> was observed at `master...origin/master [ahead 224]` before the Update-129
+> docs commit; resolve current `HEAD` and branch count through Actual Git. The
+> implementation commit contains exactly
+> `scripts/lightweight_gracekelly_smoke.py` and
+> `tests/test_lightweight_gracekelly_smoke.py`; there is no active smoke WIP
+> and no staged change.
+>
+> **Verification evidence:** the final non-paid focused gate passed **16 tests
+> in 4.95 s**, scoped Ruff passed, and scoped Mypy reported no issues in the
+> two smoke files. Pytest required an explicit writable `.tmp` basetemp because
+> the account cannot access `Temp\pytest-of-uedom`. Do not treat that prior
+> setup error as a product failure or raw-retry the inaccessible temp path.
+>
+> **Live acceptance already consumed:** exactly one successful follow-up smoke
+> selected `claude-sonnet-5`, returned source `returns_policy.md`, and stored a
+> `PASS` row timestamped `2026-08-09T15:03:21.124037+00:00` in
+> `.tmp/lightweight-gracekelly-smoke.sqlite3`. No paid request was made during
+> the commit or Update-129 docs turns. Do not infer authorization for another
+> paid call and do not substitute a fallback model.
+>
+> **GraceKelly boundary (read-only refresh):** `D:\GraceKelly` is at local
+> commit `886b277` (`main...origin/main [ahead 1]`) with unrelated untracked
+> `issues.md`; nothing was pushed. Port `8011` is currently owned by PID 3048
+> running the pre-existing uvicorn command. That process was not restarted
+> after `886b277`, so do not claim it is serving the fix. The temporary updated
+> listener on `8012` was stopped.
+>
+> **Dirty-file boundary:** preserve unrelated tracked changes in `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`, plus unrelated
+> untracked artifacts. `AGENT_STATE.md` and `docs/SESSION_HANDOFF.md` are the
+> only owned paths in this docs-only reconciliation slice.
+>
+> **Next-session decision:** first run `git status --short --branch` and
+> `git log -12 --oneline`, then read this block and
+> `docs/SESSION_HANDOFF.md`. There is no active implementation WIP and no
+> ungated default local plan item after 5.7. Await an explicit owner priority
+> for the remaining paid/live, human-sample, migration, or product-decision
+> gates; do not manufacture a new slice.
+
+## 2026-08-09 Update-128 — lightweight GraceKelly RAG smoke committed
+
+> **Routing authority:** Update-128 supersedes Update-127 for start-point
+> routing. Actual Git and the current worktree remain authoritative.
+>
+> **RAG commit:** `99c6be5` (`feat(smoke): add lightweight GraceKelly RAG
+> check`) adds `scripts/lightweight_gracekelly_smoke.py` and
+> `tests/test_lightweight_gracekelly_smoke.py`. The local branch was observed
+> at `master...origin/master [ahead 224]` immediately after the commit; no push
+> was performed.
+>
+> **Fresh non-paid gate:** focused smoke + provider pytest **16 passed** in
+> 4.95 s using an explicit writable `.tmp` basetemp; scoped Ruff passed and
+> scoped Mypy reported no issues in the two files. The earlier system-temp
+> failure was environmental (`Temp\\pytest-of-uedom` access denied), not a test
+> assertion failure.
+>
+> **Live evidence unchanged:** no paid request was repeated. The prior accepted
+> run selected exactly `claude-sonnet-5`, returned source
+> `returns_policy.md`, and persisted its `PASS` row in
+> `.tmp/lightweight-gracekelly-smoke.sqlite3`.
+>
+> **External dependency:** `D:\GraceKelly` commit `886b277` remains local
+> `main...origin/main [ahead 1]` and unpushed. The temporary updated listener
+> was stopped; the existing listener on `8011` is still the old process and
+> must not be described as running `886b277`.
+>
+> **Current state:** the two smoke files are committed and no longer active
+> WIP. Existing unrelated/protected dirty files remain untouched. On the next
+> user turn, refresh Actual Git and select one new documented atomic item; do
+> not repeat the paid smoke without new evidence.
+
+## 2026-08-09 Update-127 — GraceKelly navigation wait fixed; live Sonnet 5 smoke PASS
+
+> **Routing authority:** Update-127 supersedes Update-126 for start-point
+> routing. Actual Git and the current worktree remain authoritative.
+>
+> **GraceKelly root cause and fix:** Playwright completed the forced click on
+> the Perplexity contenteditable prompt, then timed out waiting for scheduled
+> navigation. `D:\GraceKelly` now focuses the editor with `Locator.focus()`
+> instead. The focused regression was red before the change, green after it,
+> and its R5 kill-check failed when the focus line was removed.
+>
+> **External repository commit:** `D:\GraceKelly` commit `886b277`
+> (`fix(browser): avoid prompt focus navigation wait`), local `main...origin/main
+> [ahead 1]`; not pushed. Verification: full R1 **2696 passed / 14 skipped /
+> 14 subtests**, full coverage R2 **94.67%** with the same counts, full Ruff
+> clean, scoped Mypy clean. Full Mypy still reports one unrelated pre-existing
+> `tests/test_capture_perplexity_recon_tool.py` attr-defined error; that file
+> was not modified.
+>
+> **Live acceptance:** a temporary updated GraceKelly listener on `127.0.0.1:8012`
+> executed exactly one request with `claude-sonnet-5`; the RAG smoke returned
+> `PASS`, source `returns_policy.md`, and persisted a `PASS` row at
+> `2026-08-09T15:03:21.124037+00:00` in
+> `.tmp/lightweight-gracekelly-smoke.sqlite3`. The temporary listener was
+> stopped. The existing listener on `8011` remains the old process because
+> local policy blocked its termination; do not claim it has reloaded `886b277`.
+>
+> **Current RAG WIP:** `scripts/lightweight_gracekelly_smoke.py` and
+> `tests/test_lightweight_gracekelly_smoke.py` remain untracked/uncommitted but
+> now have local and live acceptance. Next slice: inspect/stage only those two
+> paths, run proportional non-paid verification, commit them, and update this
+> handoff. Do **not** repeat the paid smoke without new evidence.
+
+## 2026-08-09 Update-126 — lightweight GraceKelly + Sonnet 5 WIP ⚠ START HERE
+
+> **Routing authority:** Update-126 supersedes Update-125 only for start-point
+> routing. Older `✅ START HERE` blocks are archival. Actual Git and the current
+> worktree win over every embedded SHA or status statement.
+>
+> **Documentation this turn:** records the current uncommitted lightweight RAG
+> smoke honestly. It changes status/handoff documentation only. It makes no
+> provider call, project-test claim, migration, push, deploy, plan-checkbox,
+> production, or release claim.
+>
+> **Actual Git observed before this docs edit:**
+> - `HEAD`: `ddb721c` (`docs: record OpenCode Zen handoff (Update-125)`)
+> - Latest committed implementation remains `faaa815` (OpenCode Zen provider).
+> - Branch: `master...origin/master [ahead 223]`; refresh next session.
+> - Current lightweight WIP is **untracked and uncommitted**:
+>   `scripts/lightweight_gracekelly_smoke.py` and
+>   `tests/test_lightweight_gracekelly_smoke.py`.
+> - Active writer: **none**.
+>
+> ---
+>
+> ### Owner runtime/model contract (mandatory)
+>
+> - **Do not start or use Docker or WSL for this path.** The owner reported that
+>   WSL + Docker paralyzes the workstation.
+> - Keep the run lightweight: existing local Chroma data + one native
+>   GraceKelly request + SQLite result storage. Do not add PostgreSQL, Redis,
+>   Celery, Ollama, or other heavy services to this smoke.
+> - Paid generation goes through **GraceKelly** and must select exactly
+>   **`claude-sonnet-5`**. Do not silently substitute `sonar-2`, Ollama, or any
+>   fallback model.
+> - The existing GraceKelly repository is an external orchestrator boundary for
+>   this RAG slice. Do not edit `D:\GraceKelly` unless the owner separately
+>   authorizes GraceKelly work.
+> - The owner's paid-provider authorization is scoped to this lightweight
+>   GraceKelly smoke, not to unrelated live ×3 quality/provider benchmarks.
+>
+> ### Current WIP contract
+>
+> - The script reads the existing persistent Chroma collection
+>   `rag_docs_default`, ranks non-empty lexical matches, sends exactly one
+>   generation request, and writes a successful result to
+>   `.tmp/lightweight-gracekelly-smoke.sqlite3`.
+> - SQLite is the lightweight result store. A failed provider attempt must not
+>   create a `PASS` row.
+> - CLI default is now `--model claude-sonnet-5`; there is no automatic model
+>   fallback in the smoke path.
+> - The default question is `Какой срок возврата товара?`; the local collection
+>   previously contained six chunks including matching return-policy context.
+>
+> ### Verification truth (do not overclaim)
+>
+> | Evidence | Result |
+> |----------|--------|
+> | Model-default regression before fix | expected red: got `sonar-2`, wanted `claude-sonnet-5` |
+> | Four non-subprocess smoke tests | **4 passed** in 0.79 s |
+> | Direct CLI + Chroma subprocess test | **1 passed** in 5.86 s |
+> | Focused smoke + provider gate | **16 passed** in 6.19 s; slowest test 5.24 s |
+> | Scoped Ruff | **passed** for the two WIP files |
+> | Scoped Mypy | **passed** for the two WIP files |
+> | Provider-failure persistence regression | added; failed generation creates no SQLite result DB / `PASS` row |
+> | Local commit | **none**; live end-to-end acceptance is not green |
+>
+> The prior timeouts did not reproduce after the prescribed isolation. Both
+> segments and the instrumented focused aggregate passed, so there is no
+> evidence-backed local hang fix to make. Do not invent one or repeat the same
+> gate without a code/environment change.
+>
+> ### Live GraceKelly evidence and blocker
+>
+> - The one real request did select **Claude Sonnet 5**. GraceKelly task
+>   `526243a3-84c5-4150-913e-70a2d21a2d29` later reported `status=failed`.
+> - Failure was inside GraceKelly's Playwright browser adapter:
+>   `Locator.click: Timeout 5000ms exceeded` while clicking the Ask input and
+>   waiting for scheduled navigation. Observed task duration was about 144 s;
+>   the RAG client had already timed out at 120 s.
+> - This is not evidence of an SQLite, retrieval, or model-selection failure.
+>   It is also **not** a successful end-to-end smoke. No successful SQLite row
+>   was claimed or persisted from that attempt.
+> - GraceKelly health at `http://127.0.0.1:8011` was last observed `ok` in the
+>   continuation session. Detailed health was `degraded`: the reported OpenAI
+>   and Anthropic adapters were both `no_key`; it did not prove that the native
+>   browser adapter state changed. Do not trust stale process IDs and do not
+>   start Docker/WSL.
+> - Do not repeat the identical paid call until there is a narrowed hypothesis
+>   for the GraceKelly click/navigation failure or external confirmation that
+>   the adapter state changed.
+> - No second paid request was made in this continuation. Live acceptance stays
+>   blocked on the external GraceKelly browser adapter.
+>
+> ### Next session — one safe atomic slice
+>
+> 1. Refresh `git status --short --branch`; preserve the four unrelated dirty
+>    tracked files and all unrelated untracked artifacts.
+> 2. Preserve the locally green two-file WIP and this Update-126 continuation.
+> 3. Do not repeat the local gate without a code/environment change.
+> 4. Run a live Sonnet 5 smoke only after GraceKelly supplies a new,
+>    evidence-backed browser-adapter path or confirms that adapter state changed.
+> 5. Never fall back to another model. Commit only after live acceptance is
+>    honestly green; stage the two WIP files by explicit pathspec.
+>
+> **Protected dirty tracked files:** `BACKLOG.md`, `README.md`,
+> `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`. Do not edit or stage them.
+
 ## 2026-08-09 Update-125 — OpenCode Zen trial/free provider ✅ START HERE
 
 > **Routing authority:** Update-125 supersedes Update-124 **only for

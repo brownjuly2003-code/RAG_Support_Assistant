@@ -1,8 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-09 — **Update-125** (docs-only full transparency after
-OpenCode Zen provider integration @ `faaa815`; latest prior docs Update-124
-`336b08e`).
+**Обновлено:** 2026-08-09 — **Update-129** (next-session state reconciled after
+lightweight GraceKelly RAG smoke commit `99c6be5`).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -13,11 +12,11 @@ OpenCode Zen provider integration @ `faaa815`; latest prior docs Update-124
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-125**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-129**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-125; dirty
+**Не использовать:** старые `✅ START HERE` ниже Update-129; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -29,28 +28,30 @@ OpenCode Zen provider integration @ `faaa815`; latest prior docs Update-124
 
 | Факт | Значение |
 |------|----------|
-| Latest **implementation** | `faaa815` — OpenCode Zen trial/free provider integration |
-| Prior implementations (recent) | `13bf255` **5.7** · `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** |
-| Latest **docs before this Update** | `336b08e` — Update-124 |
-| This Update-125 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | last observed `master...origin/master [ahead 222]` before this docs commit — **refresh mandatory** |
-| Active writer / WIP | **none** |
+| Latest **committed implementation** | `99c6be5` — lightweight GraceKelly RAG smoke + regression tests |
+| Prior implementations (recent) | `faaa815` OpenCode Zen · `13bf255` **5.7** · `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** |
+| Latest **committed docs before this Update** | `ddb721c` — Update-125 |
+| This Update-129 docs SHA | Commit containing this file if present; otherwise owned docs WIP — resolve through Actual Git |
+| Branch advisory | base observed `master...origin/master [ahead 224]` at `99c6be5` before the Update-129 docs commit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; lightweight smoke files are committed; no smoke WIP remains |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | **No ungated local plan default**; choose opt-in live ×3 evidence, human sample, or Astro7/parity decision |
-| Gates | **no** push / deploy / live multi-service / live provider·quality execute / migrate 019–023 without **explicit opt-in** |
+| Next ordered | No active implementation WIP and no ungated default after 5.7; await explicit owner priority |
+| Gates | **no Docker/WSL**; no push / deploy / live multi-service / unrelated live provider·quality execute / migrate 019–023 without **explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**This Update-125 is docs-only:** no code/test/workflow/plan-checkbox change;
-project tests are not re-run in this docs turn. Implementation state remains
-`faaa815`; latest prior docs remain `336b08e`.
+**Update-129 is docs-only:** it reconciles stale lower sections with
+`99c6be5`, the successful live smoke, and the current external GraceKelly
+state. It changes no code, test, workflow, migration, or plan checkbox; it
+makes no paid call and performs no push or deploy.
 
 **Last known verification (not re-run this docs turn):**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **Lightweight GraceKelly/Sonnet 5 smoke** | local **16 passed** + Ruff/Mypy clean; live `claude-sonnet-5` smoke **PASS**; SQLite row verified |
 | **OpenCode Zen** | 155 provider/settings/workflow/Helm tests; Ruff + scoped Mypy + Helm render + diff clean |
 | **5.7** | independent regression + quality band **83 passed**; Ruff + scoped diff clean |
 | **5.6** | Grok focused **25 passed**; independent quality + provider + workflow gate **46 passed**; Ruff and scoped diff clean |
@@ -66,6 +67,57 @@ project tests are not re-run in this docs turn. Implementation state remains
 
 Full suite / live multi-service / migrate / push / deploy / live provider
 or quality execute **not** run / **not** claimed.
+
+### 1A. Lightweight GraceKelly + SQLite smoke
+
+**Owner contract:** use native GraceKelly paid access with exactly
+`claude-sonnet-5`. Do not use or start Docker/WSL, and do not silently fall
+back to `sonar-2`, Ollama, or another model. Keep this path independent of
+PostgreSQL, Redis, Celery, and the heavy multi-service stack.
+
+**Committed in `99c6be5`:**
+
+- `scripts/lightweight_gracekelly_smoke.py`
+- `tests/test_lightweight_gracekelly_smoke.py`
+
+The script reads the existing Chroma collection `rag_docs_default`, performs
+lightweight lexical ranking, makes one GraceKelly generation request, and
+stores only a successful result in
+`.tmp/lightweight-gracekelly-smoke.sqlite3`. The CLI default is
+`claude-sonnet-5`; a provider failure must not create a `PASS` row.
+
+**Verification truth:**
+
+- The model-default test first failed because the code still selected
+  `sonar-2`, then passed after restoring `claude-sonnet-5`.
+- The four non-subprocess tests passed in 0.79 s; the direct CLI + Chroma test
+  passed separately in 5.86 s.
+- The fresh focused smoke + provider gate passed **16 tests** in 4.95 s using
+  an explicit writable `.tmp` basetemp; the slowest test was the direct CLI
+  test at 4.36 s. The preceding failure was an access-denied error for the
+  system pytest temp directory, not a product assertion failure.
+- Scoped Ruff passed; scoped Mypy reported no issues in the two committed files.
+- A regression proves a provider exception creates no SQLite result DB or
+  `PASS` row. The implementation and tests are committed as `99c6be5`.
+
+**Live evidence:** the historical task
+`526243a3-84c5-4150-913e-70a2d21a2d29` exposed Playwright's post-click
+navigation wait. GraceKelly commit `886b277` replaced that editor click with
+`Locator.focus()`. One subsequent request through a temporary updated listener
+selected exactly `claude-sonnet-5` and returned `PASS` with source
+`returns_policy.md`. SQLite contains the verified successful row timestamped
+`2026-08-09T15:03:21.124037+00:00`.
+
+`D:\GraceKelly` remains an external orchestrator boundary. A read-only
+Update-129 refresh found commit `886b277`, `main...origin/main [ahead 1]`, and
+unrelated untracked `issues.md`; nothing was pushed. The temporary listener
+was stopped. Port `8011` is owned by PID 3048 running the pre-existing uvicorn
+command, which was not restarted after `886b277`; do not describe it as
+serving the fix.
+
+**Next slice:** none is selected. The lightweight smoke is committed and live
+acceptance is already green. Await an explicit owner priority for remaining
+gated work; do not repeat the paid request without new authorization/evidence.
 
 ### Dataset snapshot (7.7)
 
@@ -93,15 +145,17 @@ or quality execute **not** run / **not** claimed.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-125 in AGENT_STATE.md + this file §1–§12
-6. Default work: ONE of next picks below. Announce: slice 1/1
-7. Tests-first → proportional gate → local commit only (no push)
+5. Read ONLY top Update-129 in AGENT_STATE.md + this file §1–§12
+6. Confirm there is no active implementation WIP; never reopen the closed smoke
+7. No ungated default remains: wait for an explicit owner priority
 8. Optional handoff refresh; STOP after one slice
 ```
 
-**Not authorized without opt-in:** push, deploy, live PostgreSQL/Redis/Celery/
-Chroma, live provider/quality execute with secrets, `alembic upgrade`
-(incl. **019–023**), destructive Git, production claims, bulk plan checkbox edits.
+**Not authorized without opt-in:** push, deploy, live PostgreSQL/Redis/Celery,
+unrelated live provider/quality execute with secrets, `alembic upgrade`
+(incl. **019–023**), destructive Git, production claims, bulk plan checkbox
+edits. The authorization for the recorded one-call GraceKelly/Sonnet 5 smoke
+has been consumed; do not infer permission for another paid call.
 
 ---
 
@@ -129,6 +183,10 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 `opencode-zen-free` routing for non-sensitive trial data. It produced no live
 evidence and closes no plan DoD.
 
+`99c6be5` adds a separate lightweight operational smoke for existing Chroma +
+native GraceKelly + SQLite. Its one-call live acceptance does not substitute
+for the formal §5 quality ×3 or §7.6 provider-gate evidence.
+
 ---
 
 ## 4. Implementation ledgers (impl SHAs only)
@@ -138,6 +196,7 @@ evidence and closes no plan DoD.
 | Slice | SHA | Surface |
 |-------|-----|---------|
 | OpenCode Zen trial/free | `faaa815` | fixed free model/profile, endpoint identity, fail-fast key, live-gate/workflow/Helm plumbing, safety docs |
+| Lightweight GraceKelly RAG smoke | `99c6be5` | existing Chroma lexical context → exact `claude-sonnet-5` request → SQLite success record; provider failures persist no PASS row |
 
 ### §5 grounding / quality (recent focus)
 
@@ -201,6 +260,20 @@ evidence and closes no plan DoD.
 ---
 
 ## 5. Contracts (recent complete slices — read before touching)
+
+### Lightweight GraceKelly smoke @ `99c6be5`
+
+- Use existing `data/vectordb/chroma` collection `rag_docs_default`; do not
+  start Docker/WSL, PostgreSQL, Redis, Celery, Ollama, or a fallback model.
+- The CLI default is exactly `claude-sonnet-5`. A missing lexical match, failed
+  provider call, or empty answer fails closed before a successful SQLite row.
+- Successful results go to
+  `.tmp/lightweight-gracekelly-smoke.sqlite3`; the verified live row is already
+  recorded in §1A and must not be regenerated merely to re-prove history.
+- Local regression command needs a unique writable `--basetemp` under `.tmp`
+  because the system pytest temp root is inaccessible to this account.
+- The GraceKelly browser fix is external commit `886b277`; the listener on
+  `8011` was not restarted onto that commit.
 
 ### OpenCode Zen @ `faaa815` (off-plan capability)
 
@@ -324,11 +397,14 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 ---
 
-## 7. Next named candidate (not started)
+## 7. Next named candidate
 
-There is **no ungated default local-only plan candidate** after 5.7. The
-off-plan Zen integration is complete locally. Choose one only with the required
-authority:
+There is **no active implementation WIP**. The lightweight GraceKelly/Sonnet 5
+smoke is closed at `99c6be5`; do not reopen or re-run it as a default action.
+
+There is also **no ungated default local-only plan candidate** after 5.7. The
+off-plan Zen integration is complete locally. Remaining choices require an
+explicit owner priority and their corresponding authority:
 
 1. Run provider/quality evidence ×3 with secrets + explicit opt-in +
    `--execute`; retain exact sidecars and the aggregate report.
@@ -343,6 +419,7 @@ authority:
   **7.1–7.7** / **DEP-01**
 - OIDC live IdP drill; bulk plan checkbox edits; production claims
 - multi-replica impl without SLA (design DEFER)
+- Docker/WSL or a silent model fallback for the lightweight smoke
 
 ### Further alternates (only if user prioritizes)
 
@@ -354,14 +431,22 @@ authority:
 
 ## 8. Protected dirty / untracked (do not touch)
 
-**Dirty tracked (leave alone):**
+**Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
+
+**Owned handoff paths:** `AGENT_STATE.md` and this file belong to Update-129.
+Actual Git decides whether their docs-only commit has already closed the diff;
+never stage the protected tracked files with them.
 
 **Untracked (examples):**
 `.grok-prompts/`, `.pytest_tmp*/`, presentations, `_NEXT_SESSION.md` (stale
 untracked pointer; never routing authority),
 `rag-remediation-plan-2026-08-03.md` (active plan — DoD source, no casual
-checkbox edits), architecture HTML, etc.
+checkbox edits), architecture HTML, etc. Preserve these unrelated artifacts.
+
+There is no owned untracked implementation WIP. The smoke script and test are
+tracked in `99c6be5`; if they appear untracked, stop and reconcile Actual Git
+instead of recreating or staging substitutes.
 
 Zen verification created
 `.pytest_tmp_codex_opencode_{baseline,red,green,gate}/`; cleanup was blocked by
@@ -408,7 +493,10 @@ Never log secret values.
 | 9 | **5.7** | `13bf255` | canonical metric producer + provenance |
 | 10 | docs | `336b08e` | Update-124 full transparency after 5.7 |
 | 11 | provider | `faaa815` | OpenCode Zen trial/free integration |
-| 12 | docs | **this** | Update-125 full transparency after Zen integration |
+| 12 | docs | `ddb721c` | Update-125 full transparency after Zen integration |
+| 13 | external fix | `D:\GraceKelly@886b277` | Playwright editor focus; local/unpushed |
+| 14 | lightweight smoke | `99c6be5` | RAG script + regressions; local/live acceptance green |
+| 15 | docs | **this Update-129 commit, if present in Actual Git** | reconciled next-session state |
 
 ---
 
@@ -422,11 +510,15 @@ Never log secret values.
 | Graph node SSE? | **Yes local** (4.7) |
 | Provider token stream? | **Yes local** (4.8; parity on + stream-capable LLM) |
 | OpenCode Zen profile? | **Yes local** (`faaa815`); trial/non-sensitive only; no live evidence |
+| Lightweight GraceKelly smoke complete? | **Yes for the scoped smoke**: committed at `99c6be5`; local and one-call live acceptance green |
+| Lightweight paid model | Exactly `claude-sonnet-5`; no silent fallback |
+| Lightweight persistence | Successful SQLite row verified at `2026-08-09T15:03:21.124037+00:00`; provider failure regression persists no PASS row |
+| Docker/WSL for this path? | **No — explicitly forbidden by owner** |
 | Relevance ≠ quality/100? | **Yes local** (5.4) |
 | Child report → §5 DoD wire? | **Yes local** (5.6; exact sidecar, fail-closed) |
 | Current child producer emits all 7 metrics? | **Yes local** (5.7; complete/provenanced or release fails closed) |
-| Live quality metrics ×3 evidence? | **No** — no paid/live runs claimed |
+| Live quality metrics ×3 evidence? | **No formal ×3 evidence**; the separate one-call lightweight paid smoke does not satisfy it |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
-| Live provider evidence? | **No** (7.6 scaffold only) |
+| Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | **None** |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; check Actual Git for Update-129 docs state |
