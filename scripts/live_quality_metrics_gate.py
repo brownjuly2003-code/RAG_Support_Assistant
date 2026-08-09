@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plan §5.5: live quality metrics gate scaffold (×3 DoD thresholds).
+"""Plan §5.5: live quality metrics gate (×3 DoD thresholds).
 
 Plan §5 verification requires repeated runs with confidence intervals:
 
@@ -12,13 +12,14 @@ Plan §5 verification requires repeated runs with confidence intervals:
 - unverified auto-rate = 0
 - **minimum three** repeated runs
 
-This module is a **scaffold** (mirrors §7.6 live provider gate):
+Modes (mirrors §7.6 live provider gate):
 
 - ``readiness`` / ``command`` — no live calls; never claim release PASS
 - ``live`` — requires ``RAG_LIVE_QUALITY_METRICS_GATE`` / ``--live`` + provider
   secrets; optional ``--execute`` runs multi-seed regression_eval without mock
 
-Default modes never place paid provider calls and never set ``release_passed``.
+Default readiness/command modes never place paid provider calls and never set
+``release_passed``. Valid live multi-run evidence can produce ``DOD_PASS``.
 """
 
 from __future__ import annotations
@@ -54,7 +55,7 @@ REQUIRED_LIVE_FLAGS = (
     "--no-persist",
 )
 
-# Plan §5 DoD floors (behavioral evidence; local scaffold enforces structure).
+# Plan §5 DoD floors (behavioral evidence; local gate enforces structure).
 MIN_RUNS = 3
 PLAN_THRESHOLDS: dict[str, float] = {
     "context_precision": 0.63,
@@ -83,7 +84,7 @@ _ALL_METRIC_KEYS = _MEAN_HIGHER_IS_BETTER + _MEAN_LOWER_IS_BETTER
 
 @dataclass
 class LiveQualityMetricsReadiness:
-    """Structured readiness / policy result (never a silent release PASS)."""
+    """Structured readiness / policy / live-execute result."""
 
     mode: str
     opt_in: bool
@@ -113,7 +114,8 @@ class LiveQualityMetricsReadiness:
         payload["schema_version"] = 1
         payload["gate"] = {
             "verdict": self.verdict,
-            "passed": False,  # scaffold never claims release PASS by itself
+            # Default readiness/command never pass; live DoD may set True below.
+            "passed": False,
             "release_passed": self.release_passed,
             "evidence_valid": self.evidence_valid,
             "reasons": list(self.reasons),
@@ -275,7 +277,7 @@ def aggregate_metric_runs(runs: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             var = sum((v - mean) ** 2 for v in values) / (len(values) - 1)
             sd = math.sqrt(var)
             stdevs[key] = round(sd, 6)
-            # Normal approx; honest for scaffold reporting (n small → wide CI).
+            # Normal approx; honest for multi-run reporting (n small → wide CI).
             half = 1.96 * sd / math.sqrt(len(values))
             ci_half[key] = round(half, 6)
         else:
@@ -441,9 +443,9 @@ def assess_readiness(
         evidence_valid=False,
         reasons=reasons,
         notes=(
-            "Scaffold only: readiness/command never claim release PASS. "
+            "Default readiness/command never claim release PASS. "
             f"Plan §5 DoD needs ≥{MIN_RUNS} live runs with CI thresholds; "
-            "execute path runs multi-seed regression_eval without mock."
+            "valid live multi-run evidence can produce DOD_PASS."
         ),
         created_at=_utc_now_iso(),
         thresholds=dict(PLAN_THRESHOLDS),
@@ -461,9 +463,33 @@ def write_report(report: dict[str, Any], path: Path) -> Path:
     return path
 
 
-def run_live_subprocess(cmd: Sequence[str], *, cwd: Path = PROJECT_ROOT) -> int:
-    completed = subprocess.run(list(cmd), cwd=str(cwd), check=False)
-    return int(completed.returncode)
+@dataclass(frozen=True)
+class LiveChildCapture:
+    """Captured child process result (no shell; argv + cwd only)."""
+
+    returncode: int
+    stdout: str = ""
+    stderr: str = ""
+
+
+def run_live_subprocess(
+    cmd: Sequence[str], *, cwd: Path = PROJECT_ROOT
+) -> LiveChildCapture:
+    """Run one live regression argv sequence and capture streams."""
+    completed = subprocess.run(
+        list(cmd),
+        cwd=str(cwd),
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    return LiveChildCapture(
+        returncode=int(completed.returncode),
+        stdout=completed.stdout or "",
+        stderr=completed.stderr or "",
+    )
 
 
 def load_run_metrics_file(path: Path) -> dict[str, Any]:
@@ -476,10 +502,272 @@ def load_run_metrics_file(path: Path) -> dict[str, Any]:
     raise ValueError(f"metrics file must be a JSON object: {path}")
 
 
+def _parse_child_json_summary(stdout: str) -> dict[str, Any]:
+    """Parse the child's JSON summary from stdout (last JSON object line).
+
+    Never eval/exec text — ``json.loads`` only. Scans from the end so progress
+    noise before the summary is ignored.
+    """
+    for line in reversed((stdout or "").splitlines()):
+        text = line.strip()
+        if not text or text[0] != "{":
+            continue
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+    raise ValueError("child stdout has no JSON object summary")
+
+
+def _resolve_workspace_report_path(
+    report_json: str | Path,
+    *,
+    workspace: Path = PROJECT_ROOT,
+) -> Path:
+    """Resolve ``report_json`` only when it points at a file inside workspace."""
+    workspace_root = Path(workspace).resolve()
+    raw = Path(str(report_json).strip())
+    if not str(report_json).strip():
+        raise ValueError("report_json path is empty")
+    candidate = raw if raw.is_absolute() else (workspace_root / raw)
+    resolved = candidate.resolve(strict=False)
+    try:
+        resolved.relative_to(workspace_root)
+    except ValueError as exc:
+        raise ValueError(
+            f"report_json outside workspace: {report_json}"
+        ) from exc
+    if not resolved.is_file():
+        raise ValueError(f"report_json is not a file: {resolved}")
+    return resolved
+
+
+def _require_true_bool(value: Any, *, field_name: str) -> str | None:
+    """Fail closed unless value is the boolean True (no metric-based inference)."""
+    if value is None:
+        return f"child {field_name} missing"
+    if not isinstance(value, bool):
+        return f"child {field_name} must be boolean True"
+    if value is not True:
+        return f"child {field_name} is false"
+    return None
+
+
+def _is_mock_or_invalid_child_evidence(report: Mapping[str, Any]) -> str | None:
+    """Return a fail-closed reason when child sidecar is not release-honest.
+
+    Required honesty flags must be present and explicitly True. Missing,
+    non-boolean, false, mock, or contradictory flags are rejected. Metric
+    values are never used to infer release honesty.
+    """
+    if "mode" not in report:
+        return "child mode missing"
+    mode_raw = report.get("mode")
+    if not isinstance(mode_raw, str) or not mode_raw.strip():
+        return "child mode missing or empty"
+    mode = mode_raw.strip()
+    if "mock" in mode.lower():
+        return f"mock child evidence (mode={mode})"
+
+    for field_name in ("evidence_valid", "release_passed"):
+        reason = _require_true_bool(report.get(field_name), field_name=field_name)
+        if reason is not None:
+            # Distinguish absent key from present-but-wrong for clearer reasons.
+            if field_name not in report:
+                return f"child {field_name} missing"
+            return reason
+
+    gate = report.get("gate")
+    if not isinstance(gate, Mapping):
+        return "child gate mapping missing"
+
+    for field_name in ("evidence_valid", "release_passed", "passed"):
+        if field_name not in gate:
+            return f"child gate.{field_name} missing"
+        reason = _require_true_bool(gate.get(field_name), field_name=f"gate.{field_name}")
+        if reason is not None:
+            return reason
+
+    # Contradictions among required True flags (defensive; all must already be True).
+    top_ev = report.get("evidence_valid")
+    top_rel = report.get("release_passed")
+    gate_ev = gate.get("evidence_valid")
+    gate_rel = gate.get("release_passed")
+    gate_pass = gate.get("passed")
+    if not (
+        top_ev is True
+        and top_rel is True
+        and gate_ev is True
+        and gate_rel is True
+        and gate_pass is True
+    ):
+        return "child release honesty flags contradictory or incomplete"
+
+    return None
+
+
+def _metric_source_mappings(report: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """Ordered sources for canonical §5 keys (never invent from quality_score)."""
+    sources: list[Mapping[str, Any]] = []
+    for key in ("quality_metrics", "section5_metrics", "metrics"):
+        value = report.get(key)
+        if isinstance(value, Mapping):
+            sources.append(value)
+    aggregate = report.get("aggregate")
+    if isinstance(aggregate, Mapping):
+        sources.append(aggregate)
+        for key in ("quality_metrics", "section5_metrics", "metrics"):
+            nested = aggregate.get(key)
+            if isinstance(nested, Mapping):
+                sources.append(nested)
+    sources.append(report)
+    return sources
+
+
+def _validate_finite_metric(name: str, value: float) -> float:
+    if value != value or value in {float("inf"), float("-inf")}:
+        raise ValueError(f"{name} is not finite: {value}")
+    if name == "miss_count":
+        if value < 0:
+            raise ValueError(f"miss_count must be >= 0, got {value}")
+    else:
+        # Rates must be in [0, 1] after alias normalization (FULL percent handled).
+        if value < 0.0 or value > 1.0:
+            raise ValueError(f"{name} must be in [0, 1], got {value}")
+    return float(value)
+
+
+def _extract_validated_run_metrics(report: Mapping[str, Any]) -> dict[str, float]:
+    """Extract all seven §5 metrics; fail closed on missing/invalid values."""
+    invalid = _is_mock_or_invalid_child_evidence(report)
+    if invalid is not None:
+        raise ValueError(invalid)
+
+    merged: dict[str, float | None] = {key: None for key in _ALL_METRIC_KEYS}
+    for source in _metric_source_mappings(report):
+        normalized = _normalize_run_metrics(source)
+        for key in _ALL_METRIC_KEYS:
+            if merged[key] is None and normalized.get(key) is not None:
+                merged[key] = normalized[key]
+
+    missing = [key for key in _ALL_METRIC_KEYS if merged[key] is None]
+    if missing:
+        raise ValueError(f"missing canonical metrics: {', '.join(missing)}")
+
+    out: dict[str, float] = {}
+    for key in _ALL_METRIC_KEYS:
+        out[key] = _validate_finite_metric(key, float(merged[key]))  # type: ignore[arg-type]
+    return out
+
+
+def _load_validated_sidecar_metrics(path: Path) -> dict[str, float]:
+    try:
+        raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"sidecar is not valid JSON: {path}") from exc
+    except OSError as exc:
+        raise ValueError(f"sidecar unreadable: {path}") from exc
+    if not isinstance(raw, dict):
+        raise ValueError(f"sidecar must be a JSON object: {path}")
+    return _extract_validated_run_metrics(raw)
+
+
+def _process_live_child_capture(
+    capture: LiveChildCapture,
+    *,
+    run_index: int,
+    workspace: Path = PROJECT_ROOT,
+) -> dict[str, float]:
+    """Validate one child capture and return its §5 metric row."""
+    label = f"run {run_index + 1}"
+    if int(capture.returncode) != 0:
+        raise ValueError(f"{label}: nonzero child exit code {capture.returncode}")
+
+    try:
+        summary = _parse_child_json_summary(capture.stdout)
+    except ValueError as exc:
+        raise ValueError(f"{label}: {exc}") from exc
+
+    report_json = summary.get("report_json")
+    if report_json is None or str(report_json).strip() == "":
+        raise ValueError(f"{label}: child summary missing report_json")
+
+    try:
+        report_path = _resolve_workspace_report_path(
+            str(report_json), workspace=workspace
+        )
+    except ValueError as exc:
+        raise ValueError(f"{label}: {exc}") from exc
+
+    try:
+        return _load_validated_sidecar_metrics(report_path)
+    except ValueError as exc:
+        raise ValueError(f"{label}: {exc}") from exc
+
+
+def execute_live_metric_runs(
+    commands: Sequence[Sequence[str]],
+    *,
+    runner: Any = None,
+    workspace: Path = PROJECT_ROOT,
+) -> tuple[list[dict[str, float]], list[str], list[int]]:
+    """Execute configured live children and collect validated §5 metric rows.
+
+    Returns ``(metric_rows, reasons, returncodes)``. On any fail-closed
+    condition ``metric_rows`` is empty and ``reasons`` is non-empty. Does not
+    include raw child stdout/stderr in reasons. Fails fast after the first
+    invalid child result so remaining potentially paid runs are not invoked.
+    """
+    run_fn = runner if runner is not None else run_live_subprocess
+    expected = len(commands)
+    returncodes: list[int] = []
+    rows: list[dict[str, float]] = []
+
+    for index, cmd in enumerate(commands):
+        try:
+            capture = run_fn(list(cmd), cwd=workspace)
+        except Exception as exc:  # noqa: BLE001 — fail-closed; type only in reason
+            reason = f"run {index + 1}: child runner raised {type(exc).__name__}"
+            returncodes.append(1)
+            return [], [reason], returncodes
+
+        if not isinstance(capture, LiveChildCapture):
+            reasons = [f"run {index + 1}: unexpected child runner result type"]
+            returncodes.append(1)
+            return [], reasons, returncodes
+
+        returncodes.append(int(capture.returncode))
+        try:
+            rows.append(
+                _process_live_child_capture(
+                    capture, run_index=index, workspace=workspace
+                )
+            )
+        except ValueError as exc:
+            # Concise validation reasons only — never raw child streams.
+            return [], [str(exc)], returncodes
+
+    if len(rows) != expected:
+        return (
+            [],
+            [f"incorrect run count: got {len(rows)} expected {expected}"],
+            returncodes,
+        )
+    if expected < MIN_RUNS:
+        return (
+            [],
+            [f"configured runs={expected} < plan min_runs={MIN_RUNS}"],
+            returncodes,
+        )
+    return rows, [], returncodes
+
+
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Plan §5.5 live quality metrics gate scaffold "
+            "Plan §5.5 live quality metrics gate "
             "(opt-in live multi-run; default readiness)."
         )
     )
@@ -626,24 +914,45 @@ def main(argv: Sequence[str] | None = None) -> int:
         if not readiness.release_eligible_to_attempt:
             exit_code = 1
         elif args.execute:
-            # Execute multi-run; DoD aggregation of live outputs is residual
-            # (regression_eval report parse) — scaffold records exit codes only.
-            run_exits: list[int] = []
-            for cmd in readiness.commands:
-                run_exits.append(run_live_subprocess(cmd))
+            metric_rows, exec_reasons, run_exits = execute_live_metric_runs(
+                readiness.commands
+            )
+            # Record only exit codes — never raw child stdout/stderr.
             readiness.notes += f" executed_exit_codes={run_exits}"
-            if any(code != 0 for code in run_exits):
+            if exec_reasons or not metric_rows:
                 readiness.verdict = "LIVE_EXECUTED_FAIL"
-                readiness.reasons.append(f"one or more runs failed: {run_exits}")
+                readiness.evidence_valid = False
+                readiness.release_passed = False
+                readiness.aggregate = None
+                readiness.dod_result = None
+                for reason in exec_reasons:
+                    if reason not in readiness.reasons:
+                        readiness.reasons.append(reason)
+                if not exec_reasons:
+                    readiness.reasons.append(
+                        "live execute produced no validated metric rows"
+                    )
                 exit_code = 1
             else:
-                readiness.verdict = "LIVE_EXECUTED_NO_DOD_PARSE"
-                readiness.reasons.append(
-                    "all subprocesses exited 0; multi-run metric parse/DoD "
-                    "still requires evaluate-report with per-run metric files"
-                )
-                # Not release_passed: no parsed metrics evidence.
-                exit_code = 0
+                aggregate = aggregate_metric_runs(metric_rows)
+                dod = evaluate_aggregate_against_dod(aggregate)
+                readiness.aggregate = aggregate
+                readiness.dod_result = dod
+                readiness.evidence_valid = True
+                readiness.release_passed = bool(dod["passed"])
+                readiness.verdict = "DOD_PASS" if dod["passed"] else "DOD_FAIL"
+                # Prefer DoD reasons on threshold failure; keep policy notes otherwise.
+                if dod["passed"]:
+                    readiness.reasons = [
+                        r
+                        for r in readiness.reasons
+                        if not r.startswith("live eligible")
+                    ]
+                else:
+                    for reason in dod["reasons"]:
+                        if reason not in readiness.reasons:
+                            readiness.reasons.append(reason)
+                exit_code = 0 if dod["passed"] else 1
         else:
             readiness.verdict = "READY_NOT_EXECUTED"
             readiness.reasons.append(
@@ -651,6 +960,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
 
     report = readiness.to_report()
+    if args.mode == "live" and readiness.evidence_valid and readiness.dod_result is not None:
+        # Align gate release flags with evaluated multi-run DoD evidence.
+        report["gate"]["release_passed"] = bool(readiness.release_passed)
+        report["gate"]["evidence_valid"] = True
+        report["gate"]["passed"] = bool(readiness.dod_result.get("passed"))
+        report["release_passed"] = bool(readiness.release_passed)
+        report["evidence_valid"] = True
     if args.write_report:
         write_report(report, Path(args.write_report))
     else:
