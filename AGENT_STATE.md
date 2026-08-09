@@ -1,5 +1,111 @@
 # Agent State
 
+## 2026-08-09 Update-123 — 5.6 live child report → §5 DoD wire ✅ START HERE
+
+> **Routing authority:** Update-123 supersedes Update-122 **only for
+> start-point routing**. All older Update blocks below, including headings
+> that literally contain `✅ START HERE`, are **archival**. **Only the
+> first/topmost Update block in this file is authoritative.** Actual Git still
+> wins over every embedded SHA or branch count.
+>
+> **Documentation this turn:** records already committed slice **5.6** at
+> `fb72dd2`. No code, test, workflow, plan-checkbox, live-service, migration,
+> push, or deploy change is made by this Update.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `fb72dd2`
+>   (`feat(eval): wire live quality reports into DoD gate (5.6)`)
+> - Prior implementation: `a901692` **5.5** · `4f95e18` **5.4** ·
+>   `fc7f07b` **4.8**
+> - Latest docs before this Update: `96ef373` **Update-122**
+> - This Update-123 docs commit SHA is unknown inside its own content; use
+>   `git log -3 --oneline` next session.
+> - Migrations on disk (not applied): **019–023**
+>
+> **Active writer / implementation WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **5.1–5.6** | grounding + relevance + live gate + **child report→DoD wire** local |
+> | **4.1–4.8** | stream parity + provider tokens local |
+> | **6.1–6.7** / **7.1–7.7** / **8.x** / **DEP-01** | prior local |
+> | Current `regression_eval` sidecar emits all seven §5 metrics | **NO** |
+> | Live quality metrics DoD (×3 real runs) | **OPEN** — no live evidence |
+> | Full plan / production | **NOT** complete / **NOT** claimed |
+>
+> ---
+>
+> ### Slice 5.6 contract
+>
+> - `scripts/live_quality_metrics_gate.py --mode live --execute` now:
+>   - captures each argv-only child result without `shell=True`;
+>   - parses only that invocation's machine-readable stdout summary;
+>   - resolves the exact `report_json` sidecar inside the workspace (no
+>     newest-file/glob heuristic and no path escape);
+>   - requires explicit non-mock release honesty at top level and in `gate`;
+>   - requires all seven canonical finite §5 metrics with sane ranges;
+>   - fails fast after the first invalid child, without leaking raw child
+>     stdout/stderr or exception text;
+>   - aggregates validated runs and returns `DOD_PASS` / `DOD_FAIL` through the
+>     existing §5 thresholds.
+> - Readiness/command defaults remain non-live and never release-pass.
+> - Offline `evaluate-report` remains available for supplied metric rows.
+>
+> **Files:** `scripts/live_quality_metrics_gate.py`,
+> `tests/test_live_quality_metrics_gate.py`.
+>
+> **Critical residual:** current `scripts/regression_eval.py` sidecars do not
+> emit all seven required metrics. Therefore a current real `--execute` run
+> fails closed before any release claim. Never derive missing metrics from
+> `quality_score`, `factuality_score`, `candidate_pass_rate`, or regression
+> counts.
+>
+> ---
+>
+> ### Known verification (5.6 turn)
+>
+> | Gate | Result |
+> |------|--------|
+> | Grok focused quality-gate tests after QA | **25 passed** |
+> | independent quality + provider + workflow contracts | **46 passed**, 1 dependency deprecation warning |
+> | Ruff on implementation/test paths | clean |
+> | scoped `git diff --check` | clean |
+> | protected dirty-file SHA-256 | unchanged |
+> | Full suite / live / push / deploy | **not** run / **not** claimed |
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - **← next default local-only candidate:** **5.7 metric producer contract** —
+>   make the release-honest child sidecar emit all seven canonical §5 metrics,
+>   tests-first and without live calls or metric substitution.
+> - After 5.7: actual ×3 live quality evidence still needs explicit opt-in,
+>   provider secrets, paid execution, and retained run artifacts.
+> - Other residuals: production dual-annotator human sample; Astro 7 / parity
+>   default product decision; live multi-service + migrations 019–023; §1/§10.
+>
+> **Do not re-select:** 2.x–3.x, 4.1–4.8, **5.1–5.6**, 6.1–6.7, 7.1–7.7,
+> 8.1–8.5, DEP-01.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Dirty tracked: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+> `plan_sol_23_07_26`
+> Untracked includes `.grok-prompts/`, `_NEXT_SESSION.md` (**stale pointer;
+> never routing authority**), pytest temps, plan/presentation/architecture files.
+>
+> ### External gates (explicit opt-in only)
+>
+> push · deploy · live multi-service · live provider/quality execute ·
+> alembic 019–023 · production claims
+
 ## 2026-08-08 Update-122 — 5.5 live quality metrics gate scaffold ✅ START HERE
 
 > **Routing authority:** Update-122 supersedes Update-121 **only for
