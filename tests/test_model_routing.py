@@ -121,9 +121,9 @@ def test_generate_and_evaluate_route_by_complexity() -> None:
     from agent.state import create_initial_state
 
     llm_fast = MagicMock()
-    llm_fast.invoke.side_effect = ["fast answer", "75"]
+    llm_fast.invoke.side_effect = ["fast answer", "75", "90"]
     llm_strong = MagicMock()
-    llm_strong.invoke.side_effect = ["strong answer", "90"]
+    llm_strong.invoke.side_effect = ["strong answer"]
 
     generate_node = make_generate_node(llm_fast, llm_strong)
     evaluate_node = make_evaluate_node(llm_fast, llm_strong)
@@ -142,8 +142,8 @@ def test_generate_and_evaluate_route_by_complexity() -> None:
     assert simple_evaluated["quality_score"] == 75
     assert complex_generated["answer"] == "strong answer"
     assert complex_evaluated["quality_score"] == 90
-    assert llm_fast.invoke.call_count == 2
-    assert llm_strong.invoke.call_count == 2
+    assert llm_fast.invoke.call_count == 3
+    assert llm_strong.invoke.call_count == 1
 
 
 def test_simple_graph_fast_path_skips_grade_docs_and_verify(monkeypatch) -> None:
