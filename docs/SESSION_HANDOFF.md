@@ -1,7 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-09 — **Update-131** (QG-01 vector parent-expansion
-root cause fixed locally at `c3ae4f4`; no live retry).
+**Обновлено:** 2026-08-09 — **Update-132** (QG-02 generation-provider
+failure routing fixed locally at `1304ff4`; no live retry).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -12,11 +12,11 @@ root cause fixed locally at `c3ae4f4`; no live retry).
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-131**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-132**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-131; dirty
+**Не использовать:** старые `START HERE` ниже Update-132; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -28,28 +28,30 @@ root cause fixed locally at `c3ae4f4`; no live retry).
 
 | Факт | Значение |
 |------|----------|
-| Latest **committed implementation** | `c3ae4f4` — QG-01 vector parent-expansion preservation |
-| Prior implementations (recent) | `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen · `13bf255` **5.7** · `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** |
-| Latest **committed docs before this Update** | `9a870f7` — Update-130 |
-| This Update-131 docs SHA | Commit containing this file if present; otherwise owned docs WIP — resolve through Actual Git |
-| Branch advisory | observed `master...origin/master [ahead 227]` at `c3ae4f4` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; QG-01 code committed; only Update-131 docs WIP may remain |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** + **QG-01** |
+| Latest **committed implementation** | `1304ff4` — QG-02 generation-provider failure → graph error routing |
+| Prior implementations (recent) | `c3ae4f4` **QG-01** · `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen · `13bf255` **5.7** · `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** |
+| Latest **committed docs before this Update** | `62a1f27` — Update-131 |
+| This Update-132 docs SHA | Commit containing this file if present; otherwise owned docs WIP — resolve through Actual Git |
+| Branch advisory | observed `master...origin/master [ahead 230]` at `1304ff4` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; QG-02 code committed; only Update-132 docs WIP may remain |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** + **QG-01** + **QG-02** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | no new implementation slice selected; do not reopen QG-01; remaining seed-42 regressions require separate RCA slices |
+| Next ordered | no new implementation slice selected; do not reopen QG-01/QG-02; two remaining seed-42 regressions require separate RCA slices |
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-131 is docs-only:** it records committed QG-01 implementation
-`c3ae4f4`. It changes no code, workflow, migration, or plan checkbox; it makes
+**Update-132 is docs-only:** it records committed QG-02 implementation
+`1304ff4` and routing-test correction `c157796`. It changes no code, workflow,
+migration, or plan checkbox; it makes
 no paid call and performs no push or deploy.
 
 **Last known verification (not re-run this docs turn):**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **QG-02 generation failure routing** | TDD red **1 failed** → green **1 passed**; final focused **1 passed**; independent provider graph/error/model-routing/judge band **31 passed**; scoped Ruff + changed-file Mypy (`--follow-imports=skip`) + diff clean; full-import Mypy blocked by unlocked local NumPy stubs before project checking |
 | **QG-01 vector parent expansion** | TDD red **2 failed / 9 passed** → focused **11 passed**; independent parent/base/reranker **34 passed**; scoped Ruff + changed-file Mypy + diff clean; broader `vectordb` Mypy has one unchanged-file error at `index_lifecycle_faults.py:128` |
 | **Native §5 live quality attempt** | seed 42: 20/20 effective, infrastructure failures 0, child evidence valid, gate **FAIL**; candidate pass 65%, baseline 70%, minimum 85%, regressions 4; seeds 43–44 not run |
 | **Lightweight GraceKelly/Sonnet 5 smoke** | local **16 passed** + Ruff/Mypy clean; live `claude-sonnet-5` smoke **PASS**; SQLite row verified |
@@ -228,8 +230,15 @@ authorized.
 The vector fast path now applies bounded same-source parent expansion after
 top-k selection, and vector-mode factories retain a lightweight
 `HybridRetriever` when expansion has chunks. BM25 and reranker stay disabled.
-The other three regressions remain separate; no paid 3×20 rerun or live quality
-recovery is claimed. A paid retry still requires fresh explicit opt-in.
+The other regressions remain separate.
+
+**QG-02 closure:** `1304ff4` fixes the `error-e20-hose-kink` orchestration
+cause only. A generation-provider exception now produces the existing graph
+error state and routes to error handling instead of returning a normal generic
+internal-error answer. The stale independent-judge mock exposed by its gate was
+corrected separately at `c157796`. The other two regressions remain separate;
+no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
+requires fresh explicit opt-in.
 
 ### Dataset snapshot (7.7)
 
@@ -257,9 +266,9 @@ recovery is claimed. A paid retry still requires fresh explicit opt-in.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-130 in AGENT_STATE.md + this file §1–§12
+5. Read ONLY top Update-132 in AGENT_STATE.md + this file §1–§12
 6. Confirm there is no active writer; read §1B before touching live-quality code
-7. Start QG-01 from the saved seed-42 sidecar; select one root cause only
+7. If continuing quality RCA, select exactly one of the two remaining regressions
 8. Add one focused failing test, make the smallest local fix, verify, then STOP
 ```
 
@@ -517,17 +526,14 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 ## 7. Next named candidate
 
 There is **no active implementation WIP**. QG-01 is locally closed at
-`c3ae4f4`; do not reopen it or repeat its focused gates without a code or
-environment change.
+`c3ae4f4` and QG-02 at `1304ff4`; do not reopen either or repeat their focused
+gates without a code or environment change.
 
-No new implementation slice was selected in Update-131. The remaining
-seed-42 regressions are distinct and must not be collapsed into the QG-01
-parent-expansion cause:
+No new implementation slice was selected in Update-132. The two remaining
+seed-42 regressions are distinct and must not be collapsed into QG-01/QG-02:
 
 - `error-e20-filter-or-pump`: escalation/fallback path; original error node is
   absent from the sidecar;
-- `error-e20-hose-kink`: retrieval context was present, but generation returned
-  an internal-error answer;
 - `error-e30`: empty generation context; intermediate grade outcome is absent.
 
 If a later turn selects one, perform a fresh single-cause RCA and test-first
@@ -626,7 +632,10 @@ Never log secret values.
 | 16 | live quality evidence | no code SHA | native seed 42 completed: valid child evidence, quality **FAIL**, seeds 43–44 not run |
 | 17 | docs | `9a870f7` | Update-130 after the native live quality attempt |
 | 18 | **QG-01** | `c3ae4f4` | preserve bounded parent expansion on the vector lane |
-| 19 | docs | **this Update-131 commit, if present in Actual Git** | QG-01 verification and residual honesty |
+| 19 | docs | `62a1f27` | Update-131 QG-01 verification and residual honesty |
+| 20 | routing test | `c157796` | align mock with the independent-judge policy |
+| 21 | **QG-02** | `1304ff4` | route generation-provider failures to graph error handling |
+| 22 | docs | **this Update-132 commit, if present in Actual Git** | QG-02 verification and residual honesty |
 
 ---
 
@@ -636,7 +645,7 @@ Never log secret values.
 |-------|-------|
 | Plan closed? | **No** |
 | Production ready? | **No** |
-| Local quality path deep? | **Yes** (4.1–4.8, 5.1–5.7, 6.1–6.7, 7.1–7.7, 8.x, DEP-01, QG-01) |
+| Local quality path deep? | **Yes** (4.1–4.8, 5.1–5.7, 6.1–6.7, 7.1–7.7, 8.x, DEP-01, QG-01, QG-02) |
 | Graph node SSE? | **Yes local** (4.7) |
 | Provider token stream? | **Yes local** (4.8; parity on + stream-capable LLM) |
 | OpenCode Zen profile? | **Yes local** (`faaa815`); trial/non-sensitive only; no live evidence |
@@ -647,9 +656,10 @@ Never log secret values.
 | Relevance ≠ quality/100? | **Yes local** (5.4) |
 | Child report → §5 DoD wire? | **Yes local** (5.6; exact sidecar, fail-closed) |
 | Current child producer emits all 7 metrics? | **Yes local** (5.7; complete/provenanced or release fails closed) |
-| QG-01 vector parent expansion fixed? | **Yes local** (`c3ae4f4`); no claim for the other three regressions or live recovery |
+| QG-01 vector parent expansion fixed? | **Yes local** (`c3ae4f4`); no claim for unrelated regressions or live recovery |
+| QG-02 generation failure routing fixed? | **Yes local** (`1304ff4`); provider exceptions now enter graph error handling; no live recovery claim |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; only Update-131 docs WIP may remain — check Actual Git |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; only Update-132 docs WIP may remain — check Actual Git |

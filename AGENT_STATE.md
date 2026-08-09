@@ -1,5 +1,57 @@
 # Agent State
 
+## 2026-08-09 Update-132 — QG-02 generation failure routing ✅ START HERE
+
+> **Read this block first.** Actual Git overrides every embedded SHA, branch
+> count, process ID, and worktree statement. Older Update blocks are archival
+> evidence and may describe state superseded by Update-132.
+>
+> **Committed implementation:** `1304ff4` (`fix(graph): route generation
+> failures to error handling`) changes exactly `agent/graph.py` and
+> `tests/test_provider_graph_integration.py`. The prerequisite stale routing
+> mock was corrected separately at `c157796`. Branch was observed at
+> `master...origin/master [ahead 230]` after the implementation commit and
+> before this docs update; refresh mandatory. Active writer: **none**.
+>
+> **QG-02 root cause and boundary:** the authoritative seed-42
+> `error-e20-hose-kink` case had relevant E20/hose context, but an exception
+> from the generation provider was caught inside `make_generate_node()` and
+> converted into a normal generic internal-error answer. Because the state did
+> not set `error`, `_route_after_generate()` continued to evaluation instead
+> of the graph error branch. This slice fixes that one orchestration cause
+> only; it does not claim to fix the two remaining seed-42 regressions.
+>
+> **Implementation contract:** a generation-provider exception now returns the
+> existing `_make_error_state(state, "generate", exc)` contract: `error=True`,
+> `error_node="generate"`, and `route="error"`, with no fabricated normal
+> answer. The compiled graph can therefore enter its existing durable error
+> escalation path. Successful generation, citations, model routing, judge
+> independence, and provider usage metadata are unchanged.
+>
+> **Fresh TDD/verification evidence:** before the production edit, the focused
+> regression test failed **1 test** because the state remained non-error; after
+> the fix it passed. The final focused gate passed **1 test** and the provider
+> graph/error/model-routing/judge band passed **31 tests**. Scoped Ruff and
+> changed-file Mypy with `--follow-imports=skip` passed; scoped diff checks were
+> clean. Full-import Mypy was blocked before project checking by local
+> unlocked `numpy 2.5.1` stubs under the Python-3.11 target (the lock pins
+> `numpy 2.4.4` and `mypy 1.19.1`), so no full locked-Mypy claim is made.
+>
+> **Live/release honesty:** no provider call, paid quality retry, Docker/WSL,
+> migration, push, or deploy ran. The saved seed-42 live result is still FAIL,
+> seeds 43–44 remain unexecuted, and formal live ×3 / Section 5 DoD /
+> production readiness remain open. A new live retry still needs fresh
+> explicit opt-in.
+>
+> **Next routing:** QG-02 is locally complete; do not reopen it or rerun its
+> focused gates without a code/environment change. No next implementation
+> slice is selected. `error-e20-filter-or-pump` and `error-e30` remain separate
+> root-cause candidates.
+>
+> **Dirty-file boundary:** preserve unrelated tracked changes in `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`, plus unrelated
+> untracked artifacts. They were not included in either QG-02 commit.
+
 ## 2026-08-09 Update-131 — QG-01 vector parent-expansion fix ✅ START HERE
 
 > **Read this block first.** Actual Git overrides every embedded SHA, branch
