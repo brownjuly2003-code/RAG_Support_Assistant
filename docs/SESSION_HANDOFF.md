@@ -1,7 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-09 — **Update-130** (native live quality gate executed;
-seed 42 produced valid evidence but failed quality thresholds).
+**Обновлено:** 2026-08-09 — **Update-131** (QG-01 vector parent-expansion
+root cause fixed locally at `c3ae4f4`; no live retry).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -12,11 +12,11 @@ seed 42 produced valid evidence but failed quality thresholds).
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-130**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-131**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-130; dirty
+**Не использовать:** старые `START HERE` ниже Update-131; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -28,29 +28,29 @@ seed 42 produced valid evidence but failed quality thresholds).
 
 | Факт | Значение |
 |------|----------|
-| Latest **committed implementation** | `99c6be5` — lightweight GraceKelly RAG smoke + regression tests |
-| Prior implementations (recent) | `faaa815` OpenCode Zen · `13bf255` **5.7** · `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** |
-| Latest **committed docs before this Update** | `79379a6` — Update-129 |
-| This Update-130 docs SHA | Commit containing this file if present; otherwise owned docs WIP — resolve through Actual Git |
-| Branch advisory | observed `master...origin/master [ahead 225]` at `79379a6` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; live gate finished; temporary listener `8012` stopped; only Update-130 docs WIP may remain |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** |
+| Latest **committed implementation** | `c3ae4f4` — QG-01 vector parent-expansion preservation |
+| Prior implementations (recent) | `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen · `13bf255` **5.7** · `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** |
+| Latest **committed docs before this Update** | `9a870f7` — Update-130 |
+| This Update-131 docs SHA | Commit containing this file if present; otherwise owned docs WIP — resolve through Actual Git |
+| Branch advisory | observed `master...origin/master [ahead 227]` at `c3ae4f4` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; QG-01 code committed; only Update-131 docs WIP may remain |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** + **QG-01** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | **QG-01:** offline/focused diagnosis of the four seed-42 regressions and candidate latency; no paid 3×20 retry before a tested local fix |
+| Next ordered | no new implementation slice selected; do not reopen QG-01; remaining seed-42 regressions require separate RCA slices |
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-130 is docs-only:** it records the completed native live quality
-attempt and its fail-closed result. It changes no code, test, workflow,
-migration, or plan checkbox; it makes no paid call and performs no push or
-deploy.
+**Update-131 is docs-only:** it records committed QG-01 implementation
+`c3ae4f4`. It changes no code, workflow, migration, or plan checkbox; it makes
+no paid call and performs no push or deploy.
 
 **Last known verification (not re-run this docs turn):**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **QG-01 vector parent expansion** | TDD red **2 failed / 9 passed** → focused **11 passed**; independent parent/base/reranker **34 passed**; scoped Ruff + changed-file Mypy + diff clean; broader `vectordb` Mypy has one unchanged-file error at `index_lifecycle_faults.py:128` |
 | **Native §5 live quality attempt** | seed 42: 20/20 effective, infrastructure failures 0, child evidence valid, gate **FAIL**; candidate pass 65%, baseline 70%, minimum 85%, regressions 4; seeds 43–44 not run |
 | **Lightweight GraceKelly/Sonnet 5 smoke** | local **16 passed** + Ruff/Mypy clean; live `claude-sonnet-5` smoke **PASS**; SQLite row verified |
 | **OpenCode Zen** | 155 provider/settings/workflow/Helm tests; Ruff + scoped Mypy + Helm render + diff clean |
@@ -224,11 +224,12 @@ compatible temporary index remains for offline diagnostics. At handoff time,
 `PythonMemoryGuard` remained `Disabled`; changing Task Scheduler state was not
 authorized.
 
-**Next named slice — QG-01:** use the saved sidecar first. Classify the four
-regressions, select one root cause, write a focused failing local test, make
-the smallest fix, and run proportional local verification. Do not run another
-paid 3×20 gate merely to reproduce this evidence. A paid retry requires fresh
-explicit opt-in after a focused local fix is green.
+**QG-01 closure:** `c3ae4f4` fixes the `warranty-receipt-storage` cause only.
+The vector fast path now applies bounded same-source parent expansion after
+top-k selection, and vector-mode factories retain a lightweight
+`HybridRetriever` when expansion has chunks. BM25 and reranker stay disabled.
+The other three regressions remain separate; no paid 3×20 rerun or live quality
+recovery is claimed. A paid retry still requires fresh explicit opt-in.
 
 ### Dataset snapshot (7.7)
 
@@ -515,26 +516,23 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 ## 7. Next named candidate
 
-There is **no active implementation WIP**. The lightweight GraceKelly/Sonnet 5
-smoke is closed at `99c6be5`; do not reopen or re-run it as a default action.
+There is **no active implementation WIP**. QG-01 is locally closed at
+`c3ae4f4`; do not reopen it or repeat its focused gates without a code or
+environment change.
 
-The owner-authorized live attempt supplied a concrete local-only next slice:
-**QG-01 — diagnose and fix one seed-42 candidate regression cause**.
+No new implementation slice was selected in Update-131. The remaining
+seed-42 regressions are distinct and must not be collapsed into the QG-01
+parent-expansion cause:
 
-1. Read §1B and the saved child sidecar; make no provider call.
-2. Classify the four regressions into orchestration/fallback versus retrieval
-   context loss. Treat that split as a hypothesis until code/trace evidence
-   confirms it.
-3. Select exactly one root cause and identify its narrow owning surface.
-4. Write and run one focused failing test before implementation.
-5. Make the smallest local fix and run the focused test plus one proportional
-   independent local gate.
-6. Stop after the local slice. A new paid seed or 3×20 retry needs fresh owner
-   opt-in; do not use a live rerun as the diagnostic tool.
+- `error-e20-filter-or-pump`: escalation/fallback path; original error node is
+  absent from the sidecar;
+- `error-e20-hose-kink`: retrieval context was present, but generation returned
+  an internal-error answer;
+- `error-e30`: empty generation context; intermediate grade outcome is absent.
 
-If QG-01 is blocked by unavailable local evidence, report the exact missing
-artifact rather than switching automatically to the human-sample, migration,
-Astro 7, parity-default, or another live gate track.
+If a later turn selects one, perform a fresh single-cause RCA and test-first
+local slice. A new paid seed or 3×20 retry needs fresh owner opt-in; do not use
+a live rerun as the diagnostic tool.
 
 ### Out without opt-in
 
@@ -626,7 +624,9 @@ Never log secret values.
 | 14 | lightweight smoke | `99c6be5` | RAG script + regressions; local/live acceptance green |
 | 15 | docs | `79379a6` | Update-129 reconciled GraceKelly smoke handoff |
 | 16 | live quality evidence | no code SHA | native seed 42 completed: valid child evidence, quality **FAIL**, seeds 43–44 not run |
-| 17 | docs | **this Update-130 commit, if present in Actual Git** | full transparency after the native live quality attempt |
+| 17 | docs | `9a870f7` | Update-130 after the native live quality attempt |
+| 18 | **QG-01** | `c3ae4f4` | preserve bounded parent expansion on the vector lane |
+| 19 | docs | **this Update-131 commit, if present in Actual Git** | QG-01 verification and residual honesty |
 
 ---
 
@@ -636,7 +636,7 @@ Never log secret values.
 |-------|-------|
 | Plan closed? | **No** |
 | Production ready? | **No** |
-| Local quality path deep? | **Yes** (4.1–4.8, 5.1–5.7, 6.1–6.7, 7.1–7.7, 8.x, DEP-01) |
+| Local quality path deep? | **Yes** (4.1–4.8, 5.1–5.7, 6.1–6.7, 7.1–7.7, 8.x, DEP-01, QG-01) |
 | Graph node SSE? | **Yes local** (4.7) |
 | Provider token stream? | **Yes local** (4.8; parity on + stream-capable LLM) |
 | OpenCode Zen profile? | **Yes local** (`faaa815`); trial/non-sensitive only; no live evidence |
@@ -647,8 +647,9 @@ Never log secret values.
 | Relevance ≠ quality/100? | **Yes local** (5.4) |
 | Child report → §5 DoD wire? | **Yes local** (5.6; exact sidecar, fail-closed) |
 | Current child producer emits all 7 metrics? | **Yes local** (5.7; complete/provenanced or release fails closed) |
+| QG-01 vector parent expansion fixed? | **Yes local** (`c3ae4f4`); no claim for the other three regressions or live recovery |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; only Update-130 docs WIP may remain — check Actual Git |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; only Update-131 docs WIP may remain — check Actual Git |

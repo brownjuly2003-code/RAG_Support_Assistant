@@ -1,5 +1,57 @@
 # Agent State
 
+## 2026-08-09 Update-131 — QG-01 vector parent-expansion fix ✅ START HERE
+
+> **Read this block first.** Actual Git overrides every embedded SHA, branch
+> count, process ID, and worktree statement. Older Update blocks are archival
+> evidence and may describe state superseded by Update-131.
+>
+> **Committed implementation:** `c3ae4f4` (`fix(retrieval): preserve parent
+> expansion on vector path`) changes exactly `vectordb/_base_manager.py` and
+> `tests/test_parent_expansion.py`. Branch was observed at
+> `master...origin/master [ahead 227]` after that commit and before this docs
+> update; refresh mandatory. Active writer: **none**.
+>
+> **QG-01 root cause and boundary:** the authoritative seed-42 sidecar showed
+> `warranty-receipt-storage` receiving the procedure chunk from `warranty.md`
+> but not its same-source terms neighbor containing `12 месяцев`. The
+> vector-only path sliced top-k without parent expansion, and both retriever
+> factories returned a plain vector retriever when
+> `RAG_RETRIEVAL_STRATEGY=vector`. This slice fixes that one regression cause
+> only; it does not claim to fix the other three seed-42 regressions.
+>
+> **Implementation contract:** `HybridRetriever.get_vector_documents()` now
+> applies the existing same-source, bounded parent expansion after vector
+> top-k selection. `build_retriever()` and `get_retriever()` now retain a
+> lightweight `HybridRetriever` when parent expansion is enabled and chunks
+> exist, even in vector mode. BM25 and reranker remain disabled in vector mode;
+> disabled/no-chunk fallback behavior remains unchanged.
+>
+> **Fresh TDD/verification evidence:** before the production edit, the focused
+> file had the expected **2 failed / 9 passed** (missing neighbor expansion and
+> `_SimpleRetriever`). After the fix it passed **11 tests**. The independent
+> parent/base-manager/reranker band passed **34 tests**; scoped Ruff and scoped
+> Mypy for `vectordb/_base_manager.py` passed; staged `git diff --check` passed.
+> The broader `python -m mypy vectordb ...` command remains red on the unchanged
+> `vectordb/index_lifecycle_faults.py:128` return-value error. Do not describe
+> the whole `vectordb` package as Mypy-green.
+>
+> **Live/release honesty:** no provider call, paid quality retry, index rebuild,
+> Docker/WSL, migration, push, or deploy ran. The saved seed-42 live result is
+> still FAIL, seeds 43–44 remain unexecuted, and formal live ×3 / Section 5 DoD
+> / production readiness remain open. A new live retry still needs fresh
+> explicit opt-in.
+>
+> **Next routing:** QG-01 is locally complete; do not reopen it or rerun its
+> tests without a code/environment change. No next implementation slice was
+> selected in this docs update. The remaining three seed-42 regressions need
+> separate root-cause slices if chosen later.
+>
+> **Dirty-file boundary:** preserve unrelated tracked changes in `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`, plus unrelated
+> untracked artifacts. Their protected hashes were unchanged through the
+> QG-01 commit.
+
 ## 2026-08-09 Update-130 — native live quality gate seed 42 FAIL ⚠ START HERE
 
 > **Read this block first.** Actual Git overrides every embedded SHA, branch
