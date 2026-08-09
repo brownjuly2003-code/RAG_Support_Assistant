@@ -94,6 +94,9 @@ class GraphState(TypedDict, total=False):
     # Plan §5.1: verified | unsupported | not_verified (never fake-perfect on skip).
     grounding_status: Literal["verified", "unsupported", "not_verified"]
     fact_verification_skipped: bool
+    # Verifier provider/transport outage (QG-03): bounded non-secret reason.
+    # When set, graph routes human via safety/log and skips evaluate/handle_error.
+    fact_verification_error: Optional[str]
     complexity: Literal["simple", "complex", "global", "unknown"]
     retrieval_strategy: Literal["vector", "hybrid", "graph", "factcard"]
     route: Optional[
@@ -182,6 +185,7 @@ def create_initial_state(
         factuality_score=0,
         grounding_status="not_verified",
         fact_verification_skipped=False,
+        fact_verification_error=None,
         complexity="unknown",
         knowledge_gap=False,
         retrieval_strategy="hybrid",

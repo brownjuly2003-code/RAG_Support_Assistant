@@ -1800,6 +1800,47 @@ def make_generate_node(
 # ---------------------------------------------------------------------------
 
 
+def _fact_verification_provider_fail_closed(
+    state: GraphState,
+    exc: Exception,
+    *,
+    usage: dict[str, Any] | None = None,
+) -> GraphState:
+    """Fail-closed state when the verifier LLM/provider call fails.
+
+    Preserves the already-generated answer and retrieval artifacts. Does **not**
+    set the generic graph ``error`` flag (that would enter ``handle_error`` and
+    overwrite the answer). Mirrors the evaluate judge-provider outage pattern.
+    """
+    from agent.grounding import status_for_skip
+
+    trace_id = state.get("trace_id", "unknown")
+    exc_name = type(exc).__name__
+    reason = f"provider_error:{exc_name}"[:120]
+    logger.warning(
+        "[verify_facts] verifier LLM error: %s",
+        exc_name,
+        extra={"trace_id": trace_id},
+    )
+    g_status, g_score, g_skipped = status_for_skip(reason="provider_error")
+    new_state: GraphState = {
+        **state,  # type: ignore[misc]
+        "claims": [],
+        "fact_verification_skipped": g_skipped,
+        "fact_verification_error": reason,
+        "factuality_score": g_score,
+        "grounding_status": g_status,
+        "route": "human",
+        "error": False,
+        "error_message": "",
+        "error_node": "",
+    }
+    if usage is not None:
+        new_state = _apply_llm_usage(new_state, usage)
+    log_step(trace_id, "verify_facts", new_state)
+    return new_state
+
+
 def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphState]:
     def node(state: GraphState) -> GraphState:
         if state.get("error"):
@@ -1824,6 +1865,7 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                     **state,
                     "claims": [],
                     "fact_verification_skipped": g_skipped,
+                    "fact_verification_error": None,
                     "factuality_score": g_score,
                     "grounding_status": g_status,
                 }
@@ -1854,6 +1896,7 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                     **state,
                     "claims": [],
                     "fact_verification_skipped": g_skipped,
+                    "fact_verification_error": None,
                     "factuality_score": g_score,
                     "grounding_status": g_status,
                 }
@@ -1866,6 +1909,7 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                     **state,
                     "claims": [],
                     "fact_verification_skipped": g_skipped,
+                    "fact_verification_error": None,
                     "factuality_score": g_score,
                     "grounding_status": g_status,
                 }
@@ -1877,7 +1921,12 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
             model = _get_llm_model_name(llm) or ""
             extract_prompt = build_extract_claims_prompt(answer)
             t0 = time.monotonic()
-            raw_claims = _invoke_llm(llm, extract_prompt, role="verify").strip()
+            # Catch expected provider/transport failures at the call boundary
+            # only — outer except still uses the generic graph error path.
+            try:
+                raw_claims = _invoke_llm(llm, extract_prompt, role="verify").strip()
+            except Exception as exc:
+                return _fact_verification_provider_fail_closed(state, exc)
             usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "verify_facts"))
             usage_recorded = True
             trace_llm_call(
@@ -1895,6 +1944,7 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                     **state,
                     "claims": [],
                     "fact_verification_skipped": g_skipped,
+                    "fact_verification_error": None,
                     "factuality_score": g_score,
                     "grounding_status": g_status,
                 }
@@ -1915,6 +1965,7 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                     **state,
                     "claims": [],
                     "fact_verification_skipped": g_skipped,
+                    "fact_verification_error": None,
                     "factuality_score": g_score,
                     "grounding_status": g_status,
                 }
@@ -1935,20 +1986,25 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                 verify_prompt = build_verify_claim_prompt(claim, context_text)
                 if consensus_enabled and _llm_supports_structured_output(llm):
                     t0 = time.monotonic()
-                    structured = _invoke_with_schema(
-                        llm,
-                        verify_prompt,
-                        {
-                            "type": "object",
-                            "properties": {
-                                "supported": {"type": "boolean"},
-                                "evidence": {"type": "string"},
+                    try:
+                        structured = _invoke_with_schema(
+                            llm,
+                            verify_prompt,
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "supported": {"type": "boolean"},
+                                    "evidence": {"type": "string"},
+                                },
+                                "required": ["supported", "evidence"],
+                                "additionalProperties": False,
                             },
-                            "required": ["supported", "evidence"],
-                            "additionalProperties": False,
-                        },
-                        reliability_level=reliability_level,
-                    )
+                            reliability_level=reliability_level,
+                        )
+                    except Exception as exc:
+                        return _fact_verification_provider_fail_closed(
+                            state, exc, usage=usage if usage_recorded else None
+                        )
                     usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "verify_facts"))
                     if isinstance(structured, dict):
                         trace_llm_call(
@@ -1976,7 +2032,12 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                             pass
                         continue
                 t0 = time.monotonic()
-                verdict = _invoke_llm(llm, verify_prompt, role="verify").strip()
+                try:
+                    verdict = _invoke_llm(llm, verify_prompt, role="verify").strip()
+                except Exception as exc:
+                    return _fact_verification_provider_fail_closed(
+                        state, exc, usage=usage if usage_recorded else None
+                    )
                 usage = _merge_llm_usage(usage, _capture_llm_usage(llm, "verify_facts"))
                 trace_llm_call(
                     trace_id=trace_id,
@@ -2029,6 +2090,7 @@ def make_verify_facts_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphS
                 **state,
                 "claims": claims_result,
                 "fact_verification_skipped": g_skipped,
+                "fact_verification_error": None,
                 "factuality_score": factuality,
                 "grounding_status": g_status,
             }
@@ -2457,6 +2519,7 @@ def make_rewrite_query_node(llm: SupportsInvoke) -> Callable[[GraphState], Graph
                 "claims": [],
                 "factuality_score": 0,
                 "fact_verification_skipped": False,
+                "fact_verification_error": None,
                 "quality_score": None,
                 "relevance_score": None,
             }
@@ -2545,6 +2608,20 @@ def _route_after_generate(state: GraphState) -> str:
     if state.get("complexity") == "simple":
         return "evaluate"
     return "verify"
+
+
+def _route_after_verify_facts(state: GraphState) -> str:
+    """After verify_facts: provider outage → safety/log; programming error → handle_error.
+
+    Expected verifier LLM/provider failures set ``fact_verification_error`` and
+    ``route=human`` without the generic graph ``error`` flag, so the answer is
+    preserved and evaluate/handle_error are skipped (QG-03).
+    """
+    if state.get("error") or state.get("route") == "error":
+        return "error"
+    if state.get("fact_verification_error"):
+        return "safety"
+    return "evaluate"
 
 
 # ---------------------------------------------------------------------------
@@ -2693,7 +2770,15 @@ def build_support_graph(
             "evaluate": "evaluate",
         },
     )
-    workflow.add_edge("verify_facts", "evaluate")
+    workflow.add_conditional_edges(
+        "verify_facts",
+        _route_after_verify_facts,
+        {
+            "error": "handle_error",
+            "evaluate": "evaluate",
+            "safety": "response_safety",
+        },
+    )
     workflow.add_edge("evaluate", "route_or_retry")
 
     # Conditional: retry or terminal safety (plan §6.2) then suggest/log
