@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-135 QG-03B contextual-header grading sync)
+**Date:** 2026-08-09 (Update-136 QG-04 retained E30 replay sync)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-135**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-136**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-135. Preserve it as DoD input, but use Actual Git + the committed
+> Update-136. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -28,7 +28,7 @@ authoritative open-problem ledger in §1C.
 | **2** index lifecycle | **2.1–2.6g local residual closed** | **OPEN** live PG/Redis/Celery/Chroma | yes for live index ops |
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.8 local** | **OPEN** parity default still off (product) | partial |
-| **5** grounding fail-closed | **5.1–5.7 + QG-01/QG-02/QG-03A/QG-03B local** | **OPEN** one valid seed-42 run exists but **FAILS**; QG-04 and passing ×3 evidence remain open | **yes** quality |
+| **5** grounding fail-closed | **5.1–5.7 + QG-01/QG-02/QG-03A/QG-03B/QG-04 local** | **OPEN** one valid seed-42 run exists but **FAILS**; passing ×3 evidence remains open | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
@@ -55,7 +55,7 @@ use only non-sensitive test data and recheck external terms before enabling it.
 
 ---
 
-## Current live-quality incident (Update-135)
+## Current live-quality incident (Update-136)
 
 The native vector-only run produced valid child evidence for seed 42 but failed
 the quality gate: candidate pass 65% (baseline 70%, required ≥85%), four
@@ -69,7 +69,7 @@ valid three-run aggregate or release evidence exists.
 | **QG-02** `error-e20-hose-kink` | fixed at `1304ff4` (routing-test baseline `c157796`) | not replayed; no live recovery claim |
 | **QG-03A** `error-e20-filter-or-pump` verifier outage | fixed at `80c2603`; retained trace proved `verify_facts` transport failure and answer overwrite | not replayed; no live or E20 keyword recovery claim |
 | **QG-03B** same case content path | fixed at `5662ea7`; relevant contextual-header shells now resolve to content-bearing chunks from the same logical source | not replayed; no live or E20 keyword recovery claim |
-| **QG-04** `error-e30` | **OPEN**; empty generation context, grade outcome absent | no new live run authorized |
+| **QG-04** `error-e30` | shared cause fixed at `5662ea7`; exact retained five-document replay guarded at `5f8bb78` | not replayed live; no E30 keyword recovery claim |
 
 The active collection remains dimension 3 while the remote embedding lane is
 dimension 1024. The successful diagnostic run used a retained six-document
@@ -112,7 +112,7 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 32 | QG-02 generation failure routing | **done local** `1304ff4`; no live replay |
 | 33 | QG-03A verifier-outage routing | **done local** `80c2603`; no live replay |
 | 34 | QG-03B contextual-header grading | **done local** `5662ea7`; no live replay |
-| 35 | QG-04 single-cause offline RCA | **next local; one item per turn** |
+| 35 | QG-04 retained E30 replay | **done local** `5f8bb78`; production fix shared with `5662ea7`; no live replay |
 | 36 | human sample / opt-in live ×3 evidence | **external/data authority required** |
 | 37 | §2/§3 residual if product needs | residual |
 | 38 | Astro 7 (clears DEP-01 moderate residual) | residual |
@@ -193,8 +193,8 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 **Residual after 5.7:** the producer emits all seven canonical metrics with
 candidate-only provenance and fails real release runs closed on incomplete
 measurement. A later authorized vector-only seed-42 run produced valid child
-evidence but failed the thresholds recorded above; QG-01/QG-02/QG-03A/QG-03B
-are local-only repairs and QG-04 remains open. Actual passing
+evidence but failed the thresholds recorded above; QG-01, QG-02, QG-03A,
+QG-03B, and QG-04 are local-only repairs. Actual passing
 precision/recall/faithfulness ×3 evidence remains explicit opt-in. Relevance is
 **not** quality/100, and §5 metrics are not substituted from legacy
 scores/counts.
@@ -300,25 +300,22 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-There is no implementation WIP. If the owner says continue without granting a
-live gate, use this deterministic local-only order and stop after one item:
-
-1. **QG-04** `error-e30`: separate offline retrieval/grade RCA; the saved
-   generation context is empty and grade evidence is absent.
+There is no implementation WIP and no deterministic ungated QG incident left.
+Do not invent another quality fix or replay QG-01–QG-04 without new evidence.
 
 Gated alternatives remain: live provider/quality ×3 (`--execute` + secrets +
 fresh opt-in), a real dual-annotator human sample, Astro 7, or the product
-decision to default `STREAMING_RAG_PARITY=true`. Do not use a paid rerun to
-discover the QG-04 cause.
+decision to default `STREAMING_RAG_PARITY=true`.
 
 **Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, DEP-01.
 
 ---
 
-## Last-known verification snapshot (Update-135)
+## Last-known verification snapshot (Update-136)
 
 | Band | Last known |
 |------|------------|
+| **QG-04** | exact retained five-document replay **1 passed**; independent grading/fail-closed/relevance/provider/fact-verification band **31 passed**; scoped Ruff + diff clean; production fix shared with `5662ea7`; no live replay |
 | **QG-03B** | TDD red **1 failed** → focused green **1 passed**; independent grading/fail-closed/relevance/provider band **24 passed**; scoped Ruff + changed-file Mypy + diff clean; no live replay |
 | **QG-03A** | Grok red 1 failed → focused **6 passed** + Ruff; independent verifier/grounding/citation/graph-error/judge/provider band **49 passed** + Ruff + diff clean; ordinary changed-file Mypy exposed 9 pre-existing `typeddict-item` errors outside changed lines, narrowed run passed; no locked/full-Mypy claim |
 | **QG-02** | TDD red 1 failed → green 1 passed; final focused **1 passed**; adjacent provider graph/error/model-routing/judge **31 passed**; Ruff + changed-file Mypy (`--follow-imports=skip`) + diff clean; no full locked-Mypy claim |

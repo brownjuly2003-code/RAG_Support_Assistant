@@ -1,5 +1,54 @@
 # Agent State
 
+## 2026-08-09 Update-136 — QG-04 retained E30 replay ✅ START HERE
+
+> **Read this block first.** Actual Git overrides every embedded SHA, branch
+> count, process ID, listener, and worktree statement. Older Update blocks are
+> archival evidence and may describe state superseded by Update-136.
+>
+> **Committed evidence:** `5f8bb78` (`test(grading): cover retained E30 context
+> recovery`) changes only `tests/test_grade_docs.py`. The production fix is the
+> already committed shared-cause change `5662ea7` from QG-03B. Branch was
+> observed at `master...origin/master [ahead 237]` after the test commit and
+> before this docs update; refresh mandatory. Active writer: **none**.
+>
+> **QG-04 root cause:** retained trace
+> `299e0b45-75c3-4ad1-99e5-cd2038977382` retrieved the E30 body containing
+> `Отключите устройство от сети`, but the grader kept only the same logical
+> document's contextual-header shell. The first answer therefore lacked the
+> instruction; its low score triggered Self-RAG, whose rewritten retrieval was
+> empty and replaced the final generation context. The first established loss
+> boundary is the same header/body grading defect closed by QG-03B. The retained
+> trace alone does not prove that empty-retry loss remains independently
+> reachable after that first boundary is corrected; require fresh post-fix
+> evidence before opening it as a separate defect.
+>
+> **Current-code evidence:** replaying the retained five-document context and
+> verdict sequence against `5662ea7` changes the graded evidence from a header
+> without the disconnect instruction to the content-bearing
+> `errors_e10_e30.md` chunk that contains it. The committed regression test
+> preserves the exact five-document order and verdict pattern.
+>
+> **Fresh verification:** the focused QG-04 replay passed, then the independent
+> grading/fail-closed/relevance/provider/fact-verification band passed **31
+> tests** with one known Starlette/httpx deprecation warning. Scoped Ruff and
+> diff checks passed. No source file changed, so no new Mypy claim is needed.
+>
+> **Residual honesty:** QG-04 is local-only through shared production fix
+> `5662ea7`; no paid/provider/live replay ran. The saved seed-42 report remains
+> FAIL, seeds 43–44 and passing 3×20 evidence do not exist, and production
+> readiness is not claimable.
+>
+> **Release/workspace truth:** no Docker/WSL, migration, Task Scheduler change,
+> push, or deploy ran. Preserve unrelated tracked changes in `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`, plus all
+> unrelated untracked artifacts.
+>
+> **Next routing:** no deterministic ungated QG incident remains. Do not invent
+> another quality fix or rerun QG-01–QG-04 without new evidence. Remaining
+> release/live-quality proof, migrations, deploy, push, and paid provider work
+> retain their documented gates and require fresh explicit authorization.
+
 ## 2026-08-09 Update-135 — QG-03B contextual-header grading ✅ START HERE
 
 > **Read this block first.** Actual Git overrides every embedded SHA, branch
