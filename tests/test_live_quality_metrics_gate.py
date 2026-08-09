@@ -131,6 +131,30 @@ def _install_child_runner(monkeypatch, responses: list) -> list[list[str]]:
     return seen
 
 
+def test_live_subprocess_preserves_blank_reranker_override(monkeypatch) -> None:
+    captured: dict = {}
+
+    def _fake_run(cmd, **kwargs):  # noqa: ANN001
+        captured["cmd"] = list(cmd)
+        captured.update(kwargs)
+        return gate_mod.subprocess.CompletedProcess(
+            args=list(cmd),
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+    monkeypatch.setattr(gate_mod.subprocess, "run", _fake_run)
+
+    result = gate_mod.run_live_subprocess(
+        ["python", "child.py"],
+        env_overrides={"RAG_RERANKER_MODEL": ""},
+    )
+
+    assert result.returncode == 0
+    assert captured["env"]["RAG_RERANKER_MODEL"] == ""
+
+
 def test_plan_thresholds_match_section_5_dod() -> None:
     assert PLAN_THRESHOLDS["context_precision"] == 0.63
     assert PLAN_THRESHOLDS["context_recall"] == 0.97
@@ -388,6 +412,53 @@ def test_live_execute_three_passing_sidecars_dod_pass(
     assert stdout_marker not in dumped
     assert stderr_marker not in dumped
     assert "Please reset" not in dumped
+
+
+def test_live_execute_disable_child_reranker_forwards_blank_override(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _enable_live_env(monkeypatch)
+    queue = []
+    for i in range(3):
+        path = tmp_path / "reranker-disabled" / f"run_{i}.json"
+        _write_section5_sidecar(path, dict(PASSING_SECTION5_METRICS))
+        queue.append(
+            gate_mod.LiveChildCapture(
+                returncode=0,
+                stdout=_child_summary_stdout(_rel_to_workspace(path)),
+            )
+        )
+
+    seen_overrides: list[dict[str, str] | None] = []
+
+    def _fake(cmd, *, cwd=PROJECT_ROOT, env_overrides=None):  # noqa: ANN001
+        assert cwd == PROJECT_ROOT or Path(cwd) == PROJECT_ROOT
+        assert cmd
+        seen_overrides.append(
+            None if env_overrides is None else dict(env_overrides)
+        )
+        return queue.pop(0)
+
+    monkeypatch.setattr(gate_mod, "run_live_subprocess", _fake)
+    out = tmp_path / "reranker-disabled-gate.json"
+
+    code = main(
+        [
+            "--mode",
+            "live",
+            "--execute",
+            "--disable-child-reranker",
+            "--runs",
+            "3",
+            "--write-report",
+            str(out),
+        ]
+    )
+
+    assert code == 0
+    assert seen_overrides == [{"RAG_RERANKER_MODEL": ""}] * 3
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert "child_reranker_disabled=true" in payload["notes"]
 
 
 def test_live_execute_threshold_miss_dod_fail(tmp_path: Path, monkeypatch) -> None:

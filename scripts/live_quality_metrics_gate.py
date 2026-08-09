@@ -474,9 +474,16 @@ class LiveChildCapture:
 
 
 def run_live_subprocess(
-    cmd: Sequence[str], *, cwd: Path = PROJECT_ROOT
+    cmd: Sequence[str],
+    *,
+    cwd: Path = PROJECT_ROOT,
+    env_overrides: Mapping[str, str] | None = None,
 ) -> LiveChildCapture:
     """Run one live regression argv sequence and capture streams."""
+    child_env = None
+    if env_overrides is not None:
+        child_env = os.environ.copy()
+        child_env.update(env_overrides)
     completed = subprocess.run(
         list(cmd),
         cwd=str(cwd),
@@ -485,6 +492,7 @@ def run_live_subprocess(
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=child_env,
     )
     return LiveChildCapture(
         returncode=int(completed.returncode),
@@ -713,6 +721,7 @@ def execute_live_metric_runs(
     *,
     runner: Any = None,
     workspace: Path = PROJECT_ROOT,
+    child_env_overrides: Mapping[str, str] | None = None,
 ) -> tuple[list[dict[str, float]], list[str], list[int]]:
     """Execute configured live children and collect validated §5 metric rows.
 
@@ -728,7 +737,14 @@ def execute_live_metric_runs(
 
     for index, cmd in enumerate(commands):
         try:
-            capture = run_fn(list(cmd), cwd=workspace)
+            if child_env_overrides is None:
+                capture = run_fn(list(cmd), cwd=workspace)
+            else:
+                capture = run_fn(
+                    list(cmd),
+                    cwd=workspace,
+                    env_overrides=child_env_overrides,
+                )
         except Exception as exc:  # noqa: BLE001 — fail-closed; type only in reason
             reason = f"run {index + 1}: child runner raised {type(exc).__name__}"
             returncodes.append(1)
@@ -812,6 +828,14 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--execute",
         action="store_true",
         help="With --mode live, actually subprocess multi-run regression_eval",
+    )
+    parser.add_argument(
+        "--disable-child-reranker",
+        action="store_true",
+        help=(
+            "With --mode live --execute, explicitly pass an empty "
+            "RAG_RERANKER_MODEL to child processes"
+        ),
     )
     parser.add_argument(
         "--metrics-runs",
@@ -915,8 +939,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         if not readiness.release_eligible_to_attempt:
             exit_code = 1
         elif args.execute:
+            child_env_overrides = None
+            if args.disable_child_reranker:
+                child_env_overrides = {"RAG_RERANKER_MODEL": ""}
+                readiness.notes += " child_reranker_disabled=true"
             metric_rows, exec_reasons, run_exits = execute_live_metric_runs(
-                readiness.commands
+                readiness.commands,
+                child_env_overrides=child_env_overrides,
             )
             # Record only exit codes — never raw child stdout/stderr.
             readiness.notes += f" executed_exit_codes={run_exits}"
