@@ -1,5 +1,56 @@
 # Agent State
 
+## 2026-08-09 Update-135 — QG-03B contextual-header grading ✅ START HERE
+
+> **Read this block first.** Actual Git overrides every embedded SHA, branch
+> count, process ID, listener, and worktree statement. Older Update blocks are
+> archival evidence and may describe state superseded by Update-135.
+>
+> **Committed implementation:** `5662ea7` (`fix(grading): preserve same-source
+> content for context headers`) changes exactly `agent/doc_grade.py`,
+> `agent/graph.py`, and `tests/test_grade_docs.py`. Branch was observed at
+> `master...origin/master [ahead 235]` after that implementation commit and
+> before this docs update; refresh mandatory. Active writer: **none**.
+>
+> **QG-03B root cause:** retained SQLite trace
+> `2889ac98-4669-422a-8163-40afefa6f03e` contains two retrieved chunks for the
+> same `errors_e10_e30.md` logical document. The grader kept only its
+> contextual-header shell and rejected the content-bearing chunk that names
+> E20, filter, hose, and pump. Generation therefore received a source label
+> without useful evidence before the separately closed QG-03A verifier outage.
+>
+> **Implementation contract:** when a positively graded document is only the
+> generated contextual-header line, grading now replaces that shell with
+> content-bearing chunks from the same logical source key (`source` plus
+> `content_hash` when present). The header itself is excluded. Unrelated
+> sources, ordinary rejected chunks, all-rejected fail-closed behavior, and the
+> no-top-1-restore contract are unchanged.
+>
+> **Fresh TDD/verification evidence:** the saved header/body verdict pattern was
+> reproduced locally: the new focused test first failed because `graded_docs`
+> contained the header shell, then passed after the implementation. The
+> independent grading/fail-closed/relevance/provider band passed **24 tests**
+> with one known Starlette/httpx deprecation warning. Scoped Ruff, changed-file
+> Mypy (`--follow-imports=skip`, disabling only the already-known
+> `typeddict-item` code), and diff checks passed.
+>
+> **Residual honesty:** QG-03B is local-only. No provider/live replay ran, so the
+> saved seed-42 report remains FAIL and E20 keyword recovery is not claimed.
+> QG-04 `error-e30` remains a separate open RCA; seeds 43–44 and passing 3×20
+> evidence do not exist.
+>
+> **Release/workspace truth:** no paid call, Docker/WSL, migration, Task
+> Scheduler change, push, or deploy ran. Preserve unrelated tracked changes in
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and
+> `plan_sol_23_07_26`, plus all unrelated untracked artifacts. Production
+> readiness is not claimable.
+>
+> **Next routing:** no implementation WIP or active writer is known. If the
+> owner later says continue, take exactly one offline RCA: QG-04 `error-e30`
+> empty generation context. Do not reopen QG-03A/QG-03B or use a paid live run
+> as diagnosis. Live/provider/migration/deploy/push actions still require fresh
+> explicit authorization.
+
 ## 2026-08-09 Update-134 — QG-03A verifier-outage routing ✅ START HERE
 
 > **Read this block first.** Actual Git overrides every embedded SHA, branch
