@@ -1,7 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-09 — **Update-133** (authoritative open-problem ledger;
-no code or live execution).
+**Обновлено:** 2026-08-09 — **Update-134** (QG-03A verifier-outage routing;
+local code and offline verification only).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -12,11 +12,11 @@ no code or live execution).
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-133**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-134**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-133; dirty
+**Не использовать:** старые `START HERE` ниже Update-134; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -28,30 +28,30 @@ no code or live execution).
 
 | Факт | Значение |
 |------|----------|
-| Latest **committed implementation** | `1304ff4` — QG-02 generation-provider failure → graph error routing |
-| Prior implementations (recent) | `c3ae4f4` **QG-01** · `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen · `13bf255` **5.7** · `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** |
-| Latest **committed docs before this Update** | `b391028` — Update-132 |
-| This Update-133 docs SHA | Commit containing this file if present; otherwise owned docs WIP — resolve through Actual Git |
-| Branch advisory | observed `master...origin/master [ahead 231]` at `b391028` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; implementation WIP **none**; only Update-133 docs WIP may remain |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** + **QG-01** + **QG-02** |
+| Latest **committed implementation** | `80c2603` — QG-03A fact-verifier provider outage → fail-closed human/safety lane |
+| Prior implementations (recent) | `1304ff4` **QG-02** · `c3ae4f4` **QG-01** · `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen · `13bf255` **5.7** · `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** |
+| Latest **committed docs before this Update** | `142747d` — Update-133 |
+| This Update-134 docs SHA | Commit containing this file if present; otherwise owned docs WIP — resolve through Actual Git |
+| Branch advisory | observed `master...origin/master [ahead 233]` at `80c2603` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; implementation WIP **none**; only Update-134 docs WIP may remain |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** + **QG-01** + **QG-02** + **QG-03A** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | if the owner says continue: QG-03 `error-e20-filter-or-pump`, then QG-04 `error-e30`; exactly one RCA per turn; do not reopen QG-01/QG-02 |
+| Next ordered | if the owner says continue: QG-03B current-code header/body grading RCA, then QG-04 `error-e30`; exactly one RCA per turn; do not reopen QG-01/QG-02/QG-03A |
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-133 is docs-only:** it consolidates every currently known open defect,
-evidence gap, environment limitation, external boundary, and dirty-worktree
-constraint into §1C, and synchronizes the plan closure matrix. It changes no
-code, workflow, migration, plan checkbox, scheduler state, or listener; it
-makes no paid call and performs no push or deploy.
+**Update-134 records QG-03A:** `80c2603` fixes only the verifier-outage routing
+cause established from the retained SQLite trace. It does not claim that the
+saved pre-error answer satisfies the E20 case, does not close QG-03B/QG-04,
+and makes no paid call, migration, scheduler change, push, or deploy.
 
-**Last known verification (not re-run this docs turn):**
+**Last known verification:**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **QG-03A verifier-outage routing** | Grok TDD red **1 failed** → focused **6 passed** + Ruff; independent verifier/grounding/citation/graph-error/judge/provider band **49 passed** + Ruff + diff clean; ordinary local Mypy exposed 9 pre-existing `typeddict-item` errors outside changed lines, while the one narrowed run disabling only that code passed both changed source files; no locked/full-Mypy claim |
 | **QG-02 generation failure routing** | TDD red **1 failed** → green **1 passed**; final focused **1 passed**; independent provider graph/error/model-routing/judge band **31 passed**; scoped Ruff + changed-file Mypy (`--follow-imports=skip`) + diff clean; full-import Mypy blocked by unlocked local NumPy stubs before project checking |
 | **QG-01 vector parent expansion** | TDD red **2 failed / 9 passed** → focused **11 passed**; independent parent/base/reranker **34 passed**; scoped Ruff + changed-file Mypy + diff clean; broader `vectordb` Mypy has one unchanged-file error at `index_lifecycle_faults.py:128` |
 | **Native §5 live quality attempt** | seed 42: 20/20 effective, infrastructure failures 0, child evidence valid, gate **FAIL**; candidate pass 65%, baseline 70%, minimum 85%, regressions 4; seeds 43–44 not run |
@@ -241,7 +241,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-133)
+### 1C. Authoritative open-problem ledger (Update-134)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -253,9 +253,10 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Next safe boundary |
 |----|--------|----------------------|--------------------|
-| **QG-03** | **OPEN** | `error-e20-filter-or-pump` returned escalation-registration fallback and omitted E20/filter/pump. The saved sidecar lacks the original error node, so the cause is not established. | Offline trace/RCA + one focused failing test. Do not diagnose with a paid rerun. |
-| **QG-04** | **OPEN** | `error-e30` had empty generation context and omitted the disconnect instruction. The saved evidence lacks the intermediate grade outcome. | Offline retrieval/grade trace + one focused failing test, separate from QG-03. |
-| **QG-LIVE** | **LOCAL-ONLY** | QG-01 (`c3ae4f4`) and QG-02 (`1304ff4`) are locally fixed, but no live replay followed. The saved seed-42 report therefore remains FAIL. | Re-evaluate only after the remaining RCAs or with fresh owner opt-in; never claim live recovery from local tests. |
+| **QG-03A** | **LOCAL-ONLY** | Retained SQLite trace proved `verify_facts` hit `httpx.ReadError`; generic graph error routing then overwrote the generated answer with an escalation-registration fallback. `80c2603` now fails closed to human through response safety while preserving answer/context and bounded error provenance. | No live replay; do not infer E20 keyword recovery or reopen without new code/evidence. |
+| **QG-03B** | **OPEN RCA** | Before the verifier outage, the saved run kept a header-only `errors_e10_e30.md` graded chunk, filtered the content-bearing same-source chunk, and generated an answer that already omitted the requested E20 components. QG-01 may have changed current vector inputs, but that has not been reproduced offline. | Deterministic current-code header/body grading reproduction + one focused failing test. Keep separate from QG-04 and paid live runs. |
+| **QG-04** | **OPEN** | `error-e30` had empty generation context and omitted the disconnect instruction. The saved evidence lacks the intermediate grade outcome. | Offline retrieval/grade trace + one focused failing test, separate from QG-03B. |
+| **QG-LIVE** | **LOCAL-ONLY** | QG-01 (`c3ae4f4`), QG-02 (`1304ff4`), and QG-03A (`80c2603`) are locally fixed, but no live replay followed and QG-03B/QG-04 remain open. The saved seed-42 report therefore remains FAIL. | Re-evaluate only after the remaining RCAs or with fresh owner opt-in; never claim live recovery from local tests. |
 | **LIVE-QUALITY** | **OPEN / FAIL** | Only seed 42 of required seeds 42–44 ran. Candidate pass 65% vs baseline 70%/floor 85%; 4 regressions; precision 0.1499, recall 0.65, FULL 0.60, MISS 6, faithfulness 0.30, relevancy 0.4855. The outer 3-run report is not valid aggregate evidence. | Fresh explicit paid/live opt-in for any new seed or 3×20 run. Passing §5 evidence does not exist. |
 | **INDEX-DIM** | **OPEN** | Active `rag_docs_default` is dimension 3 and incompatible with remote 1024-dimension embeddings. A compatible six-document diagnostic copy is retained under `.tmp/live-quality-native-index-20260809/chroma`; the active collection was not rebuilt. | Dedicated validated rebuild/publish scope; do not replace or delete collections casually. |
 | **HYBRID-MEM** | **OPEN** | Empty `RAG_RERANKER_MODEL` did not propagate to the Windows child; default `BAAI/bge-reranker-v2-m3` loaded and the child reached about 2.12 GiB. The authoritative quality result is vector-only, not proof for default hybrid retrieval. | Fix/verify child environment propagation and memory guard before any bounded hybrid attempt. |
@@ -278,10 +279,10 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **VER-01** | **ENV BLOCKER** | Local full-import Mypy stopped before project checking: installed `mypy 2.3.0` / `numpy 2.5.1` differ from locks `1.19.1` / `2.4.4`, and NumPy stubs use syntax rejected under target 3.11. | Use a locked environment. QG-02 has only changed-file Mypy with `--follow-imports=skip`; do not call the full scope green. |
+| **VER-01** | **ENV / BASELINE BLOCKER** | Installed `mypy 2.3.0` / `numpy 2.5.1` differ from locks `1.19.1` / `2.4.4`. QG-03A changed-file Mypy with `--follow-imports=skip` reported 9 pre-existing `typeddict-item` errors outside changed lines; a narrowed run disabling only that code passed. Full-import checking also stops on unlocked NumPy stubs under target 3.11. | Use a locked environment and reconcile the existing TypedDict debt separately; do not call full or ordinary changed-file Mypy green. |
 | **VER-02** | **KNOWN DEBT** | Broader `vectordb` Mypy last reported unchanged `vectordb/index_lifecycle_faults.py:128`; it was not re-run in Update-133. | Treat as last-known type-check debt until a dedicated verified slice. |
-| **VER-03** | **OPEN** | No full unit/integration/coverage/security/locked-CI suite ran after QG-01/QG-02; only focused proportional bands are evidence. | §10 or a dedicated gate turn; do not infer repository-wide green. |
-| **VER-04** | **WARNING** | Focused pytest runs emit `StarletteDeprecationWarning` for `httpx` through `starlette.testclient`; assertions still pass. | Track dependency migration separately; warning is not fixed by QG-02. |
+| **VER-03** | **OPEN** | No full unit/integration/coverage/security/locked-CI suite ran after QG-01/QG-02/QG-03A; only focused proportional bands are evidence. | §10 or a dedicated gate turn; do not infer repository-wide green. |
+| **VER-04** | **WARNING** | Focused pytest runs emit `StarletteDeprecationWarning` for `httpx` through `starlette.testclient`; assertions still pass. | Track dependency migration separately; warning is not fixed by QG-03A. |
 | **OPS-01** | **DISABLED** | `PythonMemoryGuard` was read-only verified `Disabled` on 2026-08-09; last run was 2026-07-01. The 2.12 GiB child therefore had no configured 1 GiB enforcement. | Enabling/changing Task Scheduler requires explicit authority; do not run memory-heavy hybrid commands meanwhile. |
 | **OPS-02** | **ENV LIMIT** | The system pytest temp root can return access denied. | Use a unique writable repository basetemp; do not raw-retry the inaccessible path. |
 | **OPS-03** | **ENV LIMIT** | Git/PowerShell commands intermittently exceeded 10 s or timed out; root cause is not established. `login:false`, `git -C`, scoped plumbing commands, and a 30 s read-only timeout completed. | Avoid parallel full-worktree scans and raw retries; preserve the cycle budget. |
@@ -290,7 +291,7 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 231]` before Update-133. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
+| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 233]` at `80c2603` before Update-134 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
 | **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
 | **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. | They are not implementation WIP. Do not bulk-delete or stage them. |
@@ -322,9 +323,9 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-133 in AGENT_STATE.md + §1C problem ledger in this file
+5. Read ONLY top Update-134 in AGENT_STATE.md + §1C problem ledger in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
-7. If owner says continue: select QG-03 first (QG-04 only in a later turn)
+7. If owner says continue: select QG-03B first (QG-04 only in a later turn)
 8. Add one focused failing test, make the smallest local fix, verify, then STOP
 ```
 
@@ -582,18 +583,19 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 ## 7. Next named candidate
 
 There is **no active implementation WIP**. QG-01 is locally closed at
-`c3ae4f4` and QG-02 at `1304ff4`; do not reopen either or repeat their focused
-gates without a code or environment change.
+`c3ae4f4`, QG-02 at `1304ff4`, and QG-03A at `80c2603`; do not reopen them or
+repeat their focused gates without a code or environment change.
 
 The deterministic local-only continuation order is documented, not started:
 
-1. **QG-03** — `error-e20-filter-or-pump`: escalation/fallback path; original
-   error node is absent from the sidecar.
+1. **QG-03B** — `error-e20-filter-or-pump`: reproduce the saved header-only
+   graded chunk versus content-bearing same-source chunk on current post-QG-01
+   code; the verifier-outage routing cause is already closed as QG-03A.
 2. **QG-04** — `error-e30`: empty generation context; intermediate grade
    outcome is absent.
 
 If a later turn selects one, perform a fresh single-cause RCA and test-first
-local slice. Never combine QG-03 and QG-04 in one turn. A new paid seed or 3×20
+local slice. Never combine QG-03B and QG-04 in one turn. A new paid seed or 3×20
 retry needs fresh owner opt-in; do not use a live rerun as the diagnostic tool.
 
 ### Out without opt-in
@@ -618,7 +620,7 @@ retry needs fresh owner opt-in; do not use a live rerun as the diagnostic tool.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-133:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-134:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -701,7 +703,9 @@ Never log secret values.
 | 20 | routing test | `c157796` | align mock with the independent-judge policy |
 | 21 | **QG-02** | `1304ff4` | route generation-provider failures to graph error handling |
 | 22 | docs | `b391028` | Update-132 QG-02 verification and residual honesty |
-| 23 | docs | **this Update-133 commit, if present in Actual Git** | authoritative problem ledger and next-session transparency |
+| 23 | docs | `142747d` | Update-133 authoritative problem ledger and next-session transparency |
+| 24 | **QG-03A** | `80c2603` | verifier provider outage fails closed to human/safety without answer overwrite |
+| 25 | docs | **this Update-134 commit, if present in Actual Git** | QG-03A evidence, QG-03B residual, and next-session transparency |
 
 ---
 
@@ -711,7 +715,7 @@ Never log secret values.
 |-------|-------|
 | Plan closed? | **No** |
 | Production ready? | **No** |
-| Local quality path deep? | **Yes** (4.1–4.8, 5.1–5.7, 6.1–6.7, 7.1–7.7, 8.x, DEP-01, QG-01, QG-02) |
+| Local quality path deep? | **Yes** (4.1–4.8, 5.1–5.7, 6.1–6.7, 7.1–7.7, 8.x, DEP-01, QG-01, QG-02, QG-03A) |
 | Graph node SSE? | **Yes local** (4.7) |
 | Provider token stream? | **Yes local** (4.8; parity on + stream-capable LLM) |
 | OpenCode Zen profile? | **Yes local** (`faaa815`); trial/non-sensitive only; no live evidence |
@@ -724,9 +728,10 @@ Never log secret values.
 | Current child producer emits all 7 metrics? | **Yes local** (5.7; complete/provenanced or release fails closed) |
 | QG-01 vector parent expansion fixed? | **Yes local** (`c3ae4f4`); no claim for unrelated regressions or live recovery |
 | QG-02 generation failure routing fixed? | **Yes local** (`1304ff4`); provider exceptions now enter graph error handling; no live recovery claim |
-| All known open problems indexed? | **Yes in §1C as of Update-133**; Actual Git/new evidence overrides the snapshot |
+| QG-03 verifier outage routing fixed? | **Yes local** (`80c2603`); answer/context are preserved and route is human via safety/log; QG-03B content quality remains open and no live recovery is claimed |
+| All known open problems indexed? | **Yes in §1C as of Update-134**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; only Update-133 docs WIP may remain — check Actual Git |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; only Update-134 docs WIP may remain — check Actual Git |

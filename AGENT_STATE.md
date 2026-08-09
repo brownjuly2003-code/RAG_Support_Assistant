@@ -1,5 +1,63 @@
 # Agent State
 
+## 2026-08-09 Update-134 — QG-03A verifier-outage routing ✅ START HERE
+
+> **Read this block first.** Actual Git overrides every embedded SHA, branch
+> count, process ID, listener, and worktree statement. Older Update blocks are
+> archival evidence and may describe state superseded by Update-134.
+>
+> **Committed implementation:** `80c2603` (`fix(graph): fail closed on verifier
+> outages`) changes exactly `agent/graph.py`, `agent/state.py`, and
+> `tests/test_fact_verification.py`. Branch was observed at
+> `master...origin/master [ahead 233]` after that implementation commit and
+> before this docs update; refresh mandatory. Active writer: **none**.
+>
+> **QG-03A root cause:** retained SQLite trace
+> `2889ac98-4669-422a-8163-40afefa6f03e` proves the saved
+> `error-e20-filter-or-pump` run generated an answer, then the verifier LLM
+> failed with `httpx.ReadError` / WinError 10054. `make_verify_facts_node()`
+> converted that expected provider outage into the generic graph error state;
+> `handle_error` then attempted durable escalation and overwrote the generated
+> answer with the escalation-registration failure fallback.
+>
+> **Implementation contract:** verifier provider-call failures now preserve the
+> generated answer, citations, and retrieval/grading state; record bounded
+> non-secret `fact_verification_error`; set claims empty, factuality 0,
+> grounding `not_verified`, and route `human`; then take the existing
+> response-safety/log terminal lane without evaluate, retry, or `handle_error`.
+> The catch is scoped to verifier LLM call boundaries. Other node/programming
+> exceptions retain `_make_error_state` and generic error escalation.
+>
+> **Fresh TDD/verification evidence:** Grok's focused regression was red because
+> the old node returned `error=True`; after the edit its focused file passed
+> **6 tests** and Ruff passed. Codex independently passed the fact-verification,
+> grounding, citation, graph-error, judge, and provider-graph band: **49 tests**
+> with one known Starlette/httpx deprecation warning; scoped Ruff and diff
+> checks passed. Local Mypy first reported **9 pre-existing**
+> `typeddict-item` errors outside changed lines; the single narrowed diagnostic
+> run disabling only that code passed both changed source files. No locked/full
+> Mypy or repository-wide green claim is made.
+>
+> **Residual honesty:** QG-03A closes only the verifier-outage routing cause and
+> has no live replay. Before that outage, the saved run's grader retained a
+> header-only `errors_e10_e30.md` chunk while filtering its content-bearing
+> same-source chunk, and the generated answer already omitted the requested
+> E20 components. Whether current post-QG-01 code reproduces that content path
+> remains unproved; track it separately as QG-03B. The saved seed-42 result is
+> still FAIL, seeds 43–44 and passing 3×20 evidence do not exist.
+>
+> **Release/workspace truth:** no provider call, paid retry, Docker/WSL,
+> migration, Task Scheduler change, push, or deploy ran. Preserve unrelated
+> tracked changes in `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and
+> `plan_sol_23_07_26`; their protected hashes were unchanged. Preserve all
+> unrelated untracked artifacts. Production readiness is not claimable.
+>
+> **Next routing:** no implementation WIP or active writer is known. If the
+> owner later says continue, take exactly one offline RCA: QG-03B current-code
+> reproduction of the saved header/body grading path, then QG-04 `error-e30`.
+> Do not reopen QG-03A or use a paid live run as diagnosis. Live/provider/
+> migration/deploy/push actions still require fresh explicit authorization.
+
 ## 2026-08-09 Update-133 — authoritative open-problem ledger ⚠ START HERE
 
 > **Read this block first.** Actual Git overrides every embedded SHA, branch
