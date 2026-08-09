@@ -21,6 +21,71 @@ DocGradeOutcome = Literal[
 ]
 
 
+def _doc_metadata(doc: Any) -> Mapping[str, Any]:
+    if isinstance(doc, Mapping):
+        metadata = doc.get("metadata")
+    else:
+        metadata = getattr(doc, "metadata", None)
+    return metadata if isinstance(metadata, Mapping) else {}
+
+
+def _doc_text(doc: Any) -> str:
+    if isinstance(doc, Mapping):
+        return str(doc.get("page_content") or "")
+    return str(getattr(doc, "page_content", "") or "")
+
+
+def _logical_source_key(doc: Any) -> tuple[str, str] | None:
+    metadata = _doc_metadata(doc)
+    source = str(metadata.get("source") or metadata.get("doc_id") or "").strip()
+    if not source:
+        return None
+    return source, str(metadata.get("content_hash") or "").strip()
+
+
+def _is_context_header_only(doc: Any) -> bool:
+    metadata = _doc_metadata(doc)
+    if metadata.get("has_context_header") is not True:
+        return False
+    text = _doc_text(doc).strip()
+    first_line, separator, remainder = text.partition("\n")
+    return first_line.startswith("[Контекст:") and (not separator or not remainder.strip())
+
+
+def replace_relevant_context_headers(
+    *,
+    context_docs: Sequence[Any],
+    graded: Sequence[Any],
+) -> list[Any]:
+    """Replace relevant header-only shells with content from the same source."""
+    header_keys = {
+        key
+        for doc in graded
+        if _is_context_header_only(doc)
+        if (key := _logical_source_key(doc)) is not None
+    }
+    replacement_keys = {
+        key
+        for key in header_keys
+        if any(
+            _logical_source_key(doc) == key and not _is_context_header_only(doc)
+            for doc in context_docs
+        )
+    }
+    if not replacement_keys:
+        return list(graded)
+
+    resolved: list[Any] = []
+    for doc in context_docs:
+        key = _logical_source_key(doc)
+        if key in replacement_keys:
+            if not _is_context_header_only(doc):
+                resolved.append(doc)
+        elif doc in graded:
+            resolved.append(doc)
+    return resolved
+
+
 def resolve_generation_context_docs(state: Mapping[str, Any]) -> list[Any]:
     """Select docs for answer generation without silent post-grade restore.
 

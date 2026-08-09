@@ -1519,7 +1519,7 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
             return state
         trace_id = state.get("trace_id", "unknown-trace-id")
         try:
-            from agent.doc_grade import finalize_grade_state
+            from agent.doc_grade import finalize_grade_state, replace_relevant_context_headers
 
             question = state.get("question", "")
             context_docs = state.get("context_docs", []) or []
@@ -1665,6 +1665,11 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
                             graded.append(doc)
                         else:
                             filtered_count += 1
+                graded = replace_relevant_context_headers(
+                    context_docs=context_docs,
+                    graded=graded,
+                )
+                filtered_count = len(context_docs) - len(graded)
                 # Plan §5.3: do NOT force re-insert top-ranked doc after rejection.
                 span.set_attribute("rag.filtered_docs", filtered_count)
                 span.set_attribute("rag.output_docs", len(graded))

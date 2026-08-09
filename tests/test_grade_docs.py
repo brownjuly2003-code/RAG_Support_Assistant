@@ -115,6 +115,65 @@ def test_grade_docs_does_not_force_top_hit_after_rejection(
     assert result.get("doc_grade_outcome") == "ok"
 
 
+def test_grade_docs_uses_same_source_content_when_only_context_header_is_relevant(
+    monkeypatch,
+) -> None:
+    """A relevant contextual header represents its content-bearing source chunk."""
+    import agent.graph as graph
+
+    class _HeaderOnlyRelevantLLM:
+        provider_id = "mistral"
+        model_name = "ministral-3b-latest"
+        supports_structured_output = True
+
+        def generate_with_schema(self, messages, schema, **kwargs):
+            _ = messages, schema, kwargs
+            return LLMResponse(
+                text='{"grades":[{"index":1,"relevant":true},{"index":2,"relevant":false}]}',
+                provider=self.provider_id,
+                model=self.model_name,
+                structured_output={
+                    "grades": [
+                        {"index": 1, "relevant": True},
+                        {"index": 2, "relevant": False},
+                    ]
+                },
+            )
+
+    monkeypatch.setattr(graph, "trace_llm_call", lambda **kwargs: None)
+    monkeypatch.setattr(graph, "log_step", lambda trace_id, node_name, state: None)
+
+    node = graph.make_grade_docs_node(_HeaderOnlyRelevantLLM())
+    state = create_initial_state(
+        question="Какие узлы проверить при E20: фильтр, шланг или насос?",
+        trace_id="trace-grade-e20-header-body",
+    )
+    shared_metadata = {
+        "source": "errors_e10_e30.md",
+        "content_hash": "same-logical-document",
+        "contextual_header": "Из документа errors_e10_e30.md",
+        "has_context_header": True,
+    }
+    header_doc = {
+        "page_content": "[Контекст: Из документа errors_e10_e30.md]\n",
+        "metadata": dict(shared_metadata),
+    }
+    content_doc = {
+        "page_content": (
+            "[Контекст: Из документа errors_e10_e30.md]\n"
+            "E20 — проблема со сливом: проверьте фильтр, шланг и насос."
+        ),
+        "metadata": dict(shared_metadata),
+    }
+    state["context_docs"] = [header_doc, content_doc]
+
+    result = node(state)
+
+    assert result["graded_docs"] == [content_doc]
+    assert header_doc not in result["graded_docs"]
+    assert result["doc_grade_reason"] == "Kept 1/2, filtered 1"
+
+
 def test_grade_docs_batches_multiple_documents_with_schema(
     monkeypatch,
 ) -> None:
