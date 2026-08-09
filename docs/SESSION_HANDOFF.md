@@ -1,7 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-09 — **Update-123** (docs-only full transparency after
-**5.6** @ `fb72dd2`; latest prior docs Update-122 `96ef373`).
+**Обновлено:** 2026-08-09 — **Update-124** (docs-only full transparency after
+**5.7** @ `13bf255`; latest prior docs Update-123 `33949b1`).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -12,11 +12,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-123**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-124**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `✅ START HERE` ниже Update-123; dirty
+**Не использовать:** старые `✅ START HERE` ниже Update-124; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -28,27 +28,28 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **implementation** | `fb72dd2` — **5.6** exact live child report → §5 DoD wire |
-| Prior implementations (recent) | `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** · `6b91a35` **4.7** · `c707c46` **6.7** · `47e255a` **7.7** · `d1ae4d6` **7.6** |
-| Latest **docs before this Update** | `96ef373` — Update-122 |
-| This Update-123 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
-| Branch advisory | last observed `master...origin/master [ahead 218]` before this docs commit — **refresh mandatory** |
+| Latest **implementation** | `13bf255` — **5.7** canonical §5 metric producer |
+| Prior implementations (recent) | `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** · `c707c46` **6.7** · `47e255a` **7.7** |
+| Latest **docs before this Update** | `33949b1` — Update-123 |
+| This Update-124 docs SHA | **unknown in-file** → `git log -3 --oneline` после коммита |
+| Branch advisory | last observed `master...origin/master [ahead 220]` before this docs commit — **refresh mandatory** |
 | Active writer / WIP | **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.6** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered (default) | **5.7 metric producer sidecar contract** (local-only); then human sample / opt-in live evidence / Astro7 decisions |
+| Next ordered | **No ungated local default**; choose opt-in live ×3 evidence, human sample, or Astro7/parity decision |
 | Gates | **no** push / deploy / live multi-service / live provider·quality execute / migrate 019–023 without **explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**This Update-123 is docs-only:** no code/test/workflow/plan-checkbox change;
+**This Update-124 is docs-only:** no code/test/workflow/plan-checkbox change;
 project tests are not re-run in this docs turn. Implementation state remains
-`fb72dd2`; latest prior docs remain `96ef373`.
+`13bf255`; latest prior docs remain `33949b1`.
 
 **Last known verification (not re-run this docs turn):**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **5.7** | independent regression + quality band **83 passed**; Ruff + scoped diff clean |
 | **5.6** | Grok focused **25 passed**; independent quality + provider + workflow gate **46 passed**; Ruff and scoped diff clean |
 | **5.5** | 33 passed (quality-metrics + provider-gate + workflows); readiness `SKIPPED_NO_OPT_IN`; Ruff clean |
 | **5.4** | 56 passed (relevance + agentic + grounding/judge); Ruff clean |
@@ -89,7 +90,7 @@ or quality execute **not** run / **not** claimed.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-123 in AGENT_STATE.md + this file §1–§12
+5. Read ONLY top Update-124 in AGENT_STATE.md + this file §1–§12
 6. Default work: ONE of next picks below. Announce: slice 1/1
 7. Tests-first → proportional gate → local commit only (no push)
 8. Optional handoff refresh; STOP after one slice
@@ -109,7 +110,7 @@ Chroma, live provider/quality execute with secrets, `alembic upgrade`
 | **2** index lifecycle | **2.1–2.6g** local residual closed | live PG/Redis/Celery/Chroma + migrate drills |
 | **3** execution / session / budget | **3.1a–3.1i** local | multi-replica durable session (**DEFER** without SLA; design exists) |
 | **4** pipeline + escalation | **4.1–4.8** local | parity default still **off** (product decision) |
-| **5** grounding fail-closed | **5.1–5.6** local | producer still lacks all 7 metrics; then **actual** live ×3 evidence |
+| **5** grounding fail-closed | **5.1–5.7** local | **actual** live ×3 evidence still open |
 | **6** judge / safety / agentic | **6.1–6.7** local | production human dual-annotator sample |
 | **7** eval gate | **7.1–7.7** local | live execute with secrets; mock≠release; optional more depth |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
@@ -135,6 +136,7 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 | **5.4** | `4f95e18` | independent retrieval relevance (≠ quality/100) |
 | **5.5** | **`a901692`** | live quality metrics gate scaffold (×3 DoD structure) |
 | **5.6** | **`fb72dd2`** | exact child report parse + release-honest §5 DoD wire |
+| **5.7** | **`13bf255`** | canonical candidate metric producer + completeness provenance |
 
 ### §4 pipeline + escalation
 
@@ -187,6 +189,17 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 
 ## 5. Contracts (recent complete slices — read before touching)
 
+### 5.7 @ `13bf255`
+
+- `regression_eval` emits all seven canonical §5 metrics from candidate
+  question/answer/exact generation context and explicit routing/grounding.
+- Context selection reuses `resolve_generation_context_docs`; all-rejected
+  grade results stay empty while simple-path retrieval context remains visible.
+- `quality_metrics_provenance.complete` fails real release runs closed when an
+  eligible case lacks finite measurements.
+- Top-level/nested release flags satisfy the exact-sidecar consumer contract.
+- No substitution from quality/factuality/pass-rate/regression counts.
+
 ### 5.6 @ `fb72dd2`
 
 - `scripts/live_quality_metrics_gate.py --mode live --execute` captures each
@@ -220,8 +233,8 @@ Full matrix: [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md).
 - Workflow: `.github/workflows/live-quality-metrics-gate.yml`
   (weekly + dispatch `enable_live` default **false**)
 - Offline: `--mode evaluate-report --metrics-runs <json|dir>` scores supplied runs
-- The former report-parse residual is closed by **5.6**; producer metrics and
-  actual live ×3 evidence remain open.
+- The former report-parse residual is closed by **5.6**; producer metrics are
+  closed by **5.7**; actual live ×3 evidence remains open.
 
 ### 5.4 @ `4f95e18`
 
@@ -285,24 +298,19 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 ## 7. Next named candidate (not started)
 
-**Default local-only pick:**
+There is **no ungated default local-only candidate** after 5.7. Choose one only
+with the required authority:
 
-1. **5.7 metric producer sidecar contract** — make the release-honest child
-   report emit all seven canonical §5 metrics, tests-first, with no live calls
-   and no substitution from unrelated scores/counts.
-
-**Alternates requiring data, opt-in, or product authority:**
-
+1. Run provider/quality evidence ×3 with secrets + explicit opt-in +
+   `--execute`; retain exact sidecars and the aggregate report.
 2. Collect a real dual-annotator human sample, then run recalibration with
    `--require-human --write`.
-3. After the producer contract exists, run provider/quality evidence ×3 with
-   secrets + explicit opt-in + `--execute`.
-4. Astro 7 major or product decision to default `STREAMING_RAG_PARITY=true`.
+3. Astro 7 major or product decision to default `STREAMING_RAG_PARITY=true`.
 
 ### Out without opt-in
 
 - live multi-service / migrate / push / deploy / live provider·quality execute
-- re-select through **8.5** / **4.1–4.8** / **5.1–5.6** / **6.1–6.7** /
+- re-select through **8.5** / **4.1–4.8** / **5.1–5.7** / **6.1–6.7** /
   **7.1–7.7** / **DEP-01**
 - OIDC live IdP drill; bulk plan checkbox edits; production claims
 - multi-replica impl without SLA (design DEFER)
@@ -361,7 +369,9 @@ Never log secret values.
 | 5 | **5.5** | `a901692` | live quality metrics gate scaffold |
 | 6 | docs | `96ef373` | Update-122 |
 | 7 | **5.6** | `fb72dd2` | exact child report → §5 DoD wire |
-| 8 | docs | **this** | Update-123 full transparency after 5.6 |
+| 8 | docs | `33949b1` | Update-123 full transparency after 5.6 |
+| 9 | **5.7** | `13bf255` | canonical metric producer + provenance |
+| 10 | docs | **this** | Update-124 full transparency after 5.7 |
 
 ---
 
@@ -371,12 +381,12 @@ Never log secret values.
 |-------|-------|
 | Plan closed? | **No** |
 | Production ready? | **No** |
-| Local quality path deep? | **Yes** (4.1–4.8, 5.1–5.6, 6.1–6.7, 7.1–7.7, 8.x, DEP-01) |
+| Local quality path deep? | **Yes** (4.1–4.8, 5.1–5.7, 6.1–6.7, 7.1–7.7, 8.x, DEP-01) |
 | Graph node SSE? | **Yes local** (4.7) |
 | Provider token stream? | **Yes local** (4.8; parity on + stream-capable LLM) |
 | Relevance ≠ quality/100? | **Yes local** (5.4) |
 | Child report → §5 DoD wire? | **Yes local** (5.6; exact sidecar, fail-closed) |
-| Current child producer emits all 7 metrics? | **No** — next local residual |
+| Current child producer emits all 7 metrics? | **Yes local** (5.7; complete/provenanced or release fails closed) |
 | Live quality metrics ×3 evidence? | **No** — no paid/live runs claimed |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Live provider evidence? | **No** (7.6 scaffold only) |

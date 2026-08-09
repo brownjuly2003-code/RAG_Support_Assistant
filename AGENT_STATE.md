@@ -1,5 +1,108 @@
 # Agent State
 
+## 2026-08-09 Update-124 — 5.7 canonical metric producer ✅ START HERE
+
+> **Routing authority:** Update-124 supersedes Update-123 **only for
+> start-point routing**. All older Update blocks below, including headings
+> that literally contain `✅ START HERE`, are **archival**. **Only the
+> first/topmost Update block in this file is authoritative.** Actual Git still
+> wins over every embedded SHA or branch count.
+>
+> **Documentation this turn:** records already committed slice **5.7** at
+> `13bf255`. No live provider/quality call, migration, push, deploy, plan
+> checkbox, production claim, or dependency change is made by this Update.
+>
+> **Known lineage (actual Git wins):**
+> - Latest implementation: `13bf255`
+>   (`feat(eval): emit canonical section 5 metrics (5.7)`)
+> - Prior implementation: `fb72dd2` **5.6** · `a901692` **5.5** ·
+>   `4f95e18` **5.4** · `fc7f07b` **4.8**
+> - Latest docs before this Update: `33949b1` **Update-123**
+> - This Update-124 docs commit SHA is unknown inside its own content; use
+>   `git log -3 --oneline` next session.
+> - Migrations on disk (not applied): **019–023**
+>
+> **Active writer / implementation WIP:** **none**.
+>
+> ---
+>
+> ### Completion truth (honest)
+>
+> | Band | Status |
+> |------|--------|
+> | **5.1–5.7** | grounding + relevance + live gate + **canonical producer** local |
+> | **4.1–4.8** | stream parity + provider tokens local |
+> | **6.1–6.7** / **7.1–7.7** / **8.x** / **DEP-01** | prior local |
+> | `regression_eval` sidecar emits all seven §5 metrics | **YES local** |
+> | Live quality metrics DoD (×3 real runs) | **OPEN** — no live evidence |
+> | Full plan / production | **NOT** complete / **NOT** claimed |
+>
+> ---
+>
+> ### Slice 5.7 contract
+>
+> - `scripts/regression_eval.py` measures candidate-side context precision,
+>   context recall, faithfulness, and answer relevancy from the actual
+>   question/answer/generation context via `evaluation.ragas_eval`.
+> - Generation context selection reuses
+>   `agent.doc_grade.resolve_generation_context_docs`: simple-path context is
+>   measured, while an explicit all-rejected/grader-failure result remains
+>   empty and is never silently restored.
+> - Expected evidence comes from grouped `answer_contains` and
+>   `answer_contains_any`; the producer derives FULL/PART/MISS from that
+>   context coverage and separately measures unverified `route=auto` results.
+> - Sidecars emit all seven canonical fields under `quality_metrics`, plus
+>   candidate-only provenance, cohort counts, per-case rows, coverage counts,
+>   and a completeness flag.
+> - A real `--release-gate` run fails closed when any eligible candidate case
+>   lacks a finite measurement. Top-level and nested release-honesty flags are
+>   consistent for the exact-sidecar consumer from 5.6.
+> - No metric is substituted from `quality_score`, `factuality_score`,
+>   `candidate_pass_rate`, or regression counts.
+>
+> **Files:** `scripts/regression_eval.py`,
+> `tests/test_regression_quality_metrics.py`.
+>
+> ---
+>
+> ### Known verification (5.7 turn)
+>
+> | Gate | Result |
+> |------|--------|
+> | focused TDD | red **5 failed** → green **5 passed** before QA correction |
+> | independent regression + quality gate | **83 passed**, 1 dependency deprecation warning |
+> | Ruff on implementation/test paths | clean |
+> | scoped `git diff --check` | clean |
+> | Full suite / live / push / deploy | **not** run / **not** claimed |
+>
+> ---
+>
+> ### Open boundaries (honest)
+>
+> - There is **no ungated default local-only §5 candidate** after 5.7.
+> - Next quality evidence is actual ×3 live execution: explicit opt-in,
+>   provider secrets, paid calls, and retained artifacts are required.
+> - Other ordered choices require owner/data authority: production
+>   dual-annotator human sample; Astro 7 / parity-default product decision.
+> - Other residuals: live multi-service + migrations 019–023; §1/§10.
+>
+> **Do not re-select:** 2.x–3.x, 4.1–4.8, **5.1–5.7**, 6.1–6.7, 7.1–7.7,
+> 8.1–8.5, DEP-01.
+>
+> ---
+>
+> ### Protected dirty / untracked
+>
+> Dirty tracked: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`,
+> `plan_sol_23_07_26`
+> Untracked includes `.grok-prompts/`, `_NEXT_SESSION.md` (**stale pointer;
+> never routing authority**), pytest temps, plan/presentation/architecture files.
+>
+> ### External gates (explicit opt-in only)
+>
+> push · deploy · live multi-service · live provider/quality execute ·
+> alembic 019–023 · production claims
+
 ## 2026-08-09 Update-123 — 5.6 live child report → §5 DoD wire ✅ START HERE
 
 > **Routing authority:** Update-123 supersedes Update-122 **only for

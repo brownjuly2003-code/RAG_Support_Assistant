@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-123 after 5.6 live child report → §5 DoD wire)
+**Date:** 2026-08-09 (Update-124 after 5.7 canonical metric producer)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-123**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-124**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 
 **Rules:**
@@ -22,7 +22,7 @@
 | **2** index lifecycle | **2.1–2.6g local residual closed** | **OPEN** live PG/Redis/Celery/Chroma | yes for live index ops |
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.8 local** | **OPEN** parity default still off (product) | partial |
-| **5** grounding fail-closed | **5.1–5.6 local** | **OPEN** producer lacks 7 metrics + actual live ×3 evidence | **yes** quality |
+| **5** grounding fail-closed | **5.1–5.7 local** | **OPEN** actual live ×3 evidence | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
@@ -58,8 +58,8 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 27 | §5.4 independent retrieval relevance | **done** `4f95e18` |
 | 28 | §5.5 live quality metrics gate scaffold | **done** `a901692` |
 | 29 | §5.6 exact live child report → DoD wire | **done** `fb72dd2` |
-| 30 | **§5.7 producer emits all 7 canonical metrics** | **← next local-only pick** |
-| 31 | human sample / opt-in live evidence | external/data residual |
+| 30 | §5.7 producer emits all 7 canonical metrics | **done** `13bf255` |
+| 31 | human sample / opt-in live evidence | **next; external/data authority required** |
 | 32 | §2/§3 residual if product needs | residual |
 | 33 | Astro 7 (clears DEP-01 moderate residual) | residual |
 | 34 | §1 + §10 | **opt-in live only** |
@@ -133,13 +133,14 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **5.4** | **done** | `4f95e18` independent retrieval relevance |
 | **5.5** | **done local** | `a901692` live quality metrics gate scaffold |
 | **5.6** | **done local** | `fb72dd2` exact child report parse + release-honest DoD wire |
+| **5.7** | **done local** | `13bf255` canonical metric producer + completeness provenance |
 | Live DoD evidence | **open** | actual ×3 runs still opt-in |
 
-**Residual after 5.6:** current `regression_eval` sidecars do not emit all seven
-canonical §5 metrics, so live execute correctly fails closed. Next local slice
-must add an honest producer contract without deriving metrics from unrelated
-scores/counts. Actual live precision/recall/faithfulness ×3 evidence remains
-explicit opt-in after that producer exists. Relevance is **not** quality/100.
+**Residual after 5.7:** the producer emits all seven canonical metrics with
+candidate-only provenance and fails real release runs closed on incomplete
+measurement. Actual live precision/recall/faithfulness ×3 evidence remains
+explicit opt-in; no paid/live run occurred here. Relevance is **not**
+quality/100, and §5 metrics are not substituted from legacy scores/counts.
 
 ---
 
@@ -242,22 +243,23 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-1. **§5.7 metric producer sidecar contract** — emit all seven canonical §5
-   metrics with release-honest provenance; local tests only, no live calls.
+There is **no ungated default local-only candidate** after 5.7.
+
+1. Run live provider / quality evidence ×3 (explicit opt-in + secrets +
+   `--execute`) and retain exact sidecars.
 2. Collect a real dual-annotator human sample +
    `recalibrate_routing.py --require-human --write`.
-3. After §5.7, run live provider / quality evidence ×3 (explicit opt-in +
-   secrets + `--execute`).
-4. **Astro 7** / product decision to default `STREAMING_RAG_PARITY=true`.
+3. **Astro 7** / product decision to default `STREAMING_RAG_PARITY=true`.
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.6**, 6.1–6.7, 7.1–7.7, 8.1–8.5, DEP-01.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, DEP-01.
 
 ---
 
-## Last-known verification snapshot (5.6 turn)
+## Last-known verification snapshot (5.7 turn)
 
 | Band | Last known |
 |------|------------|
+| **5.7** | independent regression/quality band **83 passed**; Ruff + scoped diff clean |
 | **5.6** | Grok focused 25 passed; independent quality/provider/workflow **46 passed**; Ruff + scoped diff clean |
 | **5.5** | 33 passed (quality-metrics + provider-gate + workflows) |
 | **5.4** | 56 passed (relevance + agentic + grounding/judge) |
