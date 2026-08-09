@@ -1,5 +1,49 @@
 # Agent State
 
+## 2026-08-09 Update-137 — HYBRID-MEM child environment propagation ✅ START HERE
+
+> **Read this block first.** Actual Git overrides every embedded SHA, branch
+> count, process ID, listener, and worktree statement. Older Update blocks are
+> archival evidence and may describe state superseded by Update-137.
+>
+> **Committed implementation:** `3c90368` (`fix(quality): preserve disabled
+> child reranker`) changes exactly `scripts/live_quality_metrics_gate.py` and
+> `tests/test_live_quality_metrics_gate.py`. Branch was observed at
+> `master...origin/master [ahead 239]` after that commit and before this docs
+> update; refresh mandatory. Active writer: **none**.
+>
+> **Root cause and contract:** Windows PowerShell omits a variable assigned an
+> empty string, so the quality-gate child inherited no `RAG_RERANKER_MODEL` key
+> and settings selected the default `BAAI/bge-reranker-v2-m3`. The live gate now
+> has an explicit `--disable-child-reranker` option. Only when that option is
+> used with live execution, the parent copies its environment and explicitly
+> inserts `RAG_RERANKER_MODEL=""` for every child; the report records the
+> non-secret `child_reranker_disabled=true` note. Behavior without the option
+> is unchanged.
+>
+> **Fresh TDD/verification evidence:** the focused test first failed with
+> `TypeError` because `run_live_subprocess` had no environment-override
+> contract, then the two focused propagation tests passed. The independent
+> live-quality/regression band passed **57 tests** with one known
+> Starlette/httpx deprecation warning. Scoped Ruff and changed-file Mypy passed.
+> A real lightweight Windows child reported the key present with value `""`.
+>
+> **Residual honesty:** this closes only local child-environment propagation.
+> No model, paid/provider call, live quality replay, hybrid retrieval, migration,
+> scheduler change, push, or deploy ran. Default hybrid quality remains
+> unproved, and `PythonMemoryGuard` remains last known **Disabled**; do not start
+> a memory-heavy hybrid attempt until its separate operational gate is resolved.
+>
+> **Release/workspace truth:** the saved seed-42 vector-only report remains
+> FAIL, seeds 43–44 and passing 3×20 evidence do not exist, and production
+> readiness is not claimable. Preserve unrelated tracked changes in
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`,
+> plus all unrelated untracked artifacts.
+>
+> **Next routing:** `HYBRID-MEM` environment propagation is local-only at
+> `3c90368`; any bounded hybrid attempt and any Task Scheduler change still need
+> fresh explicit authorization. Do not raw-retry the prior memory-heavy command.
+
 ## 2026-08-09 Update-136 — QG-04 retained E30 replay ✅ START HERE
 
 > **Read this block first.** Actual Git overrides every embedded SHA, branch

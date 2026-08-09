@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-136 QG-04 retained E30 replay sync)
+**Date:** 2026-08-09 (Update-137 HYBRID-MEM child environment sync)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-136**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-137**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-136. Preserve it as DoD input, but use Actual Git + the committed
+> Update-137. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -28,7 +28,7 @@ authoritative open-problem ledger in §1C.
 | **2** index lifecycle | **2.1–2.6g local residual closed** | **OPEN** live PG/Redis/Celery/Chroma | yes for live index ops |
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.8 local** | **OPEN** parity default still off (product) | partial |
-| **5** grounding fail-closed | **5.1–5.7 + QG-01/QG-02/QG-03A/QG-03B/QG-04 local** | **OPEN** one valid seed-42 run exists but **FAILS**; passing ×3 evidence remains open | **yes** quality |
+| **5** grounding fail-closed | **5.1–5.7 + QG-01/QG-02/QG-03A/QG-03B/QG-04 + HYBRID-MEM env local** | **OPEN** one valid seed-42 run exists but **FAILS**; passing ×3 evidence remains open | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
@@ -55,7 +55,7 @@ use only non-sensitive test data and recheck external terms before enabling it.
 
 ---
 
-## Current live-quality incident (Update-136)
+## Current live-quality incident (Update-137)
 
 The native vector-only run produced valid child evidence for seed 42 but failed
 the quality gate: candidate pass 65% (baseline 70%, required ≥85%), four
@@ -75,8 +75,12 @@ The active collection remains dimension 3 while the remote embedding lane is
 dimension 1024. The successful diagnostic run used a retained six-document
 compatible copy and vector-only retrieval. It does not prove default hybrid
 quality. An earlier hybrid attempt loaded the default reranker after an empty
-environment value failed to propagate and reached about 2.12 GiB; the
-`PythonMemoryGuard` task was last read-only verified **Disabled** in Update-133.
+environment value failed to propagate and reached about 2.12 GiB. `3c90368`
+now provides an explicit `--disable-child-reranker` path; focused tests and a
+real lightweight Windows child prove that the child receives the key as present
+and blank. No hybrid/model run followed. The `PythonMemoryGuard` task was last
+read-only verified **Disabled** in Update-133, so hybrid execution remains
+operationally gated.
 
 Detailed defect, environment, release, workspace, and external-boundary facts
 are maintained in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §1C. Do not
@@ -113,10 +117,11 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 33 | QG-03A verifier-outage routing | **done local** `80c2603`; no live replay |
 | 34 | QG-03B contextual-header grading | **done local** `5662ea7`; no live replay |
 | 35 | QG-04 retained E30 replay | **done local** `5f8bb78`; production fix shared with `5662ea7`; no live replay |
-| 36 | human sample / opt-in live ×3 evidence | **external/data authority required** |
-| 37 | §2/§3 residual if product needs | residual |
-| 38 | Astro 7 (clears DEP-01 moderate residual) | residual |
-| 39 | §1 + §10 | **opt-in live only** |
+| 36 | HYBRID-MEM child environment propagation | **done local** `3c90368`; memory guard and hybrid replay remain gated |
+| 37 | human sample / opt-in live ×3 evidence | **external/data authority required** |
+| 38 | §2/§3 residual if product needs | residual |
+| 39 | Astro 7 (clears DEP-01 moderate residual) | residual |
+| 40 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -304,17 +309,19 @@ There is no implementation WIP and no deterministic ungated QG incident left.
 Do not invent another quality fix or replay QG-01–QG-04 without new evidence.
 
 Gated alternatives remain: live provider/quality ×3 (`--execute` + secrets +
-fresh opt-in), a real dual-annotator human sample, Astro 7, or the product
-decision to default `STREAMING_RAG_PARITY=true`.
+fresh opt-in), memory-guard enablement plus a bounded hybrid attempt, a real
+dual-annotator human sample, Astro 7, or the product decision to default
+`STREAMING_RAG_PARITY=true`.
 
 **Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, DEP-01.
 
 ---
 
-## Last-known verification snapshot (Update-136)
+## Last-known verification snapshot (Update-137)
 
 | Band | Last known |
 |------|------------|
+| **HYBRID-MEM env** | TDD red **1 failed** → focused **2 passed**; independent live-quality/regression band **57 passed**; Ruff + changed-file Mypy + diff clean; real lightweight Windows child saw the key present and blank; no model/hybrid/live run |
 | **QG-04** | exact retained five-document replay **1 passed**; independent grading/fail-closed/relevance/provider/fact-verification band **31 passed**; scoped Ruff + diff clean; production fix shared with `5662ea7`; no live replay |
 | **QG-03B** | TDD red **1 failed** → focused green **1 passed**; independent grading/fail-closed/relevance/provider band **24 passed**; scoped Ruff + changed-file Mypy + diff clean; no live replay |
 | **QG-03A** | Grok red 1 failed → focused **6 passed** + Ruff; independent verifier/grounding/citation/graph-error/judge/provider band **49 passed** + Ruff + diff clean; ordinary changed-file Mypy exposed 9 pre-existing `typeddict-item` errors outside changed lines, narrowed run passed; no locked/full-Mypy claim |

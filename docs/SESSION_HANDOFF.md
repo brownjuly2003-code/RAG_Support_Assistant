@@ -1,7 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-09 — **Update-136** (QG-04 retained E30 replay;
-local code and offline verification only).
+**Обновлено:** 2026-08-09 — **Update-137** (HYBRID-MEM child environment
+propagation; local code and offline verification only).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -12,11 +12,11 @@ local code and offline verification only).
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-136**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-137**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-136; dirty
+**Не использовать:** старые `START HERE` ниже Update-137; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -28,31 +28,33 @@ local code and offline verification only).
 
 | Факт | Значение |
 |------|----------|
-| Latest **committed implementation** | `5662ea7` — shared QG-03B/QG-04 relevant contextual header → same-logical-source content |
+| Latest **committed implementation** | `3c90368` — explicit blank `RAG_RERANKER_MODEL` propagation to live-quality child processes |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `80c2603` **QG-03A** · `1304ff4` **QG-02** · `c3ae4f4` **QG-01** · `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen · `13bf255` **5.7** · `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** |
-| Latest **committed docs before this Update** | `3f6f652` — Update-135 |
-| This Update-136 docs SHA | Commit containing this file if present; otherwise owned docs WIP — resolve through Actual Git |
-| Branch advisory | observed `master...origin/master [ahead 237]` at `5f8bb78` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; implementation WIP **none**; only Update-136 docs WIP may remain |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** |
+| Latest **committed docs before this Update** | `62772d7` — Update-136 |
+| This Update-137 docs SHA | Commit containing this file if present; otherwise owned docs WIP — resolve through Actual Git |
+| Branch advisory | observed `master...origin/master [ahead 239]` at `3c90368` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; implementation WIP **none**; only Update-137 docs WIP may remain |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** + **HYBRID-MEM env propagation** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | no deterministic ungated QG incident remains; do not reopen QG-01–QG-04 without new evidence; remaining live/release work keeps its explicit gates |
+| Next ordered | no deterministic ungated QG incident remains; do not reopen QG-01–QG-04 or retry hybrid retrieval without new authority/evidence; remaining live/release work keeps its explicit gates |
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-136 records QG-04:** retained trace
-`299e0b45-75c3-4ad1-99e5-cd2038977382` proves the first context loss was the
-same header/body grading defect fixed by `5662ea7`; `5f8bb78` guards the exact
-five-document E30 replay. No live recovery, paid call, migration, scheduler
-change, push, or deploy is claimed.
+**Update-137 records HYBRID-MEM propagation:** `3c90368` adds the explicit
+`--disable-child-reranker` live-execute option and passes
+`RAG_RERANKER_MODEL=""` in a copied child environment. A real lightweight
+Windows child observed the key as present and blank. No model, hybrid/live
+quality run, paid call, migration, scheduler change, push, or deploy is claimed;
+`PythonMemoryGuard` remains last known disabled.
 
 **Last known verification:**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **HYBRID-MEM child env propagation** | TDD red **1 failed** → focused **2 passed**; independent live-quality/regression band **57 passed**; scoped Ruff + changed-file Mypy + diff clean; real lightweight child observed `RAG_RERANKER_MODEL` present with value `""`; no model/hybrid/live run |
 | **QG-04 retained E30 replay** | exact five-document replay **1 passed**; independent grading/fail-closed/relevance/provider/fact-verification band **31 passed**; scoped Ruff + diff clean; production fix shared with `5662ea7`; no live replay |
 | **QG-03B contextual-header grading** | TDD red **1 failed** → focused green **1 passed**; independent grading/fail-closed/relevance/provider band **24 passed**; scoped Ruff + changed-file Mypy + diff clean; no live replay |
 | **QG-03A verifier-outage routing** | Grok TDD red **1 failed** → focused **6 passed** + Ruff; independent verifier/grounding/citation/graph-error/judge/provider band **49 passed** + Ruff + diff clean; ordinary local Mypy exposed 9 pre-existing `typeddict-item` errors outside changed lines, while the one narrowed run disabling only that code passed both changed source files; no locked/full-Mypy claim |
@@ -245,7 +247,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-136)
+### 1C. Authoritative open-problem ledger (Update-137)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -263,7 +265,7 @@ override this snapshot.
 | **QG-LIVE** | **LOCAL-ONLY** | QG-01 (`c3ae4f4`), QG-02 (`1304ff4`), QG-03A (`80c2603`), QG-03B (`5662ea7`), and QG-04 (`5f8bb78` evidence over `5662ea7`) are locally closed, but no live replay followed. The saved seed-42 report therefore remains FAIL. | Re-evaluate only with fresh owner opt-in; never claim live recovery from local tests. |
 | **LIVE-QUALITY** | **OPEN / FAIL** | Only seed 42 of required seeds 42–44 ran. Candidate pass 65% vs baseline 70%/floor 85%; 4 regressions; precision 0.1499, recall 0.65, FULL 0.60, MISS 6, faithfulness 0.30, relevancy 0.4855. The outer 3-run report is not valid aggregate evidence. | Fresh explicit paid/live opt-in for any new seed or 3×20 run. Passing §5 evidence does not exist. |
 | **INDEX-DIM** | **OPEN** | Active `rag_docs_default` is dimension 3 and incompatible with remote 1024-dimension embeddings. A compatible six-document diagnostic copy is retained under `.tmp/live-quality-native-index-20260809/chroma`; the active collection was not rebuilt. | Dedicated validated rebuild/publish scope; do not replace or delete collections casually. |
-| **HYBRID-MEM** | **OPEN** | Empty `RAG_RERANKER_MODEL` did not propagate to the Windows child; default `BAAI/bge-reranker-v2-m3` loaded and the child reached about 2.12 GiB. The authoritative quality result is vector-only, not proof for default hybrid retrieval. | Fix/verify child environment propagation and memory guard before any bounded hybrid attempt. |
+| **HYBRID-MEM** | **LOCAL-ONLY / OPS GATED** | `3c90368` adds explicit `--disable-child-reranker` propagation; two focused tests, the 57-test band, and a real lightweight child prove `RAG_RERANKER_MODEL` reaches the Windows child as present and blank. The earlier default reranker still reached about 2.12 GiB, and the authoritative quality result remains vector-only. | Do not run hybrid while `PythonMemoryGuard` is disabled. Enabling/changing the scheduler guard and any bounded hybrid attempt require fresh explicit authority; no default-hybrid quality recovery is claimed. |
 | **LIVE-LATENCY** | **OPEN** | Seed 42 took about 2 h 9 min. Mean latency was 81,878.8 ms baseline vs 304,456.7 ms candidate. | Profile only in a separately authorized bounded run; do not raw-retry the aggregate. |
 
 #### Release / plan DoD
@@ -295,7 +297,7 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 237]` at `5f8bb78` before Update-136 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
+| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 239]` at `3c90368` before Update-137 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
 | **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
 | **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. | They are not implementation WIP. Do not bulk-delete or stage them. |
@@ -327,7 +329,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-136 in AGENT_STATE.md + §1C problem ledger in this file
+5. Read ONLY top Update-137 in AGENT_STATE.md + §1C problem ledger in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. Do not invent another QG item; QG-01–QG-04 are local-only closures
 8. Select work only from an explicit owner request or a documented ungated residual
@@ -618,7 +620,7 @@ ledger; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-136:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-137:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -707,7 +709,9 @@ Never log secret values.
 | 26 | **QG-03B** | `5662ea7` | replace relevant contextual-header shells with same-logical-source content |
 | 27 | docs | `3f6f652` | Update-135 QG-03B evidence and QG-04 routing |
 | 28 | **QG-04 evidence** | `5f8bb78` | exact retained five-document E30 grading replay over shared fix `5662ea7` |
-| 29 | docs | **this Update-136 commit, if present in Actual Git** | QG-04 shared-cause closure and remaining-gate honesty |
+| 29 | docs | `62772d7` | Update-136 QG-04 shared-cause closure and remaining-gate honesty |
+| 30 | **HYBRID-MEM env** | `3c90368` | explicitly preserve blank child reranker selection on Windows |
+| 31 | docs | **this Update-137 commit, if present in Actual Git** | HYBRID-MEM local closure and operational-gate honesty |
 
 ---
 
@@ -733,9 +737,10 @@ Never log secret values.
 | QG-03 verifier outage routing fixed? | **Yes local** (`80c2603`); answer/context are preserved and route is human via safety/log; no live recovery is claimed |
 | QG-03 contextual-header grading fixed? | **Yes local** (`5662ea7`); a relevant header shell resolves to same-logical-source content; no live E20 recovery is claimed |
 | QG-04 E30 retained replay fixed? | **Yes local** (`5f8bb78` evidence over `5662ea7`); disconnect evidence reaches graded context; no live E30 recovery is claimed |
-| All known open problems indexed? | **Yes in §1C as of Update-136**; Actual Git/new evidence overrides the snapshot |
+| Blank child reranker selection preserved? | **Yes local** (`3c90368`); explicit live-execute flag reaches a real Windows child as present and blank; no hybrid quality replay is claimed |
+| All known open problems indexed? | **Yes in §1C as of Update-137**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; only Update-136 docs WIP may remain — check Actual Git |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; only Update-137 docs WIP may remain — check Actual Git |
