@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import inspect
 import json
+import math
 import os
 import random
 import sqlite3
@@ -67,7 +68,12 @@ class CaseRunResult(BaseModel):
     cost_usd: float | None = None
     route: str = "unknown"
     trace_id: str = ""
+    grounding_status: str = "not_verified"
+    context_precision: float | None = None
     context_recall: float | None = None
+    faithfulness: float | None = None
+    answer_relevancy: float | None = None
+    keyword_coverage_status: str | None = None
     # Plan §7.1: skipped/infra must fail the release gate (never graceful pass).
     skipped: bool = False
     skip_reason: str = ""
@@ -130,6 +136,189 @@ def _is_refusal_answer(answer: str) -> bool:
 def _is_infrastructure_failure(answer: str) -> bool:
     normalized = (answer or "").strip().lower()
     return "[provider_unavailable]" in normalized or "[model_mismatch]" in normalized
+
+
+def _expected_metric_term_groups(expected: CaseExpectation) -> list[list[str]]:
+    """Build independently checkable evidence-term groups from the case contract."""
+    groups: list[list[str]] = []
+    for raw_term in expected.answer_contains:
+        term = str(raw_term).strip()
+        if term:
+            groups.append([term])
+    for raw_group in expected.answer_contains_any:
+        group = list(
+            dict.fromkeys(
+                str(raw_term).strip()
+                for raw_term in raw_group
+                if str(raw_term).strip()
+            )
+        )
+        if group:
+            groups.append(group)
+    return groups
+
+
+def _metric_context_texts(context_docs: Sequence[Any]) -> list[str]:
+    texts: list[str] = []
+    for doc in context_docs:
+        if hasattr(doc, "page_content"):
+            texts.append(str(doc.page_content))
+        elif isinstance(doc, dict):
+            texts.append(str(doc.get("page_content") or ""))
+        else:
+            texts.append(str(doc))
+    return texts
+
+
+def _measure_section5_case(
+    case: CuratedCase,
+    *,
+    answer: str,
+    context_docs: Sequence[Any],
+) -> dict[str, float | str] | None:
+    """Measure §5 metrics from question/answer/context, never legacy scores."""
+    groups = _expected_metric_term_groups(case.expected)
+    if not groups:
+        return None
+
+    from evaluation.ragas_eval import (
+        answer_relevancy,
+        context_precision,
+        faithfulness,
+    )
+
+    expected_terms = list(
+        dict.fromkeys(term for group in groups for term in group)
+    )
+    context_texts = _metric_context_texts(context_docs)
+    context_blob = "\n".join(context_texts).casefold()
+    satisfied_groups = sum(
+        1
+        for group in groups
+        if any(term.casefold() in context_blob for term in group)
+    )
+    recall = satisfied_groups / len(groups)
+    if satisfied_groups == len(groups):
+        coverage_status = "FULL"
+    elif satisfied_groups:
+        coverage_status = "PART"
+    else:
+        coverage_status = "MISS"
+
+    return {
+        "context_precision": round(
+            float(context_precision(case.query, context_texts, expected_terms)),
+            4,
+        ),
+        "context_recall": round(float(recall), 4),
+        "faithfulness": round(float(faithfulness(answer, context_texts)), 4),
+        "answer_relevancy": round(
+            float(answer_relevancy(case.query, answer)),
+            4,
+        ),
+        "keyword_coverage_status": coverage_status,
+    }
+
+
+def _section5_row_from_result(
+    case_id: str,
+    result: CaseRunResult,
+) -> dict[str, Any] | None:
+    values = {
+        "context_precision": result.context_precision,
+        "context_recall": result.context_recall,
+        "faithfulness": result.faithfulness,
+        "answer_relevancy": result.answer_relevancy,
+    }
+    normalized: dict[str, float] = {}
+    for name, raw_value in values.items():
+        if raw_value is None:
+            return None
+        value = float(raw_value)
+        if not math.isfinite(value) or value < 0.0 or value > 1.0:
+            return None
+        normalized[name] = value
+
+    coverage = str(result.keyword_coverage_status or "").strip().upper()
+    if coverage not in {"FULL", "PART", "MISS"}:
+        return None
+    return {
+        "case_id": case_id,
+        **normalized,
+        "keyword_coverage_status": coverage,
+    }
+
+
+def _aggregate_section5_metrics(
+    *,
+    eligible_case_ids: Sequence[str],
+    measured_rows: Sequence[dict[str, Any]],
+    effective_cases: int,
+    auto_cases: int,
+    unverified_auto_cases: int,
+) -> tuple[dict[str, float | int], dict[str, Any]]:
+    rows = list(measured_rows)
+
+    def _mean(name: str) -> float:
+        if not rows:
+            return 0.0
+        return round(sum(float(row[name]) for row in rows) / len(rows), 4)
+
+    coverage_counts = {"FULL": 0, "PART": 0, "MISS": 0}
+    for row in rows:
+        coverage = str(row["keyword_coverage_status"])
+        coverage_counts[coverage] += 1
+
+    measured_case_ids = {str(row["case_id"]) for row in rows}
+    eligible_ids = [str(case_id) for case_id in eligible_case_ids]
+    unmeasured_case_ids = [
+        case_id for case_id in eligible_ids if case_id not in measured_case_ids
+    ]
+    measured_count = len(rows)
+    eligible_count = len(eligible_ids)
+    complete = bool(eligible_count) and measured_count == eligible_count
+
+    metrics: dict[str, float | int] = {
+        "context_precision": _mean("context_precision"),
+        "context_recall": _mean("context_recall"),
+        "full_rate": round(
+            coverage_counts["FULL"] / measured_count,
+            4,
+        )
+        if measured_count
+        else 0.0,
+        "miss_count": coverage_counts["MISS"],
+        "faithfulness": _mean("faithfulness"),
+        "answer_relevancy": _mean("answer_relevancy"),
+        "unverified_auto_rate": round(
+            unverified_auto_cases / auto_cases,
+            4,
+        )
+        if auto_cases
+        else 0.0,
+    }
+    provenance = {
+        "schema_version": 1,
+        "complete": complete,
+        "candidate_only": True,
+        "evaluator": "evaluation.ragas_eval.keyword-v1",
+        "context_selection": (
+            "agent.doc_grade.resolve_generation_context_docs "
+            "(the exact context selected for generation)"
+        ),
+        "expected_terms_source": (
+            "expected.answer_contains plus answer_contains_any groups"
+        ),
+        "legacy_score_substitution": False,
+        "eligible_cases": eligible_count,
+        "measured_cases": measured_count,
+        "effective_cases": int(effective_cases),
+        "unmeasured_case_ids": unmeasured_case_ids,
+        "coverage_counts": coverage_counts,
+        "auto_cases": int(auto_cases),
+        "unverified_auto_cases": int(unverified_auto_cases),
+    }
+    return metrics, provenance
 
 
 def decide_regression_gate(
@@ -451,6 +640,7 @@ def apply_evidence_policy(
     gate["release_eligible"] = release_passed
     gate["release_gate"] = bool(release_gate)
     gate["graceful_skip_pass_forbidden"] = True
+    report["release_passed"] = release_passed
 
     if not evidence_valid:
         note = (
@@ -808,6 +998,10 @@ def run_regression_cases(
     candidate_refusals = 0
     infrastructure_failures = 0
     skipped_cases = 0
+    section5_eligible_case_ids: list[str] = []
+    section5_measured_rows: list[dict[str, Any]] = []
+    auto_cases = 0
+    unverified_auto_cases = 0
 
     def _run_executor(case: CuratedCase, target: str) -> CaseRunResult:
         try:
@@ -909,6 +1103,20 @@ def run_regression_cases(
             comparisons.append(case_payload)
             continue
 
+        if candidate_result.route == "auto":
+            auto_cases += 1
+            if candidate_result.grounding_status != "verified":
+                unverified_auto_cases += 1
+
+        if _expected_metric_term_groups(case.expected):
+            section5_eligible_case_ids.append(case.case_id)
+            section5_row = _section5_row_from_result(
+                case.case_id,
+                candidate_result,
+            )
+            if section5_row is not None:
+                section5_measured_rows.append(section5_row)
+
         baseline_passed, baseline_failures = _evaluate_case_output(baseline_result, case.expected)
         candidate_passed, candidate_failures = _evaluate_case_output(candidate_result, case.expected)
 
@@ -979,6 +1187,13 @@ def run_regression_cases(
         - infrastructure_failures
         - skipped_cases
     )
+    quality_metrics, quality_metrics_provenance = _aggregate_section5_metrics(
+        eligible_case_ids=section5_eligible_case_ids,
+        measured_rows=section5_measured_rows,
+        effective_cases=effective_total_cases,
+        auto_cases=auto_cases,
+        unverified_auto_cases=unverified_auto_cases,
+    )
 
     gate = decide_regression_gate(
         total_cases=total_cases,
@@ -1002,6 +1217,9 @@ def run_regression_cases(
         "dataset": str(dataset_path) if dataset_path is not None else None,
         "tenant": tenant,
         "baseline_source": baseline_source,
+        "quality_metrics": quality_metrics,
+        "quality_metrics_provenance": quality_metrics_provenance,
+        "section5_metric_cases": section5_measured_rows,
         "aggregate": {
             "total_cases": total_cases,
             "effective_cases": effective_total_cases,
@@ -1431,9 +1649,26 @@ def _read_trace_metrics(trace_id: str) -> dict[str, Any]:
     return details
 
 
-def _normalize_result(payload: dict[str, Any]) -> CaseRunResult:
+def _normalize_result(
+    payload: dict[str, Any],
+    *,
+    case: CuratedCase | None = None,
+) -> CaseRunResult:
     trace_id = str(payload.get("trace_id") or "")
     trace_metrics = _read_trace_metrics(trace_id) if trace_id else {"duration_ms": None, "cost_usd": None}
+
+    from agent.doc_grade import resolve_generation_context_docs
+
+    metric_context_docs = resolve_generation_context_docs(payload)
+    section5_metrics = (
+        _measure_section5_case(
+            case,
+            answer=str(payload.get("answer") or ""),
+            context_docs=metric_context_docs,
+        )
+        if case is not None
+        else None
+    )
 
     citations = payload.get("citations") or []
     if not citations:
@@ -1471,6 +1706,32 @@ def _normalize_result(payload: dict[str, Any]) -> CaseRunResult:
         cost_usd=trace_metrics["cost_usd"],
         route=str(payload.get("route") or "unknown"),
         trace_id=trace_id,
+        grounding_status=str(payload.get("grounding_status") or "not_verified"),
+        context_precision=(
+            float(section5_metrics["context_precision"])
+            if section5_metrics is not None
+            else None
+        ),
+        context_recall=(
+            float(section5_metrics["context_recall"])
+            if section5_metrics is not None
+            else None
+        ),
+        faithfulness=(
+            float(section5_metrics["faithfulness"])
+            if section5_metrics is not None
+            else None
+        ),
+        answer_relevancy=(
+            float(section5_metrics["answer_relevancy"])
+            if section5_metrics is not None
+            else None
+        ),
+        keyword_coverage_status=(
+            str(section5_metrics["keyword_coverage_status"])
+            if section5_metrics is not None
+            else None
+        ),
     )
 
 
@@ -1501,7 +1762,10 @@ def execute_case_with_runtime(
             trace_id=f"regression-{uuid.uuid4()}",
             tenant_id=case.tenant_id,
         )
-    return _with_wall_clock_duration(_normalize_result(result), started_at)
+    return _with_wall_clock_duration(
+        _normalize_result(result, case=case),
+        started_at,
+    )
 
 
 def execute_case_with_provider_target(
@@ -1524,7 +1788,10 @@ def execute_case_with_provider_target(
             trace_id=f"provider-benchmark-{uuid.uuid4()}",
             tenant_id=case.tenant_id,
         )
-    return _with_wall_clock_duration(_normalize_result(result), started_at)
+    return _with_wall_clock_duration(
+        _normalize_result(result, case=case),
+        started_at,
+    )
 
 
 def run_regression(
@@ -1672,6 +1939,22 @@ def run_regression(
     report["evidence_valid"] = report["mode"] not in MOCK_EVIDENCE_MODES
     report.setdefault("gate", {})
     report["gate"]["metrics_passed"] = bool(report["gate"].get("passed"))
+    quality_provenance = report.get("quality_metrics_provenance")
+    quality_metrics_complete = bool(
+        isinstance(quality_provenance, dict)
+        and quality_provenance.get("complete") is True
+    )
+    report["gate"]["section5_metrics_complete"] = quality_metrics_complete
+    if release_gate and report["evidence_valid"] and not quality_metrics_complete:
+        report["gate"]["metrics_passed"] = False
+        reasons = list(report["gate"].get("reasons") or [])
+        reason = (
+            "Section 5 metric producer incomplete: every eligible candidate "
+            "case must emit context, faithfulness, and relevancy measurements"
+        )
+        if reason not in reasons:
+            reasons.append(reason)
+        report["gate"]["reasons"] = reasons
     return apply_evidence_policy(report, release_gate=release_gate)
 
 
