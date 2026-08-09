@@ -175,3 +175,83 @@ def test_build_retriever_wires_parent_expansion_from_settings(monkeypatch) -> No
     assert retriever._parent_expansion is True
     assert retriever._parent_window == 2
     assert retriever._parent_max_chars == 999
+
+
+def test_vector_fast_path_expands_same_source_neighbors_without_reranking() -> None:
+    terms = manager.Document(
+        page_content="Гарантия составляет 12 месяцев при наличии чека.",
+        metadata={"source": "warranty.md"},
+    )
+    procedure = manager.Document(
+        page_content="Подготовьте товар и чек и обратитесь в сервисный центр.",
+        metadata={"source": "warranty.md"},
+    )
+
+    class _VectorStore:
+        def similarity_search(self, query: str, k: int) -> list[manager.Document]:
+            return [procedure]
+
+    class _UnexpectedReranker:
+        def predict(self, pairs):
+            raise AssertionError("vector fast path must not rerank")
+
+    retriever = manager.HybridRetriever(
+        _VectorStore(),
+        chunks=[terms, procedure],
+        reranker=_UnexpectedReranker(),
+        use_bm25=False,
+        rerank_k=1,
+        parent_expansion=True,
+        parent_expansion_window=1,
+        parent_expansion_max_chars=500,
+    )
+
+    result = retriever.get_vector_documents("Сколько хранить чек?")
+
+    assert len(result) == 1
+    assert result[0].page_content == (
+        "Гарантия составляет 12 месяцев при наличии чека.\n\n"
+        "Подготовьте товар и чек и обратитесь в сервисный центр."
+    )
+    assert result[0].metadata["parent_expanded"] is True
+
+
+def test_vector_strategy_factories_preserve_parent_expansion(monkeypatch) -> None:
+    import config.settings as settings_module
+
+    settings = SimpleNamespace(
+        parent_child=False,
+        retrieval_top_k=20,
+        rerank_top_k=5,
+        retrieval_strategy="vector",
+        hybrid_search=True,
+        reranker_model="must-not-load",
+        rrf_k=60,
+        rrf_doc_key_chars=200,
+        parent_expansion=True,
+        parent_expansion_window=2,
+        parent_expansion_max_chars=3600,
+    )
+    monkeypatch.setattr(settings_module, "get_settings", lambda: settings)
+
+    def _unexpected_reranker():
+        raise AssertionError("vector strategy must not load a reranker")
+
+    monkeypatch.setattr(manager, "get_reranker", _unexpected_reranker)
+    chunks = _make_chunks()
+    store = SimpleNamespace(similarity_search=lambda query, k: [])
+
+    runtime_retriever = manager.get_retriever(store, chunks=chunks)
+    built_retriever = manager.build_retriever(
+        docs=chunks,
+        embeddings=object(),
+        vector_store=store,
+        chunks=chunks,
+    )
+
+    assert isinstance(runtime_retriever, manager.HybridRetriever)
+    assert isinstance(built_retriever, manager.HybridRetriever)
+    for retriever in (runtime_retriever, built_retriever):
+        assert retriever._parent_expansion is True
+        assert retriever._bm25 is None
+        assert retriever._reranker is None

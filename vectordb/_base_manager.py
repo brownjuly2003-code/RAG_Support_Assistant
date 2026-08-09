@@ -448,7 +448,10 @@ class HybridRetriever:
 
     def get_vector_documents(self, query: str) -> list[Document]:
         """Vector-only retrieval path for cheap simple-query routing."""
-        return self._vector_search(query)[:self._rerank_k]
+        docs = self._vector_search(query)[:self._rerank_k]
+        if self._parent_expansion and docs:
+            docs = self._expand_parents(docs)
+        return docs
 
     def get_relevant_documents(self, query: str) -> list[Document]:
         """Гибридный поиск с RRF и reranking."""
@@ -1239,9 +1242,10 @@ def build_retriever(
     use_hybrid_components = retrieval_strategy != "vector"
     use_bm25 = use_hybrid_components and settings.hybrid_search and chunks is not None
     reranker = get_reranker() if use_hybrid_components and settings.reranker_model else None
+    parent_expansion = bool(getattr(settings, "parent_expansion", False))
     logger.info("Retriever: HybridRetriever (parent_child=false)")
 
-    if use_bm25 or reranker:
+    if use_bm25 or reranker or (parent_expansion and bool(chunks)):
         return HybridRetriever(
             vector_store=vector_store,
             chunks=chunks or [],
@@ -1251,7 +1255,7 @@ def build_retriever(
             doc_key_chars=getattr(settings, "rrf_doc_key_chars", 200),
             reranker=reranker,
             use_bm25=use_bm25,
-            parent_expansion=getattr(settings, "parent_expansion", False),
+            parent_expansion=parent_expansion,
             parent_expansion_window=getattr(settings, "parent_expansion_window", 1),
             parent_expansion_max_chars=getattr(settings, "parent_expansion_max_chars", 2400),
         )
@@ -1290,7 +1294,8 @@ def get_retriever(
         k: override для retrieval_top_k (по умолчанию из settings).
 
     Returns:
-        HybridRetriever если доступны BM25/reranker, иначе простой vector retriever.
+        HybridRetriever если доступны BM25/reranker или parent-expansion с
+        чанками, иначе простой vector retriever.
     """
     source_docs = getattr(vector_store, "_source_docs", None)
     source_embeddings = getattr(vector_store, "_source_embeddings", None)
@@ -1314,8 +1319,9 @@ def get_retriever(
     use_hybrid_components = retrieval_strategy != "vector"
     use_bm25 = use_hybrid_components and settings.hybrid_search and chunks is not None
     reranker = get_reranker() if use_hybrid_components and settings.reranker_model else None
+    parent_expansion = bool(getattr(settings, "parent_expansion", False))
 
-    if use_bm25 or reranker:
+    if use_bm25 or reranker or (parent_expansion and bool(chunks)):
         return HybridRetriever(
             vector_store=vector_store,
             chunks=chunks or [],
@@ -1325,7 +1331,7 @@ def get_retriever(
             doc_key_chars=getattr(settings, "rrf_doc_key_chars", 200),
             reranker=reranker,
             use_bm25=use_bm25,
-            parent_expansion=getattr(settings, "parent_expansion", False),
+            parent_expansion=parent_expansion,
             parent_expansion_window=getattr(settings, "parent_expansion_window", 1),
             parent_expansion_max_chars=getattr(settings, "parent_expansion_max_chars", 2400),
         )
