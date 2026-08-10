@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-143 §9.1c versioned cache namespace)
+**Date:** 2026-08-09 (Update-144 next-session transparency reconciliation)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-143**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-144**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-143. Preserve it as DoD input, but use Actual Git + the committed
+> Update-144. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,10 +18,13 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-143 implementation:** `893efe3` closes local **9.1c** by binding the
-response cache to tenant/index/prompt/model/query identity and skipping cache
-read/write when a required identity is unresolved. No live Redis/provider/index
-mutation ran; live and release gates are unchanged.
+**Update-144 reconciliation:** Actual Git before this docs edit was `65c82cc`;
+the latest implementation remains `893efe3`, which closes local **9.1c**. No
+implementation or closure status changed. Ordinary scoped 9.1c MyPy retains
+five pre-existing errors outside changed lines, and the separate stale
+production-caller assertion in `tests/test_index_runtime_switch.py` remains an
+open test-contract item. No live Redis/provider/index mutation ran; live and
+release gates are unchanged.
 
 ---
 
@@ -348,7 +351,7 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-143)
+## Last-known verification snapshot (Update-144)
 
 | Band | Last known |
 |------|------------|

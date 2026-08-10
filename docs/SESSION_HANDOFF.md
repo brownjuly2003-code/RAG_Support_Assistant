@@ -1,6 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-09 — **Update-143** (§9.1c versioned cache namespace).
+**Обновлено:** 2026-08-09 — **Update-144** (next-session transparency
+reconciliation after §9.1c; docs only).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +12,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-143**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-144**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-143; dirty
+**Не использовать:** старые `START HERE` ниже Update-144; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -30,10 +31,10 @@
 | Latest **committed implementation** | `893efe3` — versioned, fail-closed LLM response-cache namespace |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `eb8466e` **9.1b** · `db65e37` **9.1a** · `80c2603` **QG-03A** · `1304ff4` **QG-02** · `c3ae4f4` **QG-01** · `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen · `13bf255` **5.7** · `fb72dd2` **5.6** |
-| Latest **committed docs before this Update** | `a224659` — Update-142 next-session reconciliation |
-| This Update-143 docs SHA | Current commit containing this file, if committed; resolve through Actual Git rather than guessing a self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 249]` at `893efe3` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-143 docs WIP may remain; otherwise owned WIP **none** |
+| Latest **committed docs before this Update** | `65c82cc` — Update-143 §9.1c handoff |
+| This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
+| Branch advisory | observed `master...origin/master [ahead 250]` at `65c82cc` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-144 docs WIP may remain; otherwise owned WIP **none** |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **DEP-01** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** + **HYBRID-MEM env propagation** + **VER-02** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
@@ -42,10 +43,13 @@
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-143 records §9.1c:** `893efe3` is the committed implementation and
-`a224659` is the prior Update-142 docs SHA. All six implementation paths were
-clean after the commit; the protected dirty-file hashes in §8 still match. No
-live Redis/provider/index/migration/runtime state changed here.
+**Update-144 reconciles Actual Git after §9.1c:** `893efe3` is the committed
+implementation and `65c82cc` is its committed Update-143 handoff. All six
+implementation and three handoff paths were clean before this docs edit; the
+protected dirty-file hashes in §8 still match. The prior Grok route is inactive:
+it produced partial WIP, then Codex resolved the request-settings mismatch and
+completed verification/commit. No live Redis/provider/index/migration/runtime
+state changed here.
 
 **Last known verification:**
 
@@ -248,7 +252,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-143)
+### 1C. Authoritative open-problem ledger (Update-144)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -286,10 +290,11 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **VER-01** | **ENV / BASELINE BLOCKER** | Installed `mypy 2.3.0` / `numpy 2.5.1` differ from locks `1.19.1` / `2.4.4`. QG-03A changed-file Mypy with `--follow-imports=skip` reported 9 pre-existing `typeddict-item` errors outside changed lines; a narrowed run disabling only that code passed. Full-import checking also stops on unlocked NumPy stubs under target 3.11. | Use a locked environment and reconcile the existing TypedDict debt separately; do not call full or ordinary changed-file Mypy green. |
+| **VER-01** | **ENV / BASELINE BLOCKER** | Installed `mypy 2.3.0` / `numpy 2.5.1` differ from locks `1.19.1` / `2.4.4`. QG-03A changed-file Mypy with `--follow-imports=skip` reported 9 pre-existing `typeddict-item` errors outside changed lines; a narrowed run disabling only that code passed. The 9.1c ordinary scoped run likewise reported two pre-existing `no-redef` and three `unused-ignore` errors outside changed lines; disabling only those confirmed codes passed the four changed source files. Full-import checking also stops on unlocked NumPy stubs under target 3.11. | Use a locked environment and reconcile existing type debt separately; do not call full or ordinary changed-file MyPy green. |
 | **VER-02** | **LOCAL-CLOSED** | `3a37fd2` casts the final runtime-guarded callable to `FaultAction`. The exact failure reproduced before the edit; afterward narrowed MyPy passed, 11 lifecycle tests passed, Ruff passed, and package `vectordb` MyPy checked 10 sources under `--follow-imports=skip`. | Do not reopen without a code/environment change. Do not extrapolate this to VER-01, full imports, the repository, locked Python 3.11, or CI. |
 | **VER-03** | **OPEN** | No full unit/integration/coverage/security/locked-CI suite ran after QG-01/QG-02/QG-03A; only focused proportional bands are evidence. | §10 or a dedicated gate turn; do not infer repository-wide green. |
 | **VER-04** | **WARNING** | Focused pytest runs emit `StarletteDeprecationWarning` for `httpx` through `starlette.testclient`; assertions still pass. | Track dependency migration separately; warning is not fixed by QG-03A. |
+| **VER-05** | **OPEN / STALE TEST CONTRACT** | A broader 9.1c-era invocation of `tests/test_index_runtime_switch.py` failed its assertion that production has no retention caller, while the already-committed `api/routers/admin_ops.py` retention route is such a caller. This is separate from the cache namespace and was excluded from its final 40-test gate. | Reconcile the caller assertion and intended coverage as a separately named test-contract slice; do not count it as a 9.1c regression or loosen it blindly. |
 | **OPS-01** | **DISABLED** | `PythonMemoryGuard` was read-only verified `Disabled` on 2026-08-09; last run was 2026-07-01. The 2.12 GiB child therefore had no configured 1 GiB enforcement. | Enabling/changing Task Scheduler requires explicit authority; do not run memory-heavy hybrid commands meanwhile. |
 | **OPS-02** | **ENV LIMIT** | The system pytest temp root can return access denied. | Use a unique writable repository basetemp; do not raw-retry the inaccessible path. |
 | **OPS-03** | **ENV LIMIT** | Git/PowerShell commands intermittently exceeded 10 s or timed out; root cause is not established. `login:false`, `git -C`, scoped plumbing commands, and a 30 s read-only timeout completed. | Avoid parallel full-worktree scans and raw retries; preserve the cycle budget. |
@@ -298,10 +303,10 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 249]` at `893efe3` before Update-143 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
+| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 250]` at `65c82cc` before Update-144 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
 | **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
-| **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. | They are not implementation WIP. Do not bulk-delete or stage them. |
+| **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. `cache-namespace-9-1c.md` and `.grok-prompts/cache-namespace-9-1c-impl.md` belong to the already-committed slice. | They are not implementation WIP. Do not bulk-delete or stage them, and do not relaunch the same Grok prompt without new evidence or a narrowed hypothesis. |
 | **EXT-01** | **EXTERNAL / UNPUSHED** | `D:\GraceKelly` is `main...origin/main [ahead 1]` at `886b277`, with untracked `issues.md`. Port `8011` still listens under PID 3048 on the pre-existing command; `8012` is closed. | Do not claim `8011` serves `886b277`; external push/restart needs separate authority. |
 
 ### Dataset snapshot (7.7)
@@ -330,7 +335,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-143 in AGENT_STATE.md + §1C problem ledger in this file
+5. Read ONLY top Update-144 in AGENT_STATE.md + §1C problem ledger in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. Do not invent another QG item; QG-01–QG-04 are local-only closures
 8. Select work only from an explicit owner request or a documented ungated residual
@@ -634,7 +639,7 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-143:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-144:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -657,9 +662,12 @@ checkbox edits), architecture HTML, etc. Preserve these unrelated artifacts.
 evidence, not implementation WIP. It contains the compatible dimension-1024
 collection used by seed 42; do not rebuild, stage, or delete it casually.
 
-There is no owned untracked implementation WIP. The smoke script and test are
-tracked in `99c6be5`; if they appear untracked, stop and reconcile Actual Git
-instead of recreating or staging substitutes.
+There is no owned untracked implementation WIP. The retained
+`cache-namespace-9-1c.md` and
+`.grok-prompts/cache-namespace-9-1c-impl.md` are historical control artifacts
+for committed 9.1c, not WIP. The smoke script and test are tracked in
+`99c6be5`; if they appear untracked, stop and reconcile Actual Git instead of
+recreating or staging substitutes.
 
 Zen verification created
 `.pytest_tmp_codex_opencode_{baseline,red,green,gate}/`; cleanup was blocked by
@@ -736,7 +744,8 @@ Never log secret values.
 | 38 | docs | `3528858` | Update-141 9.1b evidence and the separate namespace residual |
 | 39 | docs | `a224659` | reconcile Actual Git and make next-session routing self-contained |
 | 40 | **9.1c** | `893efe3` | bind response cache to tenant/index/prompt/model/query identity and fail closed when unresolved |
-| 41 | docs | **this Update-143 commit, if present in Actual Git** | record 9.1c evidence and remove it from next-session routing |
+| 41 | docs | `65c82cc` | record 9.1c evidence and remove it from next-session routing |
+| 42 | docs | resolve through Actual Git | Update-144 transparency reconciliation; do not add a follow-up solely for its self-SHA |
 
 ---
 
@@ -767,9 +776,9 @@ Never log secret values.
 | Redis fallback bounded? | **Yes local** (`db65e37`): TTL, locking, and 1024-entry LRU cap; live Redis evidence remains open |
 | Redis reconnect bounded? | **Yes local** (`eb8466e`): serialized `1→2→4…≤30s` retry schedule resets after recovery; live Redis evidence remains open |
 | Response cache namespace versioned? | **Yes local** (`893efe3`): tenant/index/prompt/model/query identity; unresolved identities fail closed; no live Redis evidence |
-| All known open problems indexed? | **Yes in §1C as of Update-143**; Actual Git/new evidence overrides the snapshot |
+| All known open problems indexed? | **Yes in §1C as of Update-144**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-143 handoff files are clean, owned WIP **none** |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-144 handoff files are clean, owned WIP **none** |

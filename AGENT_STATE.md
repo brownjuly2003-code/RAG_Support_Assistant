@@ -1,5 +1,46 @@
 # Agent State
 
+## 2026-08-09 Update-144 — next-session transparency reconciliation ✅ START HERE
+
+> **Purpose:** docs-only reconciliation after the committed 9.1c handoff. No
+> project code, configuration, service, scheduler, migration, provider, index,
+> push, deploy, or other runtime state changes in this Update.
+>
+> **Verified start snapshot:** `HEAD` was `65c82cc` (`docs: record versioned
+> cache namespace`) on `master...origin/master [ahead 250]`; latest
+> implementation `893efe3`; active writer **none**; implementation WIP
+> **none**. The six 9.1c implementation paths and three handoff paths were
+> clean. The four protected dirty files retained the SHA-256 values recorded
+> in `docs/SESSION_HANDOFF.md` §8.
+>
+> **Completion truth:** 9.1a–9.1c are locally closed. The 9.1c final focused
+> band passed **40 tests**; Ruff and changed-range format checks passed.
+> Ordinary scoped MyPy remains non-green because of five pre-existing
+> `no-redef`/`unused-ignore` errors outside changed lines; the narrowly scoped
+> diagnostic run passed. Full suite/locked CI, live Redis and provider/index
+> evidence, architecture ownership, dashboards/SLO, Astro 7, §10, and
+> production readiness remain open.
+>
+> **Known separate verification debt:** `tests/test_index_runtime_switch.py`
+> has a stale production-caller assertion because the already-committed admin
+> retention route is now a real caller. It was not caused by 9.1c and was
+> excluded from that slice's final gate; fix or re-baseline it only as a
+> separately named test-contract slice.
+>
+> **Delegation/workspace truth:** the earlier Grok 9.1c route stopped making
+> progress after producing partial WIP; it is no longer active. Codex resolved
+> the request-settings mismatch, verified, and committed the slice. Retained
+> `cache-namespace-9-1c.md` and the matching `.grok-prompts/` file are
+> untracked historical artifacts, not active WIP; preserve but do not stage
+> them casually. Other protected dirty/untracked boundaries remain in §8.
+>
+> **Next-session entrypoint:** refresh Actual Git, then read this block and
+> `docs/SESSION_HANDOFF.md` §0/§1C/§2/§7/§8. No implementation slice is
+> preselected. Do not repeat 9.1a–9.1c, relaunch the same Grok route, or infer
+> authority for live calls, scheduler changes, migrations, push, or deploy.
+> Resolve this Update's own commit from Actual Git; do not create another
+> docs-only refresh merely to embed a self-SHA.
+
 ## 2026-08-09 Update-143 — §9.1c versioned cache namespace ✅ START HERE
 
 > **Committed implementation:** `893efe3` (`fix(cache): version response cache
