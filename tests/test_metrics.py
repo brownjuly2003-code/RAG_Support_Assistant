@@ -8,6 +8,8 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from monitoring import prometheus as prometheus_metrics
+
 api_app = importlib.import_module("api.app")
 CLIENT_RAISE_SERVER_EXCEPTIONS = False
 CLIENT_WITH_KEY_RAISE_SERVER_EXCEPTIONS = False
@@ -42,6 +44,72 @@ def _metric_value(metrics_text: str, name: str, labels: str = "") -> float | Non
     if match is None:
         return None
     return float(match.group(1))
+
+
+def test_index_lifecycle_failure_metric_has_bounded_operation_labels() -> None:
+    before = prometheus_metrics.generate_latest(prometheus_metrics.REGISTRY).decode()
+    before_publish = (
+        _metric_value(
+            before,
+            "rag_index_lifecycle_failures_total",
+            'operation="publish"',
+        )
+        or 0.0
+    )
+    before_retention = (
+        _metric_value(
+            before,
+            "rag_index_lifecycle_failures_total",
+            'operation="retention"',
+        )
+        or 0.0
+    )
+    before_unknown = (
+        _metric_value(
+            before,
+            "rag_index_lifecycle_failures_total",
+            'operation="unknown"',
+        )
+        or 0.0
+    )
+
+    prometheus_metrics.record_index_lifecycle_failure("publish")
+    prometheus_metrics.record_index_lifecycle_failure("retention")
+    prometheus_metrics.record_index_lifecycle_failure("tenant-specific-value")
+
+    after = prometheus_metrics.generate_latest(prometheus_metrics.REGISTRY).decode()
+    assert (
+        _metric_value(
+            after,
+            "rag_index_lifecycle_failures_total",
+            'operation="publish"',
+        )
+        == before_publish + 1.0
+    )
+    assert (
+        _metric_value(
+            after,
+            "rag_index_lifecycle_failures_total",
+            'operation="retention"',
+        )
+        == before_retention + 1.0
+    )
+    assert (
+        _metric_value(
+            after,
+            "rag_index_lifecycle_failures_total",
+            'operation="unknown"',
+        )
+        == before_unknown + 1.0
+    )
+    assert (
+        _metric_value(
+            after,
+            "rag_index_lifecycle_failures_total",
+            'operation="tenant-specific-value"',
+        )
+        is None
+    )
 
 
 def test_metrics_returns_200(client: TestClient) -> None:

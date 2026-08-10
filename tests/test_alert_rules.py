@@ -87,6 +87,22 @@ def test_for_durations_are_reasonable(rules_doc: dict) -> None:
             )
 
 
+def test_index_lifecycle_failure_alert_is_operation_scoped(rules_doc: dict) -> None:
+    alerts = {
+        rule["alert"]: rule
+        for group in rules_doc["groups"]
+        for rule in group["rules"]
+        if "alert" in rule
+    }
+
+    rule = alerts["IndexLifecycleFailure"]
+    expression = str(rule["expr"])
+    assert "rag_index_lifecycle_failures_total" in expression
+    assert "sum by (operation)" in expression
+    assert rule["labels"] == {"severity": "warning", "component": "index"}
+    assert "{{ $labels.operation }}" in rule["annotations"]["summary"]
+
+
 def _flatten_exprs(rules_doc: dict) -> str:
     """Concat all `expr:` strings for regex scanning."""
     out: list[str] = []

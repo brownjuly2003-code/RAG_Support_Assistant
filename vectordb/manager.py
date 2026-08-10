@@ -240,6 +240,18 @@ def _ensure_document_metadata(docs: Sequence[Document]) -> None:
         metadata.setdefault("last_updated", now_iso)
 
 
+def _record_index_lifecycle_failure(operation: str) -> None:
+    """Record lifecycle telemetry without masking the original failure."""
+    try:
+        from monitoring.prometheus import (  # noqa: PLC0415
+            record_index_lifecycle_failure,
+        )
+
+        record_index_lifecycle_failure(operation)
+    except Exception:
+        pass
+
+
 def _build_vector_store_result(
     docs: Sequence[Document],
     chunk_config: dict[str, int],
@@ -336,6 +348,7 @@ def _build_vector_store_result(
                     chroma_directory=persist_directory,
                 )
             except BaseException:
+                _record_index_lifecycle_failure("publish")
                 discard_staged_collection(
                     candidate,
                     tenant_id=tenant,
@@ -344,12 +357,16 @@ def _build_vector_store_result(
                 raise
             # Retention runs only after successful publish and outside the
             # unpublished-candidate discard path. Failures propagate as-is.
-            execute_chroma_retention(
-                tenant,
-                max_versions=settings.vectordb_retention_max_versions,
-                lock_token=lock_token,
-                chroma_directory=persist_directory,
-            )
+            try:
+                execute_chroma_retention(
+                    tenant,
+                    max_versions=settings.vectordb_retention_max_versions,
+                    lock_token=lock_token,
+                    chroma_directory=persist_directory,
+                )
+            except BaseException:
+                _record_index_lifecycle_failure("retention")
+                raise
             store = candidate.store
             index_cache_key = _index_cache_key(persist_directory, published_manifest)
 
@@ -535,13 +552,17 @@ def execute_vector_store_retention(
         raise IndexStagingValidationError(
             "Vector store retention is unavailable for the Qdrant backend"
         )
-    return execute_guarded_chroma_retention(
-        tenant,
-        max_versions=settings.vectordb_retention_max_versions,
-        expected_generation=expected_generation,
-        expected_candidates=expected_candidates,
-        chroma_directory=settings.vectordb_chroma_dir,
-    )
+    try:
+        return execute_guarded_chroma_retention(
+            tenant,
+            max_versions=settings.vectordb_retention_max_versions,
+            expected_generation=expected_generation,
+            expected_candidates=expected_candidates,
+            chroma_directory=settings.vectordb_chroma_dir,
+        )
+    except BaseException:
+        _record_index_lifecycle_failure("retention")
+        raise
 
 
 def build_factcard_store(

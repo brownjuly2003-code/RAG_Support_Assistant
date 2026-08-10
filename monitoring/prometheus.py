@@ -25,6 +25,7 @@ __all__ = [
     "HTTP_REQUESTS",
     "HTTP_REQUEST_DURATION",
     "INGESTION_QUEUE_OLDEST_SECONDS",
+    "INDEX_LIFECYCLE_FAILURES",
     "LLM_COST_USD_TOTAL",
     "LLM_PROVIDER_FALLBACK_TOTAL",
     "LLM_CACHE_HITS",
@@ -61,6 +62,7 @@ __all__ = [
     "record_llm_cost",
     "record_provider_fallback",
     "record_http_request",
+    "record_index_lifecycle_failure",
     "record_audit_purged",
     "record_auth_failure",
     "record_body_size_rejection",
@@ -153,6 +155,7 @@ if TYPE_CHECKING:
     QUALITY_SCORE_SOURCE_TOTAL: _CounterT
     MESSAGE_PERSIST_FAILURES: _CounterT
     ONLINE_EVALUATORS_DROPPED: _CounterT
+    INDEX_LIFECYCLE_FAILURES: _CounterT
 
     REQUEST_DURATION: _HistogramT
     HTTP_REQUEST_DURATION: _HistogramT
@@ -246,6 +249,7 @@ except ImportError:
     QUALITY_SCORE_SOURCE_TOTAL = _NoopMetric()
     MESSAGE_PERSIST_FAILURES = _NoopMetric()
     ONLINE_EVALUATORS_DROPPED = _NoopMetric()
+    INDEX_LIFECYCLE_FAILURES = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     CONTENT_TYPE_LATEST = _PROMETHEUS_CONTENT_TYPE_LATEST
@@ -593,6 +597,13 @@ else:
         registry=REGISTRY,
     )
 
+    INDEX_LIFECYCLE_FAILURES = Counter(
+        "rag_index_lifecycle_failures_total",
+        "Failed index publication and retention operations",
+        ["operation"],
+        registry=REGISTRY,
+    )
+
     for _reason in ("thumbs_down", "low_quality", "escalated", "fact_fail", "slow_trace", "manual"):
         REVIEW_QUEUE_PENDING_TOTAL.labels(reason=_reason).set(0)
     for _verdict in ("good", "bad"):
@@ -600,9 +611,12 @@ else:
     REVIEW_QUEUE_OLDEST_PENDING_SECONDS.set(0)
     INGESTION_QUEUE_OLDEST_SECONDS.set(0)
     CURATED_DATASET_LAST_BUILD_TIMESTAMP_SECONDS.set(0)
+    for _operation in ("publish", "retention", "unknown"):
+        INDEX_LIFECYCLE_FAILURES.labels(operation=_operation).inc(0)
 
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
+_INDEX_LIFECYCLE_OPERATIONS = frozenset({"publish", "retention"})
 
 
 def record_component_health(component: str, status: str) -> None:
@@ -633,6 +647,13 @@ def record_http_request(method: str, endpoint: str, status: int, duration_sec: f
         method=method,
         endpoint=endpoint,
     ).observe(duration_sec)
+
+
+def record_index_lifecycle_failure(operation: str) -> None:
+    normalized = str(operation or "").strip().lower()
+    if normalized not in _INDEX_LIFECYCLE_OPERATIONS:
+        normalized = "unknown"
+    INDEX_LIFECYCLE_FAILURES.labels(operation=normalized).inc()
 
 
 def record_llm_cost(provider: str, model: str, tenant: str, cost_usd: float) -> None:

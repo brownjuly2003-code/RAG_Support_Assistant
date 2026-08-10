@@ -142,6 +142,22 @@ groups:
             least 10 minutes. Check Celery worker health and Redis connectivity
             before the default 15-minute stale-job timeout marks it failed.
 
+      - alert: IndexLifecycleFailure
+        expr: |
+          sum by (operation) (
+            increase(rag_index_lifecycle_failures_total[10m])
+          ) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: index
+        annotations:
+          summary: "Index {{ $labels.operation }} operation failed"
+          description: |
+            At least one index publication or retention operation failed in
+            the last 10 minutes. Check index lifecycle logs and verify the
+            active manifest before retrying an operator command or ingestion.
+
   - name: rag-quality
     interval: 1m
     rules:

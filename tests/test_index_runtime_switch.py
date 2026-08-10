@@ -439,6 +439,7 @@ def test_publish_failure_removes_unpublished_candidate_and_preserves_manifest(
     manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)
     manifest_before = manifest_path.read_bytes()
     retention_calls: list[str] = []
+    failure_metrics: list[str] = []
 
     def _fail_publish(*args: Any, **kwargs: Any) -> None:
         raise RuntimeError("manifest publish failed")
@@ -448,6 +449,12 @@ def test_publish_failure_removes_unpublished_candidate_and_preserves_manifest(
         return ()
 
     monkeypatch.setattr(manager, "publish_active_collection", _fail_publish, raising=False)
+    monkeypatch.setattr(
+        manager,
+        "_record_index_lifecycle_failure",
+        failure_metrics.append,
+        raising=False,
+    )
     monkeypatch.setattr(
         manager,
         "execute_chroma_retention",
@@ -476,6 +483,7 @@ def test_publish_failure_removes_unpublished_candidate_and_preserves_manifest(
         candidate_name
     ]
     assert retention_calls == []
+    assert failure_metrics == ["publish"]
 
 
 def test_retention_failure_after_publish_propagates_without_rollback(
@@ -496,6 +504,7 @@ def test_retention_failure_after_publish_propagates_without_rollback(
     real_publish = manager.publish_active_collection
     publish_events: list[str] = []
     retention_calls: list[dict[str, Any]] = []
+    failure_metrics: list[str] = []
 
     def _spy_publish(*args: Any, **kwargs: Any) -> Any:
         collection_name = args[1]
@@ -522,6 +531,12 @@ def test_retention_failure_after_publish_propagates_without_rollback(
         raise RuntimeError("chroma retention failed")
 
     monkeypatch.setattr(manager, "publish_active_collection", _spy_publish)
+    monkeypatch.setattr(
+        manager,
+        "_record_index_lifecycle_failure",
+        failure_metrics.append,
+        raising=False,
+    )
     monkeypatch.setattr(
         manager,
         "execute_chroma_retention",
@@ -559,6 +574,7 @@ def test_retention_failure_after_publish_propagates_without_rollback(
     inventory = read_retention_inventory("acme", chroma_directory=chroma_directory)
     assert inventory is not None
     assert candidate_name in [entry.collection_name for entry in inventory.collections]
+    assert failure_metrics == ["retention"]
 
 
 def test_retriever_cache_invalidates_when_manifest_generation_changes(
@@ -1409,6 +1425,7 @@ def test_runtime_retention_propagates_guarded_failures_unchanged(
     chroma_directory = tmp_path / "vectordb" / "chroma"
     state = _FakeChromaState()
     manager = _configure_manager(monkeypatch, chroma_directory, state)
+    failure_metrics: list[str] = []
     if error_name == "IndexRetentionExecutionValidationError":
         error: Exception = index_operator.IndexRetentionExecutionValidationError(
             "expected_generation must be a positive int"
@@ -1438,6 +1455,12 @@ def test_runtime_retention_propagates_guarded_failures_unchanged(
         raise error
 
     monkeypatch.setattr(manager, "execute_guarded_chroma_retention", _raise)
+    monkeypatch.setattr(
+        manager,
+        "_record_index_lifecycle_failure",
+        failure_metrics.append,
+        raising=False,
+    )
 
     with pytest.raises(type(error)) as exc_info:
         manager.execute_vector_store_retention(
@@ -1449,6 +1472,7 @@ def test_runtime_retention_propagates_guarded_failures_unchanged(
     assert exc_info.value is error
     assert state.opened_names == []
     assert state.deleted_names == []
+    assert failure_metrics == ["retention"]
 
 
 def test_runtime_retention_empty_tuple_passthrough_without_runtime_chroma(
@@ -1468,6 +1492,7 @@ def test_runtime_retention_empty_tuple_passthrough_without_runtime_chroma(
         deleted_collections=(),
     )
     seen_candidates: list[tuple[str, ...]] = []
+    failure_metrics: list[str] = []
 
     def _fake_guarded(
         tenant_id: str,
@@ -1482,6 +1507,12 @@ def test_runtime_retention_empty_tuple_passthrough_without_runtime_chroma(
         return expected
 
     monkeypatch.setattr(manager, "execute_guarded_chroma_retention", _fake_guarded)
+    monkeypatch.setattr(
+        manager,
+        "_record_index_lifecycle_failure",
+        failure_metrics.append,
+        raising=False,
+    )
 
     result = manager.execute_vector_store_retention(
         tenant_id="acme",
@@ -1495,6 +1526,7 @@ def test_runtime_retention_empty_tuple_passthrough_without_runtime_chroma(
     assert state.deleted_names == []
     assert state.built_names == []
     assert state.events == []
+    assert failure_metrics == []
 
 
 def test_rebuild_retention_still_routes_to_execute_chroma_retention_not_guarded(
@@ -1715,6 +1747,13 @@ def test_build_publication_receipt_chroma_first_and_second_publish(
     chroma_directory = tmp_path / "vectordb" / "chroma"
     state = _FakeChromaState()
     manager = _configure_manager(monkeypatch, chroma_directory, state)
+    failure_metrics: list[str] = []
+    monkeypatch.setattr(
+        manager,
+        "_record_index_lifecycle_failure",
+        failure_metrics.append,
+        raising=False,
+    )
 
     first = manager.build_vector_store_with_publication(
         [
@@ -1758,6 +1797,7 @@ def test_build_publication_receipt_chroma_first_and_second_publish(
     assert second.publication.manifest_generation == 2
     assert second.publication.active_collection != first.publication.active_collection
     assert second.chunks[0].page_content == "second published content"
+    assert failure_metrics == []
 
 
 def test_build_publication_receipt_opt_in_does_not_reread_or_relock_or_use_guarded(
