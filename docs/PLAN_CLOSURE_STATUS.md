@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-144 next-session transparency reconciliation)
+**Date:** 2026-08-09 (Update-145 VER-05 retention caller contract)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-144**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-145**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-144. Preserve it as DoD input, but use Actual Git + the committed
+> Update-145. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,12 +18,11 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-144 reconciliation:** Actual Git before this docs edit was `65c82cc`;
-the latest implementation remains `893efe3`, which closes local **9.1c**. No
-implementation or closure status changed. Ordinary scoped 9.1c MyPy retains
-five pre-existing errors outside changed lines, and the separate stale
-production-caller assertion in `tests/test_index_runtime_switch.py` remains an
-open test-contract item. No live Redis/provider/index mutation ran; live and
+**Update-145:** Actual Git before this docs edit was `4b0fba7`, which closes
+local **VER-05**. The retention source-boundary test now requires the exact
+intentional admin caller and still rejects every additional production caller;
+the independent retention/admin band passed 51 tests. This is a test-contract
+repair only. Plan-section closure, live Redis/provider/index evidence, and all
 release gates are unchanged.
 
 ---
@@ -351,10 +350,11 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-144)
+## Last-known verification snapshot (Update-145)
 
 | Band | Last known |
 |------|------------|
+| **VER-05** | stale zero-caller assertion red **1 failed** → exact admin-only caller contract; independent retention/admin band **51 passed**, 62 deselected, one known warning; scoped Ruff + diff clean; pre-existing whole-file format debt remains |
 | **9.1c versioned cache namespace** | HTTP settings-source regression **2 failed** → **2 passed**; final namespace/HTTP-cache/Redis/manifest band **40 passed** with two known warnings; Ruff + changed-range format + narrowed MyPy + diff clean; no live Redis/provider/index mutation |
 | **9.1b Redis reconnect backoff** | recovery red **2 failed** → green **2 passed**; focused Redis file **9 passed**; final Redis/cache band **15 passed** with two known warnings; Ruff check/format + scoped MyPy + diff clean; no live Redis |
 | **9.1a bounded Redis fallback** | TTL/cap red **2 failed** → focused **2 passed**; partial-delete count red **1 failed** → green **1 passed**; final Redis/cache band **13 passed** with two known warnings; Ruff check/format + scoped MyPy + diff clean; no live Redis |

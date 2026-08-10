@@ -1,5 +1,38 @@
 # Agent State
 
+## 2026-08-09 Update-145 — VER-05 retention caller contract ✅ START HERE
+
+> **Committed implementation:** `4b0fba7` (`test(index): reconcile retention
+> caller contract`) changes only `tests/test_index_runtime_switch.py`. Actual
+> Git before this docs edit was `master...origin/master [ahead 252]`; active
+> writer **none** and implementation WIP **none**.
+>
+> **Root cause and contract:** the source-boundary test predated the intentional
+> admin-only retention endpoint added in `ac4b317`, so its global
+> `production_hits == []` assertion became stale. The test now names the
+> admin-only contract and requires the exact caller list
+> `["api/routers/admin_ops.py"]`; any additional production caller still fails,
+> while the existing build/rebuild non-automatic-retention assertions remain.
+>
+> **Fresh evidence:** the original focused test reproduced **1 failed** with
+> exactly `api/routers/admin_ops.py`, then the independent retention/admin band
+> passed **51 tests** with 62 deselected and one known Starlette warning.
+> Scoped Ruff and diff checks passed. File-wide `ruff format --check` remains a
+> pre-existing debt: it returns nonzero on both the clean `HEAD` version and the
+> changed file, so no unrelated whole-file reformat was made.
+>
+> **Delegation and scope honesty:** Grok `grok-4.5-build` via `local_grok_cli`
+> made the two-line test-only change; its run ended at a final headless
+> permission boundary after verification requests, then Codex independently
+> verified and committed it. Protected dirty-file hashes still match. No
+> production code, runtime, provider, index, migration, scheduler, push, or
+> deploy state changed.
+>
+> **Next-session entrypoint:** refresh Actual Git, then read this block and
+> `docs/SESSION_HANDOFF.md` §0/§1C/§2/§7/§8. VER-05 and 9.1a–9.1c are locally
+> closed; do not repeat them without new code/evidence. No implementation slice
+> is preselected.
+
 ## 2026-08-09 Update-144 — next-session transparency reconciliation ✅ START HERE
 
 > **Purpose:** docs-only reconciliation after the committed 9.1c handoff. No
