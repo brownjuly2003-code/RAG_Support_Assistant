@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from typing import Final
+from typing import Final, cast
 
 FaultAction = Callable[[], None]
 
@@ -125,7 +125,7 @@ def _normalize_action(
         return _raise_instance
 
     if callable(action):
-        return action
+        return cast(FaultAction, action)
 
     raise TypeError(
         "Fault action must be a callable, BaseException instance, or BaseException type"
