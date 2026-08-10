@@ -1,5 +1,36 @@
 # Agent State
 
+## 2026-08-09 Update-146 — §9.2a index lifecycle failure telemetry ✅ START HERE
+
+> **Committed implementation:** `3fe6d6d` (`feat(metrics): expose index
+> lifecycle failures`) changes exactly seven scoped paths. Actual Git before
+> this docs edit was `master...origin/master [ahead 254]`; active writer
+> **none** and implementation WIP **none**.
+>
+> **Contract:** `rag_index_lifecycle_failures_total` has the bounded
+> `operation=publish|retention|unknown` label. Publish failures and both
+> automatic and manual retention failures record exactly once; successful
+> paths and original exception semantics are unchanged. The warning alert
+> aggregates increases by operation over ten minutes.
+>
+> **Fresh evidence:** focused TDD moved from **10 failed / 2 passed** to
+> **12 passed**. The final independent lifecycle/metrics/alert band passed
+> **75 tests** with 61 deselected and one known Starlette warning; docs quality
+> passed **13 tests**. Scoped Ruff, narrowed MyPy for two source files, diff,
+> and LF checks passed. File-wide formatter debt reproduces on clean `HEAD`
+> and was not expanded.
+>
+> **Scope honesty:** this closes only local **9.2a** failure telemetry, not all
+> dashboards/SLO work or §9. No Grafana, live metric/alert delivery, service,
+> index, provider, migration, scheduler, push, or deploy state changed.
+> Protected dirty-file hashes still match.
+>
+> **Next-session entrypoint:** refresh Actual Git, then read this block and
+> `docs/SESSION_HANDOFF.md` §0/§1C/§2/§7/§8. Do not repeat 9.2a without new
+> code/evidence. No implementation slice is preselected; remaining §9
+> residuals are architecture ownership, the other dashboards/SLO signals, and
+> Astro 7.
+
 ## 2026-08-09 Update-145 — VER-05 retention caller contract ✅ START HERE
 
 > **Committed implementation:** `4b0fba7` (`test(index): reconcile retention

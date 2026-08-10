@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-09 — **Update-145** (VER-05 retention caller contract).
+**Обновлено:** 2026-08-09 — **Update-146** (§9.2a index lifecycle failure telemetry).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-145**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-146**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-145; dirty
+**Не использовать:** старые `START HERE` ниже Update-146; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -27,33 +27,34 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **committed implementation** | `4b0fba7` — VER-05 exact admin-only retention caller contract |
+| Latest **committed implementation** | `3fe6d6d` — §9.2a bounded index publish/retention failure metric and alert |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
-| Prior implementations (recent) | `893efe3` **9.1c** · `eb8466e` **9.1b** · `db65e37` **9.1a** · `80c2603` **QG-03A** · `1304ff4` **QG-02** · `c3ae4f4` **QG-01** · `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen |
-| Latest **committed docs before this Update** | `093b439` — Update-144 transparency reconciliation |
+| Prior implementations (recent) | `4b0fba7` **VER-05** · `893efe3` **9.1c** · `eb8466e` **9.1b** · `db65e37` **9.1a** · `80c2603` **QG-03A** · `1304ff4` **QG-02** · `c3ae4f4` **QG-01** · `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen |
+| Latest **committed docs before this Update** | `11430f8` — Update-145 VER-05 closure |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 252]` at `4b0fba7` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-145 docs WIP may remain; otherwise owned WIP **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **DEP-01** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** + **HYBRID-MEM env propagation** + **VER-02** + **VER-05** |
+| Branch advisory | observed `master...origin/master [ahead 254]` at `3fe6d6d` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-146 docs WIP may remain; otherwise owned WIP **none** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a index lifecycle failure telemetry** + **DEP-01** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** + **HYBRID-MEM env propagation** + **VER-02** + **VER-05** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | No implementation slice is preselected. Remaining §9 residuals are architecture ownership, dashboards/SLO, and Astro 7; select at most one explicit/documented boundary in a new owner turn |
+| Next ordered | No implementation slice is preselected. Remaining §9 residuals are architecture ownership, the other dashboards/SLO signals, and Astro 7; select at most one explicit/documented boundary in a new owner turn |
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-145 closes VER-05 locally:** `4b0fba7` changes only the stale
-source-boundary test. It now requires the exact intentional production caller
-`api/routers/admin_ops.py`, so any additional caller still fails; automatic
-build/rebuild retention boundaries remain asserted. Grok made the two-line
-test-only change through `local_grok_cli`; Codex independently verified and
-committed it. Protected dirty-file hashes in §8 still match. No product code,
-live runtime, index, provider, migration, scheduler, push, or deploy changed.
+**Update-146 closes local §9.2a only:** `3fe6d6d` adds the bounded
+`rag_index_lifecycle_failures_total{operation}` counter and a warning alert for
+publish/retention failures. Publish plus automatic and manual retention failure
+boundaries record once while success paths and exception propagation remain
+unchanged. Protected dirty-file hashes in §8 still match. No Grafana, live
+metric/alert delivery, service, index, provider, migration, scheduler, push, or
+deploy state changed; the other §9 dashboards/SLO signals remain open.
 
 **Last known verification:**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **9.2a index lifecycle failure telemetry** | focused TDD **10 failed / 2 passed** → **12 passed**; final lifecycle/metrics/alert band **75 passed**, 61 deselected, one known warning; docs **13 passed**; scoped Ruff + narrowed two-source MyPy + diff/LF clean; pre-existing whole-file format debt remains |
 | **VER-05 retention caller contract** | stale assertion red **1 failed** with exact admin caller → independent retention/admin band **51 passed**, 62 deselected, one known warning; scoped Ruff + diff clean; whole-file format debt reproduces on clean `HEAD` and remains outside scope |
 | **9.1c versioned cache namespace** | HTTP settings-source regression **2 failed** → **2 passed**; final namespace/HTTP-cache/Redis/manifest band **40 passed** with two known warnings; Ruff + changed-range format + narrowed MyPy + diff clean; no live Redis/provider/index mutation |
 | **9.1b Redis reconnect backoff** | recovery red **2 failed** → green **2 passed**; focused Redis file **9 passed**; final Redis/cache band **15 passed** with two known warnings; Ruff check/format + scoped MyPy + diff clean; no live Redis |
@@ -252,7 +253,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-145)
+### 1C. Authoritative open-problem ledger (Update-146)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -284,7 +285,7 @@ override this snapshot.
 | **REL-05** | **OPEN** | Calibration seed is synthetic; no production dual-annotator human sample or agreement/cost evidence exists. | Collect authorized human-labelled sample and reissue calibration artifact. |
 | **REL-06** | **GATED** | Formal §7.6 live provider gate has scaffold/readiness only; mock/smoke is not release evidence. | Secrets + explicit `--execute` opt-in. |
 | **REL-07** | **GATED** | Live IdP/OIDC drill and production `WIDGET_ALLOWED_ORIGINS` evidence are absent; widget E2E is Chromium-only local evidence. | Live IdP/prod-config authority and cross-environment acceptance. |
-| **REL-08** | **OPEN** | `db65e37`, `eb8466e`, and `893efe3` close local fallback bounds, reconnect backoff, and the versioned cache namespace. Architecture ownership, dashboards/SLO, Astro 7, and §10 full verification/canary/rollback remain open. npm audit exceptions expire **2026-11-07**. | Continue with one explicit §9 residual at a time; then full 3.11/3.13 suite, security/dependency gates, canary and rollback evidence. |
+| **REL-08** | **OPEN** | `db65e37`, `eb8466e`, and `893efe3` close local fallback bounds, reconnect backoff, and the versioned cache namespace; `3fe6d6d` exposes bounded index publish/retention failure telemetry and its alert. Architecture ownership, the other dashboards/SLO signals, Astro 7, and §10 full verification/canary/rollback remain open. npm audit exceptions expire **2026-11-07**. | Continue with one explicit §9 residual at a time; then full 3.11/3.13 suite, security/dependency gates, canary and rollback evidence. |
 
 #### Verification / local operations
 
@@ -303,7 +304,7 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 252]` at `4b0fba7` before Update-145 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
+| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 254]` at `3fe6d6d` before Update-146 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
 | **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
 | **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. `cache-namespace-9-1c.md` and `.grok-prompts/cache-namespace-9-1c-impl.md` belong to the already-committed slice. | They are not implementation WIP. Do not bulk-delete or stage them, and do not relaunch the same Grok prompt without new evidence or a narrowed hypothesis. |
@@ -335,7 +336,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-145 in AGENT_STATE.md + §1C problem ledger in this file
+5. Read ONLY top Update-146 in AGENT_STATE.md + §1C problem ledger in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. Do not invent another QG item; QG-01–QG-04 are local-only closures
 8. Select work only from an explicit owner request or a documented ungated residual
@@ -345,7 +346,7 @@ override this snapshot.
 
 | Candidate | Current truth | Boundary before action |
 |-----------|---------------|------------------------|
-| §9 residuals | §9.1a–9.1c fallback bounds/reconnect/versioned namespace are local-green; architecture ownership, dashboards/SLO, and Astro 7 remain open | No item preselected; choose one explicit/documented boundary in a new owner turn, with no live action inferred |
+| §9 residuals | §9.1a–9.1c cache work and §9.2a index failure telemetry are local-green; architecture ownership, the other dashboards/SLO signals, and Astro 7 remain open | No item preselected; choose one explicit/documented boundary in a new owner turn, with no live action inferred |
 | HYBRID-MEM | Blank child environment propagation is local-green at `3c90368`; default hybrid quality is unproved; memory guard is last known disabled | Fresh explicit authority for Task Scheduler state and a separately bounded hybrid attempt; verify the guard before any model load |
 | Live quality ×3 | Only seed 42 ran and **failed**; seeds 43–44 and a valid passing aggregate do not exist | Fresh paid/live opt-in, compatible index, provider prerequisites, and fail-closed evidence collection |
 | INDEX-DIM | Active `rag_docs_default` is dimension 3; remote embeddings are 1024; retained compatible copy is diagnostic evidence only | Dedicated validated rebuild/publish scope; never replace/delete the active or retained collection casually |
@@ -375,7 +376,7 @@ permission for another paid call.
 | **6** judge / safety / agentic | **6.1–6.7** local | production human dual-annotator sample |
 | **7** eval gate | **7.1–7.7** local | live execute with secrets; mock≠release; optional more depth |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
-| **9** cache / architecture / SLO | **9.1a–9.1b fallback bounds/reconnect + DEP-01 local** | expanded namespace; architecture/SLO; Astro 7 |
+| **9** cache / architecture / SLO | **9.1a–9.1c cache + 9.2a index failure telemetry + DEP-01 local** | architecture ownership; other dashboards/SLO; Astro 7; live alert delivery |
 | **10** final verification | not started | after 1–9 + opt-in evidence |
 
 **Release / production: NOT claimable** until §1 live + §5 live quality evidence +
@@ -608,11 +609,12 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 ## 7. Next named candidate
 
 There is **no active implementation WIP and no preselected implementation
-candidate**. §9.1c is locally closed at `893efe3`; QG-01 is locally closed at
+candidate**. §9.1c is locally closed at `893efe3`, and §9.2a is locally closed
+at `3fe6d6d`; QG-01 is locally closed at
 `c3ae4f4`, QG-02 at `1304ff4`, QG-03A at `80c2603`, and QG-03B/QG-04 share
 production fix `5662ea7` with the exact QG-04 replay at `5f8bb78`. Do not
-reopen them, VER-05 (`4b0fba7`), or repeat their focused gates without new code
-or evidence.
+reopen them, VER-05 (`4b0fba7`), §9.2a, or repeat their focused gates without
+new code or evidence.
 
 A new paid seed or 3×20 retry needs fresh owner opt-in. Remaining local work
 must come from an explicit owner request or one documented residual selected
@@ -622,7 +624,7 @@ in a new turn; do not invent another local QG item.
 
 - live multi-service / migrate / push / deploy / live provider·quality execute
 - re-select through **8.5** / **4.1–4.8** / **5.1–5.7** / **6.1–6.7** /
-  **7.1–7.7** / **9.1a–9.1c** / **DEP-01**
+  **7.1–7.7** / **9.1a–9.1c** / **9.2a** / **DEP-01**
 - OIDC live IdP drill; bulk plan checkbox edits; production claims
 - multi-replica impl without SLA (design DEFER)
 - Docker/WSL or a silent model fallback for the lightweight smoke
@@ -640,7 +642,7 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-145:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-146:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -749,6 +751,8 @@ Never log secret values.
 | 42 | docs | resolve through Actual Git | Update-144 transparency reconciliation; do not add a follow-up solely for its self-SHA |
 | 43 | **VER-05** | `4b0fba7` | require the exact intentional admin retention caller without permitting additional production callers |
 | 44 | docs | resolve through Actual Git | Update-145 VER-05 closure; do not add a follow-up solely for its self-SHA |
+| 45 | **9.2a** | `3fe6d6d` | expose bounded index publish/retention failure telemetry and a warning alert |
+| 46 | docs | resolve through Actual Git | Update-146 9.2a closure; do not add a follow-up solely for its self-SHA |
 
 ---
 
@@ -779,9 +783,10 @@ Never log secret values.
 | Redis fallback bounded? | **Yes local** (`db65e37`): TTL, locking, and 1024-entry LRU cap; live Redis evidence remains open |
 | Redis reconnect bounded? | **Yes local** (`eb8466e`): serialized `1→2→4…≤30s` retry schedule resets after recovery; live Redis evidence remains open |
 | Response cache namespace versioned? | **Yes local** (`893efe3`): tenant/index/prompt/model/query identity; unresolved identities fail closed; no live Redis evidence |
-| All known open problems indexed? | **Yes in §1C as of Update-145**; Actual Git/new evidence overrides the snapshot |
+| Index lifecycle failures observable? | **Yes local** (`3fe6d6d`): bounded publish/retention counter and alert contract; no live metric scrape or alert-delivery evidence |
+| All known open problems indexed? | **Yes in §1C as of Update-146**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-145 handoff files are clean, owned WIP **none** |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-146 handoff files are clean, owned WIP **none** |
