@@ -14,7 +14,6 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json as _json
 import logging
 import sys
@@ -927,10 +926,24 @@ async def _record_citation_stats(tenant_id: str, citations: list[CitationModel])
         await db.commit()
 
 
-def _cache_key(tenant: str, question: str) -> str:
-    normalized_question = question.strip().lower()
-    question_hash = hashlib.sha256(normalized_question.encode("utf-8")).hexdigest()[:16]
-    return f"llm_resp:{tenant or 'default'}:{question_hash}"
+def _cache_key(
+    tenant: str,
+    question: str,
+    *,
+    user_id: str = "anonymous",
+    session_id: str | None = None,
+    settings: Any | None = None,
+) -> str | None:
+    """Build the versioned LLM response-cache key, or ``None`` to fail closed."""
+    from cache.namespace import build_llm_response_cache_key
+
+    return build_llm_response_cache_key(
+        tenant,
+        question,
+        settings=settings if settings is not None else get_settings(),
+        user_id=user_id,
+        session_id=session_id,
+    )
 
 
 def _session_owner_tenant(session_obj: Any) -> str | None:

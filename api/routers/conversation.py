@@ -342,18 +342,33 @@ async def ask(
 
     cache_enabled = bool(getattr(settings, "llm_cache_enabled", False))
     if cache_enabled:
-        # The cache key is tenant+question only. A follow-up inside a dialog
-        # ("а сколько это стоит?") depends on the conversation context, so
+        # Cache applies to history-less first turns only. A follow-up inside a
+        # dialog ("а сколько это стоит?") depends on conversation context, so
         # caching it — or serving it from cache — would leak answers across
-        # unrelated dialogs. Cache applies to history-less first turns only.
+        # unrelated dialogs. The key itself is versioned by tenant, active
+        # index, effective prompts, model route, and normalized query (§9.1c).
         session_history = (
             getattr(session, "_history", None)
             if hasattr(session, "_history")
-            else session.get("history") if isinstance(session, dict) else None
+            else session.get("history")
+            if isinstance(session, dict)
+            else None
         )
         if session_history:
             cache_enabled = False
-    llm_cache_key = _app._cache_key(tenant, question)
+    llm_cache_key: str | None = None
+    if cache_enabled:
+        llm_cache_key = _app._cache_key(
+            tenant,
+            question,
+            user_id=str(_user.get("sub", "anonymous")),
+            session_id=session_id,
+            settings=settings,
+        )
+        # Fail closed: if any required identity cannot be resolved safely,
+        # skip both cache lookup and cache write for this request.
+        if not llm_cache_key:
+            cache_enabled = False
     cache_hit = False
     # Provenance for the QUALITY_SCORE metric; cached replays keep their
     # original "llm" provenance, agentic unmeasured paths report "unmeasured".

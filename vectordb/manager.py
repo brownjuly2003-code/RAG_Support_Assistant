@@ -142,6 +142,42 @@ def _resolve_active_index(
     )
 
 
+def resolve_response_cache_index_identity(
+    tenant_id: str = "default",
+    *,
+    settings: Any | None = None,
+) -> str | None:
+    """Durable Chroma index identity for the LLM response cache.
+
+    Returns a path-free token ``chroma:<collection>:gN`` (or
+    ``chroma:<collection>:legacy:g0`` when no manifest exists). Non-Chroma
+    backends and unreadable manifests return ``None`` so callers fail closed.
+    """
+    cfg = settings if settings is not None else get_settings()
+    backend = str(getattr(cfg, "vector_backend", "chroma") or "chroma").strip().lower()
+    if backend != "chroma":
+        return None
+
+    chroma_directory = getattr(cfg, "vectordb_chroma_dir", None)
+    if chroma_directory is None:
+        return None
+
+    tenant = tenant_id or "default"
+    try:
+        active_collection, index_key, _manifest_present = _resolve_active_index(
+            tenant,
+            chroma_directory,
+        )
+    except Exception:
+        return None
+
+    generation = int(index_key[2])
+    if generation <= 0:
+        # Explicit legacy generation: upload invalidation still covers mutations.
+        return f"chroma:{active_collection}:legacy:g0"
+    return f"chroma:{active_collection}:g{generation}"
+
+
 def add_contextual_headers(
     chunks: list[Document],
     full_documents: Sequence[Document],

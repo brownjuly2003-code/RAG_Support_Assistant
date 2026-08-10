@@ -50,11 +50,17 @@ def test_cache_key_is_normalized() -> None:
     k1 = api_app._cache_key("acme", "How to reset password?")
     k2 = api_app._cache_key("acme", "  how to reset password?  ")
 
+    assert k1 is not None
     assert k1 == k2
+    assert k1.startswith("llm_resp:acme:")
+    assert ":v1:" in k1
 
 
 def test_cache_key_isolates_tenants() -> None:
-    assert api_app._cache_key("acme", "x") != api_app._cache_key("mega", "x")
+    k1 = api_app._cache_key("acme", "x")
+    k2 = api_app._cache_key("mega", "x")
+    assert k1 is not None and k2 is not None
+    assert k1 != k2
 
 
 def test_cached_response_returns_without_pipeline(
@@ -62,11 +68,14 @@ def test_cached_response_returns_without_pipeline(
     client: TestClient,
 ) -> None:
     metrics_before = client.get("/metrics")
-    before_hits = _metric_value(
-        metrics_before.text,
-        "llm_cache_hits_total",
-        'tenant="default"',
-    ) or 0.0
+    before_hits = (
+        _metric_value(
+            metrics_before.text,
+            "llm_cache_hits_total",
+            'tenant="default"',
+        )
+        or 0.0
+    )
 
     session_holder: dict[str, object] = {}
     captured: dict[str, object] = {}
@@ -290,4 +299,55 @@ def test_cache_disabled_flag_skips_entirely(
 
     assert response.status_code == 200
     assert response.json()["answer"] == "Live answer"
+    assert captured == {"get_calls": 0, "set_calls": 0, "ask_calls": 1}
+
+
+def test_cache_identity_failure_skips_lookup_and_write(
+    monkeypatch: pytest.MonkeyPatch,
+    client: TestClient,
+    settings_factory,
+) -> None:
+    """Fail-closed: unresolved identity disables cache but keeps the pipeline."""
+    captured = {"get_calls": 0, "set_calls": 0, "ask_calls": 0}
+    settings = settings_factory(llm_cache_enabled=True, llm_cache_ttl_seconds=123)
+
+    class FakeSession:
+        def ask(
+            self, question: str, trace_id: str | None = None, tenant_id: str = "default", **kwargs
+        ):
+            captured["ask_calls"] += 1
+            return {
+                "answer": "Pipeline answer despite cache identity failure",
+                "quality_score": 77,
+                "route": "auto",
+                "graded_docs": [],
+                "trace_id": "trace-identity-fail",
+                "suggested_questions": [],
+            }
+
+    async def _fake_get_or_create_session(session_id: str | None, tenant_id: str = "default"):
+        _ = session_id, tenant_id
+        return "00000000000000000000000000000004", FakeSession()
+
+    def _fake_cache_json_get(key: str):
+        _ = key
+        captured["get_calls"] += 1
+        return None
+
+    def _fake_cache_json_set(key: str, value, ttl_seconds: int = 3600) -> None:
+        _ = key, value, ttl_seconds
+        captured["set_calls"] += 1
+
+    monkeypatch.setattr(api_app, "get_settings", lambda: settings)
+    monkeypatch.setattr(api_app, "_get_or_create_session", _fake_get_or_create_session)
+    monkeypatch.setattr(api_app, "cache_json_get", _fake_cache_json_get)
+    monkeypatch.setattr(api_app, "cache_json_set", _fake_cache_json_set)
+    monkeypatch.setattr(api_app, "log_audit", _fake_log_audit)
+    monkeypatch.setattr(api_app, "_cache_key", lambda *args, **kwargs: None)
+
+    response = client.post("/api/ask", json={"question": "identity failure path"})
+
+    assert response.status_code == 200
+    assert response.json()["answer"] == "Pipeline answer despite cache identity failure"
+    assert response.json().get("cached") is False
     assert captured == {"get_calls": 0, "set_calls": 0, "ask_calls": 1}
