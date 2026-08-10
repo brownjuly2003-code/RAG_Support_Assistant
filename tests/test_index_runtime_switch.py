@@ -1581,7 +1581,7 @@ def test_rebuild_retention_still_routes_to_execute_chroma_retention_not_guarded(
     assert guarded_calls == []
 
 
-def test_runtime_retention_signature_source_boundary_and_no_production_callers(
+def test_runtime_retention_signature_source_boundary_and_admin_only_production_caller(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1675,7 +1675,7 @@ def test_runtime_retention_signature_source_boundary_and_no_production_callers(
                 production_hits.append(
                     str(candidate.relative_to(root)).replace("\\", "/")
                 )
-    assert production_hits == []
+    assert production_hits == ["api/routers/admin_ops.py"]
 
 
 def test_build_vector_store_contract_still_returns_two_element_tuple(
