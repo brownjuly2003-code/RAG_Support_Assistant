@@ -1,5 +1,36 @@
 # Agent State
 
+## 2026-08-09 Update-141 — §9.1b Redis reconnect backoff ✅ START HERE
+
+> **Committed implementation:** `eb8466e` (`fix(cache): retry Redis with
+> bounded backoff`) changes exactly `cache/redis_cache.py` and
+> `tests/test_redis_cache.py`. Branch was observed at
+> `master...origin/master [ahead 246]` after that commit and before this docs
+> update; refresh Actual Git. Active writer: **none**.
+>
+> **Contract closed locally:** a connection/ping or cache-operation failure now
+> invalidates the failed client and schedules a serialized reconnect attempt.
+> Requests use the bounded in-process fallback until the monotonic deadline;
+> retry delays grow `1→2→4…` seconds, cap at 30 seconds, and reset after a
+> successful reconnect. This avoids both permanent fallback and retry storms.
+>
+> **Fresh evidence:** the two recovery contracts first failed because fallback
+> remained permanent and the failed client was called twice inside the retry
+> window, then passed. The focused Redis file passed **9 tests**. The final
+> Redis/LLM-cache band passed **15 tests** with the known Starlette and
+> LangChain deprecation warnings; Ruff check/format, scoped MyPy, and diff
+> checks passed.
+>
+> **Scope honesty:** this closes only local slice **9.1b** after 9.1a. The
+> expanded tenant/index/prompt/model/normalized-query cache namespace,
+> architecture ownership, dashboards/SLO, Astro 7, and §10 remain open. No
+> live Redis, provider/model call, index mutation, migration, scheduler change,
+> push, or deploy ran.
+>
+> **Next routing:** implementation WIP **none**. The next documented ungated
+> candidate is **9.1c versioned cache namespace** (not started); pick only that
+> one atomic slice in a new turn. Do not repeat 9.1a–9.1b without new evidence.
+
 ## 2026-08-09 Update-140 — §9.1a bounded Redis fallback ✅ START HERE
 
 > **Committed implementation:** `db65e37` (`fix(cache): bound Redis fallback
