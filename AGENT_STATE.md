@@ -1,5 +1,39 @@
 # Agent State
 
+## 2026-08-09 Update-147 — §9.2b unverified auto-rate telemetry ✅ START HERE
+
+> **Committed implementation:** `11e52f1` (`feat(metrics): expose unverified
+> auto responses`) changes exactly five scoped paths. Actual Git before this
+> docs edit was `master...origin/master [ahead 256]`; active writer **none**
+> and implementation WIP **none**.
+>
+> **Contract:** `rag_auto_responses_total` has only
+> `verification=verified|unverified`. Each client-visible `route=auto` result is
+> counted once at the shared `ConversationSession` sync/SSE delivery boundary;
+> missing, unsupported, or unexpected grounding is fail-closed to
+> `unverified`. The critical alert enforces the release target of zero
+> unverified automatic responses over ten minutes.
+>
+> **Fresh evidence:** focused TDD moved from **4 failed / 5 passed** to
+> **9 passed**. The independent band first reported **60 passed / 1 failed**;
+> the failure reproduced alone and is pre-existing VER-06 test debt: `HEAD`
+> calls `search_kb_docs`, while the stale safety test patches `search_kb`.
+> The one narrowed rerun passed **60 tests** with that exact test deselected.
+> Scoped Ruff, new-file format, narrowed MyPy for two sources, diff, and LF
+> checks passed; docs quality passed **13 tests**.
+>
+> **Scope honesty:** this closes only local **9.2b** telemetry, not all
+> dashboards/SLO work or §9. No routing/safety policy, Grafana, live
+> metric/alert delivery, service, provider, index, migration, scheduler, push,
+> or deploy state changed. Protected dirty-file hashes still match.
+>
+> **Next-session entrypoint:** refresh Actual Git, then read this block and
+> `docs/SESSION_HANDOFF.md` §0/§1C/§2/§7/§8. Do not repeat 9.2a–9.2b without
+> new code/evidence. No implementation slice is preselected. Remaining §9 work
+> includes architecture ownership, orphan/safety/escalation-delivery/
+> tenant-denied signals, a committed dashboard artifact, and Astro 7; VER-06
+> is a separate narrow test-contract candidate.
+
 ## 2026-08-09 Update-146 — §9.2a index lifecycle failure telemetry ✅ START HERE
 
 > **Committed implementation:** `3fe6d6d` (`feat(metrics): expose index

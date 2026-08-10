@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-146 §9.2a index lifecycle failure telemetry)
+**Date:** 2026-08-09 (Update-147 §9.2b unverified auto-rate telemetry)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-146**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-147**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-146. Preserve it as DoD input, but use Actual Git + the committed
+> Update-147. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,11 +18,12 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-146:** Actual Git before this docs edit was `3fe6d6d`, which closes
-local **§9.2a** only. A bounded counter and warning alert expose index publish
-and automatic/manual retention failures without changing success or exception
-semantics; the independent band passed 75 tests. This does not close §9, the
-remaining dashboards/SLO work, live metric/alert delivery, or any release gate.
+**Update-147:** Actual Git before this docs edit was `11e52f1`, which closes
+local **§9.2b** only. A bounded verified/unverified counter records each
+client-visible automatic response once across sync/SSE, and a critical alert
+enforces the zero target. The narrowed independent band passed 60 tests; one
+unrelated stale agentic-safety test remains explicit VER-06 debt. This does not
+close §9, remaining dashboards/SLO work, live alert delivery, or a release gate.
 
 ---
 
@@ -38,7 +39,7 @@ remaining dashboards/SLO work, live metric/alert delivery, or any release gate.
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
-| **9** cache / architecture / SLO | **9.1a–9.1c cache + 9.2a index failure telemetry + DEP-01 local** | OPEN (architecture ownership, other dashboards/SLO, Astro 7) | soft |
+| **9** cache / architecture / SLO | **9.1a–9.1c cache + 9.2a–9.2b telemetry + DEP-01 local** | OPEN (architecture ownership, four exact signals/dashboard, Astro 7) | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
 **Project / production release: NOT claimed.**
@@ -305,9 +306,11 @@ Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 | **9.1b** | **done local** | `eb8466e` | connection/ping and cache-operation failures invalidate the client; serialized reconnect delays grow from 1 second to a 30-second cap and reset after recovery |
 | **9.1c** | **done local** | `893efe3` | response-cache keys bind tenant, active Chroma collection/generation, effective prompts, configured provider-model routing, and normalized query; unresolved identity skips cache read/write |
 | **9.2a** | **done local** | `3fe6d6d` | a bounded `operation=publish|retention|unknown` counter records publish and automatic/manual retention failures once; a warning alert groups increases by operation |
+| **9.2b** | **done local** | `11e52f1` | each client-visible `route=auto` sync/SSE result increments bounded `verification=verified|unverified`; missing/unexpected grounding is unverified and the alert target is zero |
 
-**Residual:** architecture ownership; the other dashboards/SLO signals; Astro
-7. No live Redis, metric-scrape, or alert-delivery evidence exists.
+**Residual:** architecture ownership; orphan work, safety blocks, escalation
+delivery, and tenant-denied access signals; a committed dashboard artifact;
+Astro 7. No live Redis, metric-scrape, or alert-delivery evidence exists.
 
 ---
 
@@ -346,14 +349,15 @@ retry, scheduler change, index mutation, migration, push, or deploy.
 `--follow-imports=skip`. It changes no plan checkbox and does not establish a
 full repository, locked Python-3.11, CI, or production verification result.
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a**, DEP-01.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2b**, DEP-01.
 
 ---
 
-## Last-known verification snapshot (Update-146)
+## Last-known verification snapshot (Update-147)
 
 | Band | Last known |
 |------|------------|
+| **9.2b unverified auto-rate telemetry** | focused TDD **4 failed / 5 passed** → **9 passed**; independent **60 passed / 1 failed**, failure reproduced alone as pre-existing VER-06; narrowed rerun **60 passed**, 1 deselected, one warning; scoped Ruff + new-file format + narrowed two-source MyPy + diff/LF clean; no live scrape/alert delivery |
 | **9.2a index lifecycle failure telemetry** | focused TDD **10 failed / 2 passed** → **12 passed**; final lifecycle/metrics/alert band **75 passed**, 61 deselected, one known warning; docs **13 passed**; scoped Ruff + narrowed two-source MyPy + diff/LF clean; pre-existing whole-file format debt remains; no live scrape/alert delivery |
 | **VER-05** | stale zero-caller assertion red **1 failed** → exact admin-only caller contract; independent retention/admin band **51 passed**, 62 deselected, one known warning; scoped Ruff + diff clean; pre-existing whole-file format debt remains |
 | **9.1c versioned cache namespace** | HTTP settings-source regression **2 failed** → **2 passed**; final namespace/HTTP-cache/Redis/manifest band **40 passed** with two known warnings; Ruff + changed-range format + narrowed MyPy + diff clean; no live Redis/provider/index mutation |
