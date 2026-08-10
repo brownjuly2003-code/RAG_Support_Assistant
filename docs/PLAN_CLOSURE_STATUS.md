@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-148 VER-06 agentic safety mock contract)
+**Date:** 2026-08-09 (Update-149 next-session transparency reconciliation)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-148**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-149**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-148. Preserve it as DoD input, but use Actual Git + the committed
+> Update-149. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,11 +18,12 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-148:** Actual Git before this docs edit was `356a530`, which closes
-local **VER-06** only. The agentic injection safety test now patches the actual
-tuple-returning `search_kb_docs` boundary; its failure reproduced before the
-edit, and the independent safety/agentic band passed 44 tests afterward. This
-test-only repair changes no plan section, runtime behavior, or release gate.
+**Update-149:** Actual Git before this docs edit was `2fd9fd1`; latest
+implementation remains test-only `356a530`, and there is no implementation
+WIP or active writer. This docs-only reconciliation changes no plan section,
+runtime behavior, evidence classification, or release gate. §9 residuals,
+live/gated work, protected dirty boundaries, and next-session routing remain
+explicit in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md).
 
 ---
 
@@ -352,10 +353,11 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-148)
+## Last-known verification snapshot (Update-149)
 
 | Band | Last known |
 |------|------------|
+| **Update-149 docs reconciliation** | docs quality **13 passed**, one warning; scoped diff/LF clean; no project tests rerun and no new implementation evidence |
 | **VER-06 agentic safety mock contract** | exact stale test **1 failed** → **1 passed**; independent response-safety/agentic/auto-telemetry band **44 passed**, one warning; scoped Ruff + diff/LF clean; pre-existing whole-file formatter debt remains; production code unchanged |
 | **9.2b unverified auto-rate telemetry** | focused TDD **4 failed / 5 passed** → **9 passed**; independent **60 passed / 1 failed**, failure reproduced alone as pre-existing VER-06; narrowed rerun **60 passed**, 1 deselected, one warning; scoped Ruff + new-file format + narrowed two-source MyPy + diff/LF clean; no live scrape/alert delivery |
 | **9.2a index lifecycle failure telemetry** | focused TDD **10 failed / 2 passed** → **12 passed**; final lifecycle/metrics/alert band **75 passed**, 61 deselected, one known warning; docs **13 passed**; scoped Ruff + narrowed two-source MyPy + diff/LF clean; pre-existing whole-file format debt remains; no live scrape/alert delivery |

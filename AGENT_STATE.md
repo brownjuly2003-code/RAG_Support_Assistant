@@ -1,5 +1,38 @@
 # Agent State
 
+## 2026-08-09 Update-149 — next-session transparency reconciliation ✅ START HERE
+
+> **Purpose:** docs-only reconciliation after the committed VER-06 handoff.
+> No project code, configuration, service, scheduler, migration, provider,
+> index, push, deploy, or other runtime state changed in this Update.
+>
+> **Verified start snapshot:** Actual Git was `2fd9fd1` (`docs: close agentic
+> safety mock debt`) on `master...origin/master [ahead 259]`. Latest committed
+> implementation remains test-only `356a530`; active writer **none**,
+> implementation WIP **none**, and all Update-148 implementation/handoff paths
+> were clean. The only dirty tracked paths remain protected owner files:
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and
+> `plan_sol_23_07_26`; all four SHA-256 values still match the durable snapshot.
+>
+> **Last verified local outcome:** VER-06 reproduced **1 failed → 1 passed**;
+> its independent response-safety/agentic/auto-telemetry band passed **44
+> tests** with one known warning. §9.2a–9.2b remain local-green. This Update
+> reran only docs quality (**13 passed**) and scoped diff/LF checks; it does not
+> claim a new project-test run, full suite, locked CI, or production evidence.
+>
+> **Open/gated truth:** the plan and production release remain open. Local §9
+> still lacks architecture ownership, exact orphan-work/safety-block/
+> escalation-delivery/tenant-denied signals, a committed dashboard artifact,
+> and Astro 7. Live quality remains FAIL on the sole seed-42 run; seeds 43–44,
+> compatible active index evidence, live services/migrations, enabled memory
+> guard, canary/rollback, push, and deploy all remain absent or separately
+> gated. The authoritative details are in `docs/SESSION_HANDOFF.md` §1C.
+>
+> **Next-session route:** refresh Actual Git first, then read only this block
+> and `docs/SESSION_HANDOFF.md` §0/§1C/§2/§7/§8. `_NEXT_SESSION.md` remains a
+> stale untracked pointer and is not routing authority. No implementation slice
+> is preselected; choose at most one documented, locally safe residual.
+
 ## 2026-08-09 Update-148 — VER-06 agentic safety mock contract ✅ START HERE
 
 > **Committed implementation:** `356a530` (`test(agent): align safety mock with

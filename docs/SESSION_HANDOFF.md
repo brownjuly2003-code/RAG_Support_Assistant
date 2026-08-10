@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-09 — **Update-148** (VER-06 agentic safety mock contract).
+**Обновлено:** 2026-08-09 — **Update-149** (next-session transparency reconciliation).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-148**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-149**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-148; dirty
+**Не использовать:** старые `START HERE` ниже Update-149; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -30,10 +30,10 @@
 | Latest **committed implementation** | `356a530` — VER-06 exact `search_kb_docs` safety-test mock contract |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `11e52f1` **9.2b** · `3fe6d6d` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** · `eb8466e` **9.1b** · `db65e37` **9.1a** · `80c2603` **QG-03A** · `1304ff4` **QG-02** · `c3ae4f4` **QG-01** · `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen |
-| Latest **committed docs before this Update** | `09093ef` — Update-147 9.2b closure and VER-06 disclosure |
+| Latest **committed docs before this Update** | `2fd9fd1` — Update-148 VER-06 closure |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 258]` at `356a530` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-148 docs WIP may remain; otherwise owned WIP **none** |
+| Branch advisory | observed `master...origin/master [ahead 259]` at `2fd9fd1` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-149 docs WIP may remain; otherwise owned WIP **none** |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2b telemetry** + **DEP-01** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** + **HYBRID-MEM env propagation** + **VER-02** + **VER-05** + **VER-06** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
@@ -42,18 +42,20 @@
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-148 closes VER-06 locally:** `356a530` changes only the stale
-agentic-safety test mock from the unused `search_kb` wrapper to the production
-`search_kb_docs` boundary and supplies its `(formatted_text, raw_docs)` return
-contract. The injected payload now reaches the unchanged pre-response safety
-path. Protected dirty-file hashes in §8 still match. No production code,
-runtime, routing/safety policy, metric, alert, provider, service, index,
-migration, scheduler, push, or deploy state changed.
+**Update-149 is docs-only transparency reconciliation:** Actual Git was
+`2fd9fd1`; latest implementation remains test-only `356a530`; all owned
+implementation/handoff paths were clean before this docs edit. The four
+protected dirty tracked hashes in §8 still match, active writer and
+implementation WIP are none, and no new task is preselected. No project test,
+runtime, route/safety behavior, metric, alert, provider, service, index,
+migration, scheduler, push, or deploy state changed in this Update. The full
+open/gated truth remains indexed in §1C and summarized in §2A/§12.
 
 **Last known verification:**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **Update-149 docs reconciliation** | docs quality **13 passed**, one known warning; scoped diff/LF clean; no project tests rerun and no new implementation claim |
 | **VER-06 agentic safety mock contract** | exact stale test **1 failed** → **1 passed**; independent response-safety/agentic/auto-telemetry band **44 passed**, one known warning; scoped Ruff + diff/LF clean; whole-file formatter debt reproduces on `HEAD` and remains outside scope |
 | **9.2b unverified auto-rate telemetry** | focused TDD **4 failed / 5 passed** → **9 passed**; independent band **60 passed / 1 failed**, exact failure reproduced alone as pre-existing VER-06; one narrowed rerun **60 passed**, 1 deselected, one known warning; scoped Ruff + new-file format + narrowed two-source MyPy + diff/LF clean |
 | **9.2a index lifecycle failure telemetry** | focused TDD **10 failed / 2 passed** → **12 passed**; final lifecycle/metrics/alert band **75 passed**, 61 deselected, one known warning; docs **13 passed**; scoped Ruff + narrowed two-source MyPy + diff/LF clean; pre-existing whole-file format debt remains |
@@ -255,7 +257,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-148)
+### 1C. Authoritative open-problem ledger (Update-149)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -307,7 +309,7 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 258]` at `356a530` before Update-148 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
+| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 259]` at `2fd9fd1` before Update-149 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
 | **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
 | **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. `cache-namespace-9-1c.md` and `.grok-prompts/cache-namespace-9-1c-impl.md` belong to the already-committed slice. | They are not implementation WIP. Do not bulk-delete or stage them, and do not relaunch the same Grok prompt without new evidence or a narrowed hypothesis. |
@@ -339,7 +341,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-148 in AGENT_STATE.md + §1C problem ledger in this file
+5. Read ONLY top Update-149 in AGENT_STATE.md + §1C problem ledger in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. Do not invent another QG item; QG-01–QG-04 are local-only closures
 8. Select work only from an explicit owner request or a documented ungated residual
@@ -646,7 +648,7 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-148:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-149:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -761,6 +763,7 @@ Never log secret values.
 | 48 | docs | resolve through Actual Git | Update-147 9.2b evidence plus VER-06 baseline-test disclosure |
 | 49 | **VER-06** | `356a530` | align the agentic injection safety test with the tuple-returning `search_kb_docs` boundary |
 | 50 | docs | resolve through Actual Git | Update-148 VER-06 closure; do not add a follow-up solely for its self-SHA |
+| 51 | docs | resolve through Actual Git | Update-149 next-session transparency reconciliation; no implementation change |
 
 ---
 
@@ -794,9 +797,10 @@ Never log secret values.
 | Index lifecycle failures observable? | **Yes local** (`3fe6d6d`): bounded publish/retention counter and alert contract; no live metric scrape or alert-delivery evidence |
 | Unverified auto-rate observable? | **Yes local** (`11e52f1`): bounded verified/unverified counter at sync/SSE delivery and zero-tolerance alert; no live scrape/alert-delivery evidence |
 | Agentic injection safety test current? | **Yes local** (`356a530`): mock follows `search_kb_docs(text, docs)` and the full safety/agentic band is green |
-| All known open problems indexed? | **Yes in §1C as of Update-148**; Actual Git/new evidence overrides the snapshot |
+| Canonical restart capsule reconciled? | **Yes as of Update-149**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
+| All known open problems indexed? | **Yes in §1C as of Update-149**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-148 handoff files are clean, owned WIP **none** |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-149 handoff files are clean, owned WIP **none** |
