@@ -12,6 +12,11 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _redis_client = None
+_REDIS_RETRY_INITIAL_SECONDS = 1.0
+_REDIS_RETRY_MAX_SECONDS = 30.0
+_redis_retry_at = 0.0
+_redis_retry_delay_seconds = _REDIS_RETRY_INITIAL_SECONDS
+_redis_state_lock = Lock()
 _FALLBACK_CACHE_MAX = 1024
 _fallback: OrderedDict[str, tuple[str, float]] = OrderedDict()
 _fallback_lock = Lock()
@@ -68,32 +73,60 @@ def _fallback_delete_pattern(pattern: str) -> int:
         return len(to_delete)
 
 
+def _schedule_redis_retry_locked(now: float) -> None:
+    global _redis_client, _redis_retry_at, _redis_retry_delay_seconds
+    global _use_fallback
+
+    _redis_client = None
+    _use_fallback = True
+    _redis_retry_at = now + _redis_retry_delay_seconds
+    _redis_retry_delay_seconds = min(
+        _redis_retry_delay_seconds * 2,
+        _REDIS_RETRY_MAX_SECONDS,
+    )
+
+
+def _record_redis_operation_failure(client: Any) -> None:
+    with _redis_state_lock:
+        if _redis_client is client:
+            _schedule_redis_retry_locked(time.monotonic())
+
+
 def _get_redis():
     """Lazy init Redis connection."""
-    global _redis_client, _use_fallback
-    if _use_fallback:
-        return None
-    if _redis_client is not None:
-        return _redis_client
-    try:
-        import redis
+    global _redis_client, _redis_retry_at, _redis_retry_delay_seconds
+    global _use_fallback
 
-        from config.settings import get_settings
+    now = time.monotonic()
+    with _redis_state_lock:
+        if _redis_client is not None:
+            return _redis_client
+        if _use_fallback and (_redis_retry_at <= 0 or now < _redis_retry_at):
+            return None
+        try:
+            import redis
 
-        settings = get_settings()
-        _redis_client = redis.Redis.from_url(
-            settings.redis_url,
-            decode_responses=True,
-            socket_connect_timeout=2,
-            socket_timeout=2,
-        )
-        _redis_client.ping()
+            from config.settings import get_settings
+
+            settings = get_settings()
+            client = redis.Redis.from_url(
+                settings.redis_url,
+                decode_responses=True,
+                socket_connect_timeout=2,
+                socket_timeout=2,
+            )
+            client.ping()
+        except Exception as exc:
+            _schedule_redis_retry_locked(time.monotonic())
+            logger.warning("Redis unavailable, using in-memory fallback: %s", exc)
+            return None
+
+        _redis_client = client
+        _use_fallback = False
+        _redis_retry_at = 0.0
+        _redis_retry_delay_seconds = _REDIS_RETRY_INITIAL_SECONDS
         logger.info("Redis connected: %s", settings.redis_url)
-        return _redis_client
-    except Exception as exc:
-        logger.warning("Redis unavailable, using in-memory fallback: %s", exc)
-        _use_fallback = True
-        return None
+        return client
 
 
 def cache_get(key: str) -> str | None:
@@ -104,6 +137,7 @@ def cache_get(key: str) -> str | None:
             return r.get(key)
         except Exception as exc:
             logger.warning("Redis GET failed: %s", exc)
+            _record_redis_operation_failure(r)
     return _fallback_get(key)
 
 
@@ -116,6 +150,7 @@ def cache_set(key: str, value: str, ttl_seconds: int = 3600) -> None:
             return
         except Exception as exc:
             logger.warning("Redis SET failed: %s", exc)
+            _record_redis_operation_failure(r)
     _fallback_set(key, value, ttl_seconds)
 
 
@@ -127,6 +162,7 @@ def cache_delete(key: str) -> None:
             r.delete(key)
         except Exception as exc:
             logger.warning("Redis DELETE failed: %s", exc)
+            _record_redis_operation_failure(r)
     _fallback_delete(key)
 
 
@@ -142,6 +178,7 @@ def cache_delete_pattern(pattern: str) -> int:
             return deleted
         except Exception as exc:
             logger.warning("Redis SCAN/DEL failed: %s", exc)
+            _record_redis_operation_failure(r)
 
     return deleted + _fallback_delete_pattern(pattern)
 

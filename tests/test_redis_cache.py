@@ -14,10 +14,18 @@ def _reset_cache_state():
 
     redis_cache._redis_client = None
     redis_cache._fallback.clear()
+    redis_cache._redis_retry_at = 0.0
+    redis_cache._redis_retry_delay_seconds = getattr(
+        redis_cache, "_REDIS_RETRY_INITIAL_SECONDS", 1.0
+    )
     redis_cache._use_fallback = False
     yield
     redis_cache._redis_client = None
     redis_cache._fallback.clear()
+    redis_cache._redis_retry_at = 0.0
+    redis_cache._redis_retry_delay_seconds = getattr(
+        redis_cache, "_REDIS_RETRY_INITIAL_SECONDS", 1.0
+    )
     redis_cache._use_fallback = False
 
 
@@ -149,9 +157,15 @@ def test_cache_falls_back_when_redis_operations_fail(
     redis_cache._redis_client = _Client()
 
     redis_cache.cache_set("beta", "stored-in-fallback")
+    redis_cache._use_fallback = False
+    redis_cache._redis_client = _Client()
     assert redis_cache.cache_get("alpha") == "fallback-value"
+    redis_cache._use_fallback = False
+    redis_cache._redis_client = _Client()
     redis_cache.cache_delete("alpha")
     assert redis_cache.cache_get("alpha") is None
+    redis_cache._use_fallback = False
+    redis_cache._redis_client = _Client()
     assert redis_cache.cache_delete_pattern("prefix:*") == 1
     assert redis_cache.cache_get("beta") == "stored-in-fallback"
     assert "Redis GET failed: get failed" in caplog.text
@@ -185,6 +199,115 @@ def test_cache_delete_pattern_counts_partial_redis_and_fallback_deletes(
     assert deleted_keys == ["prefix:redis"]
     assert "prefix:fallback" not in redis_cache._fallback
     assert "Redis SCAN/DEL failed: scan interrupted" in caplog.text
+
+
+def test_connection_retries_with_bounded_backoff(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cache import redis_cache
+
+    now = [0.0]
+    connect_attempts: list[float] = []
+
+    class _Client:
+        def ping(self) -> None:
+            return None
+
+        def get(self, key: str) -> str:
+            _ = key
+            return "recovered"
+
+    class _Redis:
+        @staticmethod
+        def from_url(*args: Any, **kwargs: Any) -> _Client:
+            _ = args, kwargs
+            connect_attempts.append(now[0])
+            if len(connect_attempts) < 5:
+                raise RuntimeError("redis down")
+            return _Client()
+
+    monkeypatch.setattr(time, "monotonic", lambda: now[0])
+    monkeypatch.setattr(redis_cache, "_REDIS_RETRY_INITIAL_SECONDS", 1.0, raising=False)
+    monkeypatch.setattr(redis_cache, "_REDIS_RETRY_MAX_SECONDS", 4.0, raising=False)
+    monkeypatch.setitem(sys.modules, "redis", SimpleNamespace(Redis=_Redis))
+    monkeypatch.setattr(
+        "config.settings.get_settings",
+        lambda: SimpleNamespace(redis_url="redis://cache.local/0"),
+    )
+
+    assert redis_cache.cache_get("alpha") is None
+    now[0] = 0.9
+    assert redis_cache.cache_get("alpha") is None
+    now[0] = 1.0
+    assert redis_cache.cache_get("alpha") is None
+    now[0] = 2.9
+    assert redis_cache.cache_get("alpha") is None
+    now[0] = 3.0
+    assert redis_cache.cache_get("alpha") is None
+    now[0] = 6.9
+    assert redis_cache.cache_get("alpha") is None
+    now[0] = 7.0
+    assert redis_cache.cache_get("alpha") is None
+    now[0] = 10.9
+    assert redis_cache.cache_get("alpha") is None
+    now[0] = 11.0
+    assert redis_cache.cache_get("alpha") == "recovered"
+
+    assert connect_attempts == [0.0, 1.0, 3.0, 7.0, 11.0]
+    assert redis_cache._use_fallback is False
+
+
+def test_operation_failure_reconnects_after_backoff(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cache import redis_cache
+
+    now = [100.0]
+    failed_gets: list[str] = []
+    connect_attempts: list[float] = []
+
+    class _FailingClient:
+        def get(self, key: str) -> str:
+            failed_gets.append(key)
+            raise RuntimeError("connection lost")
+
+    class _RecoveredClient:
+        def ping(self) -> None:
+            return None
+
+        def get(self, key: str) -> str:
+            _ = key
+            return "redis-value"
+
+    class _Redis:
+        @staticmethod
+        def from_url(*args: Any, **kwargs: Any) -> _RecoveredClient:
+            _ = args, kwargs
+            connect_attempts.append(now[0])
+            return _RecoveredClient()
+
+    monkeypatch.setattr(time, "monotonic", lambda: now[0])
+    monkeypatch.setitem(sys.modules, "redis", SimpleNamespace(Redis=_Redis))
+    monkeypatch.setattr(
+        "config.settings.get_settings",
+        lambda: SimpleNamespace(redis_url="redis://cache.local/0"),
+    )
+
+    redis_cache._use_fallback = True
+    redis_cache.cache_set("alpha", "fallback-value")
+    redis_cache._use_fallback = False
+    redis_cache._redis_client = _FailingClient()
+
+    assert redis_cache.cache_get("alpha") == "fallback-value"
+    now[0] = 100.9
+    assert redis_cache.cache_get("alpha") == "fallback-value"
+    assert failed_gets == ["alpha"]
+    assert connect_attempts == []
+
+    now[0] = 101.0
+    assert redis_cache.cache_get("alpha") == "redis-value"
+    assert connect_attempts == [101.0]
+    assert redis_cache._use_fallback is False
 
 
 def test_fallback_entry_expires_after_ttl(monkeypatch: pytest.MonkeyPatch) -> None:
