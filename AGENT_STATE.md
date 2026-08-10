@@ -1,5 +1,36 @@
 # Agent State
 
+## 2026-08-09 Update-148 — VER-06 agentic safety mock contract ✅ START HERE
+
+> **Committed implementation:** `356a530` (`test(agent): align safety mock with
+> kb docs`) changes only `tests/test_response_safety.py`. Actual Git before
+> this docs edit was `master...origin/master [ahead 258]`; active writer
+> **none** and implementation WIP **none**.
+>
+> **Root cause and contract:** the agentic keyword path directly calls
+> `agent_tools.search_kb_docs`, but the safety characterization test still
+> patched the legacy string wrapper `search_kb`. The test now patches the
+> actual boundary and returns its `(formatted_text, raw_docs)` contract, so the
+> injected KB payload reaches pre-response safety. Production code is
+> unchanged.
+>
+> **Fresh evidence:** the exact test reproduced **1 failed**, then passed after
+> the mock correction. The independent response-safety/agentic/auto-telemetry
+> band passed **44 tests** with one known Starlette warning. Scoped Ruff, diff,
+> and LF checks passed; docs quality passed **13 tests**. File-wide formatter
+> debt reproduces on both `HEAD` and the changed file and was not reformatted.
+>
+> **Scope honesty:** this closes local **VER-06** test debt only. No runtime,
+> routing/safety policy, metric, alert, provider, service, index, migration,
+> scheduler, push, or deploy state changed. Protected dirty-file hashes still
+> match.
+>
+> **Next-session entrypoint:** refresh Actual Git, then read this block and
+> `docs/SESSION_HANDOFF.md` §0/§1C/§2/§7/§8. Do not repeat VER-06 without a new
+> boundary change. No implementation slice is preselected; remaining local §9
+> work is architecture ownership, four exact signals, a committed dashboard
+> artifact, and Astro 7.
+
 ## 2026-08-09 Update-147 — §9.2b unverified auto-rate telemetry ✅ START HERE
 
 > **Committed implementation:** `11e52f1` (`feat(metrics): expose unverified

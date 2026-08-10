@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-147 §9.2b unverified auto-rate telemetry)
+**Date:** 2026-08-09 (Update-148 VER-06 agentic safety mock contract)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-147**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-148**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-147. Preserve it as DoD input, but use Actual Git + the committed
+> Update-148. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,12 +18,11 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-147:** Actual Git before this docs edit was `11e52f1`, which closes
-local **§9.2b** only. A bounded verified/unverified counter records each
-client-visible automatic response once across sync/SSE, and a critical alert
-enforces the zero target. The narrowed independent band passed 60 tests; one
-unrelated stale agentic-safety test remains explicit VER-06 debt. This does not
-close §9, remaining dashboards/SLO work, live alert delivery, or a release gate.
+**Update-148:** Actual Git before this docs edit was `356a530`, which closes
+local **VER-06** only. The agentic injection safety test now patches the actual
+tuple-returning `search_kb_docs` boundary; its failure reproduced before the
+edit, and the independent safety/agentic band passed 44 tests afterward. This
+test-only repair changes no plan section, runtime behavior, or release gate.
 
 ---
 
@@ -349,14 +348,15 @@ retry, scheduler change, index mutation, migration, push, or deploy.
 `--follow-imports=skip`. It changes no plan checkbox and does not establish a
 full repository, locked Python-3.11, CI, or production verification result.
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2b**, DEP-01.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2b**, DEP-01, VER-06.
 
 ---
 
-## Last-known verification snapshot (Update-147)
+## Last-known verification snapshot (Update-148)
 
 | Band | Last known |
 |------|------------|
+| **VER-06 agentic safety mock contract** | exact stale test **1 failed** → **1 passed**; independent response-safety/agentic/auto-telemetry band **44 passed**, one warning; scoped Ruff + diff/LF clean; pre-existing whole-file formatter debt remains; production code unchanged |
 | **9.2b unverified auto-rate telemetry** | focused TDD **4 failed / 5 passed** → **9 passed**; independent **60 passed / 1 failed**, failure reproduced alone as pre-existing VER-06; narrowed rerun **60 passed**, 1 deselected, one warning; scoped Ruff + new-file format + narrowed two-source MyPy + diff/LF clean; no live scrape/alert delivery |
 | **9.2a index lifecycle failure telemetry** | focused TDD **10 failed / 2 passed** → **12 passed**; final lifecycle/metrics/alert band **75 passed**, 61 deselected, one known warning; docs **13 passed**; scoped Ruff + narrowed two-source MyPy + diff/LF clean; pre-existing whole-file format debt remains; no live scrape/alert delivery |
 | **VER-05** | stale zero-caller assertion red **1 failed** → exact admin-only caller contract; independent retention/admin band **51 passed**, 62 deselected, one known warning; scoped Ruff + diff clean; pre-existing whole-file format debt remains |
