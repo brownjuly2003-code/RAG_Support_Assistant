@@ -1,5 +1,35 @@
 # Agent State
 
+## 2026-08-09 Update-140 — §9.1a bounded Redis fallback ✅ START HERE
+
+> **Committed implementation:** `db65e37` (`fix(cache): bound Redis fallback
+> memory`) changes exactly `cache/redis_cache.py` and
+> `tests/test_redis_cache.py`. Branch was observed at
+> `master...origin/master [ahead 244]` after that commit and before this docs
+> update; refresh Actual Git. Active writer: **none**.
+>
+> **Contract closed locally:** the in-process Redis fallback now honors the
+> caller TTL with `time.monotonic()`, is protected by a lock, and is bounded to
+> 1024 least-recently-used entries. Pattern cleanup purges expired entries and
+> preserves the count of Redis keys already deleted if `SCAN` later fails
+> before fallback cleanup.
+>
+> **Fresh evidence:** the TTL/cap tests first failed **2 tests** on the old
+> behavior, then passed after implementation. The partial Redis-delete count
+> regression first failed `1 != 2`, then passed. The final Redis/cache band
+> passed **13 tests** with the known Starlette and LangChain deprecation
+> warnings; Ruff check/format and scoped MyPy passed; diff check was clean.
+>
+> **Scope honesty:** this closes only local slice **9.1a**. Redis
+> reconnect/backoff, expanded tenant/index/prompt/model/query cache namespace,
+> architecture ownership, dashboards/SLO, Astro 7, and §10 remain open. No
+> live Redis, provider/model call, index mutation, migration, scheduler change,
+> push, or deploy ran.
+>
+> **Next routing:** implementation WIP **none**. The next documented ungated
+> candidate is **9.1b Redis reconnect with bounded backoff** (not started); pick
+> only one atomic slice in a new turn. Do not repeat 9.1a without new evidence.
+
 ## 2026-08-09 Update-139 — VER-02 lifecycle fault type debt ✅ START HERE
 
 > **Committed implementation:** `3a37fd2` (`fix(types): narrow lifecycle fault

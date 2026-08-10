@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-139 VER-02 lifecycle-fault type debt)
+**Date:** 2026-08-09 (Update-140 §9.1a bounded Redis fallback)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-139**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-140**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-139. Preserve it as DoD input, but use Actual Git + the committed
+> Update-140. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -32,7 +32,7 @@ authoritative open-problem ledger in §1C.
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
-| **9** cache / architecture / SLO | partial + **DEP-01 local** | OPEN (Astro7 residual; cache/SLO) | soft |
+| **9** cache / architecture / SLO | **9.1a fallback bounds + DEP-01 local** | OPEN (reconnect, namespace, architecture/SLO, Astro 7) | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
 **Project / production release: NOT claimed.**
@@ -118,10 +118,11 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 34 | QG-03B contextual-header grading | **done local** `5662ea7`; no live replay |
 | 35 | QG-04 retained E30 replay | **done local** `5f8bb78`; production fix shared with `5662ea7`; no live replay |
 | 36 | HYBRID-MEM child environment propagation | **done local** `3c90368`; memory guard and hybrid replay remain gated |
-| 37 | human sample / opt-in live ×3 evidence | **external/data authority required** |
-| 38 | §2/§3 residual if product needs | residual |
-| 39 | Astro 7 (clears DEP-01 moderate residual) | residual |
-| 40 | §1 + §10 | **opt-in live only** |
+| 37 | §9.1a bounded Redis fallback | **done local** `db65e37`; no live Redis |
+| 38 | human sample / opt-in live ×3 evidence | **external/data authority required** |
+| 39 | §2/§3 residual if product needs | residual |
+| 40 | Astro 7 (clears DEP-01 moderate residual) | residual |
+| 41 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
 
@@ -289,6 +290,18 @@ Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 
 ---
 
+## §9 map + ledger
+
+| Slice | Status | SHA | Contract |
+|-------|--------|-----|----------|
+| **9.1a** | **done local** | `db65e37` | process-local Redis fallback honors TTL, is lock-protected, and evicts LRU entries above 1024; partial Redis deletes remain counted on `SCAN` failure |
+
+**Residual:** 9.1b Redis reconnect with bounded backoff; expanded cache key
+namespace covering tenant/index/prompt/model/normalized query; architecture
+ownership; dashboards/SLO; Astro 7. No live Redis evidence exists.
+
+---
+
 ## What “plan closed” means
 
 The plan is **closed** only when:
@@ -305,8 +318,9 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-There is no implementation WIP and no deterministic ungated QG incident left.
-Do not invent another quality fix or replay QG-01–QG-04 without new evidence.
+There is no implementation WIP. The next documented ungated local candidate is
+**9.1b Redis reconnect with bounded backoff**; it is not started. Do not invent
+another quality fix or replay QG-01–QG-04 without new evidence.
 
 Gated alternatives remain: live provider/quality ×3 (`--execute` + secrets +
 fresh opt-in), memory-guard enablement plus a bounded hybrid attempt, a real
@@ -314,22 +328,24 @@ dual-annotator human sample, Astro 7, or the product decision to default
 `STREAMING_RAG_PARITY=true`.
 
 This list is not authorization. The executable boundary and current facts are
-spelled out in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §2A. With no new
-owner request, the correct action is reconciliation and stop—not a speculative
-live retry, scheduler change, index mutation, or another QG fix.
+spelled out in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §2A. In a new
+direct-autonomy turn, select at most that one local slice; otherwise stop after
+reconciliation. Do not convert this routing note into authority for a live
+retry, scheduler change, index mutation, migration, push, or deploy.
 
 `3a37fd2` separately closes the local VER-02 `vectordb` type debt under
 `--follow-imports=skip`. It changes no plan checkbox and does not establish a
 full repository, locked Python-3.11, CI, or production verification result.
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, DEP-01.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a**, DEP-01.
 
 ---
 
-## Last-known verification snapshot (Update-139)
+## Last-known verification snapshot (Update-140)
 
 | Band | Last known |
 |------|------------|
+| **9.1a bounded Redis fallback** | TTL/cap red **2 failed** → focused **2 passed**; partial-delete count red **1 failed** → green **1 passed**; final Redis/cache band **13 passed** with two known warnings; Ruff check/format + scoped MyPy + diff clean; no live Redis |
 | **VER-02** | exact MyPy red **1 error** → green **1 source**; lifecycle/lock band **11 passed**; Ruff clean; package `vectordb` MyPy **10 sources** with `--follow-imports=skip`; VER-01/full locked CI remain open |
 | **HYBRID-MEM env** | TDD red **1 failed** → focused **2 passed**; independent live-quality/regression band **57 passed**; Ruff + changed-file Mypy + diff clean; real lightweight Windows child saw the key present and blank; no model/hybrid/live run |
 | **QG-04** | exact retained five-document replay **1 passed**; independent grading/fail-closed/relevance/provider/fact-verification band **31 passed**; scoped Ruff + diff clean; production fix shared with `5662ea7`; no live replay |
