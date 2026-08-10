@@ -1,5 +1,33 @@
 # Agent State
 
+## 2026-08-09 Update-139 — VER-02 lifecycle fault type debt ✅ START HERE
+
+> **Committed implementation:** `3a37fd2` (`fix(types): narrow lifecycle fault
+> actions`) changes only `vectordb/index_lifecycle_faults.py`. Branch was
+> observed at `master...origin/master [ahead 242]` after that commit and before
+> this docs update; refresh Actual Git. Active writer: **none**.
+>
+> **Root cause and fix:** MyPy retained a spurious `type[object]` alternative
+> after the combined exception-class runtime guard, so the already guarded
+> `callable(action)` return failed the declared `FaultAction` type. The final
+> branch now uses `cast(FaultAction, action)`. Runtime branching and accepted
+> callable behavior are unchanged.
+>
+> **Fresh evidence:** the narrowed command first reproduced the exact line-128
+> `return-value` error, then passed after the edit. The independent lifecycle
+> band passed **11 tests** with one known Starlette/httpx warning; Ruff passed;
+> `python -m mypy vectordb --follow-imports=skip` passed **10 source files**.
+>
+> **Scope honesty:** VER-02 is locally closed for the current environment and
+> stated import mode only. This is not a full repository, locked Python-3.11,
+> CI, or ordinary full-import MyPy claim; VER-01 remains open because installed
+> MyPy/NumPy still differ from locks. No provider/model call, index mutation,
+> migration, scheduler change, push, deploy, or runtime behavior change ran.
+>
+> **Next routing:** implementation WIP **none**. Read
+> `docs/SESSION_HANDOFF.md` §1C before selecting one new explicit or documented
+> ungated slice; do not re-run VER-02 without a code/environment change.
+
 ## 2026-08-09 Update-138 — next-session transparency reconciliation ✅ START HERE
 
 > **Purpose:** docs-only reconciliation after Update-137. No project code,

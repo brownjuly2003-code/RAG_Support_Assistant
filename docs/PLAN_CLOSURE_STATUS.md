@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-138 next-session transparency reconciliation)
+**Date:** 2026-08-09 (Update-139 VER-02 lifecycle-fault type debt)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-138**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-139**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-138. Preserve it as DoD input, but use Actual Git + the committed
+> Update-139. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -55,7 +55,7 @@ use only non-sensitive test data and recheck external terms before enabling it.
 
 ---
 
-## Current live-quality incident (Update-138)
+## Current live-quality incident (Update-139)
 
 The native vector-only run produced valid child evidence for seed 42 but failed
 the quality gate: candidate pass 65% (baseline 70%, required ≥85%), four
@@ -318,14 +318,19 @@ spelled out in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §2A. With no new
 owner request, the correct action is reconciliation and stop—not a speculative
 live retry, scheduler change, index mutation, or another QG fix.
 
+`3a37fd2` separately closes the local VER-02 `vectordb` type debt under
+`--follow-imports=skip`. It changes no plan checkbox and does not establish a
+full repository, locked Python-3.11, CI, or production verification result.
+
 **Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, DEP-01.
 
 ---
 
-## Last-known verification snapshot (Update-138)
+## Last-known verification snapshot (Update-139)
 
 | Band | Last known |
 |------|------------|
+| **VER-02** | exact MyPy red **1 error** → green **1 source**; lifecycle/lock band **11 passed**; Ruff clean; package `vectordb` MyPy **10 sources** with `--follow-imports=skip`; VER-01/full locked CI remain open |
 | **HYBRID-MEM env** | TDD red **1 failed** → focused **2 passed**; independent live-quality/regression band **57 passed**; Ruff + changed-file Mypy + diff clean; real lightweight Windows child saw the key present and blank; no model/hybrid/live run |
 | **QG-04** | exact retained five-document replay **1 passed**; independent grading/fail-closed/relevance/provider/fact-verification band **31 passed**; scoped Ruff + diff clean; production fix shared with `5662ea7`; no live replay |
 | **QG-03B** | TDD red **1 failed** → focused green **1 passed**; independent grading/fail-closed/relevance/provider band **24 passed**; scoped Ruff + changed-file Mypy + diff clean; no live replay |

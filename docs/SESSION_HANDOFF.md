@@ -1,7 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-09 — **Update-138** (next-session transparency
-reconciliation; docs only, no runtime change).
+**Обновлено:** 2026-08-09 — **Update-139** (VER-02 lifecycle-fault type debt;
+local code and verification only).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -12,11 +12,11 @@ reconciliation; docs only, no runtime change).
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-138**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-139**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-138; dirty
+**Не использовать:** старые `START HERE` ниже Update-139; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -28,14 +28,14 @@ reconciliation; docs only, no runtime change).
 
 | Факт | Значение |
 |------|----------|
-| Latest **committed implementation** | `3c90368` — explicit blank `RAG_RERANKER_MODEL` propagation to live-quality child processes |
+| Latest **committed implementation** | `3a37fd2` — type-safe lifecycle fault callable narrowing; no runtime behavior change |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `80c2603` **QG-03A** · `1304ff4` **QG-02** · `c3ae4f4` **QG-01** · `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen · `13bf255` **5.7** · `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** |
-| Latest **committed docs before this Update** | `4acdd32` — Update-137 HYBRID-MEM reconciliation |
-| This Update-138 docs SHA | Current commit containing this file, if committed; resolve through Actual Git rather than guessing a self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 240]` at `4acdd32` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-138 docs WIP may remain; otherwise owned WIP **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** + **HYBRID-MEM env propagation** |
+| Latest **committed docs before this Update** | `1c758bd` — Update-138 next-session transparency |
+| This Update-139 docs SHA | Current commit containing this file, if committed; resolve through Actual Git rather than guessing a self-SHA |
+| Branch advisory | observed `master...origin/master [ahead 242]` at `3a37fd2` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-139 docs WIP may remain; otherwise owned WIP **none** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **DEP-01** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** + **HYBRID-MEM env propagation** + **VER-02** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
@@ -43,24 +43,23 @@ reconciliation; docs only, no runtime change).
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-138 reconciles the handoff after committed Update-137:** Actual Git
-resolved the prior docs commit to `4acdd32`; the implementation remains
-`3c90368`. Its explicit `--disable-child-reranker` live-execute option passes
-`RAG_RERANKER_MODEL=""` in a copied child environment, and a real lightweight
-Windows child observed the key as present and blank. No model, hybrid/live
-quality run, paid call, migration, scheduler change, push, or deploy is claimed;
-`PythonMemoryGuard` remains last known disabled.
+**Update-139 records VER-02:** `3a37fd2` adds an explicit `FaultAction` cast
+after the existing runtime callable guard. The exact line-128 MyPy failure is
+gone, lifecycle behavior remains unchanged, and the current `vectordb` package
+passes under `--follow-imports=skip`. This does not close VER-01 or establish a
+full repository/locked-CI MyPy result.
 
 **Last known verification:**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **VER-02 lifecycle fault type debt** | narrowed MyPy red **1 error** → green **1 source**; lifecycle/lock band **11 passed**; Ruff clean; package `vectordb` MyPy **10 source files** under `--follow-imports=skip`; no full/locked-CI claim |
 | **HYBRID-MEM child env propagation** | TDD red **1 failed** → focused **2 passed**; independent live-quality/regression band **57 passed**; scoped Ruff + changed-file Mypy + diff clean; real lightweight child observed `RAG_RERANKER_MODEL` present with value `""`; no model/hybrid/live run |
 | **QG-04 retained E30 replay** | exact five-document replay **1 passed**; independent grading/fail-closed/relevance/provider/fact-verification band **31 passed**; scoped Ruff + diff clean; production fix shared with `5662ea7`; no live replay |
 | **QG-03B contextual-header grading** | TDD red **1 failed** → focused green **1 passed**; independent grading/fail-closed/relevance/provider band **24 passed**; scoped Ruff + changed-file Mypy + diff clean; no live replay |
 | **QG-03A verifier-outage routing** | Grok TDD red **1 failed** → focused **6 passed** + Ruff; independent verifier/grounding/citation/graph-error/judge/provider band **49 passed** + Ruff + diff clean; ordinary local Mypy exposed 9 pre-existing `typeddict-item` errors outside changed lines, while the one narrowed run disabling only that code passed both changed source files; no locked/full-Mypy claim |
 | **QG-02 generation failure routing** | TDD red **1 failed** → green **1 passed**; final focused **1 passed**; independent provider graph/error/model-routing/judge band **31 passed**; scoped Ruff + changed-file Mypy (`--follow-imports=skip`) + diff clean; full-import Mypy blocked by unlocked local NumPy stubs before project checking |
-| **QG-01 vector parent expansion** | TDD red **2 failed / 9 passed** → focused **11 passed**; independent parent/base/reranker **34 passed**; scoped Ruff + changed-file Mypy + diff clean; broader `vectordb` Mypy has one unchanged-file error at `index_lifecycle_faults.py:128` |
+| **QG-01 vector parent expansion** | TDD red **2 failed / 9 passed** → focused **11 passed**; independent parent/base/reranker **34 passed**; scoped Ruff + changed-file Mypy + diff clean; the former broader `vectordb` debt was closed separately by `3a37fd2` |
 | **Native §5 live quality attempt** | seed 42: 20/20 effective, infrastructure failures 0, child evidence valid, gate **FAIL**; candidate pass 65%, baseline 70%, minimum 85%, regressions 4; seeds 43–44 not run |
 | **Lightweight GraceKelly/Sonnet 5 smoke** | local **16 passed** + Ruff/Mypy clean; live `claude-sonnet-5` smoke **PASS**; SQLite row verified |
 | **OpenCode Zen** | 155 provider/settings/workflow/Helm tests; Ruff + scoped Mypy + Helm render + diff clean |
@@ -248,7 +247,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-138)
+### 1C. Authoritative open-problem ledger (Update-139)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -287,7 +286,7 @@ override this snapshot.
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
 | **VER-01** | **ENV / BASELINE BLOCKER** | Installed `mypy 2.3.0` / `numpy 2.5.1` differ from locks `1.19.1` / `2.4.4`. QG-03A changed-file Mypy with `--follow-imports=skip` reported 9 pre-existing `typeddict-item` errors outside changed lines; a narrowed run disabling only that code passed. Full-import checking also stops on unlocked NumPy stubs under target 3.11. | Use a locked environment and reconcile the existing TypedDict debt separately; do not call full or ordinary changed-file Mypy green. |
-| **VER-02** | **KNOWN DEBT** | Broader `vectordb` Mypy last reported unchanged `vectordb/index_lifecycle_faults.py:128`; it was not re-run in Update-133. | Treat as last-known type-check debt until a dedicated verified slice. |
+| **VER-02** | **LOCAL-CLOSED** | `3a37fd2` casts the final runtime-guarded callable to `FaultAction`. The exact failure reproduced before the edit; afterward narrowed MyPy passed, 11 lifecycle tests passed, Ruff passed, and package `vectordb` MyPy checked 10 sources under `--follow-imports=skip`. | Do not reopen without a code/environment change. Do not extrapolate this to VER-01, full imports, the repository, locked Python 3.11, or CI. |
 | **VER-03** | **OPEN** | No full unit/integration/coverage/security/locked-CI suite ran after QG-01/QG-02/QG-03A; only focused proportional bands are evidence. | §10 or a dedicated gate turn; do not infer repository-wide green. |
 | **VER-04** | **WARNING** | Focused pytest runs emit `StarletteDeprecationWarning` for `httpx` through `starlette.testclient`; assertions still pass. | Track dependency migration separately; warning is not fixed by QG-03A. |
 | **OPS-01** | **DISABLED** | `PythonMemoryGuard` was read-only verified `Disabled` on 2026-08-09; last run was 2026-07-01. The 2.12 GiB child therefore had no configured 1 GiB enforcement. | Enabling/changing Task Scheduler requires explicit authority; do not run memory-heavy hybrid commands meanwhile. |
@@ -298,7 +297,7 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 240]` at `4acdd32` before Update-138 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
+| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 242]` at `3a37fd2` before Update-139 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
 | **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
 | **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. | They are not implementation WIP. Do not bulk-delete or stage them. |
@@ -330,7 +329,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-138 in AGENT_STATE.md + §1C problem ledger in this file
+5. Read ONLY top Update-139 in AGENT_STATE.md + §1C problem ledger in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. Do not invent another QG item; QG-01–QG-04 are local-only closures
 8. Select work only from an explicit owner request or a documented ungated residual
@@ -634,7 +633,7 @@ ledger; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-138:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-139:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -727,7 +726,9 @@ Never log secret values.
 | 29 | docs | `62772d7` | Update-136 QG-04 shared-cause closure and remaining-gate honesty |
 | 30 | **HYBRID-MEM env** | `3c90368` | explicitly preserve blank child reranker selection on Windows |
 | 31 | docs | `4acdd32` | Update-137 HYBRID-MEM local closure and operational-gate honesty |
-| 32 | docs | **this Update-138 commit, if present in Actual Git** | reconcile committed state and add the next-session decision card |
+| 32 | docs | `1c758bd` | Update-138 reconciliation and next-session decision card |
+| 33 | **VER-02** | `3a37fd2` | close lifecycle fault callable MyPy debt without runtime change |
+| 34 | docs | **this Update-139 commit, if present in Actual Git** | record VER-02 evidence and retained verification limits |
 
 ---
 
@@ -754,9 +755,10 @@ Never log secret values.
 | QG-03 contextual-header grading fixed? | **Yes local** (`5662ea7`); a relevant header shell resolves to same-logical-source content; no live E20 recovery is claimed |
 | QG-04 E30 retained replay fixed? | **Yes local** (`5f8bb78` evidence over `5662ea7`); disconnect evidence reaches graded context; no live E30 recovery is claimed |
 | Blank child reranker selection preserved? | **Yes local** (`3c90368`); explicit live-execute flag reaches a real Windows child as present and blank; no hybrid quality replay is claimed |
-| All known open problems indexed? | **Yes in §1C as of Update-138**; Actual Git/new evidence overrides the snapshot |
+| `vectordb` lifecycle type debt closed? | **Yes local** (`3a37fd2`); package MyPy passed 10 sources under `--follow-imports=skip`; VER-01/full locked CI remain open |
+| All known open problems indexed? | **Yes in §1C as of Update-139**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-138 handoff files are clean, owned WIP **none** |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-139 handoff files are clean, owned WIP **none** |
