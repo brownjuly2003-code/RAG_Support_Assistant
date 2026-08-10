@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, TypeAlias
 
 __all__ = [
     "ACTIVE_SESSIONS",
+    "AUTO_RESPONSES_TOTAL",
     "AUTH_FAILURES",
     "AUDIT_PURGED",
     "BODY_SIZE_REJECTIONS",
@@ -58,6 +59,7 @@ __all__ = [
     "MODEL_ROUTING",
     "VECTOR_STORE_DOCS",
     "generate_latest",
+    "record_auto_response_verification",
     "record_component_health",
     "record_llm_cost",
     "record_provider_fallback",
@@ -156,6 +158,7 @@ if TYPE_CHECKING:
     MESSAGE_PERSIST_FAILURES: _CounterT
     ONLINE_EVALUATORS_DROPPED: _CounterT
     INDEX_LIFECYCLE_FAILURES: _CounterT
+    AUTO_RESPONSES_TOTAL: _CounterT
 
     REQUEST_DURATION: _HistogramT
     HTTP_REQUEST_DURATION: _HistogramT
@@ -250,6 +253,7 @@ except ImportError:
     MESSAGE_PERSIST_FAILURES = _NoopMetric()
     ONLINE_EVALUATORS_DROPPED = _NoopMetric()
     INDEX_LIFECYCLE_FAILURES = _NoopMetric()
+    AUTO_RESPONSES_TOTAL = _NoopMetric()
 else:
     PROMETHEUS_AVAILABLE = True
     CONTENT_TYPE_LATEST = _PROMETHEUS_CONTENT_TYPE_LATEST
@@ -604,6 +608,13 @@ else:
         registry=REGISTRY,
     )
 
+    AUTO_RESPONSES_TOTAL = Counter(
+        "rag_auto_responses_total",
+        "Client-visible automatic responses by grounding verification outcome",
+        ["verification"],
+        registry=REGISTRY,
+    )
+
     for _reason in ("thumbs_down", "low_quality", "escalated", "fact_fail", "slow_trace", "manual"):
         REVIEW_QUEUE_PENDING_TOTAL.labels(reason=_reason).set(0)
     for _verdict in ("good", "bad"):
@@ -613,6 +624,8 @@ else:
     CURATED_DATASET_LAST_BUILD_TIMESTAMP_SECONDS.set(0)
     for _operation in ("publish", "retention", "unknown"):
         INDEX_LIFECYCLE_FAILURES.labels(operation=_operation).inc(0)
+    for _verification in ("verified", "unverified"):
+        AUTO_RESPONSES_TOTAL.labels(verification=_verification).inc(0)
 
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
@@ -626,6 +639,15 @@ def record_component_health(component: str, status: str) -> None:
 
     value = 1 if status == "ok" else 0
     COMPONENT_UP.labels(component=component).set(value)
+
+
+def record_auto_response_verification(grounding_status: str) -> None:
+    verification = (
+        "verified"
+        if str(grounding_status or "").strip().lower() == "verified"
+        else "unverified"
+    )
+    AUTO_RESPONSES_TOTAL.labels(verification=verification).inc()
 
 
 def record_db_pool_stats(size: int, checked_out: int, overflow: int) -> None:

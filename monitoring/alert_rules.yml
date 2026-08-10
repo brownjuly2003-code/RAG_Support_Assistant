@@ -161,6 +161,22 @@ groups:
   - name: rag-quality
     interval: 1m
     rules:
+      - alert: UnverifiedAutoResponse
+        expr: |
+          sum(
+            increase(rag_auto_responses_total{verification="unverified"}[10m])
+          ) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: quality
+        annotations:
+          summary: "Unverified response delivered on the automatic route"
+          description: |
+            At least one client-visible automatic response was not grounded as
+            verified in the last 10 minutes. The release target is zero. Check
+            route/grounding invariants and the affected trace before rollout.
+
       - alert: HighEscalationRate
         expr: |
           sum(rate(rag_escalation_total[15m]))

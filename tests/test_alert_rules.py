@@ -103,6 +103,22 @@ def test_index_lifecycle_failure_alert_is_operation_scoped(rules_doc: dict) -> N
     assert "{{ $labels.operation }}" in rule["annotations"]["summary"]
 
 
+def test_unverified_auto_response_alert_is_zero_tolerance(rules_doc: dict) -> None:
+    alerts = {
+        rule["alert"]: rule
+        for group in rules_doc["groups"]
+        for rule in group["rules"]
+        if "alert" in rule
+    }
+
+    rule = alerts["UnverifiedAutoResponse"]
+    expression = str(rule["expr"])
+    assert "rag_auto_responses_total" in expression
+    assert 'verification="unverified"' in expression
+    assert expression.strip().endswith("> 0")
+    assert rule["labels"] == {"severity": "critical", "component": "quality"}
+
+
 def _flatten_exprs(rules_doc: dict) -> str:
     """Concat all `expr:` strings for regex scanning."""
     out: list[str] = []

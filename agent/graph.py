@@ -2554,6 +2554,18 @@ def make_log_node() -> Callable[[GraphState], GraphState]:
     return node
 
 
+def _record_auto_response_verification(state: GraphState) -> None:
+    """Record one client-visible auto outcome without affecting delivery."""
+    if state.get("route") != "auto":
+        return
+    try:
+        from monitoring.prometheus import record_auto_response_verification
+
+        record_auto_response_verification(str(state.get("grounding_status") or ""))
+    except Exception:
+        logger.debug("Auto-response verification metric failed", exc_info=True)
+
+
 def make_response_safety_node() -> Callable[[GraphState], GraphState]:
     """Pre-response PII + document prompt-injection gate (plan §6.2)."""
 
@@ -3832,6 +3844,7 @@ class ConversationSession:
                 answer = state.get("answer") or ""
                 if not history_appended:
                     self._append_history(question, answer, turn=turn)
+                    _record_auto_response_verification(state)
                     history_appended = True
                 stamped = self._stamp_session_version(state)
                 return {
@@ -4038,6 +4051,7 @@ class ConversationSession:
                 invalidate_orphan = False  # already invalidated
             else:
                 self._append_history(question, answer, turn=turn)
+            _record_auto_response_verification(result)
             return self._stamp_session_version(result)
         finally:
             self._release_turn(turn, invalidate=invalidate_orphan)
