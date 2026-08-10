@@ -1,5 +1,40 @@
 # Agent State
 
+## 2026-08-09 Update-143 — §9.1c versioned cache namespace ✅ START HERE
+
+> **Committed implementation:** `893efe3` (`fix(cache): version response cache
+> namespace`) changes exactly `api/app.py`, `api/routers/conversation.py`,
+> `cache/namespace.py`, `vectordb/manager.py`,
+> `tests/test_cache_namespace.py`, and `tests/test_llm_response_cache.py`.
+> Branch was observed at `master...origin/master [ahead 249]` after that commit
+> and before this docs update; refresh Actual Git. Active writer: **none**.
+>
+> **Contract closed locally:** history-less response-cache keys retain the
+> `llm_resp:<tenant>:` invalidation prefix while binding active Chroma
+> collection/generation, effective prompt content (including experiment,
+> staged, and deployed overrides), configured fast/strong provider-model
+> routing, and an NFKC/casefold/whitespace-normalized query. Unversioned
+> backends or unresolved identities skip cache read/write and continue the
+> ordinary pipeline. No provider is instantiated or called by key resolution.
+>
+> **Fresh evidence:** two HTTP cache tests first exposed that the wrapper used
+> a different settings source from the request path; after unifying that
+> source, both passed. The final namespace/HTTP-cache/Redis/manifest band
+> passed **40 tests** with the two known deprecation warnings. Scoped Ruff and
+> changed-range format checks passed. Ordinary scoped MyPy exposed five
+> pre-existing `no-redef`/`unused-ignore` errors outside changed lines; the one
+> narrowed run disabling only those confirmed codes passed all four changed
+> source files. Scoped staged diff check was clean.
+>
+> **Scope honesty:** this closes only local slice **9.1c** after 9.1a–9.1b.
+> No live Redis, provider/model request, index mutation, migration, scheduler
+> change, push, or deploy ran. Architecture ownership, dashboards/SLO, Astro 7,
+> §10, live evidence, and production readiness remain open.
+>
+> **Next routing:** implementation WIP **none**. No new implementation slice is
+> preselected. Choose at most one explicit or documented residual in a new
+> owner turn; do not repeat 9.1a–9.1c without new code/evidence.
+
 ## 2026-08-09 Update-142 — next-session transparency reconciliation ✅ START HERE
 
 > **Purpose:** docs-only reconciliation after Update-141. No project code,

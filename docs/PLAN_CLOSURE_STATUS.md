@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-142 next-session transparency reconciliation)
+**Date:** 2026-08-09 (Update-143 §9.1c versioned cache namespace)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-142**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-143**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-142. Preserve it as DoD input, but use Actual Git + the committed
+> Update-143. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,10 +18,10 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-142 reconciliation:** no implementation or plan-closure status changed.
-Actual Git before this docs edit was `3528858`, the latest implementation was
-`eb8466e`, and the owned implementation/handoff paths were clean. The next
-local candidate remains unstarted **9.1c**; live and release gates are unchanged.
+**Update-143 implementation:** `893efe3` closes local **9.1c** by binding the
+response cache to tenant/index/prompt/model/query identity and skipping cache
+read/write when a required identity is unresolved. No live Redis/provider/index
+mutation ran; live and release gates are unchanged.
 
 ---
 
@@ -37,7 +37,7 @@ local candidate remains unstarted **9.1c**; live and release gates are unchanged
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
-| **9** cache / architecture / SLO | **9.1a–9.1b fallback bounds/reconnect + DEP-01 local** | OPEN (namespace, architecture/SLO, Astro 7) | soft |
+| **9** cache / architecture / SLO | **9.1a–9.1c fallback bounds/reconnect/versioned namespace + DEP-01 local** | OPEN (architecture/SLO, Astro 7) | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
 **Project / production release: NOT claimed.**
@@ -302,10 +302,10 @@ Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 |-------|--------|-----|----------|
 | **9.1a** | **done local** | `db65e37` | process-local Redis fallback honors TTL, is lock-protected, and evicts LRU entries above 1024; partial Redis deletes remain counted on `SCAN` failure |
 | **9.1b** | **done local** | `eb8466e` | connection/ping and cache-operation failures invalidate the client; serialized reconnect delays grow from 1 second to a 30-second cap and reset after recovery |
+| **9.1c** | **done local** | `893efe3` | response-cache keys bind tenant, active Chroma collection/generation, effective prompts, configured provider-model routing, and normalized query; unresolved identity skips cache read/write |
 
-**Residual:** 9.1c expanded cache key namespace covering tenant/index/prompt/
-model/normalized query; architecture ownership; dashboards/SLO; Astro 7. No
-live Redis evidence exists.
+**Residual:** architecture ownership; dashboards/SLO; Astro 7. No live Redis
+evidence exists.
 
 ---
 
@@ -325,9 +325,9 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-There is no implementation WIP. The next documented ungated local candidate is
-**9.1c versioned cache namespace**; it is not started. Do not invent
-another quality fix or replay QG-01–QG-04 without new evidence.
+There is no implementation WIP and no preselected implementation candidate.
+Select at most one explicit owner request or documented residual in a new turn.
+Do not invent another quality fix or replay QG-01–QG-04 without new evidence.
 
 Gated alternatives remain: live provider/quality ×3 (`--execute` + secrets +
 fresh opt-in), memory-guard enablement plus a bounded hybrid attempt, a real
@@ -336,7 +336,7 @@ dual-annotator human sample, Astro 7, or the product decision to default
 
 This list is not authorization. The executable boundary and current facts are
 spelled out in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §2A. In a new
-direct-autonomy turn, select at most that one local slice; otherwise stop after
+direct-autonomy turn, select at most one local slice; otherwise stop after
 reconciliation. Do not convert this routing note into authority for a live
 retry, scheduler change, index mutation, migration, push, or deploy.
 
@@ -344,14 +344,15 @@ retry, scheduler change, index mutation, migration, push, or deploy.
 `--follow-imports=skip`. It changes no plan checkbox and does not establish a
 full repository, locked Python-3.11, CI, or production verification result.
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1b**, DEP-01.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, DEP-01.
 
 ---
 
-## Last-known verification snapshot (Update-142)
+## Last-known verification snapshot (Update-143)
 
 | Band | Last known |
 |------|------------|
+| **9.1c versioned cache namespace** | HTTP settings-source regression **2 failed** → **2 passed**; final namespace/HTTP-cache/Redis/manifest band **40 passed** with two known warnings; Ruff + changed-range format + narrowed MyPy + diff clean; no live Redis/provider/index mutation |
 | **9.1b Redis reconnect backoff** | recovery red **2 failed** → green **2 passed**; focused Redis file **9 passed**; final Redis/cache band **15 passed** with two known warnings; Ruff check/format + scoped MyPy + diff clean; no live Redis |
 | **9.1a bounded Redis fallback** | TTL/cap red **2 failed** → focused **2 passed**; partial-delete count red **1 failed** → green **1 passed**; final Redis/cache band **13 passed** with two known warnings; Ruff check/format + scoped MyPy + diff clean; no live Redis |
 | **VER-02** | exact MyPy red **1 error** → green **1 source**; lifecycle/lock band **11 passed**; Ruff clean; package `vectordb` MyPy **10 sources** with `--follow-imports=skip`; VER-01/full locked CI remain open |
