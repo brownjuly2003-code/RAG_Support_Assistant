@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import time
 from types import SimpleNamespace
 from typing import Any
 
@@ -141,9 +142,11 @@ def test_cache_falls_back_when_redis_operations_fail(
             raise RuntimeError("scan failed")
             yield ""
 
+    redis_cache._use_fallback = True
+    redis_cache.cache_set("alpha", "fallback-value")
+    redis_cache.cache_set("prefix:1", "a")
+    redis_cache._use_fallback = False
     redis_cache._redis_client = _Client()
-    redis_cache._fallback["alpha"] = "fallback-value"
-    redis_cache._fallback["prefix:1"] = "a"
 
     redis_cache.cache_set("beta", "stored-in-fallback")
     assert redis_cache.cache_get("alpha") == "fallback-value"
@@ -155,3 +158,62 @@ def test_cache_falls_back_when_redis_operations_fail(
     assert "Redis SET failed: set failed" in caplog.text
     assert "Redis DELETE failed: delete failed" in caplog.text
     assert "Redis SCAN/DEL failed: scan failed" in caplog.text
+
+
+def test_cache_delete_pattern_counts_partial_redis_and_fallback_deletes(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from cache import redis_cache
+
+    deleted_keys: list[str] = []
+
+    class _Client:
+        def delete(self, key: str) -> None:
+            deleted_keys.append(key)
+
+        def scan_iter(self, *, match: str, count: int):
+            _ = match, count
+            yield "prefix:redis"
+            raise RuntimeError("scan interrupted")
+
+    redis_cache._use_fallback = True
+    redis_cache.cache_set("prefix:fallback", "value")
+    redis_cache._use_fallback = False
+    redis_cache._redis_client = _Client()
+
+    assert redis_cache.cache_delete_pattern("prefix:*") == 2
+    assert deleted_keys == ["prefix:redis"]
+    assert "prefix:fallback" not in redis_cache._fallback
+    assert "Redis SCAN/DEL failed: scan interrupted" in caplog.text
+
+
+def test_fallback_entry_expires_after_ttl(monkeypatch: pytest.MonkeyPatch) -> None:
+    from cache import redis_cache
+
+    now = [100.0]
+    monkeypatch.setattr(time, "monotonic", lambda: now[0])
+    redis_cache._use_fallback = True
+
+    redis_cache.cache_set("short-lived", "value", ttl_seconds=5)
+    assert redis_cache.cache_get("short-lived") == "value"
+
+    now[0] = 105.0
+    assert redis_cache.cache_get("short-lived") is None
+    assert "short-lived" not in redis_cache._fallback
+
+
+def test_fallback_size_cap_evicts_least_recently_used() -> None:
+    from cache import redis_cache
+
+    redis_cache._use_fallback = True
+
+    for index in range(1024):
+        redis_cache.cache_set(f"key-{index}", str(index))
+    assert redis_cache.cache_get("key-0") == "0"
+
+    redis_cache.cache_set("key-1024", "1024")
+
+    assert redis_cache.cache_get("key-0") == "0"
+    assert redis_cache.cache_get("key-1") is None
+    assert redis_cache.cache_get("key-1024") == "1024"
+    assert len(redis_cache._fallback) == 1024

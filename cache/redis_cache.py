@@ -1,15 +1,71 @@
 """Redis cache with graceful degradation to an in-memory dict."""
+
 from __future__ import annotations
 
 import json
 import logging
+import time
+from collections import OrderedDict
+from threading import Lock
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 _redis_client = None
-_fallback: dict[str, str] = {}
+_FALLBACK_CACHE_MAX = 1024
+_fallback: OrderedDict[str, tuple[str, float]] = OrderedDict()
+_fallback_lock = Lock()
 _use_fallback = False
+
+
+def _purge_expired_fallback(now: float) -> None:
+    expired = [key for key, (_, expires_at) in _fallback.items() if expires_at <= now]
+    for key in expired:
+        _fallback.pop(key, None)
+
+
+def _fallback_get(key: str) -> str | None:
+    now = time.monotonic()
+    with _fallback_lock:
+        entry = _fallback.get(key)
+        if entry is None:
+            return None
+        value, expires_at = entry
+        if expires_at <= now:
+            _fallback.pop(key, None)
+            return None
+        _fallback.move_to_end(key)
+        return value
+
+
+def _fallback_set(key: str, value: str, ttl_seconds: int) -> None:
+    now = time.monotonic()
+    with _fallback_lock:
+        _purge_expired_fallback(now)
+        if ttl_seconds <= 0:
+            _fallback.pop(key, None)
+            return
+        _fallback[key] = (value, now + ttl_seconds)
+        _fallback.move_to_end(key)
+        while len(_fallback) > _FALLBACK_CACHE_MAX:
+            _fallback.popitem(last=False)
+
+
+def _fallback_delete(key: str) -> None:
+    with _fallback_lock:
+        _fallback.pop(key, None)
+
+
+def _fallback_delete_pattern(pattern: str) -> int:
+    import fnmatch
+
+    now = time.monotonic()
+    with _fallback_lock:
+        _purge_expired_fallback(now)
+        to_delete = [key for key in _fallback if fnmatch.fnmatch(key, pattern)]
+        for key in to_delete:
+            _fallback.pop(key, None)
+        return len(to_delete)
 
 
 def _get_redis():
@@ -48,7 +104,7 @@ def cache_get(key: str) -> str | None:
             return r.get(key)
         except Exception as exc:
             logger.warning("Redis GET failed: %s", exc)
-    return _fallback.get(key)
+    return _fallback_get(key)
 
 
 def cache_set(key: str, value: str, ttl_seconds: int = 3600) -> None:
@@ -60,7 +116,7 @@ def cache_set(key: str, value: str, ttl_seconds: int = 3600) -> None:
             return
         except Exception as exc:
             logger.warning("Redis SET failed: %s", exc)
-    _fallback[key] = value
+    _fallback_set(key, value, ttl_seconds)
 
 
 def cache_delete(key: str) -> None:
@@ -71,7 +127,7 @@ def cache_delete(key: str) -> None:
             r.delete(key)
         except Exception as exc:
             logger.warning("Redis DELETE failed: %s", exc)
-    _fallback.pop(key, None)
+    _fallback_delete(key)
 
 
 def cache_delete_pattern(pattern: str) -> int:
@@ -87,13 +143,7 @@ def cache_delete_pattern(pattern: str) -> int:
         except Exception as exc:
             logger.warning("Redis SCAN/DEL failed: %s", exc)
 
-    import fnmatch
-
-    to_delete = [key for key in _fallback if fnmatch.fnmatch(key, pattern)]
-    for key in to_delete:
-        _fallback.pop(key, None)
-        deleted += 1
-    return deleted
+    return deleted + _fallback_delete_pattern(pattern)
 
 
 def cache_json_get(key: str) -> Any | None:
