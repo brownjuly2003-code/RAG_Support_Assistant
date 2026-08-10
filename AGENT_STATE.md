@@ -1,5 +1,35 @@
 # Agent State
 
+## 2026-08-09 Update-142 — next-session transparency reconciliation ✅ START HERE
+
+> **Purpose:** docs-only reconciliation after Update-141. No project code,
+> configuration, service, scheduler, migration, provider, index, push, or
+> deployment state changed in this Update.
+>
+> **Verified start snapshot:** `HEAD` was `3528858` (`docs: record Redis
+> reconnect backoff`) on `master...origin/master [ahead 247]`; active writer
+> **none**; implementation WIP **none**. The latest implementation remains
+> `eb8466e`, and all five implementation/handoff paths were clean. The four
+> protected dirty files retained the exact SHA-256 values recorded in
+> `docs/SESSION_HANDOFF.md` §8.
+>
+> **Completion truth:** 9.1a bounds the process-local fallback and 9.1b restores
+> Redis reconnect with serialized `1→2→4…≤30s` backoff. Both are local-only;
+> no live Redis recovery evidence exists. The versioned cache namespace,
+> architecture ownership, dashboards/SLO, Astro 7, §10, and the other ledger
+> gates remain open. Full plan and production readiness are not claimed.
+>
+> **Docs-only verification:** `tests/test_docs_quality.py` passed **13 tests**
+> with the known Starlette warning, and the scoped docs diff check was clean.
+> Project code tests were not re-run because this reconciliation changes only
+> handoff prose.
+>
+> **Next-session entrypoint:** refresh Actual Git, then read this block and
+> `docs/SESSION_HANDOFF.md` §0/§1C/§2/§7/§8. The next documented ungated
+> candidate is **9.1c versioned cache namespace** (not started). Select at most
+> that one atomic slice; do not repeat 9.1a–9.1b or infer authority for live
+> Redis, provider calls, migrations, scheduler changes, push, or deploy.
+
 ## 2026-08-09 Update-141 — §9.1b Redis reconnect backoff ✅ START HERE
 
 > **Committed implementation:** `eb8466e` (`fix(cache): retry Redis with

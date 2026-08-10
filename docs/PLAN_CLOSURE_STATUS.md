@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-09 (Update-141 §9.1b Redis reconnect backoff)
+**Date:** 2026-08-09 (Update-142 next-session transparency reconciliation)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-141**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-142**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-141. Preserve it as DoD input, but use Actual Git + the committed
+> Update-142. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -17,6 +17,11 @@ authoritative open-problem ledger in §1C.
 2. Local code slice ≠ full plan section complete ≠ production release.  
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
+
+**Update-142 reconciliation:** no implementation or plan-closure status changed.
+Actual Git before this docs edit was `3528858`, the latest implementation was
+`eb8466e`, and the owned implementation/handoff paths were clean. The next
+local candidate remains unstarted **9.1c**; live and release gates are unchanged.
 
 ---
 
@@ -343,7 +348,7 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-141)
+## Last-known verification snapshot (Update-142)
 
 | Band | Last known |
 |------|------------|

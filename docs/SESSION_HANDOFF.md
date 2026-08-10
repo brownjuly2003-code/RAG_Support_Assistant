@@ -1,7 +1,7 @@
 # Session handoff
 
-**Обновлено:** 2026-08-09 — **Update-141** (§9.1b Redis reconnect backoff;
-local code and verification only).
+**Обновлено:** 2026-08-09 — **Update-142** (next-session transparency
+reconciliation; docs only).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -12,11 +12,11 @@ local code and verification only).
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-141**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-142**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-141; dirty
+**Не использовать:** старые `START HERE` ниже Update-142; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -31,10 +31,10 @@ local code and verification only).
 | Latest **committed implementation** | `eb8466e` — serialized Redis reconnect with exponential backoff capped at 30 seconds |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `80c2603` **QG-03A** · `1304ff4` **QG-02** · `c3ae4f4` **QG-01** · `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen · `13bf255` **5.7** · `fb72dd2` **5.6** · `a901692` **5.5** · `4f95e18` **5.4** · `fc7f07b` **4.8** |
-| Latest **committed docs before this Update** | `cc7abaa` — Update-140 bounded fallback closure |
-| This Update-141 docs SHA | Current commit containing this file, if committed; resolve through Actual Git rather than guessing a self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 246]` at `eb8466e` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-141 docs WIP may remain; otherwise owned WIP **none** |
+| Latest **committed docs before this Update** | `3528858` — Update-141 Redis reconnect handoff |
+| This Update-142 docs SHA | Current commit containing this file, if committed; resolve through Actual Git rather than guessing a self-SHA |
+| Branch advisory | observed `master...origin/master [ahead 247]` at `3528858` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-142 docs WIP may remain; otherwise owned WIP **none** |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1b** + **DEP-01** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** + **HYBRID-MEM env propagation** + **VER-02** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
@@ -43,11 +43,10 @@ local code and verification only).
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-141 records §9.1b:** `eb8466e` replaces permanent fallback after an
-outage with serialized reconnect attempts using monotonic exponential backoff
-from 1 second to a 30-second cap. Connection/ping and cache-operation failures
-invalidate the failed client; a successful reconnect resets the delay. The
-expanded cache namespace remains separate, unstarted work.
+**Update-142 reconciles the handoff after §9.1b:** `3528858` is the committed
+Update-141 docs SHA, and `eb8466e` remains the latest implementation. All five
+implementation/handoff paths were clean before this docs edit; the protected
+dirty-file hashes in §8 still match. No code or runtime state changed here.
 
 **Last known verification:**
 
@@ -249,7 +248,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-141)
+### 1C. Authoritative open-problem ledger (Update-142)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -299,7 +298,7 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 246]` at `eb8466e` before Update-141 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
+| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 247]` at `3528858` before Update-142 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
 | **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
 | **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. | They are not implementation WIP. Do not bulk-delete or stage them. |
@@ -331,7 +330,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-141 in AGENT_STATE.md + §1C problem ledger in this file
+5. Read ONLY top Update-142 in AGENT_STATE.md + §1C problem ledger in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. Do not invent another QG item; QG-01–QG-04 are local-only closures
 8. Select work only from an explicit owner request or a documented ungated residual
@@ -636,7 +635,7 @@ ledger; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-141:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-142:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -735,7 +734,8 @@ Never log secret values.
 | 35 | **9.1a** | `db65e37` | bound the process-local Redis fallback by TTL and 1024-entry LRU capacity |
 | 36 | docs | `cc7abaa` | Update-140 9.1a evidence and the remaining §9 boundaries |
 | 37 | **9.1b** | `eb8466e` | reconnect after Redis outage with serialized bounded exponential backoff |
-| 38 | docs | **this Update-141 commit, if present in Actual Git** | record 9.1b evidence and route the separate namespace residual |
+| 38 | docs | `3528858` | Update-141 9.1b evidence and the separate namespace residual |
+| 39 | docs | **this Update-142 commit, if present in Actual Git** | reconcile Actual Git and make next-session routing self-contained |
 
 ---
 
@@ -765,9 +765,9 @@ Never log secret values.
 | `vectordb` lifecycle type debt closed? | **Yes local** (`3a37fd2`); package MyPy passed 10 sources under `--follow-imports=skip`; VER-01/full locked CI remain open |
 | Redis fallback bounded? | **Yes local** (`db65e37`): TTL, locking, and 1024-entry LRU cap; expanded namespace and live Redis evidence remain open |
 | Redis reconnect bounded? | **Yes local** (`eb8466e`): serialized `1→2→4…≤30s` retry schedule resets after recovery; expanded namespace and live Redis evidence remain open |
-| All known open problems indexed? | **Yes in §1C as of Update-141**; Actual Git/new evidence overrides the snapshot |
+| All known open problems indexed? | **Yes in §1C as of Update-142**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-141 handoff files are clean, owned WIP **none** |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-142 handoff files are clean, owned WIP **none** |
