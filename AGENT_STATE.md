@@ -1,5 +1,38 @@
 # Agent State
 
+## 2026-08-11 Update-172 — contextual-ingestion routing test isolated ✅ START HERE
+
+> **Committed test correction:** `fce19ba` (`test(ingestion): isolate
+> vector-store routing contract`) keeps
+> `test_ingest_pipeline_uses_tenant_vector_store_builder` on its declared
+> boundary by patching the categorizer symbol owned by `ingestion.pipeline`.
+> The test no longer constructs `LocalOllamaLLM`, imports the unrelated
+> Ollama/transformers graph, or reaches a provider/network path.
+>
+> **Red → green evidence:** before the correction, the exact node timed out
+> twice at 60 seconds under coverage in the categorizer/LLM import path. After
+> the correction, Grok's exact same coverage contract passed **1 test / 1
+> warning in 5.06s**; the full contextual-ingestion file passed **13 tests / 2
+> warnings in 35.28s**, and scoped Ruff passed. Codex independently passed the
+> corrected node plus the separate categorizer unit contracts: **6 tests / 1
+> warning in 0.94s**. Existing whole-file formatter findings are outside the
+> changed block.
+>
+> **Grok/workspace truth:** the bounded `local_grok_cli` run used `grok-4.5`
+> (actual `grok-4.5-build`). It completed the edit and all three requested
+> gates, then policy-cancelled only on its final compound hash command. Codex
+> independently verified the diff, tests, lint, protected hashes, and scoped
+> status before commit. Active writer/test process **none**; implementation WIP
+> **none**; protected dirty files remain unchanged.
+>
+> **Scope honesty / next route:** this closes only the contextual-ingestion
+> test-isolation blocker. It does not close the Update-169 VER-03 full-gate
+> failure or prove the wider predecessor hypothesis. A later distinct slice may
+> now rerun the exact Update-171 20-file earlier window plus the direct CLI node
+> once with a fresh basetemp; the changed isolation boundary makes that a
+> hypothesis-driven verification, not a raw retry. No full-suite, live action,
+> migration, scheduler mutation, push, or deploy occurred.
+
 ## 2026-08-11 Update-171 — VER-03 wider band blocked by isolated ingestion timeout ⚠️ START HERE
 
 > **Fresh bounded diagnostic:** at committed HEAD `3e62849`, Grok collected
