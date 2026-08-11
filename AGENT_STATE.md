@@ -1,5 +1,40 @@
 # Agent State
 
+## 2026-08-11 Update-157 — §9 Astro 7 / DEP-01 zero-audit ✅ START HERE
+
+> **Committed implementation:** `cea370b` (`chore(docs): upgrade site to
+> Astro 7`) changes exactly five scoped paths. Actual Git after the commit was
+> `master...origin/master [ahead 273]`; active writer **none**, implementation
+> WIP **none**, and the four protected dirty-file hashes still match.
+>
+> **Contract:** the docs site now uses Astro `7.2.0`, Starlight `0.41.7`, and
+> explicit `@astrojs/markdown-remark 7.2.2`. The existing Mermaid rehype plugin
+> stays on the supported `unified({...})` processor, while
+> `compressHTML: true` preserves Astro 6 whitespace behavior. The refreshed
+> lock has zero npm audit findings, so all five stale Astro-6 exceptions were
+> removed and the empty register remains schema-validated.
+>
+> **Fresh evidence:** independent pytest passed **5 tests** with one known
+> Starlette warning; `astro check` reported **0 errors / 0 warnings / 0 hints**;
+> DEP-01 reported **0 vulnerabilities**; and the Astro build produced **59
+> pages**, Pagefind, and sitemap. Scoped diff/LF and protected-hash checks
+> passed. Matching Playwright headless shell `v1234` was installed only as a
+> local verification prerequisite and is not a repository artifact.
+>
+> **Grok truth and scope:** the initial `local_grok_cli` implementation run
+> (`grok-4.5-build`) exhausted its bounded monitor after creating the five
+> target diffs; its single QA follow-up ended normally and removed the Astro 7
+> rehype deprecation. Codex independently resolved the local browser
+> prerequisite and ran the final gates. This closes only local **Astro 7 / DEP-01**;
+> architecture ownership and live scrape/alert delivery remain open in §9.
+> No push, deploy, migration, provider call, scheduler mutation, or live
+> service occurred.
+>
+> **Next-session route:** refresh Actual Git, then read only this block and
+> `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. Do not re-select Astro 7 without
+> a dependency/advisory change. Choose at most one explicit owner request or
+> documented safe residual.
+
 ## 2026-08-11 Update-156 — post-dashboard transparency ✅ START HERE
 
 > **Docs-only reconciliation:** latest implementation remains `1237f3c`

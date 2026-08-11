@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-11 (Update-156 post-dashboard transparency)
+**Date:** 2026-08-11 (Update-157 Astro 7 / DEP-01 zero-audit)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-156**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-157**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-156. Preserve it as DoD input, but use Actual Git + the committed
+> Update-157. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,13 +18,12 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-156:** docs-only reconciliation after implementation `1237f3c` and
-handoff `192ef78`. Actual Git was `master...origin/master [ahead 271]` at
-`192ef78`; active writer and implementation WIP were none. It records the
-initial Grok run's final-command cancellation, the QA run's normal end, the two
-remaining untracked prompt controls, and absent dashboard pytest basetemps. No
-plan checkbox, implementation, evidence classification, or release gate
-changed. Architecture ownership, Astro 7, live scrape/alert delivery, and
+**Update-157:** implementation `cea370b` upgrades the docs site to Astro 7,
+keeps the supported unified Mermaid pipeline and prior whitespace semantics,
+and removes all obsolete audit exceptions after a zero-finding audit. Fresh
+evidence is pytest **5 passed**, Astro check **0/0/0**, dependency audit **0**,
+and a **59-page** static build with Pagefind and sitemap. No plan checkbox or
+release gate changed. Architecture ownership, live scrape/alert delivery, and
 live/gated work remain explicit in
 [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
 
@@ -42,7 +41,7 @@ live/gated work remain explicit in
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
-| **9** cache / architecture / SLO | **9.1a–9.1c cache + 9.2a–9.2f telemetry + 9.3a dashboard + DEP-01 local** | OPEN (architecture ownership, Astro 7, live alert delivery) | soft |
+| **9** cache / architecture / SLO | **9.1a–9.1c cache + 9.2a–9.2f telemetry + 9.3a dashboard + Astro 7 / DEP-01 local** | OPEN (architecture ownership, live alert delivery) | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
 **Project / production release: NOT claimed.**
@@ -132,7 +131,7 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 38 | §9.1b Redis reconnect backoff | **done local** `eb8466e`; no live Redis |
 | 39 | human sample / opt-in live ×3 evidence | **external/data authority required** |
 | 40 | §2/§3 residual if product needs | residual |
-| 41 | Astro 7 (clears DEP-01 moderate residual) | residual |
+| 41 | Astro 7 (clears DEP-01 moderate residual) | **done local** `cea370b`; zero audit findings / zero exceptions |
 | 42 | §1 + §10 | **opt-in live only** |
 
 Do **not** fake-close §1 or §10 with mock-only evidence.
@@ -295,9 +294,9 @@ Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 |------|--------|-----|
 | Lock refresh + high=0 | **done local** | `f622d58` |
 | Dated exceptions + `audit:deps` | **done local** | `f622d58` |
-| Astro 7 major | residual | — |
+| Astro 7 major + zero-audit lock | **done local** | `cea370b` |
 
-**Exceptions expire:** 2026-11-07 (`docs-site/npm-audit-exceptions.json`).
+**Exceptions:** none after the 2026-08-11 Astro 7 lock refresh.
 
 ---
 
@@ -315,8 +314,9 @@ Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 | **9.2e** | **done local** | `5a2f696` | label-free orphan-work gauge increments once when capacity transfers to any of five shared future callbacks and decrements once on completion; normal sync work stays uncounted, metric failure is fail-open, and work above zero for five minutes warns |
 | **9.2f** | **done local** | `344e174` | ten confirmed session/ticket/KB-draft ownership mismatches increment bounded `resource=session|ticket|kb_draft|unknown` once; missing/same-tenant access stays uncounted, metric failure is fail-open, opaque 404s remain unchanged, and any five-minute increase warns after 30 seconds |
 | **9.3a** | **done local** | `1237f3c` | a portable `DS_PROMETHEUS` dashboard gives each named signal one non-overlapping panel, preserves bounded/adaptive PromQL and zero-target semantics, and is guarded by offline JSON contract tests |
+| **9.4a** | **done local** | `cea370b` | Astro 7.2 / Starlight 0.41 retain the unified Mermaid pipeline and prior whitespace behavior; dependency audit is zero with an empty validated exception register |
 
-**Residual:** architecture ownership; Astro 7. No live Redis, Grafana import,
+**Residual:** architecture ownership. No live Redis, Grafana import,
 metric-scrape, or alert-delivery evidence exists.
 
 ---
@@ -343,7 +343,7 @@ Do not invent another quality fix or replay QG-01–QG-04 without new evidence.
 
 Gated alternatives remain: live provider/quality ×3 (`--execute` + secrets +
 fresh opt-in), memory-guard enablement plus a bounded hybrid attempt, a real
-dual-annotator human sample, Astro 7, or the product decision to default
+dual-annotator human sample, or the product decision to default
 `STREAMING_RAG_PARITY=true`.
 
 This list is not authorization. The executable boundary and current facts are
@@ -356,14 +356,15 @@ retry, scheduler change, index mutation, migration, push, or deploy.
 `--follow-imports=skip`. It changes no plan checkbox and does not establish a
 full repository, locked Python-3.11, CI, or production verification result.
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2f**, **9.3a**, DEP-01, VER-06.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2f**, **9.3a**, **9.4a / Astro 7 / DEP-01**, VER-06.
 
 ---
 
-## Last-known verification snapshot (Update-156)
+## Last-known verification snapshot (Update-157)
 
 | Band | Last known |
 |------|------------|
+| **9.4a Astro 7 / DEP-01** | independent pytest **5 passed**, one warning; Astro check **0/0/0**; npm audit **0 vulnerabilities**; static build **59 pages** + Pagefind + sitemap; scoped diff/LF + protected hashes clean |
 | **Update-156 transparency** | docs-only Actual Git/Grok/artifact reconciliation; docs quality gate only; no implementation test rerun or new implementation/release evidence |
 | **9.3a Grafana dashboard artifact** | Grok TDD **7 failed → 7 passed**; QA threshold semantics **1 failed / 6 passed → 7 passed**; independent **7 passed**, one warning; scoped Ruff + JSON parse + cached diff/LF + protected hashes clean; no live Grafana/import/scrape/alert-delivery evidence |
 | **Update-154 transparency** | docs-only reconciliation against Actual Git; no implementation file changed, no project suite rerun, and no new implementation or release evidence |
