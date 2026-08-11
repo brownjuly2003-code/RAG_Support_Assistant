@@ -1,5 +1,36 @@
 # Agent State
 
+## 2026-08-11 Update-151 — §9.2d safety-block telemetry ✅ START HERE
+
+> **Committed implementation:** `9817e89` (`feat(metrics): expose safety block
+> outcomes`) changes exactly seven scoped paths. Actual Git after the commit was
+> `master...origin/master [ahead 263]`; active writer **none**, implementation
+> WIP **none**, and the four protected dirty-file hashes still match.
+>
+> **Contract:** `rag_safety_blocks_total` has only the bounded
+> `action=redact|refuse|unknown` label. Each applied unsafe pre-response records
+> once: PII redaction as `redact`, prompt-injection refusal as `refuse`. Clean
+> and empty answers do not increment it; combined unsafe decisions produce the
+> single applied action. Metric failures remain fail-open for safety behavior.
+> The warning alert targets any refusal increase over ten minutes.
+>
+> **Fresh evidence:** focused TDD moved from **5 failed → 5 passed**. The full
+> response-safety/metrics/alerts/unverified-auto band passed **35 tests** with
+> one known warning; the post-format focused gate passed **5 tests**. Scoped
+> Ruff, two-source MyPy, diff, and LF checks passed. Formatter-diff retains only
+> pre-existing debt outside new lines.
+>
+> **Scope honesty:** this closes only local **9.2d safety-block telemetry**. It
+> does not change safety policy or routing and adds no dashboard, live scrape,
+> or alert-delivery evidence. Architecture ownership, orphan-work and
+> tenant-denied signals, Astro 7, §10, live quality, push, and deploy remain
+> open or gated.
+>
+> **Next-session route:** refresh Actual Git first, then read only this block
+> and `docs/SESSION_HANDOFF.md` §0/§1C/§2/§7/§8. Do not repeat 9.2d without a
+> safety-boundary change. No implementation slice is preselected; choose at
+> most one documented, locally safe residual.
+
 ## 2026-08-11 Update-150 — §9.2c escalation delivery telemetry ✅ START HERE
 
 > **Committed implementation:** `64f40b3` (`feat(metrics): expose escalation
