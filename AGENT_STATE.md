@@ -1,5 +1,40 @@
 # Agent State
 
+## 2026-08-11 Update-153 — §9.2f tenant-denied telemetry ✅ START HERE
+
+> **Committed implementation:** `344e174` (`feat(metrics): expose tenant
+> access denials`) changes exactly eleven scoped paths. Actual Git after the
+> commit was `master...origin/master [ahead 267]`; active writer **none**,
+> implementation WIP **none**, and the four protected dirty-file hashes still
+> match.
+>
+> **Contract:** `rag_tenant_access_denials_total` has only bounded
+> `resource=session|ticket|kb_draft|unknown` labels. A shared fail-open decision
+> boundary records each of ten confirmed ownership mismatches once: four
+> session, three ticket, and three KB-draft branches. Missing/same-tenant access
+> remains uncounted, opaque 404 behavior is unchanged, and no tenant/resource ID
+> or new foreign lookup is introduced. `TenantAccessDenied` warns per resource
+> after the five-minute increase remains positive for the minimum 30-second
+> debounce.
+>
+> **Fresh evidence:** focused TDD moved from **5 failed → 5 passed**. The
+> independent tenant/session/agent/KB/metrics/alerts band first rejected a
+> zero-duration alert; after the single narrowed correction it passed **54
+> tests** with one known warning. Scoped Ruff, six-source narrowed MyPy, diff,
+> and LF checks passed. Ordinary MyPy still reports four pre-existing `api/app.py`
+> errors outside changed lines; formatter debt also remains outside added lines.
+>
+> **Scope honesty:** this closes only local **9.2f tenant-denied telemetry** and
+> brings the seven named §9 access/operations signals to **7/7 local**. It does
+> not close §9 itself or add a dashboard, live scrape, or alert-delivery
+> evidence. Architecture ownership, a committed dashboard artifact, Astro 7,
+> §10, live quality, push, and deploy remain open or gated.
+>
+> **Next-session route:** refresh Actual Git first, then read only this block
+> and `docs/SESSION_HANDOFF.md` §0/§1C/§2/§7/§8. Do not repeat 9.2f without a
+> tenant-ownership boundary change. No implementation slice is preselected;
+> choose at most one documented, locally safe residual.
+
 ## 2026-08-11 Update-152 — §9.2e orphan-work telemetry ✅ START HERE
 
 > **Committed implementation:** `5a2f696` (`feat(metrics): expose orphan work

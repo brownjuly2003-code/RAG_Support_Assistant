@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-11 (Update-152 orphan-work telemetry)
+**Date:** 2026-08-11 (Update-153 tenant-denied telemetry)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-152**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-153**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-152. Preserve it as DoD input, but use Actual Git + the committed
+> Update-153. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,11 +18,11 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-152:** `5a2f696` locally closes §9.2e orphan-work telemetry at the
-shared capacity-transfer boundary; there is no implementation WIP or active
-writer. The exact local §9 signals are now **6/7**. This does not close a plan
-section or release gate: architecture ownership, tenant-denied telemetry, a
-dashboard artifact, Astro 7, and live/gated work remain explicit in
+**Update-153:** `344e174` locally closes §9.2f tenant-denied telemetry across
+ten confirmed ownership-mismatch branches; there is no implementation WIP or
+active writer. The exact local §9 signals are now **7/7**. This does not close
+a plan section or release gate: architecture ownership, a dashboard artifact,
+Astro 7, live alert delivery, and live/gated work remain explicit in
 [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md).
 
 ---
@@ -39,7 +39,7 @@ dashboard artifact, Astro 7, and live/gated work remain explicit in
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
-| **9** cache / architecture / SLO | **9.1a–9.1c cache + 9.2a–9.2e telemetry + DEP-01 local** | OPEN (architecture ownership, one exact signal/dashboard, Astro 7) | soft |
+| **9** cache / architecture / SLO | **9.1a–9.1c cache + 9.2a–9.2f telemetry + DEP-01 local** | OPEN (architecture ownership, dashboard artifact, Astro 7) | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
 **Project / production release: NOT claimed.**
@@ -310,9 +310,9 @@ Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 | **9.2c** | **done local** | `64f40b3` | each real shared inbox delivery attempt increments bounded `outcome=delivered|failed|unknown` exactly once across initial and retry paths; non-attempts remain uncounted and failures have a warning alert |
 | **9.2d** | **done local** | `9817e89` | each applied unsafe pre-response increments bounded `action=redact|refuse|unknown` once; clean/empty answers remain uncounted, metric failure is fail-open, and refusals have a warning alert |
 | **9.2e** | **done local** | `5a2f696` | label-free orphan-work gauge increments once when capacity transfers to any of five shared future callbacks and decrements once on completion; normal sync work stays uncounted, metric failure is fail-open, and work above zero for five minutes warns |
+| **9.2f** | **done local** | `344e174` | ten confirmed session/ticket/KB-draft ownership mismatches increment bounded `resource=session|ticket|kb_draft|unknown` once; missing/same-tenant access stays uncounted, metric failure is fail-open, opaque 404s remain unchanged, and any five-minute increase warns after 30 seconds |
 
-**Residual:** architecture ownership; the tenant-denied access signal; a
-committed dashboard artifact;
+**Residual:** architecture ownership; a committed dashboard artifact;
 Astro 7. No live Redis, metric-scrape, or alert-delivery evidence exists.
 
 ---
@@ -352,14 +352,15 @@ retry, scheduler change, index mutation, migration, push, or deploy.
 `--follow-imports=skip`. It changes no plan checkbox and does not establish a
 full repository, locked Python-3.11, CI, or production verification result.
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2e**, DEP-01, VER-06.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2f**, DEP-01, VER-06.
 
 ---
 
-## Last-known verification snapshot (Update-152)
+## Last-known verification snapshot (Update-153)
 
 | Band | Last known |
 |------|------------|
+| **9.2f tenant-denied telemetry** | focused TDD **5 failed → 5 passed**; independent tenant/session/agent/KB/metrics/alerts band first rejected a zero-duration alert, then passed **54 tests** after one narrowed correction, one warning; scoped Ruff + six-source narrowed MyPy + diff/LF clean; ordinary MyPy retains four pre-existing `api/app.py` errors outside changed lines; formatter debt remains outside added lines; no live scrape/alert delivery |
 | **9.2e orphan-work telemetry** | focused TDD **5 failed → 5 passed**; independent pipeline/stream/metrics/alerts/timeout band first exposed test-isolation leakage, then passed **37 tests** after one narrowed correction, one warning; scoped Ruff + narrowed metrics MyPy + diff/LF clean; ordinary two-source MyPy retains two pre-existing `no-redef` errors outside changed lines; formatter debt remains outside added lines; no live scrape/alert delivery |
 | **9.2d safety-block telemetry** | focused TDD **5 failed → 5 passed**; full response-safety/metrics/alerts/unverified-auto band **35 passed**, one warning; post-format focused gate **5 passed**; scoped Ruff + two-source MyPy + diff/LF clean; formatter debt remains outside added lines; no live scrape/alert delivery |
 | **9.2c escalation-delivery telemetry** | Grok focused TDD **8 failed → 8 passed** after one narrowed test-fixture correction; independent four-file band **33 passed**, one warning; scoped Ruff + two-source MyPy + diff/LF clean; whole-file formatter debt remains outside added lines; no live scrape/alert delivery |
