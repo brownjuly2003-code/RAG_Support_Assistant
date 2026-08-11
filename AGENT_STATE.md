@@ -1,5 +1,39 @@
 # Agent State
 
+## 2026-08-11 Update-162 — §9.5c2 ingestion worker lifecycle owner ✅ START HERE
+
+> **Committed implementation:** `890155a` (`refactor(ingestion): centralize
+> worker lifecycle ownership`) extends the existing `IngestionJobService` with
+> the five synchronous worker entry points: require, claim, heartbeat extend,
+> completed CAS, and failed CAS. Their module-level names and signatures remain
+> compatibility wrappers. Actual Git is `master...origin/master [ahead 283]`;
+> active writer **none** and implementation WIP **none**.
+>
+> **Fresh evidence:** the exact ownership contract reproduced **1 failed → 1
+> passed**. The job-contract/liveness/worker/outage/duplicate-claim band passed
+> **111 tests**. Scoped Ruff, narrowed MyPy, source format, diff/LF, public
+> signature, staged-path, and protected-hash gates passed; known Starlette and
+> LangChain warnings remain.
+>
+> **Scope honesty:** worker lease tokens, tenant/status predicates, heartbeat
+> horizon, terminal CAS, durable result/error writes, and failure semantics are
+> unchanged. Read-only `sync_list_known_job_object_refs` and
+> `sync_list_job_statuses_for_tenant` remain module helpers outside the owner;
+> no caller, DB schema, migration, broker, vector index, or live service was
+> changed. `SessionService` remains gated by the multi-replica SLA decision;
+> `PipelineRunner`, remaining architecture ownership, and live scrape/alert
+> delivery remain open.
+>
+> **Workspace boundary:** protected tracked owner files `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` retain their
+> durable SHA-256 values. Unrelated untracked artifacts remain preserved. No
+> live action, migration, scheduler mutation, push, or deploy occurred.
+>
+> **Next-session route:** refresh Actual Git and choose at most one explicit
+> documented residual. Do not reopen ingestion API/worker ownership without a
+> changed boundary; do not infer authority for multi-replica sessions, live
+> services, push, or deploy.
+
 ## 2026-08-11 Update-161 — §9.5b/§9.5c1 lifecycle ownership ✅ START HERE
 
 > **Actual committed state:** `03057aa` makes `EscalationService` the single
