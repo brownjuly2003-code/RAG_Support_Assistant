@@ -1,5 +1,34 @@
 # Agent State
 
+## 2026-08-11 Update-169 — VER-03 full gate remains red ⚠️ START HERE
+
+> **Fresh full-gate evidence:** at committed HEAD `82c9006`, the CI-shaped
+> Python 3.13 unit+coverage command completed in **20m39s** with **1839 passed /
+> 1 failed / 15 skipped / 187 warnings**. Coverage passed its configured 72%
+> threshold at **77.06%**. The sole failure was
+> `test_direct_cli_resolves_project_imports`; therefore VER-03, §10, release,
+> and production verification remain **OPEN**.
+>
+> **Narrow diagnosis:** the exact CLI node passed alone in **5.10s**. It also
+> passed under pytest-cov; that diagnostic command was red only because one
+> test covers **15.65%**, below the repository-wide 72% threshold. No direct
+> environment/CWD mutation or local port-9 listener was found. The aggregate-
+> only failure is not deterministically reproduced and its root cause remains
+> unproved, so no timeout or runtime edit was made and the full suite was not
+> raw-retried.
+>
+> **Workspace boundary:** actual Git before this docs update is
+> `master...origin/master [ahead 294]` at `82c9006`; active writer/test process
+> **none** and owned implementation/test WIP **none**. Protected dirty tracked
+> files retain their recorded SHA-256 values; new VER-03 basetemps remain
+> untracked evidence. No Grok run, live action, migration, scheduler mutation,
+> push, or deploy occurred.
+>
+> **Next-session route:** Actual Git first, then this block and
+> `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. Do not rerun the full suite
+> unchanged. The only local VER-03 candidate is a bounded order/load diagnostic
+> that reproduces the aggregate-only direct-CLI failure before any correction.
+
 ## 2026-08-11 Update-168 — VER-03 focused deployment contract closure ✅ START HERE
 
 > **Committed test contract:** `eb764da` (`test(ingestion): align deployment
