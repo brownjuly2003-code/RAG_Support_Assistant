@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-11 (Update-155 §9.3a Grafana dashboard artifact)
+**Date:** 2026-08-11 (Update-156 post-dashboard transparency)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-155**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-156**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-155. Preserve it as DoD input, but use Actual Git + the committed
+> Update-156. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,10 +18,13 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-155:** `1237f3c` commits the portable seven-panel Grafana dashboard
-for all **7/7** named §9 signals plus offline contract tests. TDD passed after
-one QA correction to keep zero-target states green; no plan checkbox or release
-gate changed. Architecture ownership, Astro 7, live scrape/alert delivery, and
+**Update-156:** docs-only reconciliation after implementation `1237f3c` and
+handoff `192ef78`. Actual Git was `master...origin/master [ahead 271]` at
+`192ef78`; active writer and implementation WIP were none. It records the
+initial Grok run's final-command cancellation, the QA run's normal end, the two
+remaining untracked prompt controls, and absent dashboard pytest basetemps. No
+plan checkbox, implementation, evidence classification, or release gate
+changed. Architecture ownership, Astro 7, live scrape/alert delivery, and
 live/gated work remain explicit in
 [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
 
@@ -357,10 +360,11 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-155)
+## Last-known verification snapshot (Update-156)
 
 | Band | Last known |
 |------|------------|
+| **Update-156 transparency** | docs-only Actual Git/Grok/artifact reconciliation; docs quality gate only; no implementation test rerun or new implementation/release evidence |
 | **9.3a Grafana dashboard artifact** | Grok TDD **7 failed → 7 passed**; QA threshold semantics **1 failed / 6 passed → 7 passed**; independent **7 passed**, one warning; scoped Ruff + JSON parse + cached diff/LF + protected hashes clean; no live Grafana/import/scrape/alert-delivery evidence |
 | **Update-154 transparency** | docs-only reconciliation against Actual Git; no implementation file changed, no project suite rerun, and no new implementation or release evidence |
 | **9.2f tenant-denied telemetry** | focused TDD **5 failed → 5 passed**; independent tenant/session/agent/KB/metrics/alerts band first rejected a zero-duration alert, then passed **54 tests** after one narrowed correction, one warning; scoped Ruff + six-source narrowed MyPy + diff/LF clean; ordinary MyPy retains four pre-existing `api/app.py` errors outside changed lines; formatter debt remains outside added lines; no live scrape/alert delivery |

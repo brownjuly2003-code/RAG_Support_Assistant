@@ -1,5 +1,40 @@
 # Agent State
 
+## 2026-08-11 Update-156 — post-dashboard transparency ✅ START HERE
+
+> **Docs-only reconciliation:** latest implementation remains `1237f3c`
+> (`feat(monitoring): add RAG operations dashboard`) and the latest committed
+> handoff is `192ef78` (`docs: record Grafana dashboard artifact`). Actual Git
+> is `master...origin/master [ahead 271]` at `192ef78`; active writer **none**
+> and implementation WIP **none**.
+>
+> **Delegation truth:** both writes used `local_grok_cli` with actual model
+> `grok-4.5-build`. Initial run `rag-dashboard-9-3a-20260811-01` ended
+> `cancelled` at its final protected-hash command after creating the three
+> implementation paths and reaching **7 passed**. The single QA follow-up
+> `rag-dashboard-9-3a-qa-20260811-01` ended normally with `end_turn` after
+> reproducing **1 failed / 6 passed** and correcting thresholds to **7 passed**.
+>
+> **Evidence and workspace boundary:** Codex independently passed **7 tests**,
+> scoped Ruff, JSON parse, cached diff/LF, and protected hashes; the docs gate
+> passed **13 tests**, with the known Starlette warning in both pytest bands.
+> The four protected owner files remain the only dirty tracked paths and their
+> §8 hashes match. The two dashboard Grok prompt files remain untracked control
+> artifacts; dashboard pytest basetemps are absent. Other unrelated untracked
+> artifacts remain preserved.
+>
+> **Honest residual:** §9.3a is local-only; no Grafana import/provisioning,
+> live scrape, or alert-delivery evidence exists. Architecture ownership and
+> Astro 7 remain local §9 residuals. §1 live services/migrations, passing §5
+> quality ×3, human calibration, formal provider/IdP evidence, §10, push, and
+> deploy remain open or gated. This Update changes no code, runtime, plan
+> checkbox, service, scheduler, migration, or external state.
+>
+> **Next-session route:** refresh Actual Git, then read only this block and
+> `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. No implementation candidate is
+> preselected. Do not repeat §9.3a without a dashboard-schema or metric-contract
+> change; choose at most one explicit owner request or documented safe residual.
+
 ## 2026-08-11 Update-155 — §9.3a Grafana dashboard artifact ✅ START HERE
 
 > **Committed implementation:** `1237f3c` (`feat(monitoring): add RAG

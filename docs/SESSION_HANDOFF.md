@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-11 — **Update-155** (§9.3a Grafana dashboard artifact).
+**Обновлено:** 2026-08-11 — **Update-156** (post-dashboard transparency).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-155**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-156**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-155; dirty
+**Не использовать:** старые `START HERE` ниже Update-156; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -28,11 +28,13 @@
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
 | Последний implementation SHA | `1237f3c` — §9.3a committed Grafana dashboard artifact |
-| Последний handoff SHA до Update-155 | `1c5fa2c` — Update-154; SHA этого docs-коммита всегда брать из Actual Git |
+| Последний committed handoff до Update-156 | `192ef78` — Update-155 dashboard handoff; SHA этого docs-коммита всегда брать из Actual Git |
+| Actual Git перед Update-156 | `master...origin/master [ahead 271]` at `192ef78`; refresh remains mandatory |
 | Что закрыто локально | §9 named telemetry **7/7** + committed dashboard artifact; это не закрывает весь §9 и не означает production ready |
 | Последний implementation gate | TDD **7 failed → 7 passed**; QA threshold red **1 failed / 6 passed → 7 passed**; independent **7 passed**; Ruff + JSON + diff/LF green; one known Starlette warning |
 | Известный baseline debt | ordinary MyPy: four pre-existing `api/app.py` errors; formatter debt outside new lines; no full locked-CI claim |
-| Worktree boundary | only four protected tracked owner files are dirty; unrelated untracked artifacts are preserved; implementation WIP/active writer none |
+| Worktree boundary | only four protected tracked owner files are dirty and their hashes match; two dashboard Grok prompts remain untracked; dashboard pytest basetemps are absent; unrelated untracked artifacts are preserved; implementation WIP/active writer none |
+| Grok route truth | `local_grok_cli`, actual model `grok-4.5-build`; implementation run ended `cancelled` only at the final protected-hash command after green files/tests; the single QA follow-up ended `end_turn` |
 | Что не запускалось | push, deploy, migration 019–023, Grafana import/provisioning, live service/provider/quality/scrape/alert delivery, scheduler mutation |
 | Что осталось в §9 | architecture ownership, Astro 7, live alert delivery |
 | Следующий slice | не выбран; только явный owner request или один documented safe residual |
@@ -46,10 +48,10 @@
 | Latest **committed implementation** | `1237f3c` — §9.3a committed portable Grafana dashboard artifact |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** · `eb8466e` **9.1b** · `db65e37` **9.1a** · `80c2603` **QG-03A** · `1304ff4` **QG-02** · `c3ae4f4` **QG-01** · `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen |
-| Latest **committed docs before this Update** | `1c5fa2c` — Update-154 transparency reconciliation |
+| Latest **committed docs before this Update** | `192ef78` — Update-155 dashboard handoff |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 270]` at `1237f3c` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-155 docs WIP may remain; otherwise owned WIP **none** |
+| Branch advisory | observed `master...origin/master [ahead 271]` at `192ef78` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-156 docs WIP may remain; otherwise owned WIP **none** |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **DEP-01** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** + **HYBRID-MEM env propagation** + **VER-02** + **VER-05** + **VER-06** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
@@ -58,18 +60,22 @@
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-155 closes local dashboard artifact only:** `1237f3c` adds the
-portable seven-panel Grafana model, colocated import/scope documentation, and
-offline contract tests. The four protected dirty tracked hashes in §8 still
-match, active writer and implementation WIP are none, and no new task is
-preselected. No live Grafana import/provisioning, scrape, alert delivery,
-provider, service, index, migration, scheduler, push, or deploy action ran. The
-full open/gated truth remains indexed in §1C and summarized in §2A/§12.
+**Update-156 is docs-only transparency:** it reconciles Actual Git after the
+committed Update-155 handoff and records both Grok terminal states plus the
+exact control-artifact boundary. Initial implementation run
+`rag-dashboard-9-3a-20260811-01` reached green files/tests, then ended
+`cancelled` at its final protected-hash command; the only QA follow-up
+`rag-dashboard-9-3a-qa-20260811-01` ended `end_turn`. The two prompt files
+remain untracked and dashboard pytest basetemps are absent. No implementation
+test is rerun, and no live Grafana import/provisioning, scrape, alert delivery,
+provider, service, index, migration, scheduler, push, or deploy action occurs
+in this reconciliation. The full open/gated truth remains in §1C and §2A/§12.
 
 **Last known verification:**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **Update-156 transparency** | docs-only Actual Git/Grok/artifact reconciliation; docs quality gate only; no implementation test rerun or new implementation/release claim |
 | **9.3a Grafana dashboard artifact** | Grok TDD **7 failed → 7 passed**; QA semantic threshold check **1 failed / 6 passed → 7 passed**; independent **7 passed**, one known warning; scoped Ruff + JSON parse + cached diff/LF + protected hashes clean; no live Grafana/import/scrape/alert-delivery evidence |
 | **Update-154 transparency** | docs-only reconciliation against Actual Git; no implementation file changed, no project suite rerun, and no new implementation or release claim |
 | **9.2f tenant-denied telemetry** | focused TDD **5 failed → 5 passed**; independent tenant/session/agent/KB/metrics/alerts band first rejected a zero-duration alert, then passed **54 tests** after one narrowed correction, one known warning; scoped Ruff + six-source narrowed MyPy + diff/LF clean; ordinary MyPy retains four pre-existing `api/app.py` errors outside changed lines; formatter debt remains outside added lines; no live scrape/alert delivery |
@@ -278,7 +284,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-155)
+### 1C. Authoritative open-problem ledger (Update-156)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -330,10 +336,10 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 270]` at `1237f3c` before Update-155 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
+| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 271]` at `192ef78` before Update-156 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
 | **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
-| **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. `cache-namespace-9-1c.md` and `.grok-prompts/cache-namespace-9-1c-impl.md` belong to the already-committed slice. | They are not implementation WIP. Do not bulk-delete or stage them, and do not relaunch the same Grok prompt without new evidence or a narrowed hypothesis. |
+| **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. The two `.grok-prompts/dashboard-artifact-9-3a-*.md` controls remain, while their dashboard pytest basetemps are absent. `cache-namespace-9-1c.md` and its prompt are historical. | They are not implementation WIP. Do not bulk-delete or stage them, and do not relaunch the same Grok prompt without new evidence or a narrowed hypothesis. |
 | **EXT-01** | **EXTERNAL / UNPUSHED** | `D:\GraceKelly` is `main...origin/main [ahead 1]` at `886b277`, with untracked `issues.md`. Port `8011` still listens under PID 3048 on the pre-existing command; `8012` is closed. | Do not claim `8011` serves `886b277`; external push/restart needs separate authority. |
 
 ### Dataset snapshot (7.7)
@@ -362,7 +368,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-155 in AGENT_STATE.md + §0A/§1C in this file
+5. Read ONLY top Update-156 in AGENT_STATE.md + §0A/§1C in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. Do not invent another QG item; QG-01–QG-04 are local-only closures
 8. Select work only from an explicit owner request or a documented ungated residual
@@ -671,7 +677,7 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-155:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-156:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -698,9 +704,9 @@ There is no owned untracked implementation WIP. The retained
 `cache-namespace-9-1c.md` and
 `.grok-prompts/cache-namespace-9-1c-impl.md` are historical control artifacts
 for committed 9.1c, not WIP. The two untracked
-`.grok-prompts/dashboard-artifact-9-3a-*.md` files and dashboard pytest
-basetemps are control/verification artifacts for committed `1237f3c`, not WIP.
-The smoke script and test are tracked in
+`.grok-prompts/dashboard-artifact-9-3a-*.md` files are control artifacts for
+committed `1237f3c`, not WIP; dashboard pytest basetemps are absent. The smoke
+script and test are tracked in
 `99c6be5`; if they appear untracked, stop and reconcile Actual Git instead of
 recreating or staging substitutes.
 
@@ -797,6 +803,7 @@ Never log secret values.
 | 56 | docs | resolve through Actual Git | Update-154 next-session transparency reconciliation; no implementation change |
 | 57 | **9.3a** | `1237f3c` | commit a portable seven-panel Grafana dashboard with bounded PromQL, zero-target thresholds, and offline contract tests |
 | 58 | docs | resolve through Actual Git | Update-155 §9.3a closure; do not add a follow-up solely for its self-SHA |
+| 59 | docs | resolve through Actual Git | Update-156 owner-requested post-dashboard transparency; records Actual Git, Grok terminal states, and control-artifact boundaries only |
 
 ---
 
@@ -833,10 +840,10 @@ Never log secret values.
 | Tenant-denied access observable? | **Yes local** (`344e174`): ten confirmed session/ticket/KB-draft mismatch branches feed bounded resource labels without tenant/resource IDs; no live scrape/alert-delivery evidence |
 | Seven-signal operations dashboard committed? | **Yes local** (`1237f3c`): portable `DS_PROMETHEUS`, seven non-overlapping panels, bounded/adaptive PromQL, and threshold contract tests; no live Grafana/import/scrape evidence |
 | Agentic injection safety test current? | **Yes local** (`356a530`): mock follows `search_kb_docs(text, docs)` and the full safety/agentic band is green |
-| Canonical restart capsule reconciled? | **Yes as of Update-155**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
-| All known open problems indexed? | **Yes in §1C as of Update-155**; Actual Git/new evidence overrides the snapshot |
+| Canonical restart capsule reconciled? | **Yes as of Update-156**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
+| All known open problems indexed? | **Yes in §1C as of Update-156**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-155 handoff files are clean, owned WIP **none** |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-156 handoff files are clean, owned WIP **none** |
