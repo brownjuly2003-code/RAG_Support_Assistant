@@ -572,14 +572,14 @@ def test_deployment_docs_distinguish_web_and_ingestion_and_list_open_gates() -> 
     assert "ingest@%h" in text or "ingest@<hostname>" in text
     # Long warm-shutdown default (seconds), consistent with Compose/Helm.
     assert "3600" in text
-    # Still-open reliability gates — topology slice must not claim them done.
+    # Implemented reliability contracts and still-open gates must stay visible.
     lowered = text.lower()
     for needle in (
         "reaper",
         "idempotency",
-        "queue-age",
+        "rag_ingestion_queue_oldest_seconds",
         "ing-02",
-        "ten-03",
+        "safe-slug--<16 hex sha-256>",
         "live",
     ):
-        assert needle in lowered, f"DEPLOYMENT.md missing open-gate mention: {needle}"
+        assert needle in lowered, f"DEPLOYMENT.md missing reliability contract/open gate: {needle}"
