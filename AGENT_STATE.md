@@ -1,5 +1,44 @@
 # Agent State
 
+## 2026-08-11 Update-171 — VER-03 wider band blocked by isolated ingestion timeout ⚠️ START HERE
+
+> **Fresh bounded diagnostic:** at committed HEAD `3e62849`, Grok collected
+> **1862** tests and resolved the next earlier predecessor window as 20 files
+> from `test_health_postgres_redis.py` through
+> `test_ingestion_worker_topology.py`, excluding the already-green adjacent
+> nine-file band. The exact coverage-instrumented run did not reach
+> `test_direct_cli_resolves_project_imports`: after more than 42% progress it
+> hit the 60-second per-test timeout in
+> `test_ingest_pipeline_uses_tenant_vector_store_builder` while lazily importing
+> the Ollama/aiohttp dependency graph.
+>
+> **Narrow reproduction:** Codex then ran only that contextual-ingestion node
+> under the same coverage and timeout settings. It timed out again at 60
+> seconds, this time in the same `LocalOllamaLLM` construction path while
+> importing `langchain_core -> transformers`. This rules out the selected
+> predecessor window as a necessary cause of the new timeout. It does not
+> reproduce or close the original aggregate-only direct-CLI failure.
+>
+> **Diagnostic conclusion:** the contextual-ingestion test has an intrinsic
+> coverage/cold-import isolation problem because its vector-store assertion
+> reaches the real categorizer/LLM dependency path. No timeout increase,
+> runtime edit, test mock, or full-suite retry is justified in this exhausted
+> slice; VER-03 remains **OPEN / full-gate red**.
+>
+> **Grok/workspace truth:** the first `local_grok_cli` run collected successfully
+> but policy-cancelled when it tried to parse its external session log. The
+> cause-specific second run used `grok-4.5` (actual `grok-4.5-build`) and ended
+> normally with the timeout evidence above. Active writer/test process **none**;
+> owned implementation/test WIP **none**. Protected dirty files remain outside
+> scope. No live action, migration, scheduler mutation, push, or deploy occurred.
+>
+> **Next-session route:** Actual Git first, then this block and
+> `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. Do not repeat either timed-out
+> coverage command, the green adjacent band, or the full suite. A later,
+> distinct slice may diagnose the contextual-ingestion test boundary and prove
+> whether its categorizer/LLM dependency should be isolated before VER-03 order
+> diagnosis resumes.
+
 ## 2026-08-11 Update-170 — VER-03 adjacent order band ruled out ⚠️ START HERE
 
 > **Fresh bounded diagnostic:** at committed HEAD `c68911d`, pytest collection

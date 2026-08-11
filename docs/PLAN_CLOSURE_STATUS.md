@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-11 (Update-170 VER-03 adjacent order band ruled out)
+**Date:** 2026-08-11 (Update-171 VER-03 wider band blocked by isolated ingestion timeout)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-170**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-171**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-170. Preserve it as DoD input, but use Actual Git + the committed
+> Update-171. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,12 +18,12 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-170:** the immediate nine-file predecessor band ran under pytest-cov
-and finished **85 passed / 3 warnings**; the direct CLI node passed in
-**4.68s**. Immediate order pollution is ruled out, while two SQLite
-ResourceWarnings remain unproved diagnostic evidence. No speculative
-correction or raw full-suite retry occurred. Actual Git before this docs edit
-was `master...origin/master [ahead 295]` at `c68911d`. This closes no plan
+**Update-171:** the next 20-file earlier predecessor window did not reach the
+direct CLI node; it timed out after 60 seconds in contextual ingestion while
+importing the real categorizer/LLM dependency graph. The exact contextual node
+repeated the same timeout alone under coverage, so no speculative correction
+or raw retry occurred. Actual Git before this docs edit was
+`master...origin/master [ahead 296]` at `3e62849`. This closes no plan
 section or release gate. SLA-gated sessions,
 live scrape/alert delivery, VER-03, and other live/gated work remain explicit in
 [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
@@ -348,10 +348,12 @@ Local green slices alone **do not** close the plan.
 ## Next session pick (one only)
 
 The fresh VER-03 full gate is red only on an aggregate-only direct-CLI failure,
-while the immediate predecessor window is green. The documented local residual
-is one wider bounded predecessor window ending before that green band. Do not
-repeat the band or unchanged full suite, make a timeout guess, invent another
-quality fix, or replay QG-01–QG-04 without new evidence.
+while the immediate predecessor window is green. The attempted wider earlier
+window is now blocked by a contextual-ingestion timeout that reproduces on the
+exact node alone under coverage. The documented local residual is a distinct
+diagnosis of that test's real categorizer/LLM dependency boundary. Do not repeat
+either timeout command, the green band, or unchanged full suite; do not guess at
+larger timeouts or replay QG-01–QG-04 without new evidence.
 
 Gated alternatives remain: live provider/quality ×3 (`--execute` + secrets +
 fresh opt-in), memory-guard enablement plus a bounded hybrid attempt, a real
@@ -372,11 +374,11 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-170)
+## Last-known verification snapshot (Update-171)
 
 | Band | Last known |
 |------|------------|
-| **VER-03 Python 3.13 unit+coverage gate** | adjacent nine-file order band **85 passed / 3 warnings**; direct CLI passed in **4.68s**. Fresh full run remains **1839 passed / 1 failed / 15 skipped / 187 warnings** at **77.06%** coverage; no root cause/correction or full-suite/locked-CI/release-green claim |
+| **VER-03 Python 3.13 unit+coverage gate** | adjacent nine-file band remains green; the next earlier 20-file window timed out before direct CLI in contextual ingestion, and that exact node independently repeated the 60-second coverage timeout. Fresh full run remains **1839 passed / 1 failed / 15 skipped / 187 warnings** at **77.06%** coverage; no root cause/correction or full-suite/locked-CI/release-green claim |
 | **9.5d3 PipelineRunner streaming execution/deadline owner** | Grok TDD transcript **2 failed → 6 passed**, first focused band **32 passed**; QA follow-up added event-worker and exception-fallback ownership; Codex independent owner/provider-token stream band **7 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d2 PipelineRunner sync execution/deadline owner** | ownership **2 failed / 2 passed → 4 passed**; owner/concurrency/request-timeout/stream-capacity/chat-streaming band **22 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d1 PipelineRunner capacity lifecycle owner** | ownership **2 failed → 2 passed**; pipeline concurrency/stream-capacity/request-timeout/chat-streaming band **20 passed**; Ruff/narrowed MyPy/format/diff/LF/protected hashes green |

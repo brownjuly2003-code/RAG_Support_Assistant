@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-11 — **Update-170** (VER-03 adjacent order band ruled out).
+**Обновлено:** 2026-08-11 — **Update-171** (VER-03 wider band blocked by isolated ingestion timeout).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-170**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-171**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-170; dirty
+**Не использовать:** старые `START HERE` ниже Update-171; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -29,16 +29,16 @@
 |-------------------------|-------------------|
 | Последний implementation SHA | `c53f724` — §9.5d3 PipelineRunner streaming execution/deadline owner |
 | Последний committed test contract | `eb764da` — VER-03 focused deployment reliability assertion closure |
-| Последний committed handoff до Update-170 | `c68911d` — Update-169 aggregate-only full-gate failure; SHA этого docs-коммита всегда брать из Actual Git |
-| Actual Git перед этой docs edit | `master...origin/master [ahead 295]` at `c68911d`; refresh remains mandatory |
+| Последний committed handoff до Update-171 | `3e62849` — Update-170 adjacent order band green; SHA этого docs-коммита всегда брать из Actual Git |
+| Actual Git перед этой docs edit | `master...origin/master [ahead 296]` at `3e62849`; refresh remains mandatory |
 | Что закрыто локально | §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, PipelineRunner capacity + sync + streaming execution, and VER-07; это не закрывает весь §9 и не означает production ready |
-| Последний local gate | immediate nine-file predecessor band under coverage **85 passed / 3 warnings**; direct CLI passed in **4.68s**; full VER-03 remains red |
+| Последний local gate | wider earlier band timed out before direct CLI in contextual ingestion; the exact contextual node independently repeated the 60-second coverage timeout |
 | Известный baseline debt | no full locked-CI claim; ordinary router MyPy retains two pre-existing `no-redef` findings, and older `api/app.py`/legacy formatter debt remains outside recent changed lines |
 | Worktree boundary | four protected tracked owner files remain dirty; owned implementation/test WIP **none**; unrelated untracked artifacts are preserved; active writer/test process none |
-| Grok route truth | no Grok run occurred in Update-170; prior bounded §9.5d3 runs remain historical evidence only |
+| Grok route truth | `local_grok_cli`; first run collected 1862 nodes then policy-cancelled at external-log parsing; cause-specific second run used `grok-4.5` (actual `grok-4.5-build`) and returned the timeout evidence |
 | Что не запускалось | push, deploy, migration 019–023, Grafana import/provisioning, live service/provider/quality/scrape/alert delivery, scheduler mutation |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
-| Следующий slice | one wider bounded predecessor window ending before the ruled-out adjacent band, then the direct CLI node once; no unchanged full-suite retry |
+| Следующий slice | distinct contextual-ingestion isolation diagnosis before any VER-03 order retry; do not repeat either timeout command or the full suite |
 
 ---
 
@@ -50,24 +50,24 @@
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
 | Latest **committed test contract** | `eb764da` — VER-03 focused deployment reliability assertion closure |
-| Latest **committed docs before this Update** | `c68911d` — Update-169 aggregate-only full-gate failure |
+| Latest **committed docs before this Update** | `3e62849` — Update-170 adjacent order band green |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 295]` at `c68911d` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer/test process **none**; owned implementation/test WIP **none**; if these three handoff files are dirty, Update-170 docs WIP is present |
+| Branch advisory | observed `master...origin/master [ahead 296]` at `3e62849` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer/test process **none**; owned implementation/test WIP **none**; if these three handoff files are dirty, Update-171 docs WIP is present |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | Expand once to a wider bounded predecessor window before the green adjacent band; capture direct-CLI timing/traceback and do not repeat the full gate |
+| Next ordered | Diagnose the contextual-ingestion test's real categorizer/LLM dependency under coverage before resuming VER-03 order isolation |
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-170 rules out the immediate predecessor order window:** the exact
-nine-file coverage-instrumented band finished **85 passed / 3 warnings** in
-**12.17s**, and the direct lightweight GraceKelly CLI node passed in **4.68s**.
-Two unclosed-SQLite ResourceWarnings remain diagnostic evidence, not a proved
-cause. No code/test correction or raw full-suite retry occurred; the Update-169
-full gate remains red and VER-03 stays open. No live
+**Update-171 records a different bounded blocker:** the selected 20-file
+earlier window did not reach the direct lightweight GraceKelly CLI node. It
+timed out after 60 seconds in contextual ingestion while importing the real
+Ollama dependency graph; the exact contextual node repeated that timeout alone
+under the same coverage settings. No code/test correction or raw retry
+occurred; the Update-169 full gate remains red and VER-03 stays open. No live
 Grafana import/provisioning, scrape, alert delivery, provider, service, index,
 migration, scheduler, push, or deploy action occurs in this Update. The full
 open/gated truth remains in §1C and §2A/§12.
@@ -76,7 +76,7 @@ open/gated truth remains in §1C and §2A/§12.
 
 | Slice | Last known gate |
 |-------|-----------------|
-| **VER-03 Python 3.13 unit+coverage gate** | adjacent nine-file order band **85 passed / 3 warnings**; direct CLI passed in **4.68s**, so immediate predecessors are ruled out. Fresh full run remains **1839 passed / 1 failed / 15 skipped / 187 warnings** at **77.06%** coverage; no root cause/correction or full-suite-green claim |
+| **VER-03 Python 3.13 unit+coverage gate** | adjacent nine-file band remains green, but the next 20-file earlier window timed out before direct CLI in contextual ingestion; that exact node independently repeated the 60-second coverage timeout. Fresh full run remains **1839 passed / 1 failed / 15 skipped / 187 warnings** at **77.06%** coverage; no root cause/correction or full-suite-green claim |
 | **9.5d3 PipelineRunner streaming execution/deadline owner** | Grok TDD transcript **2 failed → 6 passed**, first focused band **32 passed**; QA follow-up added event-worker and exception-fallback ownership; Codex independent owner/provider-token stream band **7 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d2 PipelineRunner sync execution/deadline owner** | ownership **2 failed / 2 passed → 4 passed**; owner/concurrency/request-timeout/stream-capacity/chat-streaming band **22 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d1 PipelineRunner capacity lifecycle owner** | ownership **2 failed → 2 passed**; pipeline concurrency/stream-capacity/request-timeout/chat-streaming band **20 passed**; Ruff/narrowed MyPy/format/diff/LF/protected hashes green |
@@ -295,7 +295,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-170)
+### 1C. Authoritative open-problem ledger (Update-171)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -335,7 +335,7 @@ override this snapshot.
 |----|--------|----------------------|---------------|
 | **VER-01** | **ENV / BASELINE BLOCKER** | Installed `mypy 2.3.0` / `numpy 2.5.1` differ from locks `1.19.1` / `2.4.4`. QG-03A changed-file Mypy with `--follow-imports=skip` reported 9 pre-existing `typeddict-item` errors outside changed lines; a narrowed run disabling only that code passed. The 9.1c ordinary scoped run likewise reported two pre-existing `no-redef` and three `unused-ignore` errors outside changed lines; disabling only those confirmed codes passed the four changed source files. Full-import checking also stops on unlocked NumPy stubs under target 3.11. | Use a locked environment and reconcile existing type debt separately; do not call full or ordinary changed-file MyPy green. |
 | **VER-02** | **LOCAL-CLOSED** | `3a37fd2` casts the final runtime-guarded callable to `FaultAction`. The exact failure reproduced before the edit; afterward narrowed MyPy passed, 11 lifecycle tests passed, Ruff passed, and package `vectordb` MyPy checked 10 sources under `--follow-imports=skip`. | Do not reopen without a code/environment change. Do not extrapolate this to VER-01, full imports, the repository, locked Python 3.11, or CI. |
-| **VER-03** | **OPEN / FULL GATE RED; ADJACENT ORDER BAND GREEN** | Fresh Python 3.13 full gate remains **1839 passed / 1 failed / 15 skipped / 187 warnings** at **77.06%** coverage. The exact CLI node passes alone, under pytest-cov, and after its immediate nine-file predecessor window (**85 passed** total); two SQLite ResourceWarnings are not a proved cause. | Expand once to a wider bounded predecessor window before any correction. Do not repeat the green adjacent band or unchanged full suite. |
+| **VER-03** | **OPEN / FULL GATE RED; WIDER BAND BLOCKED** | Fresh Python 3.13 full gate remains **1839 passed / 1 failed / 15 skipped / 187 warnings** at **77.06%** coverage. The exact CLI node and adjacent nine-file band pass, but the next earlier window timed out first in contextual ingestion; that exact node repeats the timeout alone under coverage while importing the real categorizer/LLM graph. | Diagnose the contextual test boundary as a distinct slice before resuming order isolation. Do not repeat either timeout command, the green adjacent band, or unchanged full suite. |
 | **VER-04** | **WARNING** | Focused pytest runs emit `StarletteDeprecationWarning` for `httpx` through `starlette.testclient`; assertions still pass. | Track dependency migration separately; warning is not fixed by QG-03A. |
 | **VER-05** | **LOCAL-CLOSED** | `4b0fba7` replaces the stale zero-caller assertion with the exact intentional allowlist `["api/routers/admin_ops.py"]` and renames the test accordingly. The original assert reproduced red; the independent retention/admin band passed 51 tests, scoped Ruff and diff checks passed. | Do not reopen without a new caller or contract change. Whole-file Ruff format debt predates this slice and was not reformatted here. |
 | **VER-06** | **LOCAL-CLOSED** | `356a530` updates the exact stale agentic-injection test to patch `agent.tools.search_kb_docs` and return `(formatted_text, raw_docs)`. The failure reproduced before the edit; afterward the exact test and the 44-test response-safety/agentic band passed. | Do not reopen without another agentic KB boundary change. File-wide formatter debt predates this test-only slice. |
@@ -655,11 +655,12 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 ## 7. Next named candidate
 
 The fresh VER-03 full gate is red only on the direct lightweight GraceKelly CLI
-node. The exact node and its immediate nine-file predecessor window are green.
-The sole next local candidate is one wider bounded predecessor window ending
-before the ruled-out band, with the direct CLI node appended once. Do not repeat
-the green band or whole suite, increase the subprocess timeout speculatively,
-or combine this diagnostic with another implementation item.
+node, but the next earlier order window cannot yet test that hypothesis: it
+times out first in contextual ingestion, and the exact contextual node repeats
+the timeout alone under coverage. The sole next local candidate is a distinct
+diagnosis of that test boundary and its real categorizer/LLM dependency. Do not
+repeat either timed-out command, the green adjacent band, or the whole suite;
+do not increase timeouts speculatively.
 
 Completed lifecycle-owner boundaries are TraceService `9c207b6`,
 EscalationService `03057aa`, IngestionJobService API `84fbdf7`, ingestion worker
@@ -698,7 +699,7 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-170:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-171:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -884,10 +885,10 @@ Never log secret values.
 | Sync pipeline execution has one owner? | **Yes local** (`d865b06`): PipelineRunner owns executor submission, shielded wall deadline, and timeout capacity handoff for sync `/api/ask` |
 | Streaming pipeline execution has one owner? | **Yes local** (`c53f724`): PipelineRunner owns graph/event executor submission, queue and shielded-future deadlines, and timeout capacity handoff; router keeps SSE semantics and compatibility seams |
 | Agentic injection safety test current? | **Yes local** (`356a530`): mock follows `search_kb_docs(text, docs)` and the full safety/agentic band is green |
-| Canonical restart capsule reconciled? | **Yes as of Update-170**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
-| All known open problems indexed? | **Yes in §1C as of Update-170**; Actual Git/new evidence overrides the snapshot |
+| Canonical restart capsule reconciled? | **Yes as of Update-171**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
+| All known open problems indexed? | **Yes in §1C as of Update-171**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Active writer/test process **none**; owned implementation/test WIP **none**; Update-170 handoff files may be dirty until their docs-only commit |
+| WIP / active writer? | Active writer/test process **none**; owned implementation/test WIP **none**; Update-171 handoff files may be dirty until their docs-only commit |
