@@ -1,4 +1,4 @@
-"""Single owner for pipeline capacity and orphan-work lifecycle."""
+"""Single owner for pipeline execution, capacity, and orphan-work lifecycle."""
 
 from __future__ import annotations
 
@@ -13,7 +13,34 @@ logger = logging.getLogger(__name__)
 
 
 class PipelineRunner:
-    """Own semaphore release and orphaned-future capacity handoff."""
+    """Own sync execution deadlines and pipeline-capacity lifecycle."""
+
+    async def run_sync_with_deadline(
+        self,
+        *,
+        executor: Any,
+        operation: Callable[[], Any],
+        timeout: float,
+        semaphore: Any,
+        release_capacity: Callable[[Any], None] | None = None,
+        loop: asyncio.AbstractEventLoop | None = None,
+    ) -> Any:
+        """Run synchronous pipeline work and retain capacity past a timeout."""
+        active_loop = loop or asyncio.get_running_loop()
+        future = active_loop.run_in_executor(executor, operation)
+        try:
+            return await asyncio.wait_for(
+                asyncio.shield(future),
+                timeout=timeout,
+            )
+        except asyncio.TimeoutError:
+            self.hold_capacity_until_future_done(
+                loop=active_loop,
+                fut=future,
+                semaphore=semaphore,
+                release_capacity=release_capacity,
+            )
+            raise
 
     def release_capacity(self, semaphore: Any) -> None:
         """Drop inflight gauge and release the semaphore best-effort."""

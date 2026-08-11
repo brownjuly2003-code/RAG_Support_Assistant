@@ -475,24 +475,17 @@ async def ask(
                 try:
                     from utils.request_executor import get_request_executor
 
-                    loop = asyncio.get_running_loop()
-                    ask_future = loop.run_in_executor(
-                        get_request_executor(),
-                        lambda: session.ask(question, **ask_kwargs),
-                    )
                     try:
-                        result = await asyncio.wait_for(
-                            asyncio.shield(ask_future),
+                        result = await pipeline_runner.run_sync_with_deadline(
+                            executor=get_request_executor(),
+                            operation=lambda: session.ask(question, **ask_kwargs),
                             timeout=timeout,
+                            semaphore=semaphore,
+                            release_capacity=_release_pipeline_capacity,
                         )
                     except asyncio.TimeoutError:
-                        # Keep semaphore + inflight until the orphaned worker ends.
+                        # PipelineRunner keeps semaphore + inflight until worker end.
                         capacity_held_for_orphan = True
-                        _hold_capacity_until_future_done(
-                            loop=loop,
-                            fut=ask_future,
-                            semaphore=semaphore,
-                        )
                         try:
                             prometheus_metrics.record_request_timeout("/api/ask")
                         except Exception:
