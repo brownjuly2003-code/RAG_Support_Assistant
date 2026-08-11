@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-11 (Update-158 TraceService lifecycle owner)
+**Date:** 2026-08-11 (Update-159 VER-07 retention audit tenant contract)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-158**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-159**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-158. Preserve it as DoD input, but use Actual Git + the committed
+> Update-159. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,13 +18,12 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-158:** implementation `9c207b6` makes TraceService the injectable
-single owner of trace start/log/finish and redaction while preserving the
-SQLite module API. Fresh evidence includes focused TDD, a narrowed **34-test**
-adjacent band, final **13 tests**, scoped Ruff/format, and narrowed MyPy. The
-pre-existing `VER-07` retention assertion is recorded separately. No plan
-checkbox or release gate changed. Remaining architecture ownership, live
-scrape/alert delivery, and live/gated work remain explicit in
+**Update-159:** test-contract repair `fd23317` adds the existing default
+`tenant_id` to the stale trace-purge audit expectation without changing
+runtime code. The exact test moved from **1 failed → 1 passed** and the
+adjacent retention/tenant/audit band passed **22 tests**. No plan checkbox or
+release gate changed. Remaining architecture ownership, live scrape/alert
+delivery, and live/gated work remain explicit in
 [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
 
 ---
@@ -357,14 +356,15 @@ retry, scheduler change, index mutation, migration, push, or deploy.
 `--follow-imports=skip`. It changes no plan checkbox and does not establish a
 full repository, locked Python-3.11, CI, or production verification result.
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2f**, **9.3a–9.5a**, VER-06.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2f**, **9.3a–9.5a**, VER-06, or VER-07.
 
 ---
 
-## Last-known verification snapshot (Update-158)
+## Last-known verification snapshot (Update-159)
 
 | Band | Last known |
 |------|------------|
+| **VER-07 retention audit tenant contract** | exact stale assertion **1 failed → 1 passed**; adjacent trace-retention/audit-retention/audit-tenant/tenant-enforcement band **22 passed**; Ruff lint + diff/LF + runtime-diff + protected hashes clean; whole-file formatter debt reproduces on clean `HEAD` |
 | **9.5a TraceService lifecycle owner** | TDD import error → **3 passed**; adjacent **34 passed / 1 pre-existing failed**; narrowed **34 passed / 1 deselected**; final **13 passed**; scoped Ruff/format + narrowed MyPy + diff/LF + protected hashes clean |
 | **9.4a Astro 7 / DEP-01** | independent pytest **5 passed**, one warning; Astro check **0/0/0**; npm audit **0 vulnerabilities**; static build **59 pages** + Pagefind + sitemap; scoped diff/LF + protected hashes clean |
 | **Update-156 transparency** | docs-only Actual Git/Grok/artifact reconciliation; docs quality gate only; no implementation test rerun or new implementation/release evidence |

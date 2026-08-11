@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-11 — **Update-158** (§9.5a TraceService lifecycle owner).
+**Обновлено:** 2026-08-11 — **Update-159** (VER-07 retention audit tenant contract).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-158**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-159**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-158; dirty
+**Не использовать:** старые `START HERE` ниже Update-159; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -28,13 +28,13 @@
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
 | Последний implementation SHA | `9c207b6` — §9.5a TraceService lifecycle owner |
-| Последний committed handoff до Update-158 | `c246fd7` — Update-157 Astro 7 verification; SHA этого docs-коммита всегда брать из Actual Git |
-| Actual Git после implementation | `master...origin/master [ahead 275]` at `9c207b6`; refresh remains mandatory |
-| Что закрыто локально | §9 named telemetry **7/7** + dashboard + Astro 7 / DEP-01 + TraceService lifecycle owner; это не закрывает весь §9 и не означает production ready |
-| Последний implementation gate | TDD import error → **3 passed**; adjacent **34 passed / 1 pre-existing failed**; narrowed **34 passed / 1 deselected**; final **13 passed**; Ruff/format/Mypy/diff/LF green; one known Starlette warning |
-| Известный baseline debt | `VER-07`: stale retention audit expectation omits unchanged tenant field; ordinary MyPy also retains four pre-existing `api/app.py` errors; no full locked-CI claim |
+| Последний committed handoff до Update-159 | `77b4d66` — Update-158 TraceService ownership; SHA этого docs-коммита всегда брать из Actual Git |
+| Actual Git после local slice | `master...origin/master [ahead 277]` at `fd23317`; refresh remains mandatory |
+| Что закрыто локально | §9 named telemetry **7/7** + dashboard + Astro 7 / DEP-01 + TraceService lifecycle owner + VER-07 test contract; это не закрывает весь §9 и не означает production ready |
+| Последний local gate | VER-07 exact **1 failed → 1 passed**; adjacent retention/tenant/audit band **22 passed**; Ruff lint/diff/LF/runtime-diff/protected hashes green; pre-existing whole-file formatter debt unchanged; one known Starlette warning |
+| Известный baseline debt | ordinary MyPy retains four pre-existing `api/app.py` errors and whole-file formatter debt exists in some legacy tests; no full locked-CI claim |
 | Worktree boundary | only four protected tracked owner files are dirty and their hashes match; unrelated untracked artifacts are preserved; implementation WIP/active writer none |
-| Grok route truth | no Grok run occurred in Update-158; the implementation and verification were performed locally by Codex |
+| Grok route truth | no Grok run occurred in Update-159; the repair and verification were performed locally by Codex |
 | Что не запускалось | push, deploy, migration 019–023, Grafana import/provisioning, live service/provider/quality/scrape/alert delivery, scheduler mutation |
 | Что осталось в §9 | architecture ownership beyond TraceService, live scrape/alert delivery |
 | Следующий slice | не выбран; только явный owner request или один documented safe residual |
@@ -48,31 +48,31 @@
 | Latest **committed implementation** | `9c207b6` — §9.5a TraceService lifecycle owner |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** · `eb8466e` **9.1b** · `db65e37` **9.1a** · `80c2603` **QG-03A** · `1304ff4` **QG-02** · `c3ae4f4` **QG-01** · `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen |
-| Latest **committed docs before this Update** | `c246fd7` — Update-157 Astro 7 verification |
+| Latest **committed docs before this Update** | `77b4d66` — Update-158 TraceService ownership |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 275]` at `9c207b6` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-158 docs WIP may remain; otherwise owned WIP **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a TraceService** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** + **HYBRID-MEM env propagation** + **VER-02** + **VER-05** + **VER-06** |
+| Branch advisory | observed `master...origin/master [ahead 277]` at `fd23317` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-159 docs WIP may remain; otherwise owned WIP **none** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a TraceService** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** + **HYBRID-MEM env propagation** + **VER-02** + **VER-05** + **VER-06** + **VER-07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | No implementation slice is preselected. Remaining §9 residuals are architecture ownership beyond TraceService and live scrape/alert delivery; `VER-07` is a separate narrow test-debt candidate |
+| Next ordered | No implementation slice is preselected. Remaining §9 residuals are architecture ownership beyond TraceService and live scrape/alert delivery |
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-158 records committed TraceService ownership:** `9c207b6` adds one
-injectable start/log/finish owner while preserving the SQLite public API and
-PII-redaction contract. Focused TDD, the narrowed adjacent band, final focused
-tests, Ruff/format, narrowed MyPy, diff/LF, and protected hashes are green.
-The unrelated `VER-07` retention assertion remains open. No live Grafana
-import/provisioning, scrape, alert delivery, provider, service, index,
-migration, scheduler, push, or deploy action occurs in this Update.
+**Update-159 records committed VER-07 closure:** `fd23317` aligns the stale
+full audit-call assertion with the existing tenant-aware trace-purge endpoint;
+runtime code is unchanged. Exact red/green evidence and the **22-test**
+adjacent band are green. No live Grafana import/provisioning, scrape, alert
+delivery, provider, service, index, migration, scheduler, push, or deploy
+action occurs in this Update.
 The full open/gated truth remains in §1C and §2A/§12.
 
 **Last known verification:**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **VER-07 retention audit tenant contract** | exact stale assertion **1 failed → 1 passed**; adjacent trace-retention/audit-retention/audit-tenant/tenant-enforcement band **22 passed**; Ruff lint + diff/LF + runtime-diff + protected hashes clean; whole-file formatter debt reproduces on clean `HEAD` |
 | **9.5a TraceService lifecycle owner** | TDD import error → **3 passed**; adjacent **34 passed / 1 pre-existing failed**; narrowed **34 passed / 1 deselected**; final **13 passed**; scoped Ruff/format + narrowed MyPy + diff/LF + protected hashes clean |
 | **9.4a Astro 7 / DEP-01** | independent pytest **5 passed**, one known warning; Astro check **0/0/0**; npm audit **0 vulnerabilities**; static build **59 pages** + Pagefind + sitemap; scoped diff/LF + protected hashes clean |
 | **Update-156 transparency** | docs-only Actual Git/Grok/artifact reconciliation; docs quality gate only; no implementation test rerun or new implementation/release claim |
@@ -369,7 +369,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-158 in AGENT_STATE.md + §0A/§1C in this file
+5. Read ONLY top Update-159 in AGENT_STATE.md + §0A/§1C in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. Do not invent another QG item; QG-01–QG-04 are local-only closures
 8. Select work only from an explicit owner request or a documented ungated residual
@@ -653,7 +653,8 @@ dashboard artifact is locally closed at `1237f3c`; do not reopen it without a
 dashboard-schema or metric-contract change. Astro 7 / DEP-01 is locally closed
 at `cea370b`; do not reopen it without a dependency or advisory change.
 TraceService lifecycle ownership is locally closed at `9c207b6`; do not reopen
-it without a trace lifecycle boundary change.
+it without a trace lifecycle boundary change. VER-07 is locally closed at
+`fd23317`; do not reopen it without a tenant/audit boundary change.
 
 A new paid seed or 3×20 retry needs fresh owner opt-in. Remaining local work
 must come from an explicit owner request or one documented residual selected

@@ -1,5 +1,35 @@
 # Agent State
 
+## 2026-08-11 Update-159 — VER-07 retention audit tenant contract ✅ START HERE
+
+> **Committed test-contract repair:** `fd23317` (`test(tracing): align purge
+> audit tenant contract`) changes exactly the stale trace-retention assertion
+> and its root plan artifact. Runtime source files are unchanged. Actual Git
+> after the commit was `master...origin/master [ahead 277]`; active writer
+> **none**, implementation WIP **none**, and protected owner-file hashes match.
+>
+> **Contract:** the existing admin trace-purge endpoint records the resolved
+> tenant through `tenant_id`; the full captured audit-call expectation now
+> includes the default tenant instead of asserting the pre-tenant payload.
+>
+> **Fresh evidence:** the exact regression reproduced **1 failed** with only
+> `tenant_id='default'` differing, then passed **1 test**. The adjacent
+> trace-retention/audit-retention/audit-tenant/tenant-enforcement band passed
+> **22 tests**. Ruff lint, diff/LF, runtime-diff, staged-path, and protected-hash
+> gates passed; file-wide Ruff formatter debt reproduces on clean `HEAD` and
+> was not expanded. One known Starlette warning remains.
+>
+> **Scope honesty:** this closes only local verification debt **VER-07**. It
+> does not change trace purge behavior, close §9, or provide live scrape,
+> alert-delivery, service, migration, provider, scheduler, push, or deploy
+> evidence. Remaining §9 residuals are architecture ownership beyond
+> TraceService and live scrape/alert delivery.
+>
+> **Next-session route:** refresh Actual Git, then read only this block and
+> `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. Do not re-select VER-07 without
+> a tenant/audit boundary change. Choose at most one explicit owner request or
+> documented safe residual.
+
 ## 2026-08-11 Update-158 — §9.5a TraceService lifecycle owner ✅ START HERE
 
 > **Committed implementation:** `9c207b6` (`refactor(tracing): centralize
