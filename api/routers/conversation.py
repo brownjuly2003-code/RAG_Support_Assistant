@@ -20,6 +20,7 @@ from api.correlation import get_current_tenant, get_request_id
 from api.rate_limit import limiter
 from auth.dependencies import get_current_user
 from monitoring import prometheus as prometheus_metrics
+from services.pipeline import pipeline_runner
 from utils.background_tasks import spawn_tracked
 
 router = APIRouter()
@@ -31,14 +32,7 @@ _TERMINAL_ESCALATE_ROUTES = frozenset({"human", "error", "error_escalation"})
 
 def _release_pipeline_capacity(semaphore: Any) -> None:
     """Drop inflight gauge + release the pipeline semaphore (best-effort)."""
-    try:
-        prometheus_metrics.INFLIGHT_PIPELINES.dec()
-    except Exception:
-        pass
-    try:
-        semaphore.release()
-    except Exception:
-        pass
+    pipeline_runner.release_capacity(semaphore)
 
 
 def _hold_capacity_until_future_done(
@@ -48,21 +42,11 @@ def _hold_capacity_until_future_done(
     semaphore: Any,
 ) -> None:
     """Keep pipeline capacity until a thread-pool future finishes (3.1a / 3.1f)."""
-
-    try:
-        prometheus_metrics.record_orphan_work_started()
-    except Exception:
-        logger.debug("Orphan work start metric failed", exc_info=True)
-
-    def _on_done(_fut: Any) -> None:
-        try:
-            prometheus_metrics.record_orphan_work_finished()
-        except Exception:
-            logger.debug("Orphan work finish metric failed", exc_info=True)
-        _release_pipeline_capacity(semaphore)
-
-    fut.add_done_callback(
-        lambda done: loop.call_soon_threadsafe(_on_done, done)
+    pipeline_runner.hold_capacity_until_future_done(
+        loop=loop,
+        fut=fut,
+        semaphore=semaphore,
+        release_capacity=_release_pipeline_capacity,
     )
 
 
