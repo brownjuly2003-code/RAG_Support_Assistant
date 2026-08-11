@@ -1,5 +1,6 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
+import { unified } from '@astrojs/markdown-remark';
 import starlight from '@astrojs/starlight';
 import rehypeMermaid from 'rehype-mermaid';
 
@@ -68,9 +69,14 @@ const headTags = [
 export default defineConfig({
   site: 'https://brownjuly2003-code.github.io',
   base: '/RAG_Support_Assistant',
+  // Preserve Astro 6 whitespace compression semantics (Astro 7 default changed).
+  compressHTML: true,
   markdown: {
+    // Astro 7: pass remark/rehype plugins via unified({...}), not markdown.*.
+    processor: unified({
+      rehypePlugins: [[rehypeMermaid, { strategy: 'inline-svg' }]],
+    }),
     syntaxHighlight: { type: 'shiki', excludeLangs: ['mermaid'] },
-    rehypePlugins: [[rehypeMermaid, { strategy: 'inline-svg' }]],
   },
   integrations: [
     starlight({

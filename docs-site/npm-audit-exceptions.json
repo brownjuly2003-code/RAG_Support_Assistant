@@ -1,51 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-08-07",
-  "notes": "Plan DEP-01: residual moderate/low only after 2026-08-07 lock refresh. No high/critical remain. Each entry is a dated reachability exception; expire forces re-audit.",
-  "exceptions": [
-    {
-      "package": "astro",
-      "max_severity": "moderate",
-      "advisories": [
-        "GHSA-4g3v-8h47-v7g6",
-        "GHSA-f48w-9m4c-m7f5",
-        "GHSA-7pw4-f3q4-r2p2"
-      ],
-      "reason": "Deployed artifact is fully static GitHub Pages (HTML/CSS/JS). Remaining Astro advisories target view transitions / hydrated islands / SSR-style rendering paths; production fix requires Astro 7 major (breaking for Starlight 0.39). Revisit on Starlight Astro-7 support.",
-      "expires": "2026-11-07",
-      "owner": "docs-site"
-    },
-    {
-      "package": "@astrojs/mdx",
-      "max_severity": "moderate",
-      "advisories": [],
-      "reason": "Transitive of Starlight; severity inherited from Astro 6.x tree only (no independent high advisory after lock refresh).",
-      "expires": "2026-11-07",
-      "owner": "docs-site"
-    },
-    {
-      "package": "@astrojs/starlight",
-      "max_severity": "moderate",
-      "advisories": [],
-      "reason": "Docs theme; inherits Astro 6 residual moderates only. No independent high after lock refresh.",
-      "expires": "2026-11-07",
-      "owner": "docs-site"
-    },
-    {
-      "package": "astro-expressive-code",
-      "max_severity": "moderate",
-      "advisories": [],
-      "reason": "Build-time code-block plugin under Starlight; inherits Astro residual only.",
-      "expires": "2026-11-07",
-      "owner": "docs-site"
-    },
-    {
-      "package": "esbuild",
-      "max_severity": "low",
-      "advisories": ["GHSA-g7r4-m6w7-qqqr"],
-      "reason": "Windows dev-server arbitrary file read. CI/Pages path uses production build, not `astro dev` esbuild serve. Fix pulls Astro 7 major.",
-      "expires": "2026-11-07",
-      "owner": "docs-site"
-    }
-  ]
+  "updated": "2026-08-11",
+  "notes": "Plan DEP-01: after Astro 7.2 / Starlight 0.41 lock refresh (2026-08-11), npm audit reports zero residual advisories. Empty exceptions list is intentional; re-audit forces new dated entries if any low/moderate returns.",
+  "exceptions": []
 }
