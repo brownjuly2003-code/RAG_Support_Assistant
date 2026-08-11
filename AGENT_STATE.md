@@ -1,5 +1,38 @@
 # Agent State
 
+## 2026-08-11 Update-163 — §9.5d1 PipelineRunner capacity lifecycle owner ✅ START HERE
+
+> **Committed implementation:** `aefcf20` (`refactor(pipeline): centralize
+> capacity lifecycle`) introduces `PipelineRunner` as the owner of pipeline
+> semaphore release and orphan-future capacity handoff. Existing conversation
+> helper names remain thin compatibility wrappers, including their monkeypatch
+> seam. Actual Git is `master...origin/master [ahead 285]`; active writer
+> **none** and implementation WIP **none**.
+>
+> **Fresh evidence:** the direct ownership contract reproduced **2 failed → 2
+> passed**. The pipeline concurrency/stream-capacity/request-timeout/chat-
+> streaming band passed **20 tests**. Scoped Ruff, narrowed MyPy, new-source
+> format, diff/LF, staged-path, and protected-hash gates passed. Ordinary MyPy
+> still reports the two pre-existing `no-redef` findings at unchanged
+> `conversation.py` lines 1380 and 1417; one known Starlette warning remains.
+>
+> **Scope honesty:** this slice owns only capacity release and orphan-future
+> completion bookkeeping. Ask, SSE, deadline, persistence, executor, and
+> pipeline execution semantics are unchanged. Broader `PipelineRunner`
+> execution/deadline ownership remains a separate residual. `SessionService`
+> remains gated by the multi-replica SLA decision; live scrape/alert delivery
+> and other documented plan gates remain open.
+>
+> **Workspace boundary:** protected tracked owner files `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` retain their
+> durable SHA-256 values. Unrelated untracked artifacts remain preserved. No
+> live action, migration, scheduler mutation, push, or deploy occurred.
+>
+> **Next-session route:** refresh Actual Git and choose at most one explicit
+> documented residual. Do not reopen pipeline capacity ownership without a
+> changed boundary; do not infer authority for multi-replica sessions, live
+> services, push, or deploy.
+
 ## 2026-08-11 Update-162 — §9.5c2 ingestion worker lifecycle owner ✅ START HERE
 
 > **Committed implementation:** `890155a` (`refactor(ingestion): centralize
