@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-11 (Update-160 next-session transparency)
+**Date:** 2026-08-11 (Update-165 canonical next-session transparency)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-160**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-165**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-160. Preserve it as DoD input, but use Actual Git + the committed
+> Update-165. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,11 +18,12 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-160:** docs-only reconciliation records runtime implementation
-`9c207b6`, local VER-07 closure `fd23317`, committed handoff `e7fba57`, and
-Actual Git `master...origin/master [ahead 278]`. No plan checkbox, runtime,
-test result, or release gate changed. Remaining architecture ownership, live
-scrape/alert delivery, and live/gated work remain explicit in
+**Update-165:** docs-only reconciliation records latest runtime implementation
+`d865b06`, committed handoff `a0035bc`, completed lifecycle-owner slices
+through §9.5d2, and Actual Git `master...origin/master [ahead 288]`. No plan
+checkbox, runtime, test result, or release gate changed. Remaining streaming
+pipeline ownership, SLA-gated sessions, live scrape/alert delivery, and other
+live/gated work remain explicit in
 [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
 
 ---
@@ -39,7 +40,7 @@ scrape/alert delivery, and live/gated work remain explicit in
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
-| **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5a local** | OPEN (remaining architecture ownership, live alert delivery) | soft |
+| **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5d2 owner slices local** | OPEN (streaming pipeline owner, SLA-gated sessions, live alert delivery) | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
 **Project / production release: NOT claimed.**
@@ -314,9 +315,16 @@ Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 | **9.3a** | **done local** | `1237f3c` | a portable `DS_PROMETHEUS` dashboard gives each named signal one non-overlapping panel, preserves bounded/adaptive PromQL and zero-target semantics, and is guarded by offline JSON contract tests |
 | **9.4a** | **done local** | `cea370b` | Astro 7.2 / Starlight 0.41 retain the unified Mermaid pipeline and prior whitespace behavior; dependency audit is zero with an empty validated exception register |
 | **9.5a** | **done local** | `9c207b6` | TraceService is the injectable single owner of start/log/finish and pre-persistence redaction; SQLite module-level signatures remain compatible |
+| **9.5b** | **done local** | `03057aa` | EscalationService owns durable ticket creation and inbox/outbox delivery lifecycle while preserving module-level compatibility |
+| **9.5c1** | **done local** | `84fbdf7` | IngestionJobService owns the nine API-side durable enqueue/status operations with unchanged module-level signatures |
+| **9.5c2** | **done local** | `890155a` | IngestionJobService owns worker require/claim/heartbeat/completed-CAS/failed-CAS entry points without changing lease or terminal semantics |
+| **9.5d1** | **done local** | `aefcf20` | PipelineRunner owns pipeline capacity release and orphan-future completion handoff; router helpers remain compatibility seams |
+| **9.5d2** | **done local** | `d865b06` | PipelineRunner owns sync `/api/ask` executor submission, shielded deadline, and timeout transfer to orphan-capacity lifecycle |
 
-**Residual:** architecture ownership beyond TraceService. No live Redis, Grafana import,
-metric-scrape, or alert-delivery evidence exists.
+**Residual:** streaming graph submission/deadline ownership remains outside
+PipelineRunner; SessionService remains deferred pending a multi-replica
+SLA/consistency decision. No live Redis, Grafana import, metric-scrape, or
+alert-delivery evidence exists.
 
 ---
 
@@ -355,14 +363,19 @@ retry, scheduler change, index mutation, migration, push, or deploy.
 `--follow-imports=skip`. It changes no plan checkbox and does not establish a
 full repository, locked Python-3.11, CI, or production verification result.
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2f**, **9.3a–9.5a**, VER-06, or VER-07.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2f**, **9.3a–9.5d2 completed slices**, VER-06, or VER-07 without a changed boundary.
 
 ---
 
-## Last-known verification snapshot (Update-159)
+## Last-known verification snapshot (Update-165)
 
 | Band | Last known |
 |------|------------|
+| **9.5d2 PipelineRunner sync execution/deadline owner** | ownership **2 failed / 2 passed → 4 passed**; owner/concurrency/request-timeout/stream-capacity/chat-streaming band **22 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
+| **9.5d1 PipelineRunner capacity lifecycle owner** | ownership **2 failed → 2 passed**; pipeline concurrency/stream-capacity/request-timeout/chat-streaming band **20 passed**; Ruff/narrowed MyPy/format/diff/LF/protected hashes green |
+| **9.5c2 IngestionJobService worker owner** | ownership **1 failed → 1 passed**; job-contract/liveness/worker/outage/duplicate-claim band **111 passed**; static/signature/boundary gates green |
+| **9.5c1 IngestionJobService API owner** | ownership **1 failed → 1 passed**; job-contract/upload-idempotency band **73 passed**; scoped static/boundary gates green |
+| **9.5b EscalationService lifecycle owner** | ownership **1 failed → 1 passed**; focused escalation band **32 passed**; scoped static/boundary gates green |
 | **VER-07 retention audit tenant contract** | exact stale assertion **1 failed → 1 passed**; adjacent trace-retention/audit-retention/audit-tenant/tenant-enforcement band **22 passed**; Ruff lint + diff/LF + runtime-diff + protected hashes clean; whole-file formatter debt reproduces on clean `HEAD` |
 | **9.5a TraceService lifecycle owner** | TDD import error → **3 passed**; adjacent **34 passed / 1 pre-existing failed**; narrowed **34 passed / 1 deselected**; final **13 passed**; scoped Ruff/format + narrowed MyPy + diff/LF + protected hashes clean |
 | **9.4a Astro 7 / DEP-01** | independent pytest **5 passed**, one warning; Astro check **0/0/0**; npm audit **0 vulnerabilities**; static build **59 pages** + Pagefind + sitemap; scoped diff/LF + protected hashes clean |

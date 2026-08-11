@@ -1,5 +1,44 @@
 # Agent State
 
+## 2026-08-11 Update-165 — canonical next-session transparency ✅ START HERE
+
+> **Actual committed state before this docs-only reconciliation:** latest
+> implementation is `d865b06` (`refactor(pipeline): centralize sync execution
+> deadline`), latest committed handoff is `a0035bc` (`docs: record sync
+> pipeline execution ownership`), and Git is
+> `master...origin/master [ahead 288]`. Active writer **none** and owned
+> implementation WIP **none**.
+>
+> **Locally closed lifecycle owners:** `TraceService` (`9c207b6`),
+> `EscalationService` (`03057aa`), API-side and worker-side
+> `IngestionJobService` (`84fbdf7`, `890155a`), plus `PipelineRunner` capacity
+> and sync `/api/ask` execution/deadline ownership (`aefcf20`, `d865b06`).
+> Public/module compatibility seams and request behavior remain preserved.
+>
+> **Fresh evidence carried forward:** the latest PipelineRunner contract
+> reproduced **2 failed / 2 passed → 4 passed**; its focused regression band
+> passed **22 tests**, and Update-164 docs passed **13 tests**. Earlier owner
+> bands passed 32 escalation, 73 ingestion API, 111 ingestion worker, and 20
+> pipeline-capacity tests. This reconciliation changes documentation only and
+> adds no runtime, full-suite, locked-CI, live, or production claim.
+>
+> **Honest residual:** streaming graph submission/deadline ownership remains a
+> separate `PipelineRunner` slice. `SessionService` remains deferred pending a
+> multi-replica SLA/consistency decision. Live scrape/alert delivery, migrations
+> 019–023, live quality ×3, release gates, §10, push, and deploy remain open or
+> explicitly gated. Do not reopen completed lifecycle owners without a changed
+> boundary.
+>
+> **Workspace boundary:** protected dirty tracked files `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` retain their
+> recorded SHA-256 values; unrelated untracked artifacts remain preserved. No
+> Grok run, live action, migration, scheduler mutation, push, or deploy occurs
+> in this reconciliation.
+>
+> **Next-session route:** Actual Git first, then this block and
+> `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. Choose at most one explicit local
+> residual. No implementation item is preselected.
+
 ## 2026-08-11 Update-164 — §9.5d2 PipelineRunner sync execution owner ✅ START HERE
 
 > **Committed implementation:** `d865b06` (`refactor(pipeline): centralize
