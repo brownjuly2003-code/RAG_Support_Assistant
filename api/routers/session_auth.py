@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from api._shared import app_module as _app_module
+from api._shared import tenant_access_allowed
 from api.rate_limit import limiter
 from auth.dependencies import require_role
 from monitoring import prometheus as prometheus_metrics
@@ -311,7 +312,11 @@ async def get_session_history(
             session_tenant = session._tenant_id
         elif isinstance(session, dict):
             session_tenant = session.get("tenant_id") or session.get("_tenant_id")
-        if session_tenant is not None and session_tenant != user_tenant:
+        if session_tenant is not None and not tenant_access_allowed(
+            session_tenant,
+            user_tenant,
+            "session",
+        ):
             raise HTTPException(status_code=404, detail="Session not found")
 
         if hasattr(session, "history"):
@@ -409,7 +414,11 @@ async def clear_session(
         elif isinstance(session, dict):
             session_tenant = session.get("tenant_id") or session.get("_tenant_id")
         # Tenant isolation: in-memory session must belong to caller's tenant.
-        if session_tenant is None or session_tenant == user_tenant:
+        if session_tenant is None or tenant_access_allowed(
+            session_tenant,
+            user_tenant,
+            "session",
+        ):
             if hasattr(session, "clear"):
                 session.clear()
             del _app._sessions[session_id]

@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy import text as sql_text
 
 from api._shared import app_module as _app_module
+from api._shared import tenant_access_allowed
 from api.correlation import get_current_tenant
 from auth.dependencies import require_role
 from db import engine as _db_engine
@@ -343,7 +344,11 @@ async def admin_update_kb_draft(
     tenant = _user.get("tenant") or get_current_tenant() or "default"
     async with _async_session() as db:
         draft = await db.get(KbDraft, uuid.UUID(draft_id))
-        if draft is None or draft.tenant_id != tenant:
+        if draft is None or not tenant_access_allowed(
+            draft.tenant_id,
+            tenant,
+            "kb_draft",
+        ):
             raise HTTPException(status_code=404, detail="draft not found")
         if draft.status != "pending":
             raise HTTPException(status_code=409, detail="draft is immutable")
@@ -362,7 +367,11 @@ async def admin_reject_kb_draft(
     tenant = _user.get("tenant") or get_current_tenant() or "default"
     async with _async_session() as db:
         draft = await db.get(KbDraft, uuid.UUID(draft_id))
-        if draft is None or draft.tenant_id != tenant:
+        if draft is None or not tenant_access_allowed(
+            draft.tenant_id,
+            tenant,
+            "kb_draft",
+        ):
             raise HTTPException(status_code=404, detail="draft not found")
         if draft.status != "pending":
             raise HTTPException(status_code=409, detail="draft is immutable")
@@ -385,7 +394,11 @@ async def admin_publish_kb_draft(
     tenant = _user.get("tenant") or get_current_tenant() or "default"
     async with _async_session() as db:
         draft = await db.get(KbDraft, uuid.UUID(draft_id))
-        if draft is None or draft.tenant_id != tenant:
+        if draft is None or not tenant_access_allowed(
+            draft.tenant_id,
+            tenant,
+            "kb_draft",
+        ):
             raise HTTPException(status_code=404, detail="draft not found")
         if draft.status != "pending":
             raise HTTPException(status_code=409, detail="draft is immutable")

@@ -52,6 +52,7 @@ from cache.redis_cache import (
     cache_json_get as _cache_json_get,
     cache_json_set,
 )
+from api._shared import record_tenant_access_denial, tenant_access_allowed
 from api.rate_limit import RateLimitExceeded, _rate_limit_rejected, limiter
 from db.audit import log_audit  # re-exported as api.app.log_audit for late-binding by routers  # noqa: F401
 from monitoring import prometheus as prometheus_metrics
@@ -1014,6 +1015,7 @@ async def _get_or_create_session(
                         timeout=db_timeout,
                     )
                     if exists_result.scalar_one_or_none() is not None:
+                        record_tenant_access_denial("session")
                         raise HTTPException(
                             status_code=404,
                             detail="Session not found",
@@ -1068,7 +1070,11 @@ async def _get_or_create_session(
     existing_session = _session_llm_state.get(session_id)
     if existing_session is not None:
         owner = _session_owner_tenant(existing_session)
-        if owner is not None and owner != tenant_id:
+        if owner is not None and not tenant_access_allowed(
+            owner,
+            tenant_id,
+            "session",
+        ):
             # Never replace or mutate a foreign in-memory session.
             raise HTTPException(status_code=404, detail="Session not found")
 

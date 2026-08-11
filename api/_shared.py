@@ -34,6 +34,26 @@ def app_module() -> Any:
     return _app
 
 
+def record_tenant_access_denial(resource: str) -> None:
+    """Record a confirmed ownership mismatch without affecting access control."""
+    try:
+        prometheus_metrics.record_tenant_access_denial(resource)
+    except Exception:
+        pass
+
+
+def tenant_access_allowed(
+    owner_tenant: str | None,
+    current_tenant: str,
+    resource: str,
+) -> bool:
+    """Return False and record once only for a confirmed tenant mismatch."""
+    if owner_tenant is None or owner_tenant == current_tenant:
+        return True
+    record_tenant_access_denial(resource)
+    return False
+
+
 def _review_queue_enabled() -> bool:
     return bool(getattr(get_settings(), "review_queue_enabled", True))
 

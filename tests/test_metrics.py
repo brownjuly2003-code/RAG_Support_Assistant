@@ -231,6 +231,37 @@ def test_orphan_work_gauge_tracks_current_workers_without_labels() -> None:
     assert _metric_value(after, "rag_orphan_work_inflight") == before_value
 
 
+def test_tenant_access_denial_metric_has_bounded_resource_labels() -> None:
+    before = prometheus_metrics.generate_latest(prometheus_metrics.REGISTRY).decode()
+    expected_resources = ("session", "ticket", "kb_draft", "unknown")
+    before_values = {
+        resource: _metric_value(
+            before,
+            "rag_tenant_access_denials_total",
+            f'resource="{resource}"',
+        )
+        or 0.0
+        for resource in expected_resources
+    }
+
+    for resource in ("session", "ticket", "kb_draft", "unexpected"):
+        prometheus_metrics.record_tenant_access_denial(resource)
+
+    after = prometheus_metrics.generate_latest(prometheus_metrics.REGISTRY).decode()
+    for resource in expected_resources:
+        assert (
+            _metric_value(
+                after,
+                "rag_tenant_access_denials_total",
+                f'resource="{resource}"',
+            )
+            == before_values[resource] + 1.0
+        )
+    assert "tenant_id=" not in "\n".join(
+        line for line in after.splitlines() if "rag_tenant_access_denials" in line
+    )
+
+
 def test_metrics_returns_200(client: TestClient) -> None:
     with patch("tracing.sqlite_trace.get_metrics_snapshot", return_value=MOCK_SNAPSHOT):
         response = client.get("/api/metrics")

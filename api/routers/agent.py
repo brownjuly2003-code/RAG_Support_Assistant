@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from api._shared import app_module as _app_module
+from api._shared import tenant_access_allowed
 from api.correlation import get_current_tenant
 from auth.dependencies import require_role
 from db import engine as _db_engine
@@ -255,7 +256,11 @@ async def agent_get_ticket(
 
     async with _async_session() as db:
         ticket = await db.get(EscalatedTicket, ticket_uuid)
-        if ticket is None or ticket.tenant_id != tenant:
+        if ticket is None or not tenant_access_allowed(
+            ticket.tenant_id,
+            tenant,
+            "ticket",
+        ):
             raise HTTPException(status_code=404, detail="ticket not found")
 
         messages: list[dict[str, str | None]] = []
@@ -338,7 +343,11 @@ async def agent_respond_to_ticket(
 
     async with _async_session() as db:
         ticket = await db.get(EscalatedTicket, ticket_uuid)
-        if ticket is None or ticket.tenant_id != tenant:
+        if ticket is None or not tenant_access_allowed(
+            ticket.tenant_id,
+            tenant,
+            "ticket",
+        ):
             raise HTTPException(status_code=404, detail="ticket not found")
 
         ticket.operator_response = body.response.strip()
@@ -386,7 +395,11 @@ async def agent_similar_tickets(
 
     async with _async_session() as db:
         ticket = await db.get(EscalatedTicket, ticket_uuid)
-        if ticket is None or ticket.tenant_id != tenant:
+        if ticket is None or not tenant_access_allowed(
+            ticket.tenant_id,
+            tenant,
+            "ticket",
+        ):
             raise HTTPException(status_code=404, detail="ticket not found")
 
         result = await db.execute(

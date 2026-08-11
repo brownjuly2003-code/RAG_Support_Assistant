@@ -176,6 +176,25 @@ def test_orphan_work_stuck_alert_contract(rules_doc: dict) -> None:
     assert "{" not in expression
 
 
+def test_tenant_access_denied_alert_contract(rules_doc: dict) -> None:
+    alerts = {
+        rule["alert"]: rule
+        for group in rules_doc["groups"]
+        for rule in group["rules"]
+        if "alert" in rule
+    }
+
+    rule = alerts["TenantAccessDenied"]
+    expression = str(rule["expr"])
+    assert "rag_tenant_access_denials_total" in expression
+    assert "increase" in expression
+    assert "[5m]" in expression
+    assert "> 0" in expression
+    assert "tenant" not in expression.replace("rag_tenant_access_denials_total", "")
+    assert rule["for"] == "30s"
+    assert rule["labels"] == {"severity": "warning", "component": "auth"}
+
+
 def _flatten_exprs(rules_doc: dict) -> str:
     """Concat all `expr:` strings for regex scanning."""
     out: list[str] = []

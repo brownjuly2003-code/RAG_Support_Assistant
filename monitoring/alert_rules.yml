@@ -64,6 +64,22 @@ groups:
             Check audit_log for action="login_failed" and consider
             temporary IP-level blocks at the edge.
 
+      - alert: TenantAccessDenied
+        expr: |
+          sum by (resource) (
+            increase(rag_tenant_access_denials_total[5m])
+          ) > 0
+        for: 30s
+        labels:
+          severity: warning
+          component: auth
+        annotations:
+          summary: "Confirmed cross-tenant access denied"
+          description: |
+            At least one authenticated request attempted to access a resource
+            owned by another tenant in the last five minutes. Investigate the
+            resource type without exposing tenant or resource identifiers.
+
   - name: rag-health
     interval: 30s
     rules:

@@ -56,6 +56,7 @@ __all__ = [
     "REQUEST_TIMEOUTS",
     "SAFETY_BLOCKS_TOTAL",
     "STALE_IMPORTANT_DOCS",
+    "TENANT_ACCESS_DENIALS_TOTAL",
     "TRACES_PURGED",
     "INFLIGHT_PIPELINES",
     "ORPHAN_WORK_INFLIGHT",
@@ -92,6 +93,7 @@ __all__ = [
     "record_orphan_work_finished",
     "record_orphan_work_started",
     "record_safety_block",
+    "record_tenant_access_denial",
     "set_review_queue_confirmed",
     "set_review_queue_oldest_pending",
     "set_review_queue_pending",
@@ -156,6 +158,7 @@ if TYPE_CHECKING:
     REGRESSION_RUNS_TOTAL: _CounterT
     REQUEST_TIMEOUTS: _CounterT
     SAFETY_BLOCKS_TOTAL: _CounterT
+    TENANT_ACCESS_DENIALS_TOTAL: _CounterT
     PIPELINE_REJECTIONS: _CounterT
     LLM_CACHE_HITS: _CounterT
     LLM_CACHE_MISSES: _CounterT
@@ -248,6 +251,7 @@ except ImportError:
     INGESTION_QUEUE_OLDEST_SECONDS = _NoopMetric()
     REQUEST_TIMEOUTS = _NoopMetric()
     SAFETY_BLOCKS_TOTAL = _NoopMetric()
+    TENANT_ACCESS_DENIALS_TOTAL = _NoopMetric()
     STALE_IMPORTANT_DOCS = _NoopMetric()
     INFLIGHT_PIPELINES = _NoopMetric()
     ORPHAN_WORK_INFLIGHT = _NoopMetric()
@@ -345,6 +349,13 @@ else:
         "rag_safety_blocks_total",
         "Pre-response safety interventions by applied action",
         ["action"],
+        registry=REGISTRY,
+    )
+
+    TENANT_ACCESS_DENIALS_TOTAL = Counter(
+        "rag_tenant_access_denials_total",
+        "Confirmed cross-tenant ownership denials by resource type",
+        ["resource"],
         registry=REGISTRY,
     )
 
@@ -663,12 +674,15 @@ else:
         ESCALATION_DELIVERY_TOTAL.labels(outcome=_outcome).inc(0)
     for _action in ("redact", "refuse", "unknown"):
         SAFETY_BLOCKS_TOTAL.labels(action=_action).inc(0)
+    for _resource in ("session", "ticket", "kb_draft", "unknown"):
+        TENANT_ACCESS_DENIALS_TOTAL.labels(resource=_resource).inc(0)
 
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
 _INDEX_LIFECYCLE_OPERATIONS = frozenset({"publish", "retention"})
 _ESCALATION_DELIVERY_OUTCOMES = frozenset({"delivered", "failed"})
 _SAFETY_BLOCK_ACTIONS = frozenset({"redact", "refuse"})
+_TENANT_ACCESS_RESOURCES = frozenset({"session", "ticket", "kb_draft"})
 
 
 def record_component_health(component: str, status: str) -> None:
@@ -729,6 +743,13 @@ def record_safety_block(action: str) -> None:
     if normalized not in _SAFETY_BLOCK_ACTIONS:
         normalized = "unknown"
     SAFETY_BLOCKS_TOTAL.labels(action=normalized).inc()
+
+
+def record_tenant_access_denial(resource: str) -> None:
+    normalized = str(resource or "").strip().lower()
+    if normalized not in _TENANT_ACCESS_RESOURCES:
+        normalized = "unknown"
+    TENANT_ACCESS_DENIALS_TOTAL.labels(resource=normalized).inc()
 
 
 def record_llm_cost(provider: str, model: str, tenant: str, cost_usd: float) -> None:
