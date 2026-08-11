@@ -1,5 +1,41 @@
 # Agent State
 
+## 2026-08-11 Update-164 — §9.5d2 PipelineRunner sync execution owner ✅ START HERE
+
+> **Committed implementation:** `d865b06` (`refactor(pipeline): centralize
+> sync execution deadline`) makes `PipelineRunner.run_sync_with_deadline` the
+> single owner of sync `/api/ask` executor submission, shielded wall deadline,
+> and timeout handoff to orphan-capacity lifecycle. HTTP 504 mapping, timeout
+> metric/logging, response shaping, and the existing capacity compatibility
+> wrappers remain in the conversation router. Actual Git after implementation
+> is `master...origin/master [ahead 287]`; active writer **none** and
+> implementation WIP **none**.
+>
+> **Fresh evidence:** the ownership contract reproduced **2 failed / 2 passed
+> → 4 passed**. The owner/concurrency/request-timeout/stream-capacity/chat-
+> streaming band passed **22 tests**. Scoped Ruff, source format, service MyPy,
+> router MyPy with only the two known pre-existing `no-redef` findings disabled,
+> diff/LF, staged-path, and protected-hash gates passed; one known Starlette
+> warning remains.
+>
+> **Scope honesty:** this slice moves only sync `/api/ask` execution/deadline
+> ownership. Request semantics, semaphore acquisition, cache, persistence,
+> escalation, SSE, and streaming execution are unchanged. Streaming graph
+> submission/deadline ownership remains a separate `PipelineRunner` residual.
+> `SessionService` remains gated by the multi-replica SLA decision; live
+> scrape/alert delivery and other documented plan gates remain open.
+>
+> **Workspace boundary:** protected tracked owner files `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` retain their
+> durable SHA-256 values. Unrelated untracked artifacts remain preserved. Grok
+> was not used for this narrow local slice. No live action, migration, scheduler
+> mutation, push, or deploy occurred.
+>
+> **Next-session route:** refresh Actual Git and choose at most one explicit
+> documented residual. Do not reopen sync execution or capacity ownership
+> without a changed boundary; do not infer authority for multi-replica
+> sessions, live services, push, or deploy.
+
 ## 2026-08-11 Update-163 — §9.5d1 PipelineRunner capacity lifecycle owner ✅ START HERE
 
 > **Committed implementation:** `aefcf20` (`refactor(pipeline): centralize
