@@ -54,6 +54,7 @@ __all__ = [
     "REQUEST_COUNT",
     "REQUEST_DURATION",
     "REQUEST_TIMEOUTS",
+    "SAFETY_BLOCKS_TOTAL",
     "STALE_IMPORTANT_DOCS",
     "TRACES_PURGED",
     "INFLIGHT_PIPELINES",
@@ -87,6 +88,7 @@ __all__ = [
     "record_regression_run",
     "record_rate_limit_rejection",
     "record_request_timeout",
+    "record_safety_block",
     "set_review_queue_confirmed",
     "set_review_queue_oldest_pending",
     "set_review_queue_pending",
@@ -150,6 +152,7 @@ if TYPE_CHECKING:
     RATE_LIMIT_REJECTIONS: _CounterT
     REGRESSION_RUNS_TOTAL: _CounterT
     REQUEST_TIMEOUTS: _CounterT
+    SAFETY_BLOCKS_TOTAL: _CounterT
     PIPELINE_REJECTIONS: _CounterT
     LLM_CACHE_HITS: _CounterT
     LLM_CACHE_MISSES: _CounterT
@@ -240,6 +243,7 @@ except ImportError:
     REVIEW_QUEUE_OLDEST_PENDING_SECONDS = _NoopMetric()
     INGESTION_QUEUE_OLDEST_SECONDS = _NoopMetric()
     REQUEST_TIMEOUTS = _NoopMetric()
+    SAFETY_BLOCKS_TOTAL = _NoopMetric()
     STALE_IMPORTANT_DOCS = _NoopMetric()
     INFLIGHT_PIPELINES = _NoopMetric()
     PIPELINE_REJECTIONS = _NoopMetric()
@@ -329,6 +333,13 @@ else:
         "rag_escalation_delivery_total",
         "Escalation inbox delivery attempts by final outcome",
         ["outcome"],
+        registry=REGISTRY,
+    )
+
+    SAFETY_BLOCKS_TOTAL = Counter(
+        "rag_safety_blocks_total",
+        "Pre-response safety interventions by applied action",
+        ["action"],
         registry=REGISTRY,
     )
 
@@ -639,11 +650,14 @@ else:
         AUTO_RESPONSES_TOTAL.labels(verification=_verification).inc(0)
     for _outcome in ("delivered", "failed", "unknown"):
         ESCALATION_DELIVERY_TOTAL.labels(outcome=_outcome).inc(0)
+    for _action in ("redact", "refuse", "unknown"):
+        SAFETY_BLOCKS_TOTAL.labels(action=_action).inc(0)
 
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
 _INDEX_LIFECYCLE_OPERATIONS = frozenset({"publish", "retention"})
 _ESCALATION_DELIVERY_OUTCOMES = frozenset({"delivered", "failed"})
+_SAFETY_BLOCK_ACTIONS = frozenset({"redact", "refuse"})
 
 
 def record_component_health(component: str, status: str) -> None:
@@ -697,6 +711,13 @@ def record_escalation_delivery(outcome: str) -> None:
     if normalized not in _ESCALATION_DELIVERY_OUTCOMES:
         normalized = "unknown"
     ESCALATION_DELIVERY_TOTAL.labels(outcome=normalized).inc()
+
+
+def record_safety_block(action: str) -> None:
+    normalized = str(action or "").strip().lower()
+    if normalized not in _SAFETY_BLOCK_ACTIONS:
+        normalized = "unknown"
+    SAFETY_BLOCKS_TOTAL.labels(action=normalized).inc()
 
 
 def record_llm_cost(provider: str, model: str, tenant: str, cost_usd: float) -> None:

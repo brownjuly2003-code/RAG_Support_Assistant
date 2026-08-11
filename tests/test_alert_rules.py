@@ -139,6 +139,26 @@ def test_escalation_delivery_failure_alert_contract(rules_doc: dict) -> None:
     assert "ticket" not in expression.lower()
 
 
+def test_safety_refusal_alert_contract(rules_doc: dict) -> None:
+    alerts = {
+        rule["alert"]: rule
+        for group in rules_doc["groups"]
+        for rule in group["rules"]
+        if "alert" in rule
+    }
+
+    rule = alerts["SafetyRefusalDetected"]
+    expression = str(rule["expr"])
+    assert "rag_safety_blocks_total" in expression
+    assert 'action="refuse"' in expression
+    assert "increase(" in expression
+    assert expression.strip().endswith("> 0")
+    assert rule["for"] == "1m"
+    assert rule["labels"] == {"severity": "warning", "component": "safety"}
+    for forbidden in ("tenant", "reason", "trace", "payload"):
+        assert forbidden not in expression.lower()
+
+
 def _flatten_exprs(rules_doc: dict) -> str:
     """Concat all `expr:` strings for regex scanning."""
     out: list[str] = []

@@ -188,6 +188,35 @@ def test_escalation_delivery_metric_has_bounded_outcome_labels() -> None:
     )
 
 
+def test_safety_block_metric_has_bounded_action_labels() -> None:
+    before = prometheus_metrics.generate_latest(prometheus_metrics.REGISTRY).decode()
+    before_redact = _metric_value(before, "rag_safety_blocks_total", 'action="redact"') or 0.0
+    before_refuse = _metric_value(before, "rag_safety_blocks_total", 'action="refuse"') or 0.0
+    before_unknown = _metric_value(before, "rag_safety_blocks_total", 'action="unknown"') or 0.0
+
+    prometheus_metrics.record_safety_block("redact")
+    prometheus_metrics.record_safety_block("refuse")
+    prometheus_metrics.record_safety_block("allow")
+    prometheus_metrics.record_safety_block("tenant-specific-value")
+    prometheus_metrics.record_safety_block("")
+
+    after = prometheus_metrics.generate_latest(prometheus_metrics.REGISTRY).decode()
+    assert _metric_value(after, "rag_safety_blocks_total", 'action="redact"') == before_redact + 1.0
+    assert _metric_value(after, "rag_safety_blocks_total", 'action="refuse"') == before_refuse + 1.0
+    assert (
+        _metric_value(after, "rag_safety_blocks_total", 'action="unknown"') == before_unknown + 3.0
+    )
+    assert (
+        _metric_value(
+            after,
+            "rag_safety_blocks_total",
+            'action="tenant-specific-value"',
+        )
+        is None
+    )
+    assert _metric_value(after, "rag_safety_blocks_total", 'action="allow"') is None
+
+
 def test_metrics_returns_200(client: TestClient) -> None:
     with patch("tracing.sqlite_trace.get_metrics_snapshot", return_value=MOCK_SNAPSHOT):
         response = client.get("/api/metrics")

@@ -192,6 +192,22 @@ groups:
             10 minutes. Ticket creation may still have succeeded; check outbox
             retry status and inbox/sink connectivity before re-running delivery.
 
+      - alert: SafetyRefusalDetected
+        expr: |
+          sum(
+            increase(rag_safety_blocks_total{action="refuse"}[10m])
+          ) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: safety
+        annotations:
+          summary: "Pre-response safety refusal detected"
+          description: |
+            At least one answer was refused by the pre-response safety gate in
+            the last 10 minutes. Inspect bounded safety logs and the affected
+            trace before changing prompts, documents, or routing policy.
+
       - alert: HighEscalationRate
         expr: |
           sum(rate(rag_escalation_total[15m]))

@@ -14,12 +14,15 @@ monitoring only — this module is runtime protection.
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from utils.pii import contains_pii, redact_pii
+
+logger = logging.getLogger(__name__)
 
 SafetyAction = Literal["allow", "redact", "refuse", "human"]
 
@@ -136,6 +139,16 @@ def _doc_texts(context_docs: Sequence[Any] | None) -> list[str]:
     return texts
 
 
+def _record_safety_block(action: str) -> None:
+    """Record one applied safety intervention without changing its behavior."""
+    try:
+        from monitoring.prometheus import record_safety_block  # noqa: PLC0415
+
+        record_safety_block(action)
+    except Exception:
+        logger.debug("Safety block metric failed", exc_info=True)
+
+
 def evaluate_pre_response_safety(
     *,
     answer: str,
@@ -215,6 +228,8 @@ def apply_pre_response_safety(state: Mapping[str, Any]) -> dict[str, Any]:
         context_docs=docs if isinstance(docs, Sequence) else [],
         requires_confirmation=requires_confirmation,
     )
+    if decision.action in {"redact", "refuse"}:
+        _record_safety_block(decision.action)
 
     out = dict(state)
     out["safety_action"] = decision.action
