@@ -230,3 +230,49 @@ async def test_retry_missing_ticket(
     assert result.skipped is True
     assert result.retried is False
     assert result.ticket_id
+
+
+@pytest.mark.asyncio
+async def test_retry_records_delivery_outcome_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    recorded: list[str] = []
+    monkeypatch.setattr(esc, "_record_escalation_delivery", recorded.append)
+
+    ticket = _Ticket(delivery_state="failed", delivery_error="boom")
+    _FakeAsyncSession.store = [ticket]
+    monkeypatch.setattr("db.engine.async_session", lambda: _FakeAsyncSession())
+
+    result = await esc.retry_escalation_delivery(
+        str(ticket.id),
+        project_root=tmp_path,
+    )
+    assert result.retried is True
+    assert result.delivery_state == "delivered"
+    assert recorded == ["delivered"]
+
+
+@pytest.mark.asyncio
+async def test_retry_skip_and_invalid_do_not_record_delivery(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    recorded: list[str] = []
+    monkeypatch.setattr(esc, "_record_escalation_delivery", recorded.append)
+
+    delivered = _Ticket(delivery_state="delivered", delivery_error=None)
+    _FakeAsyncSession.store = [delivered]
+    monkeypatch.setattr("db.engine.async_session", lambda: _FakeAsyncSession())
+
+    skipped = await esc.retry_escalation_delivery(
+        str(delivered.id),
+        project_root=tmp_path,
+    )
+    assert skipped.skipped is True
+    assert recorded == []
+
+    invalid = await esc.retry_escalation_delivery(
+        "not-a-uuid",
+        project_root=tmp_path,
+    )
+    assert invalid.skipped is True
+    assert recorded == []

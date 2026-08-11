@@ -177,6 +177,21 @@ groups:
             verified in the last 10 minutes. The release target is zero. Check
             route/grounding invariants and the affected trace before rollout.
 
+      - alert: EscalationDeliveryFailure
+        expr: |
+          increase(rag_escalation_delivery_total{outcome="failed"}[10m])
+          > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: escalation
+        annotations:
+          summary: "Escalation inbox delivery failed"
+          description: |
+            At least one escalation inbox delivery attempt failed in the last
+            10 minutes. Ticket creation may still have succeeded; check outbox
+            retry status and inbox/sink connectivity before re-running delivery.
+
       - alert: HighEscalationRate
         expr: |
           sum(rate(rag_escalation_total[15m]))

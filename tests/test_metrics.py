@@ -112,6 +112,82 @@ def test_index_lifecycle_failure_metric_has_bounded_operation_labels() -> None:
     )
 
 
+def test_escalation_delivery_metric_has_bounded_outcome_labels() -> None:
+    before = prometheus_metrics.generate_latest(prometheus_metrics.REGISTRY).decode()
+    before_delivered = (
+        _metric_value(
+            before,
+            "rag_escalation_delivery_total",
+            'outcome="delivered"',
+        )
+        or 0.0
+    )
+    before_failed = (
+        _metric_value(
+            before,
+            "rag_escalation_delivery_total",
+            'outcome="failed"',
+        )
+        or 0.0
+    )
+    before_unknown = (
+        _metric_value(
+            before,
+            "rag_escalation_delivery_total",
+            'outcome="unknown"',
+        )
+        or 0.0
+    )
+
+    prometheus_metrics.record_escalation_delivery("delivered")
+    prometheus_metrics.record_escalation_delivery("failed")
+    prometheus_metrics.record_escalation_delivery("pending")
+    prometheus_metrics.record_escalation_delivery("tenant-specific-value")
+    prometheus_metrics.record_escalation_delivery("")
+
+    after = prometheus_metrics.generate_latest(prometheus_metrics.REGISTRY).decode()
+    assert (
+        _metric_value(
+            after,
+            "rag_escalation_delivery_total",
+            'outcome="delivered"',
+        )
+        == before_delivered + 1.0
+    )
+    assert (
+        _metric_value(
+            after,
+            "rag_escalation_delivery_total",
+            'outcome="failed"',
+        )
+        == before_failed + 1.0
+    )
+    assert (
+        _metric_value(
+            after,
+            "rag_escalation_delivery_total",
+            'outcome="unknown"',
+        )
+        == before_unknown + 3.0
+    )
+    assert (
+        _metric_value(
+            after,
+            "rag_escalation_delivery_total",
+            'outcome="tenant-specific-value"',
+        )
+        is None
+    )
+    assert (
+        _metric_value(
+            after,
+            "rag_escalation_delivery_total",
+            'outcome="pending"',
+        )
+        is None
+    )
+
+
 def test_metrics_returns_200(client: TestClient) -> None:
     with patch("tracing.sqlite_trace.get_metrics_snapshot", return_value=MOCK_SNAPSHOT):
         response = client.get("/api/metrics")

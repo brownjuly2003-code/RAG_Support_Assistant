@@ -151,3 +151,161 @@ def test_make_idempotency_key_stable() -> None:
     )
     assert a == b
     assert a != c
+
+
+@pytest.mark.asyncio
+async def test_deliver_inbox_records_delivered_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    recorded: list[str] = []
+    monkeypatch.setattr(esc, "_record_escalation_delivery", recorded.append)
+
+    state, error = esc._deliver_inbox(
+        project_root=tmp_path,
+        record={"entity_id": "sess-1", "ticket_id": "t-1", "question": "q"},
+    )
+    assert state == "delivered"
+    assert error == ""
+    assert recorded == ["delivered"]
+
+    outcome = await esc.create_escalation(
+        tenant_id="acme",
+        session_id="sess-metric-ok",
+        question="deliver once",
+        source="manual",
+        project_root=tmp_path,
+    )
+    assert outcome.delivery_state == "delivered"
+    assert recorded == ["delivered", "delivered"]
+
+
+@pytest.mark.asyncio
+async def test_deliver_inbox_records_failed_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    recorded: list[str] = []
+    monkeypatch.setattr(esc, "_record_escalation_delivery", recorded.append)
+
+    original_open = Path.open
+
+    def blocked_open(self: Path, *args: Any, **kwargs: Any):  # noqa: ANN401
+        if self.name == "support_inbox.jsonl":
+            raise OSError("disk full")
+        return original_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", blocked_open)
+
+    state, error = esc._deliver_inbox(
+        project_root=tmp_path,
+        record={"entity_id": "sess-1", "ticket_id": "t-1", "question": "q"},
+    )
+    assert state == "failed"
+    assert "disk full" in error
+    assert recorded == ["failed"]
+
+    outcome = await esc.create_escalation(
+        tenant_id="acme",
+        session_id="sess-metric-fail",
+        question="delivery fails",
+        source="manual",
+        project_root=tmp_path,
+    )
+    assert outcome.delivery_state == "failed"
+    assert "disk full" in outcome.delivery_error
+    assert recorded == ["failed", "failed"]
+
+
+@pytest.mark.asyncio
+async def test_non_attempt_paths_do_not_record_delivery(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    recorded: list[str] = []
+    monkeypatch.setattr(esc, "_record_escalation_delivery", recorded.append)
+
+    first = await esc.create_escalation(
+        tenant_id="acme",
+        session_id="sess-skip",
+        question="same q",
+        source="manual",
+        reason="r",
+        project_root=tmp_path,
+    )
+    assert first.delivery_state == "delivered"
+    assert recorded == ["delivered"]
+
+    duplicate = await esc.create_escalation(
+        tenant_id="acme",
+        session_id="sess-skip",
+        question="same q",
+        source="manual",
+        reason="r",
+        project_root=tmp_path,
+    )
+    assert duplicate.delivery_state == "duplicate"
+    assert recorded == ["delivered"]
+
+    # Fresh store so the disabled path is not treated as an idempotent hit.
+    _FakeAsyncSession.store = []
+    disabled = await esc.create_escalation(
+        tenant_id="acme",
+        session_id="sess-disabled",
+        question="no inbox",
+        source="manual",
+        project_root=tmp_path,
+        deliver_inbox=False,
+    )
+    assert disabled.durable is True
+    assert disabled.delivery_state == "pending"
+    assert recorded == ["delivered"]
+
+    class _Boom:
+        async def __aenter__(self):
+            raise RuntimeError("db down")
+
+        async def __aexit__(self, *a):
+            return None
+
+    monkeypatch.setattr("db.engine.async_session", lambda: _Boom())
+    insert_fail = await esc.create_escalation(
+        tenant_id="acme",
+        session_id="sess-db-down",
+        question="no ticket",
+        source="pipeline_error",
+        project_root=tmp_path,
+    )
+    assert insert_fail.durable is False
+    assert insert_fail.ticket_id is None
+    assert recorded == ["delivered"]
+
+
+@pytest.mark.asyncio
+async def test_delivery_metric_failure_is_fail_open(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    def _boom(outcome: str) -> None:
+        raise RuntimeError("metrics boom")
+
+    monkeypatch.setattr(
+        "monitoring.prometheus.record_escalation_delivery",
+        _boom,
+    )
+
+    with caplog.at_level("DEBUG", logger="services.escalation"):
+        state, error = esc._deliver_inbox(
+            project_root=tmp_path,
+            record={"entity_id": "sess-1", "ticket_id": "t-1", "question": "q"},
+        )
+
+    assert state == "delivered"
+    assert error == ""
+    assert any("metric" in rec.message.lower() for rec in caplog.records)
+
+    outcome = await esc.create_escalation(
+        tenant_id="acme",
+        session_id="sess-metric-open",
+        question="still delivers",
+        source="manual",
+        project_root=tmp_path,
+    )
+    assert outcome.delivery_state == "delivered"
+    assert outcome.durable is True

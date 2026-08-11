@@ -20,6 +20,7 @@ __all__ = [
     "DB_POOL_SIZE",
     "EVAL_DRIFT",
     "ESCALATION_TOTAL",
+    "ESCALATION_DELIVERY_TOTAL",
     "FACT_VERIFICATION_CONSENSUS_TOTAL",
     "FACTUALITY_SCORE",
     "FEEDBACK_COUNT",
@@ -73,6 +74,7 @@ __all__ = [
     "set_ingestion_queue_oldest",
     "record_db_pool_stats",
     "record_eval_drift",
+    "record_escalation_delivery",
     "record_circuit_breaker_change",
     "record_message_persist_failure",
     "record_ollama_retry_event",
@@ -137,6 +139,7 @@ if TYPE_CHECKING:
     LLM_COST_USD_TOTAL: _CounterT
     LLM_PROVIDER_FALLBACK_TOTAL: _CounterT
     ESCALATION_TOTAL: _CounterT
+    ESCALATION_DELIVERY_TOTAL: _CounterT
     FACT_VERIFICATION_CONSENSUS_TOTAL: _CounterT
     FEEDBACK_COUNT: _CounterT
     CIRCUIT_BREAKER_TRANSITIONS: _CounterT
@@ -212,6 +215,7 @@ except ImportError:
     QUALITY_SCORE = _NoopMetric()
     FACTUALITY_SCORE = _NoopMetric()
     ESCALATION_TOTAL = _NoopMetric()
+    ESCALATION_DELIVERY_TOTAL = _NoopMetric()
     FACT_VERIFICATION_CONSENSUS_TOTAL = _NoopMetric()
     FEEDBACK_COUNT = _NoopMetric()
     ACTIVE_SESSIONS = _NoopMetric()
@@ -318,6 +322,13 @@ else:
     ESCALATION_TOTAL = Counter(
         "rag_escalation_total",
         "Total escalations to human",
+        registry=REGISTRY,
+    )
+
+    ESCALATION_DELIVERY_TOTAL = Counter(
+        "rag_escalation_delivery_total",
+        "Escalation inbox delivery attempts by final outcome",
+        ["outcome"],
         registry=REGISTRY,
     )
 
@@ -626,10 +637,13 @@ else:
         INDEX_LIFECYCLE_FAILURES.labels(operation=_operation).inc(0)
     for _verification in ("verified", "unverified"):
         AUTO_RESPONSES_TOTAL.labels(verification=_verification).inc(0)
+    for _outcome in ("delivered", "failed", "unknown"):
+        ESCALATION_DELIVERY_TOTAL.labels(outcome=_outcome).inc(0)
 
 
 _STATE_VALUE = {"closed": 0, "half_open": 1, "open": 2}
 _INDEX_LIFECYCLE_OPERATIONS = frozenset({"publish", "retention"})
+_ESCALATION_DELIVERY_OUTCOMES = frozenset({"delivered", "failed"})
 
 
 def record_component_health(component: str, status: str) -> None:
@@ -676,6 +690,13 @@ def record_index_lifecycle_failure(operation: str) -> None:
     if normalized not in _INDEX_LIFECYCLE_OPERATIONS:
         normalized = "unknown"
     INDEX_LIFECYCLE_FAILURES.labels(operation=normalized).inc()
+
+
+def record_escalation_delivery(outcome: str) -> None:
+    normalized = str(outcome or "").strip().lower()
+    if normalized not in _ESCALATION_DELIVERY_OUTCOMES:
+        normalized = "unknown"
+    ESCALATION_DELIVERY_TOTAL.labels(outcome=normalized).inc()
 
 
 def record_llm_cost(provider: str, model: str, tenant: str, cost_usd: float) -> None:

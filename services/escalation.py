@@ -118,6 +118,18 @@ def _user_message(
     )
 
 
+def _record_escalation_delivery(outcome: str) -> None:
+    """Record one inbox delivery attempt without changing delivery semantics."""
+    try:
+        from monitoring.prometheus import (  # noqa: PLC0415
+            record_escalation_delivery,
+        )
+
+        record_escalation_delivery(outcome)
+    except Exception:
+        logger.debug("Escalation delivery metric failed", exc_info=True)
+
+
 def _deliver_inbox(
     *,
     project_root: Path,
@@ -129,6 +141,7 @@ def _deliver_inbox(
 
         entity_id = str(record.get("entity_id") or record.get("ticket_id") or "unknown")
         get_support_sink().send(entity_id, json.dumps(record, ensure_ascii=False))
+        _record_escalation_delivery("delivered")
         return "delivered", ""
     except ImportError:
         pass
@@ -140,9 +153,11 @@ def _deliver_inbox(
         inbox_path.parent.mkdir(parents=True, exist_ok=True)
         with inbox_path.open("a", encoding="utf-8", newline="\n") as handle:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+        _record_escalation_delivery("delivered")
         return "delivered", ""
     except Exception as exc:
         logger.error("Inbox JSONL delivery failed: %s", exc)
+        _record_escalation_delivery("failed")
         return "failed", str(exc)
 
 

@@ -119,6 +119,26 @@ def test_unverified_auto_response_alert_is_zero_tolerance(rules_doc: dict) -> No
     assert rule["labels"] == {"severity": "critical", "component": "quality"}
 
 
+def test_escalation_delivery_failure_alert_contract(rules_doc: dict) -> None:
+    alerts = {
+        rule["alert"]: rule
+        for group in rules_doc["groups"]
+        for rule in group["rules"]
+        if "alert" in rule
+    }
+
+    rule = alerts["EscalationDeliveryFailure"]
+    expression = str(rule["expr"])
+    assert "rag_escalation_delivery_total" in expression
+    assert 'outcome="failed"' in expression
+    assert "increase(" in expression
+    assert expression.strip().endswith("> 0")
+    assert rule["for"] == "1m"
+    assert rule["labels"] == {"severity": "warning", "component": "escalation"}
+    assert "tenant" not in expression
+    assert "ticket" not in expression.lower()
+
+
 def _flatten_exprs(rules_doc: dict) -> str:
     """Concat all `expr:` strings for regex scanning."""
     out: list[str] = []
