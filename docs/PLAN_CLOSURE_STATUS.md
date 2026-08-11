@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-11 (Update-166 §9.5d3 streaming execution owner)
+**Date:** 2026-08-11 (Update-167 VER-03 Python 3.13 full-gate evidence)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-166**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-167**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-166. Preserve it as DoD input, but use Actual Git + the committed
+> Update-167. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,11 +18,13 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-166:** runtime implementation `c53f724` completes the local
-PipelineRunner streaming submission/deadline owner through §9.5d3; Actual Git
-before this docs edit was `master...origin/master [ahead 290]`. This closes no
-plan section or release gate. SLA-gated sessions, live scrape/alert delivery,
-and other live/gated work remain explicit in
+**Update-167:** the Python 3.13 unit+coverage gate passed coverage at **77.06%**
+but finished **1848 passed / 3 failed / 4 skipped**. Exact diagnosis reproduced
+only a stale deployment queue-metric assertion; its canonical-metric edit is
+dirty/uncommitted because the sole corrective full rerun timed out at 30m.
+Actual Git before this docs edit was `master...origin/master [ahead 291]` at
+`6154d55`. This closes no plan section or release gate. SLA-gated sessions,
+live scrape/alert delivery, VER-03, and other live/gated work remain explicit in
 [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
 
 ---
@@ -40,7 +42,7 @@ and other live/gated work remain explicit in
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5d3 owner slices local** | OPEN (SLA-gated sessions, live alert delivery) | soft |
-| **10** final verification / canary | not started | OPEN | **yes** |
+| **10** final verification / canary | Python 3.13 unit+coverage attempted: coverage green, suite red; corrective rerun timed out | OPEN | **yes** |
 
 **Project / production release: NOT claimed.**
 
@@ -344,9 +346,12 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-There is no implementation WIP and no preselected implementation candidate.
-Select at most one explicit owner request or documented residual in a new turn.
-Do not invent another quality fix or replay QG-01–QG-04 without new evidence.
+The sole next candidate is current dirty test-contract WIP in
+`tests/test_ingestion_worker_topology.py`: verify only the exact deployment-doc
+test with a fresh unique basetemp, then run scoped Ruff/diff/LF/protected-hash
+gates and commit only that test file if green. Do not combine that slice with
+another full-suite run. Do not invent another quality fix or replay
+QG-01–QG-04 without new evidence.
 
 Gated alternatives remain: live provider/quality ×3 (`--execute` + secrets +
 fresh opt-in), memory-guard enablement plus a bounded hybrid attempt, a real
@@ -367,10 +372,11 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-166)
+## Last-known verification snapshot (Update-167)
 
 | Band | Last known |
 |------|------------|
+| **VER-03 Python 3.13 unit+coverage gate** | full run **1848 passed / 3 failed / 4 skipped / 186 warnings**, coverage **77.06%** ≥ 72%; exact diagnosis **2 passed / 1 failed**; stale queue-metric assertion edit remains uncommitted; corrective full rerun timed out at **30m** without final report; no full-suite/locked-CI/release-green claim |
 | **9.5d3 PipelineRunner streaming execution/deadline owner** | Grok TDD transcript **2 failed → 6 passed**, first focused band **32 passed**; QA follow-up added event-worker and exception-fallback ownership; Codex independent owner/provider-token stream band **7 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d2 PipelineRunner sync execution/deadline owner** | ownership **2 failed / 2 passed → 4 passed**; owner/concurrency/request-timeout/stream-capacity/chat-streaming band **22 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d1 PipelineRunner capacity lifecycle owner** | ownership **2 failed → 2 passed**; pipeline concurrency/stream-capacity/request-timeout/chat-streaming band **20 passed**; Ruff/narrowed MyPy/format/diff/LF/protected hashes green |

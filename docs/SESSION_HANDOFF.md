@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-11 — **Update-166** (§9.5d3 streaming execution owner).
+**Обновлено:** 2026-08-11 — **Update-167** (VER-03 Python 3.13 full-gate evidence).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-166**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-167**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-166; dirty
+**Не использовать:** старые `START HERE` ниже Update-167; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -28,16 +28,16 @@
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
 | Последний implementation SHA | `c53f724` — §9.5d3 PipelineRunner streaming execution/deadline owner |
-| Последний committed handoff до Update-166 | `378c4f5` — Update-165 canonical transparency; SHA этого docs-коммита всегда брать из Actual Git |
-| Actual Git перед этой docs edit | `master...origin/master [ahead 290]` at `c53f724`; refresh remains mandatory |
+| Последний committed handoff до Update-167 | `6154d55` — Update-166 streaming ownership; SHA этого docs-коммита всегда брать из Actual Git |
+| Actual Git перед этой docs edit | `master...origin/master [ahead 291]` at `6154d55`; refresh remains mandatory |
 | Что закрыто локально | §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, PipelineRunner capacity + sync + streaming execution, and VER-07; это не закрывает весь §9 и не означает production ready |
-| Последний local gate | Grok TDD **2 failed → 6 passed**, first focused band **32 passed**; Codex independent owner/provider-stream band **7 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green; one known Starlette warning |
+| Последний local gate | VER-03 Python 3.13 unit+coverage: **1848 passed / 3 failed / 4 skipped**, **77.06%** coverage; exact diagnosis **2 passed / 1 failed**; corrective full rerun timed out at **30m** without final report |
 | Известный baseline debt | no full locked-CI claim; ordinary router MyPy retains two pre-existing `no-redef` findings, and older `api/app.py`/legacy formatter debt remains outside recent changed lines |
-| Worktree boundary | only four protected tracked owner files are dirty and their hashes match; unrelated untracked artifacts are preserved; implementation WIP/active writer none |
-| Grok route truth | bounded `local_grok_cli`: obsolete ID failed before edits; implementation + one QA follow-up used `grok-4.5` alias / actual `grok-4.5-build`, ended `cancelled` only at final disallowed hash check; Codex independently verified the diff |
+| Worktree boundary | four protected tracked owner files remain dirty; owned uncommitted WIP is exactly `tests/test_ingestion_worker_topology.py`; unrelated untracked artifacts are preserved; active writer/test process none |
+| Grok route truth | no Grok run occurred in Update-167; prior bounded §9.5d3 runs remain historical evidence only |
 | Что не запускалось | push, deploy, migration 019–023, Grafana import/provisioning, live service/provider/quality/scrape/alert delivery, scheduler mutation |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
-| Следующий slice | не выбран; только явный owner request или один documented safe residual |
+| Следующий slice | current dirty WIP only: focused verification and scoped commit of the stale deployment queue-metric assertion; full VER-03 rerun remains a later separate slice |
 
 ---
 
@@ -48,32 +48,34 @@
 | Latest **committed implementation** | `c53f724` — §9.5d3 PipelineRunner streaming execution/deadline owner |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
-| Latest **committed docs before this Update** | `378c4f5` — Update-165 canonical transparency |
+| Latest **committed docs before this Update** | `6154d55` — Update-166 streaming ownership |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 290]` at `c53f724` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-166 docs WIP may remain; otherwise owned WIP **none** |
+| Branch advisory | observed `master...origin/master [ahead 291]` at `6154d55` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer/test process **none**; owned uncommitted test WIP is `tests/test_ingestion_worker_topology.py`; if these three handoff files are dirty, Update-167 docs WIP is also present |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | No implementation slice is preselected. SessionService requires an SLA decision; live scrape/alert delivery remains gated; choose only an explicit owner request or documented ungated residual |
+| Next ordered | Close current dirty WIP first: verify the exact deployment-doc contract and commit only its test file if green; do not combine that slice with another full-suite run |
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-166 records the committed §9.5d3 boundary:** runtime implementation is
-`c53f724`; `PipelineRunner` now owns streaming graph/event submission, queue
-and shielded-future wait deadlines, and timeout transfer to orphan capacity.
-The router retains SSE semantics, payload shaping, timeout metrics/logging,
-history, and compatibility wrappers. Grok produced the bounded implementation
-and one QA correction; Codex independently verified the resulting diff.
-No live Grafana import/provisioning, scrape, alert delivery, provider, service,
-index, migration, scheduler, push, or deploy action occurs in this Update.
-The full open/gated truth remains in §1C and §2A/§12.
+**Update-167 records the first post-ownership VER-03 full-gate evidence:** the
+Python 3.13 unit+coverage run passed coverage at **77.06%** but finished
+**1848 passed / 3 failed / 4 skipped**. Exact diagnosis reproduced only the
+stale deployment-doc `queue-age` assertion; retention inventory and lightweight
+CLI passed unchanged. The test-contract WIP now names the implemented canonical
+metric, but the sole corrective full rerun timed out at 30 minutes without a
+final report, so the WIP remains uncommitted and VER-03 stays open. No live
+Grafana import/provisioning, scrape, alert delivery, provider, service, index,
+migration, scheduler, push, or deploy action occurs in this Update. The full
+open/gated truth remains in §1C and §2A/§12.
 
 **Last known verification:**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **VER-03 Python 3.13 unit+coverage gate** | full run **1848 passed / 3 failed / 4 skipped / 186 warnings**, coverage **77.06%** ≥ 72%; exact three-failure diagnosis **2 passed / 1 failed**; one stale test-contract WIP applied; corrective full rerun timed out at **30m** without final report; no full-suite-green claim |
 | **9.5d3 PipelineRunner streaming execution/deadline owner** | Grok TDD transcript **2 failed → 6 passed**, first focused band **32 passed**; QA follow-up added event-worker and exception-fallback ownership; Codex independent owner/provider-token stream band **7 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d2 PipelineRunner sync execution/deadline owner** | ownership **2 failed / 2 passed → 4 passed**; owner/concurrency/request-timeout/stream-capacity/chat-streaming band **22 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d1 PipelineRunner capacity lifecycle owner** | ownership **2 failed → 2 passed**; pipeline concurrency/stream-capacity/request-timeout/chat-streaming band **20 passed**; Ruff/narrowed MyPy/format/diff/LF/protected hashes green |
@@ -292,7 +294,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-166)
+### 1C. Authoritative open-problem ledger (Update-167)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -332,7 +334,7 @@ override this snapshot.
 |----|--------|----------------------|---------------|
 | **VER-01** | **ENV / BASELINE BLOCKER** | Installed `mypy 2.3.0` / `numpy 2.5.1` differ from locks `1.19.1` / `2.4.4`. QG-03A changed-file Mypy with `--follow-imports=skip` reported 9 pre-existing `typeddict-item` errors outside changed lines; a narrowed run disabling only that code passed. The 9.1c ordinary scoped run likewise reported two pre-existing `no-redef` and three `unused-ignore` errors outside changed lines; disabling only those confirmed codes passed the four changed source files. Full-import checking also stops on unlocked NumPy stubs under target 3.11. | Use a locked environment and reconcile existing type debt separately; do not call full or ordinary changed-file MyPy green. |
 | **VER-02** | **LOCAL-CLOSED** | `3a37fd2` casts the final runtime-guarded callable to `FaultAction`. The exact failure reproduced before the edit; afterward narrowed MyPy passed, 11 lifecycle tests passed, Ruff passed, and package `vectordb` MyPy checked 10 sources under `--follow-imports=skip`. | Do not reopen without a code/environment change. Do not extrapolate this to VER-01, full imports, the repository, locked Python 3.11, or CI. |
-| **VER-03** | **OPEN** | No full unit/integration/coverage/security/locked-CI suite ran after QG-01/QG-02/QG-03A; only focused proportional bands are evidence. | §10 or a dedicated gate turn; do not infer repository-wide green. |
+| **VER-03** | **OPEN / FULL GATE RED** | Python 3.13 unit+coverage completed **1848 passed / 3 failed / 4 skipped / 186 warnings** with coverage **77.06%** above the 72% threshold. Exact diagnosis passed retention and lightweight CLI unchanged and reproduced only the stale deployment `queue-age` literal. The canonical-metric assertion edit is dirty/uncommitted; its single corrective full rerun timed out at 30m without a final report. | Next slice closes only the dirty focused test contract. A later dedicated turn may run the full gate once; do not claim full-suite, locked-CI, or release green from coverage or focused evidence. |
 | **VER-04** | **WARNING** | Focused pytest runs emit `StarletteDeprecationWarning` for `httpx` through `starlette.testclient`; assertions still pass. | Track dependency migration separately; warning is not fixed by QG-03A. |
 | **VER-05** | **LOCAL-CLOSED** | `4b0fba7` replaces the stale zero-caller assertion with the exact intentional allowlist `["api/routers/admin_ops.py"]` and renames the test accordingly. The original assert reproduced red; the independent retention/admin band passed 51 tests, scoped Ruff and diff checks passed. | Do not reopen without a new caller or contract change. Whole-file Ruff format debt predates this slice and was not reformatted here. |
 | **VER-06** | **LOCAL-CLOSED** | `356a530` updates the exact stale agentic-injection test to patch `agent.tools.search_kb_docs` and return `(formatted_text, raw_docs)`. The failure reproduced before the edit; afterward the exact test and the 44-test response-safety/agentic band passed. | Do not reopen without another agentic KB boundary change. File-wide formatter debt predates this test-only slice. |
@@ -345,10 +347,11 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 290]` at `c53f724` before Update-166 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
+| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 291]` at `6154d55` before Update-167 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
 | **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
 | **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. The two `.grok-prompts/dashboard-artifact-9-3a-*.md` controls remain, while their dashboard pytest basetemps are absent. `cache-namespace-9-1c.md` and its prompt are historical. | They are not implementation WIP. Do not bulk-delete or stage them, and do not relaunch the same Grok prompt without new evidence or a narrowed hypothesis. |
+| **WS-05** | **OWNED DIRTY WIP** | `tests/test_ingestion_worker_topology.py` replaces the stale literal `queue-age` with canonical `rag_ingestion_queue_oldest_seconds`; the post-edit full rerun timed out, so no green claim or commit exists. | First candidate only: run the exact test once with a fresh unique basetemp; if green, run scoped Ruff/diff/LF/protected hashes and commit only this test file. |
 | **EXT-01** | **EXTERNAL / UNPUSHED** | `D:\GraceKelly` is `main...origin/main [ahead 1]` at `886b277`, with untracked `issues.md`. Port `8011` still listens under PID 3048 on the pre-existing command; `8012` is closed. | Do not claim `8011` serves `886b277`; external push/restart needs separate authority. |
 
 ### Dataset snapshot (7.7)
@@ -377,16 +380,17 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-166 in AGENT_STATE.md + §0A/§1C in this file
+5. Read ONLY top Update-167 in AGENT_STATE.md + §0A/§1C in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
-7. Do not invent another QG item; QG-01–QG-04 are local-only closures
-8. Select work only from an explicit owner request or a documented ungated residual
+7. Close the owned dirty topology-test WIP first; do not combine it with a full suite
+8. Do not invent another QG item; QG-01–QG-04 are local-only closures
 ```
 
 ### 2A. Decision card (status, not authorization)
 
 | Candidate | Current truth | Boundary before action |
 |-----------|---------------|------------------------|
+| VER-03 dirty WIP | Full Python 3.13 gate is red; canonical queue-metric assertion edit is uncommitted after a 30m corrective timeout | Run only the exact topology docs test once; if green, scoped static/boundary gates and explicit-pathspec commit of that test file |
 | §9 residuals | Cache, telemetry (**7/7**), dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, and PipelineRunner capacity + sync + streaming execution are local-green | No item preselected; SessionService needs an SLA decision and live alert delivery needs opt-in; no ungated local architecture owner is currently named |
 | HYBRID-MEM | Blank child environment propagation is local-green at `3c90368`; default hybrid quality is unproved; memory guard is last known disabled | Fresh explicit authority for Task Scheduler state and a separately bounded hybrid attempt; verify the guard before any model load |
 | Live quality ×3 | Only seed 42 ran and **failed**; seeds 43–44 and a valid passing aggregate do not exist | Fresh paid/live opt-in, compatible index, provider prerequisites, and fail-closed evidence collection |
@@ -649,8 +653,14 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 ## 7. Next named candidate
 
-There is **no active implementation WIP and no preselected implementation
-candidate**. Completed lifecycle-owner boundaries are TraceService `9c207b6`,
+There is one **owned uncommitted test-contract WIP** and it is the sole next
+candidate: `tests/test_ingestion_worker_topology.py` aligns a stale
+`queue-age` literal with `rag_ingestion_queue_oldest_seconds`. The first full
+gate was red and the post-edit full rerun timed out, so the edit is not yet
+verified or committable. The next slice runs only that exact test, then scoped
+static/boundary gates and an explicit-pathspec test-only commit if green.
+
+Completed lifecycle-owner boundaries are TraceService `9c207b6`,
 EscalationService `03057aa`, IngestionJobService API `84fbdf7`, ingestion worker
 `890155a`, PipelineRunner capacity `aefcf20`, and PipelineRunner sync execution
 `d865b06`, plus PipelineRunner streaming execution `c53f724`. Do not reopen
@@ -669,7 +679,7 @@ in a new turn; do not invent another local QG item.
 
 - live multi-service / migrate / push / deploy / live provider·quality execute
 - re-select through **8.5** / **4.1–4.8** / **5.1–5.7** / **6.1–6.7** /
-  **7.1–7.7** / **9.1a–9.1c** / **9.2a–9.2f** / completed **9.3a–9.5d2** slices
+  **7.1–7.7** / **9.1a–9.1c** / **9.2a–9.2f** / completed **9.3a–9.5d3** slices
 - OIDC live IdP drill; bulk plan checkbox edits; production claims
 - multi-replica impl without SLA (design DEFER)
 - Docker/WSL or a silent model fallback for the lightweight smoke
@@ -687,9 +697,13 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-166:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-167:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
+
+**Owned dirty test WIP:** `tests/test_ingestion_worker_topology.py` contains
+only the canonical queue-metric assertion update described in VER-03/WS-05.
+It is deliberately uncommitted because the post-edit full rerun timed out.
 
 **Protected SHA-256 snapshot (2026-08-09, before Update-133 edit):**
 
@@ -825,6 +839,7 @@ Never log secret values.
 | 68 | docs | `a0035bc` | record Update-164 PipelineRunner sync ownership before the canonical reconciliation |
 | 69 | **9.5d3** | `c53f724` | make PipelineRunner own streaming graph/event submission, wait deadlines, and timeout handoff |
 | 70 | docs | resolve through Actual Git | Update-166 §9.5d3 closure; do not add a follow-up solely for its self-SHA |
+| 71 | docs | resolve through Actual Git | Update-167 VER-03 full-gate evidence and dirty-WIP routing; no implementation closure |
 
 ---
 
@@ -868,10 +883,10 @@ Never log secret values.
 | Sync pipeline execution has one owner? | **Yes local** (`d865b06`): PipelineRunner owns executor submission, shielded wall deadline, and timeout capacity handoff for sync `/api/ask` |
 | Streaming pipeline execution has one owner? | **Yes local** (`c53f724`): PipelineRunner owns graph/event executor submission, queue and shielded-future deadlines, and timeout capacity handoff; router keeps SSE semantics and compatibility seams |
 | Agentic injection safety test current? | **Yes local** (`356a530`): mock follows `search_kb_docs(text, docs)` and the full safety/agentic band is green |
-| Canonical restart capsule reconciled? | **Yes as of Update-166**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
-| All known open problems indexed? | **Yes in §1C as of Update-166**; Actual Git/new evidence overrides the snapshot |
+| Canonical restart capsule reconciled? | **Yes as of Update-167**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
+| All known open problems indexed? | **Yes in §1C as of Update-167**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-166 handoff files are clean, owned WIP **none** |
+| WIP / active writer? | Active writer/test process **none**; owned uncommitted WIP is exactly `tests/test_ingestion_worker_topology.py`; Update-167 handoff files may also be dirty until their docs-only commit |

@@ -1,5 +1,48 @@
 # Agent State
 
+## 2026-08-11 Update-167 — VER-03 Python 3.13 full-gate evidence ⚠️ START HERE
+
+> **Actual Git before this docs update:** `6154d55` (`docs: record streaming
+> pipeline ownership`), `master...origin/master [ahead 291]`. Active test
+> process **none**. One owned uncommitted test-contract WIP exists in
+> `tests/test_ingestion_worker_topology.py`; do not confuse it with the four
+> protected owner-dirty files or commit it without fresh focused verification.
+>
+> **Full-gate evidence:** the CI-shaped Python 3.13 unit+coverage command ran
+> for **22m13s** and finished **1848 passed / 3 failed / 4 skipped / 186
+> warnings**. Coverage passed its configured 72% threshold at **77.06%**.
+> Failures were retention inventory `os.replace` `PermissionError`, a stale
+> deployment-doc `queue-age` assertion, and the direct lightweight GraceKelly
+> CLI import contract. Therefore VER-03 and §10 remain **OPEN**; no full-suite,
+> locked-CI, release, or production-green claim exists.
+>
+> **Narrow diagnosis:** the exact three failures reproduced **1 failed / 2
+> passed**. Retention and lightweight CLI passed unchanged; no runtime fix was
+> justified. The deterministic failure was the topology test's 2026-08-02
+> literal `queue-age`, while current deployment docs and the implemented
+> `35e4bb9` contract use `rag_ingestion_queue_oldest_seconds`. The owned WIP
+> replaces only that stale literal and clarifies the assertion comment.
+>
+> **Verification stop:** the single permitted corrective full rerun reached
+> the **30-minute timeout** without a final pytest/coverage report. Per cycle
+> budget it was not retried. The test-contract WIP is therefore intentionally
+> **uncommitted and unverified after edit**. This Update records evidence only;
+> it does not claim the assertion now passes or that either full-suite-only
+> failure is resolved.
+>
+> **Workspace boundary:** protected dirty tracked files `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` remain outside
+> this work. New VER-03 pytest basetemps remain untracked and must not be bulk
+> staged or deleted. No Grok run, live action, migration, scheduler mutation,
+> push, or deploy occurred.
+>
+> **Next-session route:** Actual Git first, then this block and
+> `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. Candidate priority is the current
+> dirty WIP only: run the exact deployment-doc test once with a fresh unique
+> basetemp; if green, run scoped Ruff/diff/LF/protected-hash gates and commit
+> only `tests/test_ingestion_worker_topology.py`. Do not rerun the full suite in
+> that same atomic slice; VER-03 remains a later dedicated gate.
+
 ## 2026-08-11 Update-166 — §9.5d3 PipelineRunner streaming execution owner ✅ START HERE
 
 > **Committed implementation:** `c53f724` (`refactor(pipeline): centralize
