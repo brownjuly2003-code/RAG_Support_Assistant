@@ -1,5 +1,39 @@
 # Agent State
 
+## 2026-08-11 Update-158 — §9.5a TraceService lifecycle owner ✅ START HERE
+
+> **Committed implementation:** `9c207b6` (`refactor(tracing): centralize
+> lifecycle ownership`) changes exactly four scoped paths. Actual Git after the
+> commit was `master...origin/master [ahead 275]`; active writer **none**,
+> implementation WIP **none**, and the four protected dirty-file hashes still
+> match.
+>
+> **Contract:** `tracing.service.TraceService` is the injectable single owner
+> for trace start/log/finish plus pre-persistence PII redaction. The canonical
+> SQLite module keeps its exact module-level signatures as compatibility
+> wrappers, so existing graph/API call sites do not move. Trace queries,
+> retention, feedback, storage schema, and orchestration remain outside this
+> slice.
+>
+> **Fresh evidence:** focused TDD moved from import error to **3 passed**. The
+> adjacent trace/PII/cost/correlation/retention/tenant band produced **34
+> passed / 1 failed**; the sole failure is pre-existing `VER-07`, where an
+> April-17 retention test omits the tenant field supplied by the unchanged
+> April-27 endpoint. One narrowed run passed **34 tests** with that exact test
+> deselected; the final lifecycle/PII/cost band passed **13 tests**. Scoped
+> Ruff check/format, narrowed MyPy, diff/LF, and protected hashes passed; one
+> known Starlette warning remains.
+>
+> **Scope honesty:** this closes only local **§9.5a TraceService lifecycle
+> ownership**, not all architecture ownership or §9. No live service, provider,
+> metric scrape, alert delivery, migration, scheduler, push, or deploy action
+> occurred. `VER-07` is recorded, not fixed here.
+>
+> **Next-session route:** refresh Actual Git, then read only this block and
+> `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. Do not re-select §9.5a without a
+> trace lifecycle boundary change. Choose at most one explicit owner request
+> or documented safe residual.
+
 ## 2026-08-11 Update-157 — §9 Astro 7 / DEP-01 zero-audit ✅ START HERE
 
 > **Committed implementation:** `cea370b` (`chore(docs): upgrade site to

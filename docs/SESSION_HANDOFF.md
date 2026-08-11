@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-11 — **Update-157** (§9 Astro 7 / DEP-01 zero-audit).
+**Обновлено:** 2026-08-11 — **Update-158** (§9.5a TraceService lifecycle owner).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-157**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-158**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-157; dirty
+**Не использовать:** старые `START HERE` ниже Update-158; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -27,16 +27,16 @@
 
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
-| Последний implementation SHA | `cea370b` — §9 Astro 7 / DEP-01 zero-audit |
-| Последний committed handoff до Update-157 | `5bf5614` — Update-156 post-dashboard transparency; SHA этого docs-коммита всегда брать из Actual Git |
-| Actual Git после implementation | `master...origin/master [ahead 273]` at `cea370b`; refresh remains mandatory |
-| Что закрыто локально | §9 named telemetry **7/7** + dashboard + Astro 7 / DEP-01 zero-audit; это не закрывает весь §9 и не означает production ready |
-| Последний implementation gate | pytest **5 passed**; Astro check **0/0/0**; npm audit **0 vulnerabilities**; build **59 pages** + Pagefind + sitemap; diff/LF green; one known Starlette warning |
-| Известный baseline debt | ordinary MyPy: four pre-existing `api/app.py` errors; formatter debt outside new lines; no full locked-CI claim |
-| Worktree boundary | only four protected tracked owner files are dirty and their hashes match; Astro 7 and dashboard Grok prompts remain untracked controls; unrelated untracked artifacts are preserved; implementation WIP/active writer none |
-| Grok route truth | `local_grok_cli`, actual model `grok-4.5-build`; Astro 7 implementation run exhausted its bounded monitor after creating the five target diffs; its single QA follow-up ended `end_turn` and removed the rehype deprecation; Codex ran final gates |
+| Последний implementation SHA | `9c207b6` — §9.5a TraceService lifecycle owner |
+| Последний committed handoff до Update-158 | `c246fd7` — Update-157 Astro 7 verification; SHA этого docs-коммита всегда брать из Actual Git |
+| Actual Git после implementation | `master...origin/master [ahead 275]` at `9c207b6`; refresh remains mandatory |
+| Что закрыто локально | §9 named telemetry **7/7** + dashboard + Astro 7 / DEP-01 + TraceService lifecycle owner; это не закрывает весь §9 и не означает production ready |
+| Последний implementation gate | TDD import error → **3 passed**; adjacent **34 passed / 1 pre-existing failed**; narrowed **34 passed / 1 deselected**; final **13 passed**; Ruff/format/Mypy/diff/LF green; one known Starlette warning |
+| Известный baseline debt | `VER-07`: stale retention audit expectation omits unchanged tenant field; ordinary MyPy also retains four pre-existing `api/app.py` errors; no full locked-CI claim |
+| Worktree boundary | only four protected tracked owner files are dirty and their hashes match; unrelated untracked artifacts are preserved; implementation WIP/active writer none |
+| Grok route truth | no Grok run occurred in Update-158; the implementation and verification were performed locally by Codex |
 | Что не запускалось | push, deploy, migration 019–023, Grafana import/provisioning, live service/provider/quality/scrape/alert delivery, scheduler mutation |
-| Что осталось в §9 | architecture ownership, live scrape/alert delivery |
+| Что осталось в §9 | architecture ownership beyond TraceService, live scrape/alert delivery |
 | Следующий slice | не выбран; только явный owner request или один documented safe residual |
 
 ---
@@ -45,27 +45,26 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **committed implementation** | `cea370b` — §9 Astro 7 / DEP-01 zero-audit |
+| Latest **committed implementation** | `9c207b6` — §9.5a TraceService lifecycle owner |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** · `eb8466e` **9.1b** · `db65e37` **9.1a** · `80c2603` **QG-03A** · `1304ff4` **QG-02** · `c3ae4f4` **QG-01** · `99c6be5` lightweight GraceKelly smoke · `faaa815` OpenCode Zen |
-| Latest **committed docs before this Update** | `5bf5614` — Update-156 post-dashboard transparency |
+| Latest **committed docs before this Update** | `c246fd7` — Update-157 Astro 7 verification |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 273]` at `cea370b` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-157 docs WIP may remain; otherwise owned WIP **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **Astro 7 / DEP-01 zero-audit** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** + **HYBRID-MEM env propagation** + **VER-02** + **VER-05** + **VER-06** |
+| Branch advisory | observed `master...origin/master [ahead 275]` at `9c207b6` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-158 docs WIP may remain; otherwise owned WIP **none** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a TraceService** + **QG-01** + **QG-02** + **QG-03A** + **QG-03B** + **QG-04** + **HYBRID-MEM env propagation** + **VER-02** + **VER-05** + **VER-06** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | No implementation slice is preselected. Remaining §9 residuals are architecture ownership and live scrape/alert delivery |
+| Next ordered | No implementation slice is preselected. Remaining §9 residuals are architecture ownership beyond TraceService and live scrape/alert delivery; `VER-07` is a separate narrow test-debt candidate |
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-157 records committed Astro 7 / DEP-01 closure:** `cea370b` upgrades
-the isolated docs site, preserves Mermaid and whitespace behavior, and removes
-the obsolete audit exceptions after a zero-finding audit. Independent evidence
-is pytest **5 passed**, Astro check **0/0/0**, npm audit **0**, and a **59-page**
-static build with Pagefind and sitemap. The matching Playwright headless shell
-was installed only as a local verification prerequisite. No live Grafana
+**Update-158 records committed TraceService ownership:** `9c207b6` adds one
+injectable start/log/finish owner while preserving the SQLite public API and
+PII-redaction contract. Focused TDD, the narrowed adjacent band, final focused
+tests, Ruff/format, narrowed MyPy, diff/LF, and protected hashes are green.
+The unrelated `VER-07` retention assertion remains open. No live Grafana
 import/provisioning, scrape, alert delivery, provider, service, index,
 migration, scheduler, push, or deploy action occurs in this Update.
 The full open/gated truth remains in §1C and §2A/§12.
@@ -74,6 +73,7 @@ The full open/gated truth remains in §1C and §2A/§12.
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **9.5a TraceService lifecycle owner** | TDD import error → **3 passed**; adjacent **34 passed / 1 pre-existing failed**; narrowed **34 passed / 1 deselected**; final **13 passed**; scoped Ruff/format + narrowed MyPy + diff/LF + protected hashes clean |
 | **9.4a Astro 7 / DEP-01** | independent pytest **5 passed**, one known warning; Astro check **0/0/0**; npm audit **0 vulnerabilities**; static build **59 pages** + Pagefind + sitemap; scoped diff/LF + protected hashes clean |
 | **Update-156 transparency** | docs-only Actual Git/Grok/artifact reconciliation; docs quality gate only; no implementation test rerun or new implementation/release claim |
 | **9.3a Grafana dashboard artifact** | Grok TDD **7 failed → 7 passed**; QA semantic threshold check **1 failed / 6 passed → 7 passed**; independent **7 passed**, one known warning; scoped Ruff + JSON parse + cached diff/LF + protected hashes clean; no live Grafana/import/scrape/alert-delivery evidence |
@@ -284,7 +284,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-157)
+### 1C. Authoritative open-problem ledger (Update-158)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -316,7 +316,7 @@ override this snapshot.
 | **REL-05** | **OPEN** | Calibration seed is synthetic; no production dual-annotator human sample or agreement/cost evidence exists. | Collect authorized human-labelled sample and reissue calibration artifact. |
 | **REL-06** | **GATED** | Formal §7.6 live provider gate has scaffold/readiness only; mock/smoke is not release evidence. | Secrets + explicit `--execute` opt-in. |
 | **REL-07** | **GATED** | Live IdP/OIDC drill and production `WIDGET_ALLOWED_ORIGINS` evidence are absent; widget E2E is Chromium-only local evidence. | Live IdP/prod-config authority and cross-environment acceptance. |
-| **REL-08** | **OPEN** | `db65e37`, `eb8466e`, and `893efe3` close local cache work; `3fe6d6d`, `11e52f1`, `64f40b3`, `9817e89`, `5a2f696`, and `344e174` expose all seven named local signals. `1237f3c` adds their portable Grafana dashboard. `cea370b` upgrades the docs site to Astro 7 and clears DEP-01 to zero audit findings with no exceptions. Architecture ownership, live scrape/alert delivery, and §10 full verification/canary/rollback remain open. | Continue with one explicit §9 residual at a time; then full 3.11/3.13 suite, security/dependency gates, canary and rollback evidence. |
+| **REL-08** | **OPEN** | Cache, seven telemetry signals, dashboard, and Astro 7 / DEP-01 are local-green. `9c207b6` gives trace start/log/finish one injectable owner while preserving the SQLite API and PII redaction. Remaining architecture ownership, live scrape/alert delivery, and §10 full verification/canary/rollback remain open. | Continue with one explicit §9 residual at a time; then full 3.11/3.13 suite, security/dependency gates, canary and rollback evidence. |
 
 #### Verification / local operations
 
@@ -328,6 +328,7 @@ override this snapshot.
 | **VER-04** | **WARNING** | Focused pytest runs emit `StarletteDeprecationWarning` for `httpx` through `starlette.testclient`; assertions still pass. | Track dependency migration separately; warning is not fixed by QG-03A. |
 | **VER-05** | **LOCAL-CLOSED** | `4b0fba7` replaces the stale zero-caller assertion with the exact intentional allowlist `["api/routers/admin_ops.py"]` and renames the test accordingly. The original assert reproduced red; the independent retention/admin band passed 51 tests, scoped Ruff and diff checks passed. | Do not reopen without a new caller or contract change. Whole-file Ruff format debt predates this slice and was not reformatted here. |
 | **VER-06** | **LOCAL-CLOSED** | `356a530` updates the exact stale agentic-injection test to patch `agent.tools.search_kb_docs` and return `(formatted_text, raw_docs)`. The failure reproduced before the edit; afterward the exact test and the 44-test response-safety/agentic band passed. | Do not reopen without another agentic KB boundary change. File-wide formatter debt predates this test-only slice. |
+| **VER-07** | **OPEN / PRE-EXISTING TEST DEBT** | `tests/test_trace_retention.py::test_admin_purge_endpoint_returns_counts_and_records_audit` expects no `tenant_id`, while the unchanged tenant-aware endpoint supplies `tenant_id="default"`. Blame dates the test to `8841fb6b` (2026-04-17) and the endpoint behavior to `6668ffe0` (2026-04-27). | Dedicated test-contract slice; do not weaken tenant-aware audit behavior or mix it into TraceService ownership. |
 | **OPS-01** | **DISABLED** | `PythonMemoryGuard` was read-only verified `Disabled` on 2026-08-09; last run was 2026-07-01. The 2.12 GiB child therefore had no configured 1 GiB enforcement. | Enabling/changing Task Scheduler requires explicit authority; do not run memory-heavy hybrid commands meanwhile. |
 | **OPS-02** | **ENV LIMIT** | The system pytest temp root can return access denied. | Use a unique writable repository basetemp; do not raw-retry the inaccessible path. |
 | **OPS-03** | **ENV LIMIT** | Git/PowerShell commands intermittently exceeded 10 s or timed out; root cause is not established. `login:false`, `git -C`, scoped plumbing commands, and a 30 s read-only timeout completed. | Avoid parallel full-worktree scans and raw retries; preserve the cycle budget. |
@@ -336,7 +337,7 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 273]` at `cea370b` before Update-157 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
+| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 275]` at `9c207b6` before Update-158 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
 | **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
 | **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. The two `.grok-prompts/dashboard-artifact-9-3a-*.md` controls remain, while their dashboard pytest basetemps are absent. `cache-namespace-9-1c.md` and its prompt are historical. | They are not implementation WIP. Do not bulk-delete or stage them, and do not relaunch the same Grok prompt without new evidence or a narrowed hypothesis. |
@@ -368,7 +369,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-157 in AGENT_STATE.md + §0A/§1C in this file
+5. Read ONLY top Update-158 in AGENT_STATE.md + §0A/§1C in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. Do not invent another QG item; QG-01–QG-04 are local-only closures
 8. Select work only from an explicit owner request or a documented ungated residual
@@ -378,7 +379,7 @@ override this snapshot.
 
 | Candidate | Current truth | Boundary before action |
 |-----------|---------------|------------------------|
-| §9 residuals | §9.1a–9.1c cache work, §9.2a–9.2f telemetry (**7/7 exact signals** including queue age), §9.3a dashboard, and §9.4a Astro 7 / DEP-01 are local-green; architecture ownership and live alert delivery remain open | No item preselected; choose one explicit/documented boundary in a new owner turn, with no live action inferred |
+| §9 residuals | Cache, telemetry (**7/7**), dashboard, Astro 7 / DEP-01, and §9.5a TraceService are local-green; architecture ownership beyond TraceService and live alert delivery remain open | No item preselected; choose one explicit/documented boundary in a new owner turn, with no live action inferred |
 | HYBRID-MEM | Blank child environment propagation is local-green at `3c90368`; default hybrid quality is unproved; memory guard is last known disabled | Fresh explicit authority for Task Scheduler state and a separately bounded hybrid attempt; verify the guard before any model load |
 | Live quality ×3 | Only seed 42 ran and **failed**; seeds 43–44 and a valid passing aggregate do not exist | Fresh paid/live opt-in, compatible index, provider prerequisites, and fail-closed evidence collection |
 | INDEX-DIM | Active `rag_docs_default` is dimension 3; remote embeddings are 1024; retained compatible copy is diagnostic evidence only | Dedicated validated rebuild/publish scope; never replace/delete the active or retained collection casually |
@@ -408,7 +409,7 @@ permission for another paid call.
 | **6** judge / safety / agentic | **6.1–6.7** local | production human dual-annotator sample |
 | **7** eval gate | **7.1–7.7** local | live execute with secrets; mock≠release; optional more depth |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
-| **9** cache / architecture / SLO | **9.1a–9.1c cache + 9.2a–9.2f telemetry + 9.3a dashboard + 9.4a Astro 7 / DEP-01 local** | architecture ownership; live alert delivery |
+| **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5a local** | architecture ownership beyond TraceService; live alert delivery |
 | **10** final verification | not started | after 1–9 + opt-in evidence |
 
 **Release / production: NOT claimable** until §1 live + §5 live quality evidence +
@@ -651,6 +652,8 @@ reopen it without another agentic KB boundary change. The §9.3a committed
 dashboard artifact is locally closed at `1237f3c`; do not reopen it without a
 dashboard-schema or metric-contract change. Astro 7 / DEP-01 is locally closed
 at `cea370b`; do not reopen it without a dependency or advisory change.
+TraceService lifecycle ownership is locally closed at `9c207b6`; do not reopen
+it without a trace lifecycle boundary change.
 
 A new paid seed or 3×20 retry needs fresh owner opt-in. Remaining local work
 must come from an explicit owner request or one documented residual selected
@@ -660,7 +663,7 @@ in a new turn; do not invent another local QG item.
 
 - live multi-service / migrate / push / deploy / live provider·quality execute
 - re-select through **8.5** / **4.1–4.8** / **5.1–5.7** / **6.1–6.7** /
-  **7.1–7.7** / **9.1a–9.1c** / **9.2a–9.2f** / **DEP-01 / Astro 7**
+  **7.1–7.7** / **9.1a–9.1c** / **9.2a–9.2f** / **9.3a–9.5a**
 - OIDC live IdP drill; bulk plan checkbox edits; production claims
 - multi-replica impl without SLA (design DEFER)
 - Docker/WSL or a silent model fallback for the lightweight smoke
@@ -678,7 +681,7 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-157:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-158:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -806,6 +809,7 @@ Never log secret values.
 | 58 | docs | resolve through Actual Git | Update-155 §9.3a closure; do not add a follow-up solely for its self-SHA |
 | 59 | docs | resolve through Actual Git | Update-156 owner-requested post-dashboard transparency; records Actual Git, Grok terminal states, and control-artifact boundaries only |
 | 60 | **9.4a** | `cea370b` | upgrade the docs site to Astro 7, retain supported Mermaid/whitespace behavior, and clear DEP-01 to zero audit findings |
+| 61 | **9.5a** | `9c207b6` | make TraceService the injectable single owner of start/log/finish while preserving SQLite API and PII redaction |
 
 ---
 
@@ -842,11 +846,12 @@ Never log secret values.
 | Tenant-denied access observable? | **Yes local** (`344e174`): ten confirmed session/ticket/KB-draft mismatch branches feed bounded resource labels without tenant/resource IDs; no live scrape/alert-delivery evidence |
 | Seven-signal operations dashboard committed? | **Yes local** (`1237f3c`): portable `DS_PROMETHEUS`, seven non-overlapping panels, bounded/adaptive PromQL, and threshold contract tests; no live Grafana/import/scrape evidence |
 | Astro 7 / DEP-01 closed? | **Yes local** (`cea370b`): Astro 7.2 / Starlight 0.41, supported unified Mermaid pipeline, 59-page build, and zero audit findings with no exceptions |
+| Trace lifecycle has one owner? | **Yes local** (`9c207b6`): TraceService owns start/log/finish and redaction; existing SQLite module-level signatures remain compatible |
 | Agentic injection safety test current? | **Yes local** (`356a530`): mock follows `search_kb_docs(text, docs)` and the full safety/agentic band is green |
-| Canonical restart capsule reconciled? | **Yes as of Update-157**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
-| All known open problems indexed? | **Yes in §1C as of Update-157**; Actual Git/new evidence overrides the snapshot |
+| Canonical restart capsule reconciled? | **Yes as of Update-158**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
+| All known open problems indexed? | **Yes in §1C as of Update-158**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-157 handoff files are clean, owned WIP **none** |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-158 handoff files are clean, owned WIP **none** |

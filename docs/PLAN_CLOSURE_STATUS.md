@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-11 (Update-157 Astro 7 / DEP-01 zero-audit)
+**Date:** 2026-08-11 (Update-158 TraceService lifecycle owner)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-157**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-158**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-157. Preserve it as DoD input, but use Actual Git + the committed
+> Update-158. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,13 +18,13 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-157:** implementation `cea370b` upgrades the docs site to Astro 7,
-keeps the supported unified Mermaid pipeline and prior whitespace semantics,
-and removes all obsolete audit exceptions after a zero-finding audit. Fresh
-evidence is pytest **5 passed**, Astro check **0/0/0**, dependency audit **0**,
-and a **59-page** static build with Pagefind and sitemap. No plan checkbox or
-release gate changed. Architecture ownership, live scrape/alert delivery, and
-live/gated work remain explicit in
+**Update-158:** implementation `9c207b6` makes TraceService the injectable
+single owner of trace start/log/finish and redaction while preserving the
+SQLite module API. Fresh evidence includes focused TDD, a narrowed **34-test**
+adjacent band, final **13 tests**, scoped Ruff/format, and narrowed MyPy. The
+pre-existing `VER-07` retention assertion is recorded separately. No plan
+checkbox or release gate changed. Remaining architecture ownership, live
+scrape/alert delivery, and live/gated work remain explicit in
 [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
 
 ---
@@ -41,7 +41,7 @@ live/gated work remain explicit in
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
-| **9** cache / architecture / SLO | **9.1a–9.1c cache + 9.2a–9.2f telemetry + 9.3a dashboard + Astro 7 / DEP-01 local** | OPEN (architecture ownership, live alert delivery) | soft |
+| **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5a local** | OPEN (remaining architecture ownership, live alert delivery) | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
 **Project / production release: NOT claimed.**
@@ -315,8 +315,9 @@ Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 | **9.2f** | **done local** | `344e174` | ten confirmed session/ticket/KB-draft ownership mismatches increment bounded `resource=session|ticket|kb_draft|unknown` once; missing/same-tenant access stays uncounted, metric failure is fail-open, opaque 404s remain unchanged, and any five-minute increase warns after 30 seconds |
 | **9.3a** | **done local** | `1237f3c` | a portable `DS_PROMETHEUS` dashboard gives each named signal one non-overlapping panel, preserves bounded/adaptive PromQL and zero-target semantics, and is guarded by offline JSON contract tests |
 | **9.4a** | **done local** | `cea370b` | Astro 7.2 / Starlight 0.41 retain the unified Mermaid pipeline and prior whitespace behavior; dependency audit is zero with an empty validated exception register |
+| **9.5a** | **done local** | `9c207b6` | TraceService is the injectable single owner of start/log/finish and pre-persistence redaction; SQLite module-level signatures remain compatible |
 
-**Residual:** architecture ownership. No live Redis, Grafana import,
+**Residual:** architecture ownership beyond TraceService. No live Redis, Grafana import,
 metric-scrape, or alert-delivery evidence exists.
 
 ---
@@ -356,14 +357,15 @@ retry, scheduler change, index mutation, migration, push, or deploy.
 `--follow-imports=skip`. It changes no plan checkbox and does not establish a
 full repository, locked Python-3.11, CI, or production verification result.
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2f**, **9.3a**, **9.4a / Astro 7 / DEP-01**, VER-06.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2f**, **9.3a–9.5a**, VER-06.
 
 ---
 
-## Last-known verification snapshot (Update-157)
+## Last-known verification snapshot (Update-158)
 
 | Band | Last known |
 |------|------------|
+| **9.5a TraceService lifecycle owner** | TDD import error → **3 passed**; adjacent **34 passed / 1 pre-existing failed**; narrowed **34 passed / 1 deselected**; final **13 passed**; scoped Ruff/format + narrowed MyPy + diff/LF + protected hashes clean |
 | **9.4a Astro 7 / DEP-01** | independent pytest **5 passed**, one warning; Astro check **0/0/0**; npm audit **0 vulnerabilities**; static build **59 pages** + Pagefind + sitemap; scoped diff/LF + protected hashes clean |
 | **Update-156 transparency** | docs-only Actual Git/Grok/artifact reconciliation; docs quality gate only; no implementation test rerun or new implementation/release evidence |
 | **9.3a Grafana dashboard artifact** | Grok TDD **7 failed → 7 passed**; QA threshold semantics **1 failed / 6 passed → 7 passed**; independent **7 passed**, one warning; scoped Ruff + JSON parse + cached diff/LF + protected hashes clean; no live Grafana/import/scrape/alert-delivery evidence |
