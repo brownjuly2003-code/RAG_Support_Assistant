@@ -1,5 +1,38 @@
 # Agent State
 
+## 2026-08-11 Update-152 — §9.2e orphan-work telemetry ✅ START HERE
+
+> **Committed implementation:** `5a2f696` (`feat(metrics): expose orphan work
+> gauge`) changes exactly seven scoped paths. Actual Git after the commit was
+> `master...origin/master [ahead 265]`; active writer **none**, implementation
+> WIP **none**, and the four protected dirty-file hashes still match.
+>
+> **Contract:** label-free `rag_orphan_work_inflight` increments once when any
+> of the five shared timeout/disconnect paths transfers pipeline capacity to a
+> future done-callback, then decrements once when that future finishes. Normal
+> synchronous completion remains uncounted, and metric failures cannot prevent
+> callback registration or capacity release. `OrphanWorkStuck` warns only when
+> the gauge remains above zero for five minutes.
+>
+> **Fresh evidence:** focused TDD moved from **5 failed → 5 passed**. The
+> independent pipeline/stream/metrics/alerts/timeout band first exposed a new
+> test-isolation leak; after the single narrowed correction it passed **37
+> tests** with one known warning. Scoped Ruff, narrowed metrics MyPy, diff, and
+> LF checks passed. Ordinary two-source MyPy still reports two pre-existing
+> `no-redef` errors outside the changed lines; formatter debt also remains only
+> outside the added lines.
+>
+> **Scope honesty:** this closes only local **9.2e orphan-work telemetry**. It
+> changes no timeout, executor, cancellation, or capacity-release policy and
+> adds no dashboard, live scrape, or alert-delivery evidence. Architecture
+> ownership, the tenant-denied exact signal, Astro 7, §10, live quality, push,
+> and deploy remain open or gated.
+>
+> **Next-session route:** refresh Actual Git first, then read only this block
+> and `docs/SESSION_HANDOFF.md` §0/§1C/§2/§7/§8. Do not repeat 9.2e without a
+> capacity-ownership change. No implementation slice is preselected; choose at
+> most one documented, locally safe residual.
+
 ## 2026-08-11 Update-151 — §9.2d safety-block telemetry ✅ START HERE
 
 > **Committed implementation:** `9817e89` (`feat(metrics): expose safety block
