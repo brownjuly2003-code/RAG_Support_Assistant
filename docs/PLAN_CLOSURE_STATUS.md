@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-11 (Update-154 next-session transparency)
+**Date:** 2026-08-11 (Update-155 §9.3a Grafana dashboard artifact)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-154**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-155**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-154. Preserve it as DoD input, but use Actual Git + the committed
+> Update-155. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,12 +18,12 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-154:** docs-only reconciliation against `806bf27`; latest
-implementation remains `344e174`, implementation WIP and active writer are
-none, and exact local §9 signals remain **7/7**. No code, plan checkbox,
-evidence classification, or release gate changed. Architecture ownership, a
-dashboard artifact, Astro 7, live alert delivery, and live/gated work remain
-explicit in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
+**Update-155:** `1237f3c` commits the portable seven-panel Grafana dashboard
+for all **7/7** named §9 signals plus offline contract tests. TDD passed after
+one QA correction to keep zero-target states green; no plan checkbox or release
+gate changed. Architecture ownership, Astro 7, live scrape/alert delivery, and
+live/gated work remain explicit in
+[`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
 
 ---
 
@@ -39,7 +39,7 @@ explicit in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
-| **9** cache / architecture / SLO | **9.1a–9.1c cache + 9.2a–9.2f telemetry + DEP-01 local** | OPEN (architecture ownership, dashboard artifact, Astro 7) | soft |
+| **9** cache / architecture / SLO | **9.1a–9.1c cache + 9.2a–9.2f telemetry + 9.3a dashboard + DEP-01 local** | OPEN (architecture ownership, Astro 7, live alert delivery) | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
 **Project / production release: NOT claimed.**
@@ -311,9 +311,10 @@ Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 | **9.2d** | **done local** | `9817e89` | each applied unsafe pre-response increments bounded `action=redact|refuse|unknown` once; clean/empty answers remain uncounted, metric failure is fail-open, and refusals have a warning alert |
 | **9.2e** | **done local** | `5a2f696` | label-free orphan-work gauge increments once when capacity transfers to any of five shared future callbacks and decrements once on completion; normal sync work stays uncounted, metric failure is fail-open, and work above zero for five minutes warns |
 | **9.2f** | **done local** | `344e174` | ten confirmed session/ticket/KB-draft ownership mismatches increment bounded `resource=session|ticket|kb_draft|unknown` once; missing/same-tenant access stays uncounted, metric failure is fail-open, opaque 404s remain unchanged, and any five-minute increase warns after 30 seconds |
+| **9.3a** | **done local** | `1237f3c` | a portable `DS_PROMETHEUS` dashboard gives each named signal one non-overlapping panel, preserves bounded/adaptive PromQL and zero-target semantics, and is guarded by offline JSON contract tests |
 
-**Residual:** architecture ownership; a committed dashboard artifact;
-Astro 7. No live Redis, metric-scrape, or alert-delivery evidence exists.
+**Residual:** architecture ownership; Astro 7. No live Redis, Grafana import,
+metric-scrape, or alert-delivery evidence exists.
 
 ---
 
@@ -352,14 +353,15 @@ retry, scheduler change, index mutation, migration, push, or deploy.
 `--follow-imports=skip`. It changes no plan checkbox and does not establish a
 full repository, locked Python-3.11, CI, or production verification result.
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2f**, DEP-01, VER-06.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2f**, **9.3a**, DEP-01, VER-06.
 
 ---
 
-## Last-known verification snapshot (Update-154)
+## Last-known verification snapshot (Update-155)
 
 | Band | Last known |
 |------|------------|
+| **9.3a Grafana dashboard artifact** | Grok TDD **7 failed → 7 passed**; QA threshold semantics **1 failed / 6 passed → 7 passed**; independent **7 passed**, one warning; scoped Ruff + JSON parse + cached diff/LF + protected hashes clean; no live Grafana/import/scrape/alert-delivery evidence |
 | **Update-154 transparency** | docs-only reconciliation against Actual Git; no implementation file changed, no project suite rerun, and no new implementation or release evidence |
 | **9.2f tenant-denied telemetry** | focused TDD **5 failed → 5 passed**; independent tenant/session/agent/KB/metrics/alerts band first rejected a zero-duration alert, then passed **54 tests** after one narrowed correction, one warning; scoped Ruff + six-source narrowed MyPy + diff/LF clean; ordinary MyPy retains four pre-existing `api/app.py` errors outside changed lines; formatter debt remains outside added lines; no live scrape/alert delivery |
 | **9.2e orphan-work telemetry** | focused TDD **5 failed → 5 passed**; independent pipeline/stream/metrics/alerts/timeout band first exposed test-isolation leakage, then passed **37 tests** after one narrowed correction, one warning; scoped Ruff + narrowed metrics MyPy + diff/LF clean; ordinary two-source MyPy retains two pre-existing `no-redef` errors outside changed lines; formatter debt remains outside added lines; no live scrape/alert delivery |

@@ -1,5 +1,40 @@
 # Agent State
 
+## 2026-08-11 Update-155 — §9.3a Grafana dashboard artifact ✅ START HERE
+
+> **Committed implementation:** `1237f3c` (`feat(monitoring): add RAG
+> operations dashboard`) adds exactly three scoped paths. Actual Git after the
+> commit was `master...origin/master [ahead 270]`; active writer **none**,
+> implementation WIP **none**, and the four protected dirty-file hashes still
+> match.
+>
+> **Contract:** the importable `rag-support-operations` dashboard binds a
+> portable `DS_PROMETHEUS` input and gives one non-overlapping panel to each of
+> the seven bounded §9 signals. Counter queries use adaptive
+> `$__rate_interval` increases and only their bounded grouping label; both
+> gauges remain label-free. Queue age shows the 300-second warning boundary,
+> orphan work keeps zero green/red from one, and the unverified-auto series
+> retains an explicit red zero-target treatment. Prometheus alert ownership
+> remains in `monitoring/alert_rules.yml`.
+>
+> **Fresh evidence:** Grok TDD moved from **7 failed → 7 passed**. The single
+> QA follow-up reproduced the zero-threshold defect as **1 failed / 6 passed**,
+> corrected it, and returned **7 passed**. Codex independently passed all
+> **7 tests**, scoped Ruff, JSON parse, cached diff, LF, and protected-hash
+> checks; one known Starlette warning remains.
+>
+> **Scope honesty:** this closes only the committed local **§9.3a dashboard
+> artifact**. No Grafana import/provisioning, live scrape, alert delivery,
+> deploy, provider/quality run, migration, scheduler change, push, or production
+> evidence occurred. §9 architecture ownership and Astro 7 remain local
+> residuals; live alert delivery and §10 remain open/gated.
+>
+> **Next-session route:** refresh Actual Git first, then read only this block
+> and `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. Do not repeat §9.3a without a
+> dashboard-schema or metric-contract change. No implementation slice is
+> preselected; choose at most one explicit owner request or documented safe
+> residual.
+
 ## 2026-08-11 Update-154 — next-session transparency ✅ START HERE
 
 > **Docs-only reconciliation:** latest implementation remains `344e174`
