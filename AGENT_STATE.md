@@ -1,5 +1,35 @@
 # Agent State
 
+## 2026-08-11 Update-170 — VER-03 adjacent order band ruled out ⚠️ START HERE
+
+> **Fresh bounded diagnostic:** at committed HEAD `c68911d`, pytest collection
+> confirmed the exact immediate predecessor order before
+> `test_direct_cli_resolves_project_imports`. A nine-file Python 3.13 band ran
+> those job-object, judge/JWT, KB, Langfuse, and lightweight-smoke tests in
+> order under pytest-cov with only the partial-band fail-under disabled. It
+> finished **85 passed / 3 warnings** in **12.17s**; the direct CLI node passed
+> in **4.68s**.
+>
+> **Diagnostic conclusion:** the immediate predecessor window does not
+> reproduce the aggregate-only full-suite failure. Two ResourceWarnings named
+> unclosed SQLite connections during the passing CLI node, but they did not
+> fail the band and do not prove the earlier full-gate root cause. No code,
+> timeout, runtime, or test-contract edit was justified. VER-03 remains
+> **OPEN / full-gate red** at the Update-169 result.
+>
+> **Workspace boundary:** actual Git before this docs update is
+> `master...origin/master [ahead 295]` at `c68911d`; active writer/test process
+> **none** and owned implementation/test WIP **none**. Protected dirty tracked
+> files remain unchanged; the new order-band basetemp is untracked evidence.
+> No Grok run, live action, migration, scheduler mutation, push, or deploy
+> occurred.
+>
+> **Next-session route:** Actual Git first, then this block and
+> `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. Do not repeat the green adjacent
+> band or the unchanged full suite. The next local candidate is one wider,
+> still-bounded predecessor window ending before the ruled-out band, with the
+> direct CLI node appended and duration/traceback evidence captured once.
+
 ## 2026-08-11 Update-169 — VER-03 full gate remains red ⚠️ START HERE
 
 > **Fresh full-gate evidence:** at committed HEAD `82c9006`, the CI-shaped
