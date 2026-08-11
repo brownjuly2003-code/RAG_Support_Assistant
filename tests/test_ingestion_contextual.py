@@ -58,6 +58,14 @@ def test_ingest_pipeline_uses_tenant_vector_store_builder(
         captured["root_called"] = True
         return object()
 
+    # Keep this test on the vector-store routing contract only; categorizer is covered elsewhere.
+    import ingestion.pipeline as ingestion_pipeline
+
+    monkeypatch.setattr(
+        ingestion_pipeline,
+        "annotate_documents_with_categories",
+        lambda docs, tenant_id="default": {},
+    )
     monkeypatch.setattr(tenant_manager, "build_vector_store", _fake_build_vector_store)
     monkeypatch.setattr(manager, "get_embeddings", MagicMock(return_value=MagicMock()))
     monkeypatch.setattr(manager, "_build_text_splitter", lambda **kwargs: splitter)
