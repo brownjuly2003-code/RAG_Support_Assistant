@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-11 — **Update-165** (canonical next-session transparency).
+**Обновлено:** 2026-08-11 — **Update-166** (§9.5d3 streaming execution owner).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-165**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-166**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-165; dirty
+**Не использовать:** старые `START HERE` ниже Update-166; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -27,16 +27,16 @@
 
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
-| Последний implementation SHA | `d865b06` — §9.5d2 PipelineRunner sync execution/deadline owner |
-| Последний committed handoff до Update-165 | `a0035bc` — Update-164 PipelineRunner sync ownership; SHA этого docs-коммита всегда брать из Actual Git |
-| Actual Git перед этой docs-only сверкой | `master...origin/master [ahead 288]` at `a0035bc`; refresh remains mandatory |
-| Что закрыто локально | §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, PipelineRunner capacity + sync execution, and VER-07; это не закрывает весь §9 и не означает production ready |
-| Последний local gate | PipelineRunner ownership **2 failed / 2 passed → 4 passed**; focused regression band **22 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green; Update-164 docs **13 passed**; one known Starlette warning |
+| Последний implementation SHA | `c53f724` — §9.5d3 PipelineRunner streaming execution/deadline owner |
+| Последний committed handoff до Update-166 | `378c4f5` — Update-165 canonical transparency; SHA этого docs-коммита всегда брать из Actual Git |
+| Actual Git перед этой docs edit | `master...origin/master [ahead 290]` at `c53f724`; refresh remains mandatory |
+| Что закрыто локально | §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, PipelineRunner capacity + sync + streaming execution, and VER-07; это не закрывает весь §9 и не означает production ready |
+| Последний local gate | Grok TDD **2 failed → 6 passed**, first focused band **32 passed**; Codex independent owner/provider-stream band **7 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green; one known Starlette warning |
 | Известный baseline debt | no full locked-CI claim; ordinary router MyPy retains two pre-existing `no-redef` findings, and older `api/app.py`/legacy formatter debt remains outside recent changed lines |
 | Worktree boundary | only four protected tracked owner files are dirty and their hashes match; unrelated untracked artifacts are preserved; implementation WIP/active writer none |
-| Grok route truth | no Grok run occurred in Updates 161–165; historical Grok control artifacts remain non-WIP |
+| Grok route truth | bounded `local_grok_cli`: obsolete ID failed before edits; implementation + one QA follow-up used `grok-4.5` alias / actual `grok-4.5-build`, ended `cancelled` only at final disallowed hash check; Codex independently verified the diff |
 | Что не запускалось | push, deploy, migration 019–023, Grafana import/provisioning, live service/provider/quality/scrape/alert delivery, scheduler mutation |
-| Что осталось в §9 | PipelineRunner streaming submission/deadline owner; SessionService deferred pending multi-replica SLA; live scrape/alert delivery |
+| Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
 | Следующий slice | не выбран; только явный owner request или один documented safe residual |
 
 ---
@@ -45,26 +45,27 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **committed implementation** | `d865b06` — §9.5d2 PipelineRunner sync execution/deadline owner |
+| Latest **committed implementation** | `c53f724` — §9.5d3 PipelineRunner streaming execution/deadline owner |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
-| Prior implementations (recent) | `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
-| Latest **committed docs before this Update** | `a0035bc` — Update-164 PipelineRunner sync ownership |
+| Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
+| Latest **committed docs before this Update** | `378c4f5` — Update-165 canonical transparency |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 288]` at `a0035bc` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-165 docs WIP may remain; otherwise owned WIP **none** |
-| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d2 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/05/06/07** |
+| Branch advisory | observed `master...origin/master [ahead 290]` at `c53f724` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer **none**; implementation WIP **none**; if these three handoff files are dirty, only Update-166 docs WIP may remain; otherwise owned WIP **none** |
+| Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | No implementation slice is preselected. Local residual: PipelineRunner streaming submission/deadline; SessionService requires an SLA decision; live scrape/alert delivery remains gated |
+| Next ordered | No implementation slice is preselected. SessionService requires an SLA decision; live scrape/alert delivery remains gated; choose only an explicit owner request or documented ungated residual |
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-165 reconciles the next-session entrypoint with Actual Git:** latest
-runtime implementation is `d865b06`, completed lifecycle owners are enumerated
-above, and the committed Update-164 handoff is `a0035bc`. This is
-documentation-only; it adds no project-test, runtime, full-suite, locked-CI,
-live, or release claim.
+**Update-166 records the committed §9.5d3 boundary:** runtime implementation is
+`c53f724`; `PipelineRunner` now owns streaming graph/event submission, queue
+and shielded-future wait deadlines, and timeout transfer to orphan capacity.
+The router retains SSE semantics, payload shaping, timeout metrics/logging,
+history, and compatibility wrappers. Grok produced the bounded implementation
+and one QA correction; Codex independently verified the resulting diff.
 No live Grafana import/provisioning, scrape, alert delivery, provider, service,
 index, migration, scheduler, push, or deploy action occurs in this Update.
 The full open/gated truth remains in §1C and §2A/§12.
@@ -73,6 +74,7 @@ The full open/gated truth remains in §1C and §2A/§12.
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **9.5d3 PipelineRunner streaming execution/deadline owner** | Grok TDD transcript **2 failed → 6 passed**, first focused band **32 passed**; QA follow-up added event-worker and exception-fallback ownership; Codex independent owner/provider-token stream band **7 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d2 PipelineRunner sync execution/deadline owner** | ownership **2 failed / 2 passed → 4 passed**; owner/concurrency/request-timeout/stream-capacity/chat-streaming band **22 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d1 PipelineRunner capacity lifecycle owner** | ownership **2 failed → 2 passed**; pipeline concurrency/stream-capacity/request-timeout/chat-streaming band **20 passed**; Ruff/narrowed MyPy/format/diff/LF/protected hashes green |
 | **9.5c2 IngestionJobService worker owner** | ownership **1 failed → 1 passed**; job-contract/liveness/worker/outage/duplicate-claim band **111 passed**; Ruff/narrowed MyPy/format/signature/diff/LF/protected hashes green |
@@ -290,7 +292,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-165)
+### 1C. Authoritative open-problem ledger (Update-166)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -322,7 +324,7 @@ override this snapshot.
 | **REL-05** | **OPEN** | Calibration seed is synthetic; no production dual-annotator human sample or agreement/cost evidence exists. | Collect authorized human-labelled sample and reissue calibration artifact. |
 | **REL-06** | **GATED** | Formal §7.6 live provider gate has scaffold/readiness only; mock/smoke is not release evidence. | Secrets + explicit `--execute` opt-in. |
 | **REL-07** | **GATED** | Live IdP/OIDC drill and production `WIDGET_ALLOWED_ORIGINS` evidence are absent; widget E2E is Chromium-only local evidence. | Live IdP/prod-config authority and cross-environment acceptance. |
-| **REL-08** | **OPEN** | Cache, seven telemetry signals, dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, and PipelineRunner capacity + sync execution owners are local-green. Streaming pipeline ownership, SLA-gated sessions, live scrape/alert delivery, and §10 full verification/canary/rollback remain open. | Continue with one explicit local residual at a time; then full 3.11/3.13 suite, security/dependency gates, canary and rollback evidence. |
+| **REL-08** | **OPEN** | Cache, seven telemetry signals, dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, and PipelineRunner capacity + sync + streaming execution owners are local-green. SLA-gated sessions, live scrape/alert delivery, and §10 full verification/canary/rollback remain open. | No ungated local architecture owner is preselected; continue only from an explicit owner request or documented safe residual, then run the required release gates. |
 
 #### Verification / local operations
 
@@ -343,7 +345,7 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 288]` at `a0035bc` before Update-165 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
+| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 290]` at `c53f724` before Update-166 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
 | **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
 | **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. The two `.grok-prompts/dashboard-artifact-9-3a-*.md` controls remain, while their dashboard pytest basetemps are absent. `cache-namespace-9-1c.md` and its prompt are historical. | They are not implementation WIP. Do not bulk-delete or stage them, and do not relaunch the same Grok prompt without new evidence or a narrowed hypothesis. |
@@ -375,7 +377,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-165 in AGENT_STATE.md + §0A/§1C in this file
+5. Read ONLY top Update-166 in AGENT_STATE.md + §0A/§1C in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. Do not invent another QG item; QG-01–QG-04 are local-only closures
 8. Select work only from an explicit owner request or a documented ungated residual
@@ -385,7 +387,7 @@ override this snapshot.
 
 | Candidate | Current truth | Boundary before action |
 |-----------|---------------|------------------------|
-| §9 residuals | Cache, telemetry (**7/7**), dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, and PipelineRunner capacity + sync execution are local-green | No item preselected; streaming PipelineRunner ownership is the remaining ungated local candidate, while SessionService needs an SLA decision and live alert delivery needs opt-in |
+| §9 residuals | Cache, telemetry (**7/7**), dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, and PipelineRunner capacity + sync + streaming execution are local-green | No item preselected; SessionService needs an SLA decision and live alert delivery needs opt-in; no ungated local architecture owner is currently named |
 | HYBRID-MEM | Blank child environment propagation is local-green at `3c90368`; default hybrid quality is unproved; memory guard is last known disabled | Fresh explicit authority for Task Scheduler state and a separately bounded hybrid attempt; verify the guard before any model load |
 | Live quality ×3 | Only seed 42 ran and **failed**; seeds 43–44 and a valid passing aggregate do not exist | Fresh paid/live opt-in, compatible index, provider prerequisites, and fail-closed evidence collection |
 | INDEX-DIM | Active `rag_docs_default` is dimension 3; remote embeddings are 1024; retained compatible copy is diagnostic evidence only | Dedicated validated rebuild/publish scope; never replace/delete the active or retained collection casually |
@@ -415,7 +417,7 @@ permission for another paid call.
 | **6** judge / safety / agentic | **6.1–6.7** local | production human dual-annotator sample |
 | **7** eval gate | **7.1–7.7** local | live execute with secrets; mock≠release; optional more depth |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
-| **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5d2 owner slices local** | PipelineRunner streaming owner; SessionService SLA decision; live alert delivery |
+| **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5d3 owner slices local** | SessionService SLA decision; live alert delivery |
 | **10** final verification | not started | after 1–9 + opt-in evidence |
 
 **Release / production: NOT claimable** until §1 live + §5 live quality evidence +
@@ -651,10 +653,10 @@ There is **no active implementation WIP and no preselected implementation
 candidate**. Completed lifecycle-owner boundaries are TraceService `9c207b6`,
 EscalationService `03057aa`, IngestionJobService API `84fbdf7`, ingestion worker
 `890155a`, PipelineRunner capacity `aefcf20`, and PipelineRunner sync execution
-`d865b06`. Do not reopen them without a changed boundary. The remaining
-ungated local architecture residual is streaming graph submission/deadline
-ownership in PipelineRunner. SessionService requires an explicit
-multi-replica SLA/consistency decision and is not an autonomous candidate.
+`d865b06`, plus PipelineRunner streaming execution `c53f724`. Do not reopen
+them without a changed boundary. No ungated local architecture owner is
+preselected. SessionService requires an explicit multi-replica SLA/consistency
+decision and is not an autonomous candidate.
 
 QG-01–QG-04, VER-05/06/07, §9.1a–9.4a, and their focused gates are locally
 closed; do not replay them without new code or evidence.
@@ -685,7 +687,7 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-165:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-166:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -821,6 +823,8 @@ Never log secret values.
 | 66 | **9.5d1** | `aefcf20` | make PipelineRunner own capacity release and orphan-future handoff |
 | 67 | **9.5d2** | `d865b06` | make PipelineRunner own sync executor submission, wall deadline, and timeout handoff |
 | 68 | docs | `a0035bc` | record Update-164 PipelineRunner sync ownership before the canonical reconciliation |
+| 69 | **9.5d3** | `c53f724` | make PipelineRunner own streaming graph/event submission, wait deadlines, and timeout handoff |
+| 70 | docs | resolve through Actual Git | Update-166 §9.5d3 closure; do not add a follow-up solely for its self-SHA |
 
 ---
 
@@ -862,12 +866,12 @@ Never log secret values.
 | Ingestion lifecycle has one owner? | **Yes local** (`84fbdf7`, `890155a`): IngestionJobService owns API durable jobs plus worker lease/terminal entry points; read-only list helpers remain outside the critical lifecycle owner |
 | Pipeline capacity has one owner? | **Yes local** (`aefcf20`): PipelineRunner owns release and orphan-future completion handoff; router helpers are compatibility seams |
 | Sync pipeline execution has one owner? | **Yes local** (`d865b06`): PipelineRunner owns executor submission, shielded wall deadline, and timeout capacity handoff for sync `/api/ask` |
-| Streaming pipeline execution has one owner? | **Not yet**: graph/event submission and wait deadlines remain in the conversation router and are the next local architecture residual |
+| Streaming pipeline execution has one owner? | **Yes local** (`c53f724`): PipelineRunner owns graph/event executor submission, queue and shielded-future deadlines, and timeout capacity handoff; router keeps SSE semantics and compatibility seams |
 | Agentic injection safety test current? | **Yes local** (`356a530`): mock follows `search_kb_docs(text, docs)` and the full safety/agentic band is green |
-| Canonical restart capsule reconciled? | **Yes as of Update-165**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
-| All known open problems indexed? | **Yes in §1C as of Update-165**; Actual Git/new evidence overrides the snapshot |
+| Canonical restart capsule reconciled? | **Yes as of Update-166**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
+| All known open problems indexed? | **Yes in §1C as of Update-166**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-165 handoff files are clean, owned WIP **none** |
+| WIP / active writer? | Implementation WIP **none** / active writer **none**; if the three Update-166 handoff files are clean, owned WIP **none** |

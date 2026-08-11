@@ -1,5 +1,49 @@
 # Agent State
 
+## 2026-08-11 Update-166 — §9.5d3 PipelineRunner streaming execution owner ✅ START HERE
+
+> **Committed implementation:** `c53f724` (`refactor(pipeline): centralize
+> streaming execution ownership`) makes `PipelineRunner` the owner of
+> `/api/ask/stream` graph/event executor submission, queue-event and shielded
+> future wait deadlines, and timeout transfer to orphan-capacity lifecycle.
+> Existing SSE payloads, timeout/error mapping, metrics, direct-await fallback,
+> history behavior, and router capacity wrappers remain compatible. Actual Git
+> after implementation is `master...origin/master [ahead 290]`; active writer
+> **none** and implementation WIP **none**.
+>
+> **Fresh evidence:** the Grok TDD transcript records **2 failed → 6 passed**
+> and a **32-test** focused band. Its single QA follow-up added the event-worker
+> delegation contract and routed the exception fallback submission through the
+> owner. Codex independently passed **7 tests** across the three new owner
+> contracts plus provider-token streaming. Scoped Ruff, source format, service
+> MyPy, router MyPy with only the two known pre-existing `no-redef` findings
+> disabled, diff/LF, staged-path, and protected-hash gates passed; one known
+> Starlette warning remains.
+>
+> **Grok truth:** the obsolete requested model ID `grok-4.5-build` failed before
+> edits; the two bounded `local_grok_cli` runs launched with the supported
+> `grok-4.5` alias and reported actual model `grok-4.5-build`. Both produced the
+> intended verified diffs but ended `cancelled` at their final disallowed
+> protected-hash command. Codex treated only the diff as output and ran the
+> independent gate. Delegated budget is exhausted; active writer **none**.
+>
+> **Honest residual:** `SessionService` remains deferred pending a multi-replica
+> SLA/consistency decision. Live scrape/alert delivery, migrations 019–023,
+> live quality ×3, full/locked §10 gates, push, and deploy remain open or
+> explicitly gated. No ungated local architecture owner is preselected; do not
+> reopen completed PipelineRunner boundaries without changed evidence.
+>
+> **Workspace boundary:** protected dirty tracked files `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` retain their
+> recorded SHA-256 values. Grok control prompts and pytest basetemps remain
+> untracked; unrelated artifacts are preserved. No live action, migration,
+> scheduler mutation, push, or deploy occurred.
+>
+> **Next-session route:** Actual Git first, then this block and
+> `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. Choose at most one explicit owner
+> request or documented ungated residual; if none exists, stop rather than
+> inventing work.
+
 ## 2026-08-11 Update-165 — canonical next-session transparency ✅ START HERE
 
 > **Actual committed state before this docs-only reconciliation:** latest
