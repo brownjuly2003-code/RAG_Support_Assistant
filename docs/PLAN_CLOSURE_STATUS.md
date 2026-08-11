@@ -39,7 +39,7 @@ explicit in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md).
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
-| **9** cache / architecture / SLO | **9.1a–9.1c cache + 9.2a–9.2b telemetry + DEP-01 local** | OPEN (architecture ownership, four exact signals/dashboard, Astro 7) | soft |
+| **9** cache / architecture / SLO | **9.1a–9.1c cache + 9.2a–9.2c telemetry + DEP-01 local** | OPEN (architecture ownership, three exact signals/dashboard, Astro 7) | soft |
 | **10** final verification / canary | not started | OPEN | **yes** |
 
 **Project / production release: NOT claimed.**
@@ -307,9 +307,10 @@ Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 | **9.1c** | **done local** | `893efe3` | response-cache keys bind tenant, active Chroma collection/generation, effective prompts, configured provider-model routing, and normalized query; unresolved identity skips cache read/write |
 | **9.2a** | **done local** | `3fe6d6d` | a bounded `operation=publish|retention|unknown` counter records publish and automatic/manual retention failures once; a warning alert groups increases by operation |
 | **9.2b** | **done local** | `11e52f1` | each client-visible `route=auto` sync/SSE result increments bounded `verification=verified|unverified`; missing/unexpected grounding is unverified and the alert target is zero |
+| **9.2c** | **done local** | `64f40b3` | each real shared inbox delivery attempt increments bounded `outcome=delivered|failed|unknown` exactly once across initial and retry paths; non-attempts remain uncounted and failures have a warning alert |
 
-**Residual:** architecture ownership; orphan work, safety blocks, escalation
-delivery, and tenant-denied access signals; a committed dashboard artifact;
+**Residual:** architecture ownership; orphan work, safety blocks, and
+tenant-denied access signals; a committed dashboard artifact;
 Astro 7. No live Redis, metric-scrape, or alert-delivery evidence exists.
 
 ---
@@ -349,14 +350,15 @@ retry, scheduler change, index mutation, migration, push, or deploy.
 `--follow-imports=skip`. It changes no plan checkbox and does not establish a
 full repository, locked Python-3.11, CI, or production verification result.
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2b**, DEP-01, VER-06.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2c**, DEP-01, VER-06.
 
 ---
 
-## Last-known verification snapshot (Update-149)
+## Last-known verification snapshot (Update-150)
 
 | Band | Last known |
 |------|------------|
+| **9.2c escalation-delivery telemetry** | Grok focused TDD **8 failed → 8 passed** after one narrowed test-fixture correction; independent four-file band **33 passed**, one warning; scoped Ruff + two-source MyPy + diff/LF clean; whole-file formatter debt remains outside added lines; no live scrape/alert delivery |
 | **Update-149 docs reconciliation** | docs quality **13 passed**, one warning; scoped diff/LF clean; no project tests rerun and no new implementation evidence |
 | **VER-06 agentic safety mock contract** | exact stale test **1 failed** → **1 passed**; independent response-safety/agentic/auto-telemetry band **44 passed**, one warning; scoped Ruff + diff/LF clean; pre-existing whole-file formatter debt remains; production code unchanged |
 | **9.2b unverified auto-rate telemetry** | focused TDD **4 failed / 5 passed** → **9 passed**; independent **60 passed / 1 failed**, failure reproduced alone as pre-existing VER-06; narrowed rerun **60 passed**, 1 deselected, one warning; scoped Ruff + new-file format + narrowed two-source MyPy + diff/LF clean; no live scrape/alert delivery |

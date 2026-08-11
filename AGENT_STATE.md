@@ -1,5 +1,36 @@
 # Agent State
 
+## 2026-08-11 Update-150 — §9.2c escalation delivery telemetry ✅ START HERE
+
+> **Committed implementation:** `64f40b3` (`feat(metrics): expose escalation
+> delivery outcomes`) changes exactly eight scoped paths. Actual Git after the
+> commit was `master...origin/master [ahead 261]`; active writer **none** and
+> implementation WIP **none**. The four protected dirty-file hashes still
+> match the durable snapshot.
+>
+> **Contract:** `rag_escalation_delivery_total` has only the bounded
+> `outcome=delivered|failed|unknown` label. Each real shared inbox delivery
+> attempt records exactly once by final outcome, covering initial creation and
+> retry. Duplicate, disabled, rejected, and skipped non-attempt paths do not
+> increment it; metric failures remain fail-open for delivery behavior. The
+> warning alert fires on any failed delivery increase over ten minutes.
+>
+> **Fresh evidence:** Grok TDD moved from **8 failed** to **8 passed** after one
+> narrowed fake-store test correction. Codex independently passed the full
+> relevant four-file band (**33 tests**) with one known warning. Scoped Ruff,
+> two-source MyPy, diff, and LF checks passed. Whole-file formatter debt remains
+> only in pre-existing lines and was not reformatted.
+>
+> **Scope honesty:** this closes only local **9.2c escalation-delivery
+> telemetry**. It adds no dashboard or live scrape/alert-delivery evidence and
+> does not close architecture ownership, orphan-work, safety-block, or
+> tenant-denied signals, Astro 7, §10, live quality, push, or deploy.
+>
+> **Next-session route:** refresh Actual Git first, then read only this block
+> and `docs/SESSION_HANDOFF.md` §0/§1C/§2/§7/§8. Do not repeat 9.2c without a
+> delivery-boundary change. No implementation slice is preselected; choose at
+> most one documented, locally safe residual.
+
 ## 2026-08-09 Update-149 — next-session transparency reconciliation ✅ START HERE
 
 > **Purpose:** docs-only reconciliation after the committed VER-06 handoff.
