@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import importlib
 import threading
 import time
@@ -9,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 api_app = importlib.import_module("api.app")
+conversation_router = importlib.import_module("api.routers.conversation")
 
 
 def _fake_slow_session_factory(sleep_sec: float):
@@ -161,6 +163,116 @@ def test_inflight_gauge_decrements_after_success(
 
     assert response.status_code == 200
     assert _get_inflight_gauge_value() == 0.0
+
+
+def test_success_does_not_record_orphan_work(
+    monkeypatch: pytest.MonkeyPatch,
+    client: TestClient,
+) -> None:
+    started: list[str] = []
+    monkeypatch.setattr(
+        conversation_router.prometheus_metrics,
+        "record_orphan_work_started",
+        lambda: started.append("started"),
+    )
+    api_app._db_retry_after = time.monotonic() + 60.0
+    _install_fake_session(monkeypatch, _fake_slow_session_factory(0.01))
+
+    response = client.post("/api/ask", json={"question": "q"})
+
+    assert response.status_code == 200
+    assert started == []
+
+
+def test_orphan_capacity_hold_records_exact_lifecycle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recorded: list[str] = []
+    monkeypatch.setattr(
+        conversation_router.prometheus_metrics,
+        "record_orphan_work_started",
+        lambda: recorded.append("started"),
+    )
+    monkeypatch.setattr(
+        conversation_router.prometheus_metrics,
+        "record_orphan_work_finished",
+        lambda: recorded.append("finished"),
+    )
+    monkeypatch.setattr(
+        conversation_router,
+        "_release_pipeline_capacity",
+        lambda semaphore: semaphore.release(),
+    )
+
+    class _Semaphore:
+        releases = 0
+
+        def release(self) -> None:
+            self.releases += 1
+
+    loop = asyncio.new_event_loop()
+    semaphore = _Semaphore()
+    try:
+        future = loop.create_future()
+        conversation_router._hold_capacity_until_future_done(
+            loop=loop,
+            fut=future,
+            semaphore=semaphore,
+        )
+        assert recorded == ["started"]
+        assert semaphore.releases == 0
+
+        future.set_result(None)
+        loop.run_until_complete(asyncio.sleep(0.01))
+
+        assert recorded == ["started", "finished"]
+        assert semaphore.releases == 1
+    finally:
+        loop.close()
+
+
+def test_orphan_metric_failures_do_not_block_capacity_release(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _boom() -> None:
+        raise RuntimeError("metrics boom")
+
+    monkeypatch.setattr(
+        conversation_router.prometheus_metrics,
+        "record_orphan_work_started",
+        _boom,
+    )
+    monkeypatch.setattr(
+        conversation_router.prometheus_metrics,
+        "record_orphan_work_finished",
+        _boom,
+    )
+    monkeypatch.setattr(
+        conversation_router,
+        "_release_pipeline_capacity",
+        lambda semaphore: semaphore.release(),
+    )
+
+    class _Semaphore:
+        releases = 0
+
+        def release(self) -> None:
+            self.releases += 1
+
+    loop = asyncio.new_event_loop()
+    semaphore = _Semaphore()
+    try:
+        future = loop.create_future()
+        conversation_router._hold_capacity_until_future_done(
+            loop=loop,
+            fut=future,
+            semaphore=semaphore,
+        )
+        future.set_result(None)
+        loop.run_until_complete(asyncio.sleep(0.01))
+        assert semaphore.releases == 1
+    finally:
+        loop.close()
 
 
 def test_inflight_gauge_decrements_after_timeout(

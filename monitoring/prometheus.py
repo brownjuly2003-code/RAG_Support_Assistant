@@ -58,6 +58,7 @@ __all__ = [
     "STALE_IMPORTANT_DOCS",
     "TRACES_PURGED",
     "INFLIGHT_PIPELINES",
+    "ORPHAN_WORK_INFLIGHT",
     "MODEL_ROUTING",
     "VECTOR_STORE_DOCS",
     "generate_latest",
@@ -88,6 +89,8 @@ __all__ = [
     "record_regression_run",
     "record_rate_limit_rejection",
     "record_request_timeout",
+    "record_orphan_work_finished",
+    "record_orphan_work_started",
     "record_safety_block",
     "set_review_queue_confirmed",
     "set_review_queue_oldest_pending",
@@ -188,6 +191,7 @@ if TYPE_CHECKING:
     INGESTION_QUEUE_OLDEST_SECONDS: _GaugeT
     STALE_IMPORTANT_DOCS: _GaugeT
     INFLIGHT_PIPELINES: _GaugeT
+    ORPHAN_WORK_INFLIGHT: _GaugeT
     EVAL_DRIFT: _GaugeT
     CURATED_DATASET_SIZE: _GaugeT
     CURATED_DATASET_LAST_BUILD_TIMESTAMP_SECONDS: _GaugeT
@@ -246,6 +250,7 @@ except ImportError:
     SAFETY_BLOCKS_TOTAL = _NoopMetric()
     STALE_IMPORTANT_DOCS = _NoopMetric()
     INFLIGHT_PIPELINES = _NoopMetric()
+    ORPHAN_WORK_INFLIGHT = _NoopMetric()
     PIPELINE_REJECTIONS = _NoopMetric()
     LLM_CACHE_HITS = _NoopMetric()
     LLM_CACHE_MISSES = _NoopMetric()
@@ -525,6 +530,12 @@ else:
         registry=REGISTRY,
     )
 
+    ORPHAN_WORK_INFLIGHT = Gauge(
+        "rag_orphan_work_inflight",
+        "Thread-pool workers still running after request timeout or disconnect",
+        registry=REGISTRY,
+    )
+
     PIPELINE_REJECTIONS = Counter(
         "rag_pipeline_rejections_total",
         "Requests rejected due to pipeline saturation",
@@ -776,6 +787,14 @@ def record_regression_run(result: str, duration_sec: float) -> None:
 
 def record_request_timeout(endpoint: str) -> None:
     REQUEST_TIMEOUTS.labels(endpoint=endpoint).inc()
+
+
+def record_orphan_work_started() -> None:
+    ORPHAN_WORK_INFLIGHT.inc()
+
+
+def record_orphan_work_finished() -> None:
+    ORPHAN_WORK_INFLIGHT.dec()
 
 
 def set_review_queue_pending(reason: str, count: int) -> None:

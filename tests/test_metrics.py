@@ -217,6 +217,20 @@ def test_safety_block_metric_has_bounded_action_labels() -> None:
     assert _metric_value(after, "rag_safety_blocks_total", 'action="allow"') is None
 
 
+def test_orphan_work_gauge_tracks_current_workers_without_labels() -> None:
+    before = prometheus_metrics.generate_latest(prometheus_metrics.REGISTRY).decode()
+    before_value = _metric_value(before, "rag_orphan_work_inflight") or 0.0
+
+    prometheus_metrics.record_orphan_work_started()
+    during = prometheus_metrics.generate_latest(prometheus_metrics.REGISTRY).decode()
+    assert _metric_value(during, "rag_orphan_work_inflight") == before_value + 1.0
+    assert "rag_orphan_work_inflight{" not in during
+
+    prometheus_metrics.record_orphan_work_finished()
+    after = prometheus_metrics.generate_latest(prometheus_metrics.REGISTRY).decode()
+    assert _metric_value(after, "rag_orphan_work_inflight") == before_value
+
+
 def test_metrics_returns_200(client: TestClient) -> None:
     with patch("tracing.sqlite_trace.get_metrics_snapshot", return_value=MOCK_SNAPSHOT):
         response = client.get("/api/metrics")

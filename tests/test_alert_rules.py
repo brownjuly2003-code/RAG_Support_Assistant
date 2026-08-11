@@ -159,6 +159,23 @@ def test_safety_refusal_alert_contract(rules_doc: dict) -> None:
         assert forbidden not in expression.lower()
 
 
+def test_orphan_work_stuck_alert_contract(rules_doc: dict) -> None:
+    alerts = {
+        rule["alert"]: rule
+        for group in rules_doc["groups"]
+        for rule in group["rules"]
+        if "alert" in rule
+    }
+
+    rule = alerts["OrphanWorkStuck"]
+    expression = str(rule["expr"])
+    assert "rag_orphan_work_inflight" in expression
+    assert expression.strip().endswith("> 0")
+    assert rule["for"] == "5m"
+    assert rule["labels"] == {"severity": "warning", "component": "pipeline"}
+    assert "{" not in expression
+
+
 def _flatten_exprs(rules_doc: dict) -> str:
     """Concat all `expr:` strings for regex scanning."""
     out: list[str] = []

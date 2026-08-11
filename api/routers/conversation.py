@@ -49,7 +49,16 @@ def _hold_capacity_until_future_done(
 ) -> None:
     """Keep pipeline capacity until a thread-pool future finishes (3.1a / 3.1f)."""
 
+    try:
+        prometheus_metrics.record_orphan_work_started()
+    except Exception:
+        logger.debug("Orphan work start metric failed", exc_info=True)
+
     def _on_done(_fut: Any) -> None:
+        try:
+            prometheus_metrics.record_orphan_work_finished()
+        except Exception:
+            logger.debug("Orphan work finish metric failed", exc_info=True)
         _release_pipeline_capacity(semaphore)
 
     fut.add_done_callback(

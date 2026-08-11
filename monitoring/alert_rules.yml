@@ -126,6 +126,19 @@ groups:
             immediately: identify slow queries or a connection leak,
             consider raising pool_size/max_overflow as a temporary fix.
 
+      - alert: OrphanWorkStuck
+        expr: rag_orphan_work_inflight > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: pipeline
+        annotations:
+          summary: "Background pipeline work remains after request completion"
+          description: |
+            At least one thread-pool worker has retained pipeline capacity for
+            over five minutes after its request timed out or disconnected.
+            Inspect request timeouts and executor health before raising limits.
+
   - name: rag-ingestion
     interval: 30s
     rules:
