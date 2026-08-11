@@ -1,5 +1,40 @@
 # Agent State
 
+## 2026-08-11 Update-161 — §9.5b/§9.5c1 lifecycle ownership ✅ START HERE
+
+> **Actual committed state:** `03057aa` makes `EscalationService` the single
+> public owner of durable ticket + inbox/outbox lifecycle; `84fbdf7` makes
+> `IngestionJobService` the single owner of the nine API-side durable job
+> operations while preserving their module-level signatures. Actual Git is
+> `master...origin/master [ahead 281]` at `84fbdf7`; active writer **none** and
+> implementation WIP **none**.
+>
+> **Fresh evidence:** escalation ownership reproduced **1 failed → 1 passed**
+> and its focused band passed **32 tests**. Ingestion ownership reproduced
+> **1 failed → 1 passed** and its job-contract/upload-idempotency band passed
+> **73 tests**. Scoped Ruff, narrowed MyPy, source format, diff/LF, public
+> signature, staged-path, and protected-hash gates passed; known Starlette and
+> LangChain warnings remain.
+>
+> **Scope honesty:** the ingestion slice owns only async API enqueue/status
+> lifecycle. Existing synchronous worker lease/CAS helpers remain unchanged
+> and are a separate residual. `SessionService` remains gated by the
+> multi-replica SLA decision; `PipelineRunner`, remaining ingestion worker
+> ownership, architecture ownership beyond the three completed services, and
+> live scrape/alert delivery remain open. No live service, migration, provider,
+> scheduler, push, or deploy action occurred.
+>
+> **Workspace boundary:** protected tracked owner files `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` retain their
+> durable SHA-256 values. Unrelated untracked artifacts remain preserved.
+> `docs/SESSION_HANDOFF.md` Update-160 predates these two commits; Actual Git
+> and this block override it until a later full reconciliation.
+>
+> **Next-session route:** refresh Actual Git, then choose at most one explicit
+> documented residual. Do not reopen TraceService, EscalationService, or the
+> async ingestion owner without a changed boundary; do not infer authority for
+> sync worker ownership, multi-replica sessions, live services, push, or deploy.
+
 ## 2026-08-11 Update-160 — next-session transparency ✅ START HERE
 
 > **Actual committed state:** latest runtime implementation remains `9c207b6`
