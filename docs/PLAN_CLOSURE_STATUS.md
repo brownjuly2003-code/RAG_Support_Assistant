@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-11 (Update-167 VER-03 Python 3.13 full-gate evidence)
+**Date:** 2026-08-11 (Update-168 VER-03 focused contract closure)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-167**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-168**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-167. Preserve it as DoD input, but use Actual Git + the committed
+> Update-168. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,12 +18,13 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-167:** the Python 3.13 unit+coverage gate passed coverage at **77.06%**
-but finished **1848 passed / 3 failed / 4 skipped**. Exact diagnosis reproduced
-only a stale deployment queue-metric assertion; its canonical-metric edit is
-dirty/uncommitted because the sole corrective full rerun timed out at 30m.
-Actual Git before this docs edit was `master...origin/master [ahead 291]` at
-`6154d55`. This closes no plan section or release gate. SLA-gated sessions,
+**Update-168:** `eb764da` closes the focused deployment reliability assertion.
+The exact Python 3.13 test reproduced stale `ten-03`, then passed **1 test**
+after one narrowed correction; Ruff/diff/LF/protected-hash gates passed. The
+prior full gate remains **1848 passed / 3 failed / 4 skipped** at **77.06%**
+coverage, and its corrective rerun still timed out without a final report.
+Actual Git before this docs edit was `master...origin/master [ahead 293]` at
+`eb764da`. This closes no plan section or release gate. SLA-gated sessions,
 live scrape/alert delivery, VER-03, and other live/gated work remain explicit in
 [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
 
@@ -346,12 +347,10 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-The sole next candidate is current dirty test-contract WIP in
-`tests/test_ingestion_worker_topology.py`: verify only the exact deployment-doc
-test with a fresh unique basetemp, then run scoped Ruff/diff/LF/protected-hash
-gates and commit only that test file if green. Do not combine that slice with
-another full-suite run. Do not invent another quality fix or replay
-QG-01–QG-04 without new evidence.
+The former topology-test WIP is closed at `eb764da`. The documented local
+verification residual is a later dedicated VER-03 full Python 3.13 gate. Treat
+that gate as one atomic slice; do not combine it with implementation work and
+do not invent another quality fix or replay QG-01–QG-04 without new evidence.
 
 Gated alternatives remain: live provider/quality ×3 (`--execute` + secrets +
 fresh opt-in), memory-guard enablement plus a bounded hybrid attempt, a real
@@ -372,11 +371,11 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-167)
+## Last-known verification snapshot (Update-168)
 
 | Band | Last known |
 |------|------------|
-| **VER-03 Python 3.13 unit+coverage gate** | full run **1848 passed / 3 failed / 4 skipped / 186 warnings**, coverage **77.06%** ≥ 72%; exact diagnosis **2 passed / 1 failed**; stale queue-metric assertion edit remains uncommitted; corrective full rerun timed out at **30m** without final report; no full-suite/locked-CI/release-green claim |
+| **VER-03 Python 3.13 unit+coverage gate** | focused deployment contract stale `ten-03` **1 failed → 1 passed**, committed at `eb764da`; Ruff/diff/LF/protected hashes green. Prior full run remains **1848 passed / 3 failed / 4 skipped / 186 warnings**, coverage **77.06%** ≥ 72%; corrective full rerun timed out at **30m** without final report; no full-suite/locked-CI/release-green claim |
 | **9.5d3 PipelineRunner streaming execution/deadline owner** | Grok TDD transcript **2 failed → 6 passed**, first focused band **32 passed**; QA follow-up added event-worker and exception-fallback ownership; Codex independent owner/provider-token stream band **7 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d2 PipelineRunner sync execution/deadline owner** | ownership **2 failed / 2 passed → 4 passed**; owner/concurrency/request-timeout/stream-capacity/chat-streaming band **22 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d1 PipelineRunner capacity lifecycle owner** | ownership **2 failed → 2 passed**; pipeline concurrency/stream-capacity/request-timeout/chat-streaming band **20 passed**; Ruff/narrowed MyPy/format/diff/LF/protected hashes green |

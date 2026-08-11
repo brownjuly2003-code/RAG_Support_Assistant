@@ -1,5 +1,40 @@
 # Agent State
 
+## 2026-08-11 Update-168 — VER-03 focused deployment contract closure ✅ START HERE
+
+> **Committed test contract:** `eb764da` (`test(ingestion): align deployment
+> reliability contract`) closes the owned topology-test WIP. The deployment
+> assertion now names the canonical queue metric and the implemented
+> collision-resistant tenant physical-name marker instead of stale status
+> literals. Actual Git after the test commit is
+> `master...origin/master [ahead 293]`; active writer/test process **none** and
+> owned implementation/test WIP **none**.
+>
+> **Fresh evidence:** the required exact Python 3.13 test first reproduced one
+> remaining stale `ten-03` assertion, after the prior `queue-age` correction.
+> Git history showed `d13804b` had closed TEN-03 and replaced that status ID in
+> deployment docs with the durable `safe-slug--<16 hex SHA-256>` contract. The
+> single narrowed correction then passed the exact test **1 passed**. Scoped
+> Ruff, diff/LF, staged-path, and all four protected SHA-256 gates passed; one
+> known Starlette/httpx warning remains.
+>
+> **Scope honesty:** this focused closure does **not** rerun or close VER-03.
+> The last full Python 3.13 gate remains **1848 passed / 3 failed / 4 skipped**
+> at **77.06%** coverage, and its sole corrective full rerun still has no final
+> report after the 30-minute timeout. No full-suite, locked-CI, release, or
+> production-green claim exists.
+>
+> **Workspace boundary:** protected dirty tracked files `BACKLOG.md`,
+> `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` retain their
+> recorded SHA-256 values. Unrelated pytest basetemps and other untracked
+> artifacts remain preserved. No Grok run, live action, migration, scheduler
+> mutation, push, or deploy occurred.
+>
+> **Next-session route:** Actual Git first, then this block and
+> `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. The focused WIP is closed; a
+> later dedicated VER-03 full gate remains distinct work. Do not reopen this
+> assertion or completed lifecycle owners without changed evidence.
+
 ## 2026-08-11 Update-167 — VER-03 Python 3.13 full-gate evidence ⚠️ START HERE
 
 > **Actual Git before this docs update:** `6154d55` (`docs: record streaming
