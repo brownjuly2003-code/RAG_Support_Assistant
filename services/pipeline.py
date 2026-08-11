@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class PipelineRunner:
-    """Own sync execution deadlines and pipeline-capacity lifecycle."""
+    """Own sync/stream execution deadlines and pipeline-capacity lifecycle."""
 
     async def run_sync_with_deadline(
         self,
@@ -37,6 +37,65 @@ class PipelineRunner:
             self.hold_capacity_until_future_done(
                 loop=active_loop,
                 fut=future,
+                semaphore=semaphore,
+                release_capacity=release_capacity,
+            )
+            raise
+
+    def submit_stream_graph(
+        self,
+        *,
+        executor: Any,
+        operation: Callable[[], Any],
+        loop: asyncio.AbstractEventLoop | None = None,
+    ) -> Any:
+        """Submit streaming graph/event work to the request executor."""
+        active_loop = loop or asyncio.get_running_loop()
+        return active_loop.run_in_executor(executor, operation)
+
+    async def wait_stream_queue_event(
+        self,
+        *,
+        queue: asyncio.Queue,
+        timeout: float,
+        fut: Any,
+        semaphore: Any,
+        release_capacity: Callable[[Any], None] | None = None,
+        loop: asyncio.AbstractEventLoop | None = None,
+    ) -> Any:
+        """Wait for the next stream queue event; hand off capacity on timeout."""
+        active_loop = loop or asyncio.get_running_loop()
+        try:
+            return await asyncio.wait_for(queue.get(), timeout=timeout)
+        except asyncio.TimeoutError:
+            self.hold_capacity_until_future_done(
+                loop=active_loop,
+                fut=fut,
+                semaphore=semaphore,
+                release_capacity=release_capacity,
+            )
+            raise
+
+    async def wait_stream_future_result(
+        self,
+        *,
+        fut: Any,
+        timeout: float,
+        semaphore: Any,
+        release_capacity: Callable[[Any], None] | None = None,
+        loop: asyncio.AbstractEventLoop | None = None,
+    ) -> Any:
+        """Wait for a shielded stream graph future; hand off capacity on timeout."""
+        active_loop = loop or asyncio.get_running_loop()
+        try:
+            return await asyncio.wait_for(
+                asyncio.shield(fut),
+                timeout=timeout,
+            )
+        except asyncio.TimeoutError:
+            self.hold_capacity_until_future_done(
+                loop=active_loop,
+                fut=fut,
                 semaphore=semaphore,
                 release_capacity=release_capacity,
             )

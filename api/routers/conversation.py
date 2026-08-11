@@ -927,16 +927,21 @@ async def ask_stream(
                                 event_queue.put_nowait, ("error", worker_exc)
                             )
 
-                    graph_task = loop.run_in_executor(
-                        get_request_executor(),
-                        _session_events_worker,
+                    graph_task = pipeline_runner.submit_stream_graph(
+                        loop=loop,
+                        executor=get_request_executor(),
+                        operation=_session_events_worker,
                     )
                     try:
                         while True:
                             try:
-                                kind, payload = await asyncio.wait_for(
-                                    event_queue.get(),
+                                kind, payload = await pipeline_runner.wait_stream_queue_event(
+                                    queue=event_queue,
                                     timeout=graph_parity_timeout,
+                                    fut=graph_task,
+                                    semaphore=semaphore,
+                                    release_capacity=_release_pipeline_capacity,
+                                    loop=loop,
                                 )
                             except asyncio.TimeoutError:
                                 logger.warning(
@@ -944,13 +949,7 @@ async def ask_stream(
                                     "holding pipeline capacity until orphan completes",
                                     graph_parity_timeout,
                                 )
-                                if not capacity_held_for_orphan:
-                                    capacity_held_for_orphan = True
-                                    _hold_capacity_until_future_done(
-                                        loop=loop,
-                                        fut=graph_task,
-                                        semaphore=semaphore,
-                                    )
+                                capacity_held_for_orphan = True
                                 try:
                                     prometheus_metrics.record_request_timeout(
                                         "/api/ask/stream"
@@ -1035,14 +1034,18 @@ async def ask_stream(
                         return
                 else:
                     # Legacy §4.2 ask-only path (test doubles without events).
-                    graph_task = loop.run_in_executor(
-                        get_request_executor(),
-                        _session_ask_with_shared_limits,
+                    graph_task = pipeline_runner.submit_stream_graph(
+                        loop=loop,
+                        executor=get_request_executor(),
+                        operation=_session_ask_with_shared_limits,
                     )
                     try:
-                        graph_result = await asyncio.wait_for(
-                            asyncio.shield(graph_task),
+                        graph_result = await pipeline_runner.wait_stream_future_result(
+                            fut=graph_task,
                             timeout=graph_parity_timeout,
+                            semaphore=semaphore,
+                            release_capacity=_release_pipeline_capacity,
+                            loop=loop,
                         )
                     except asyncio.TimeoutError:
                         logger.warning(
@@ -1050,13 +1053,7 @@ async def ask_stream(
                             "holding pipeline capacity until orphan completes",
                             graph_parity_timeout,
                         )
-                        if not capacity_held_for_orphan:
-                            capacity_held_for_orphan = True
-                            _hold_capacity_until_future_done(
-                                loop=loop,
-                                fut=graph_task,
-                                semaphore=semaphore,
-                            )
+                        capacity_held_for_orphan = True
                         try:
                             prometheus_metrics.record_request_timeout("/api/ask/stream")
                         except Exception:
@@ -1410,9 +1407,12 @@ async def ask_stream(
             graph_result: dict[str, Any] | None = None
             if graph_task is not None:
                 try:
-                    graph_result = await asyncio.wait_for(
-                        asyncio.shield(graph_task),
+                    graph_result = await pipeline_runner.wait_stream_future_result(
+                        fut=graph_task,
                         timeout=graph_parity_timeout,
+                        semaphore=semaphore,
+                        release_capacity=_release_pipeline_capacity,
+                        loop=loop,
                     )
                 except asyncio.TimeoutError:
                     logger.warning(
@@ -1421,13 +1421,8 @@ async def ask_stream(
                         graph_parity_timeout,
                     )
                     # Thread work is not cancellable; hold capacity until done (3.1f).
-                    if not capacity_held_for_orphan:
-                        capacity_held_for_orphan = True
-                        _hold_capacity_until_future_done(
-                            loop=loop,
-                            fut=graph_task,
-                            semaphore=semaphore,
-                        )
+                    # PipelineRunner already performed the single orphan handoff.
+                    capacity_held_for_orphan = True
                     graph_result = None
                 except Exception as graph_exc:
                     logger.warning("Streaming RAG parity task failed: %s", graph_exc)
@@ -1530,9 +1525,12 @@ async def ask_stream(
                         logger.warning("Streaming parity task failed in fallback: %s", parity_exc)
                         result = None
                 if result is None and hasattr(session, "ask"):
-                    result = await loop.run_in_executor(
-                        get_request_executor(),
-                        _session_ask_with_shared_limits,
+                    # Graph fallback still routes executor submission through
+                    # PipelineRunner; direct-await preserves no-new-deadline.
+                    result = await pipeline_runner.submit_stream_graph(
+                        loop=loop,
+                        executor=get_request_executor(),
+                        operation=_session_ask_with_shared_limits,
                     )
                 if result is not None:
                     answer = result.get("answer") or "Не удалось получить ответ."
