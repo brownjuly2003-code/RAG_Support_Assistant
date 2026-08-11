@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-11 (Update-159 VER-07 retention audit tenant contract)
+**Date:** 2026-08-11 (Update-160 next-session transparency)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-159**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-160**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-159. Preserve it as DoD input, but use Actual Git + the committed
+> Update-160. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,12 +18,11 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-159:** test-contract repair `fd23317` adds the existing default
-`tenant_id` to the stale trace-purge audit expectation without changing
-runtime code. The exact test moved from **1 failed → 1 passed** and the
-adjacent retention/tenant/audit band passed **22 tests**. No plan checkbox or
-release gate changed. Remaining architecture ownership, live scrape/alert
-delivery, and live/gated work remain explicit in
+**Update-160:** docs-only reconciliation records runtime implementation
+`9c207b6`, local VER-07 closure `fd23317`, committed handoff `e7fba57`, and
+Actual Git `master...origin/master [ahead 278]`. No plan checkbox, runtime,
+test result, or release gate changed. Remaining architecture ownership, live
+scrape/alert delivery, and live/gated work remain explicit in
 [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
 
 ---

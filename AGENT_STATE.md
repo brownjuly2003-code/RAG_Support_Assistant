@@ -1,5 +1,36 @@
 # Agent State
 
+## 2026-08-11 Update-160 — next-session transparency ✅ START HERE
+
+> **Actual committed state:** latest runtime implementation remains `9c207b6`
+> (`refactor(tracing): centralize lifecycle ownership`), latest local
+> test-contract repair is `fd23317` (`test(tracing): align purge audit tenant
+> contract`), and latest committed handoff is `e7fba57` (`docs: close VER-07
+> tenant audit debt`). Actual Git is `master...origin/master [ahead 278]` at
+> `e7fba57`; active writer **none** and owned implementation WIP **none**.
+>
+> **Workspace boundary:** the only dirty tracked paths are protected owner
+> files `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and
+> `plan_sol_23_07_26`; their durable SHA-256 values still match. Numerous
+> unrelated untracked artifacts remain preserved and are not implementation
+> WIP. Do not stage, rewrite, delete, or use them as routing authority.
+>
+> **Last verified outcome:** VER-07 reproduced **1 failed → 1 passed** and its
+> adjacent retention/tenant/audit band passed **22 tests**. The docs gate for
+> Update-159 passed **13 tests**. This Update is documentation-only and adds no
+> new runtime, full-suite, live, locked-CI, or production verification claim.
+>
+> **Open truth:** §9 still needs architecture ownership beyond TraceService
+> and live scrape/alert delivery. The full plan remains open for live services
+> and migrations, passing quality ×3, human/provider/IdP evidence, §10, push,
+> and deploy. No live action, migration, scheduler mutation, push, deploy, or
+> Grok run occurred in this reconciliation.
+>
+> **Next-session route:** refresh Actual Git, then read only this block and
+> `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. No implementation candidate is
+> preselected. Choose at most one explicit owner request or documented safe
+> residual; do not repeat §9.5a or VER-07 without new boundary evidence.
+
 ## 2026-08-11 Update-159 — VER-07 retention audit tenant contract ✅ START HERE
 
 > **Committed test-contract repair:** `fd23317` (`test(tracing): align purge
