@@ -632,6 +632,38 @@ class IngestionJobService:
     ) -> IngestionJob | None:
         return await _get_job_for_tenant_by_identifier_impl(identifier, tenant_id)
 
+    def sync_require_job(self, job_id: uuid.UUID, tenant_id: str) -> IngestionJob:
+        return _sync_require_job_impl(job_id, tenant_id)
+
+    def sync_claim_running(self, job_id: uuid.UUID, tenant_id: str) -> str:
+        return _sync_claim_running_impl(job_id, tenant_id)
+
+    def sync_extend_lease(
+        self,
+        job_id: uuid.UUID,
+        tenant_id: str,
+        lease_token: str,
+    ) -> bool:
+        return _sync_extend_lease_impl(job_id, tenant_id, lease_token)
+
+    def sync_mark_completed(
+        self,
+        job_id: uuid.UUID,
+        tenant_id: str,
+        lease_token: str,
+        result: dict[str, Any] | None = None,
+    ) -> None:
+        _sync_mark_completed_impl(job_id, tenant_id, lease_token, result)
+
+    def sync_mark_failed(
+        self,
+        job_id: uuid.UUID,
+        tenant_id: str,
+        lease_token: str,
+        error: str,
+    ) -> None:
+        _sync_mark_failed_impl(job_id, tenant_id, lease_token, error)
+
 
 ingestion_job_service = IngestionJobService()
 
@@ -763,7 +795,7 @@ class JobOwnershipError(RuntimeError):
     """Claim/heartbeat/terminal CAS failed (lost lease, duplicate claim, etc.)."""
 
 
-def sync_require_job(job_id: uuid.UUID, tenant_id: str) -> IngestionJob:
+def _sync_require_job_impl(job_id: uuid.UUID, tenant_id: str) -> IngestionJob:
     with sync_session() as session:
         job = session.get(IngestionJob, job_id)
         if job is None or job.tenant_id != tenant_id:
@@ -773,7 +805,7 @@ def sync_require_job(job_id: uuid.UUID, tenant_id: str) -> IngestionJob:
         return job
 
 
-def sync_claim_running(job_id: uuid.UUID, tenant_id: str) -> str:
+def _sync_claim_running_impl(job_id: uuid.UUID, tenant_id: str) -> str:
     """Atomically claim a queued job for this worker; return opaque lease token.
 
     Fail closed on missing/wrong-tenant/non-queued rows before any vector work.
@@ -812,7 +844,11 @@ def sync_claim_running(job_id: uuid.UUID, tenant_id: str) -> str:
     return token
 
 
-def sync_extend_lease(job_id: uuid.UUID, tenant_id: str, lease_token: str) -> bool:
+def _sync_extend_lease_impl(
+    job_id: uuid.UUID,
+    tenant_id: str,
+    lease_token: str,
+) -> bool:
     """Conditional heartbeat extension; True only when ownership matches."""
     if not lease_token:
         return False
@@ -839,7 +875,7 @@ def sync_extend_lease(job_id: uuid.UUID, tenant_id: str, lease_token: str) -> bo
         return True
 
 
-def sync_mark_completed(
+def _sync_mark_completed_impl(
     job_id: uuid.UUID,
     tenant_id: str,
     lease_token: str,
@@ -876,7 +912,7 @@ def sync_mark_completed(
         session.commit()
 
 
-def sync_mark_failed(
+def _sync_mark_failed_impl(
     job_id: uuid.UUID,
     tenant_id: str,
     lease_token: str,
@@ -907,6 +943,43 @@ def sync_mark_failed(
             session.rollback()
             raise JobOwnershipError(f"Lost lease failing ingestion job {job_id}")
         session.commit()
+
+
+def sync_require_job(job_id: uuid.UUID, tenant_id: str) -> IngestionJob:
+    return ingestion_job_service.sync_require_job(job_id, tenant_id)
+
+
+def sync_claim_running(job_id: uuid.UUID, tenant_id: str) -> str:
+    """Atomically claim a queued job for this worker; return opaque lease token.
+
+    Fail closed on missing/wrong-tenant/non-queued rows before any vector work.
+    """
+    return ingestion_job_service.sync_claim_running(job_id, tenant_id)
+
+
+def sync_extend_lease(job_id: uuid.UUID, tenant_id: str, lease_token: str) -> bool:
+    """Conditional heartbeat extension; True only when ownership matches."""
+    return ingestion_job_service.sync_extend_lease(job_id, tenant_id, lease_token)
+
+
+def sync_mark_completed(
+    job_id: uuid.UUID,
+    tenant_id: str,
+    lease_token: str,
+    result: dict[str, Any] | None = None,
+) -> None:
+    """CAS completed transition; requires exact running lease ownership."""
+    ingestion_job_service.sync_mark_completed(job_id, tenant_id, lease_token, result)
+
+
+def sync_mark_failed(
+    job_id: uuid.UUID,
+    tenant_id: str,
+    lease_token: str,
+    error: str,
+) -> None:
+    """CAS failed transition; requires exact running lease ownership."""
+    ingestion_job_service.sync_mark_failed(job_id, tenant_id, lease_token, error)
 
 
 def sync_list_known_job_object_refs(tenant_id: str) -> tuple[Any, ...]:

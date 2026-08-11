@@ -1844,3 +1844,72 @@ async def test_async_job_lifecycle_functions_delegate_to_single_owner(
         ("get", job_id, "acme"),
         ("get_identifier", "task-2", "acme"),
     ]
+
+
+def test_sync_worker_lifecycle_functions_delegate_to_single_owner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Worker lease/CAS entry points remain exact owner-backed wrappers."""
+    from ingestion import jobs as jobs_mod
+
+    class RecordingOwner:
+        def __init__(self) -> None:
+            self.calls: list[tuple[Any, ...]] = []
+
+        def sync_require_job(self, job_id: uuid.UUID, tenant_id: str) -> str:
+            self.calls.append(("require", job_id, tenant_id))
+            return "job"
+
+        def sync_claim_running(self, job_id: uuid.UUID, tenant_id: str) -> str:
+            self.calls.append(("claim", job_id, tenant_id))
+            return "lease-token"
+
+        def sync_extend_lease(
+            self,
+            job_id: uuid.UUID,
+            tenant_id: str,
+            lease_token: str,
+        ) -> bool:
+            self.calls.append(("extend", job_id, tenant_id, lease_token))
+            return True
+
+        def sync_mark_completed(
+            self,
+            job_id: uuid.UUID,
+            tenant_id: str,
+            lease_token: str,
+            result: dict[str, Any] | None = None,
+        ) -> None:
+            self.calls.append(("completed", job_id, tenant_id, lease_token, result))
+
+        def sync_mark_failed(
+            self,
+            job_id: uuid.UUID,
+            tenant_id: str,
+            lease_token: str,
+            error: str,
+        ) -> None:
+            self.calls.append(("failed", job_id, tenant_id, lease_token, error))
+
+    owner = RecordingOwner()
+    monkeypatch.setattr(jobs_mod, "ingestion_job_service", owner)
+    monkeypatch.setattr(
+        jobs_mod,
+        "sync_session",
+        lambda: (_ for _ in ()).throw(AssertionError("worker lifecycle bypassed owner")),
+    )
+    job_id = uuid.uuid4()
+    result = {"status": "ok"}
+
+    assert jobs_mod.sync_require_job(job_id, "acme") == "job"
+    assert jobs_mod.sync_claim_running(job_id, "acme") == "lease-token"
+    assert jobs_mod.sync_extend_lease(job_id, "acme", "lease-token") is True
+    jobs_mod.sync_mark_completed(job_id, "acme", "lease-token", result)
+    jobs_mod.sync_mark_failed(job_id, "acme", "lease-token", "boom")
+    assert owner.calls == [
+        ("require", job_id, "acme"),
+        ("claim", job_id, "acme"),
+        ("extend", job_id, "acme", "lease-token"),
+        ("completed", job_id, "acme", "lease-token", result),
+        ("failed", job_id, "acme", "lease-token", "boom"),
+    ]
