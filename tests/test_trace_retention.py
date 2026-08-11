@@ -176,6 +176,7 @@ def test_admin_purge_endpoint_returns_counts_and_records_audit(
             "actor": "admin",
             "action": "trace_purge",
             "resource": "traces/older_than=30d",
+            "tenant_id": "default",
             "detail": {
                 "traces_deleted": 1,
                 "steps_deleted": 1,
