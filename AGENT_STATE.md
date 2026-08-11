@@ -1,5 +1,38 @@
 # Agent State
 
+## 2026-08-11 Update-154 — next-session transparency ✅ START HERE
+
+> **Docs-only reconciliation:** latest implementation remains `344e174`
+> (`feat(metrics): expose tenant access denials`); latest committed handoff
+> before this update is `806bf27` (`docs: record tenant denial telemetry`).
+> Actual Git was `master...origin/master [ahead 268]` at `806bf27`. No project
+> code, runtime config, dependency, migration, or plan checkbox changes here.
+>
+> **Current local truth:** active writer **none**, implementation WIP **none**,
+> and all seven named §9 telemetry signals are **7/7 local**. The only dirty
+> tracked files are the four protected owner files whose SHA-256 values still
+> match §8 of `docs/SESSION_HANDOFF.md`; unrelated untracked artifacts remain
+> intentionally preserved.
+>
+> **Evidence boundary:** Update-153 remains the latest implementation evidence:
+> focused TDD **5 failed → 5 passed**, independent band **54 passed**, scoped
+> Ruff and narrowed six-source MyPy green, plus one known Starlette warning.
+> Ordinary MyPy still has four pre-existing `api/app.py` errors and formatter
+> debt remains outside the added lines. This docs-only update reruns no project
+> implementation suite and makes no broader green claim.
+>
+> **Still open / gated:** §9 architecture ownership, a committed dashboard
+> artifact, Astro 7, and live alert delivery; §1 live services/migrations,
+> passing §5 quality ×3, human calibration, formal provider/IdP evidence, and
+> §10 verification also remain open or require explicit authority. No push,
+> deploy, live provider/quality run, migration, scheduler change, or Grok run
+> occurred in this reconciliation.
+>
+> **Next-session route:** refresh Actual Git, then read only this block and
+> `docs/SESSION_HANDOFF.md` §0A/§1C/§2/§7/§8. No implementation candidate is
+> preselected. Choose at most one explicit owner request or documented safe
+> residual; do not repeat §9.2a–§9.2f without new boundary evidence.
+
 ## 2026-08-11 Update-153 — §9.2f tenant-denied telemetry ✅ START HERE
 
 > **Committed implementation:** `344e174` (`feat(metrics): expose tenant

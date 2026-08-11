@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-11 (Update-153 tenant-denied telemetry)
+**Date:** 2026-08-11 (Update-154 next-session transparency)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-153**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-154**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-153. Preserve it as DoD input, but use Actual Git + the committed
+> Update-154. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,12 +18,12 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-153:** `344e174` locally closes §9.2f tenant-denied telemetry across
-ten confirmed ownership-mismatch branches; there is no implementation WIP or
-active writer. The exact local §9 signals are now **7/7**. This does not close
-a plan section or release gate: architecture ownership, a dashboard artifact,
-Astro 7, live alert delivery, and live/gated work remain explicit in
-[`SESSION_HANDOFF.md`](SESSION_HANDOFF.md).
+**Update-154:** docs-only reconciliation against `806bf27`; latest
+implementation remains `344e174`, implementation WIP and active writer are
+none, and exact local §9 signals remain **7/7**. No code, plan checkbox,
+evidence classification, or release gate changed. Architecture ownership, a
+dashboard artifact, Astro 7, live alert delivery, and live/gated work remain
+explicit in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
 
 ---
 
@@ -356,10 +356,11 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-153)
+## Last-known verification snapshot (Update-154)
 
 | Band | Last known |
 |------|------------|
+| **Update-154 transparency** | docs-only reconciliation against Actual Git; no implementation file changed, no project suite rerun, and no new implementation or release evidence |
 | **9.2f tenant-denied telemetry** | focused TDD **5 failed → 5 passed**; independent tenant/session/agent/KB/metrics/alerts band first rejected a zero-duration alert, then passed **54 tests** after one narrowed correction, one warning; scoped Ruff + six-source narrowed MyPy + diff/LF clean; ordinary MyPy retains four pre-existing `api/app.py` errors outside changed lines; formatter debt remains outside added lines; no live scrape/alert delivery |
 | **9.2e orphan-work telemetry** | focused TDD **5 failed → 5 passed**; independent pipeline/stream/metrics/alerts/timeout band first exposed test-isolation leakage, then passed **37 tests** after one narrowed correction, one warning; scoped Ruff + narrowed metrics MyPy + diff/LF clean; ordinary two-source MyPy retains two pre-existing `no-redef` errors outside changed lines; formatter debt remains outside added lines; no live scrape/alert delivery |
 | **9.2d safety-block telemetry** | focused TDD **5 failed → 5 passed**; full response-safety/metrics/alerts/unverified-auto band **35 passed**, one warning; post-format focused gate **5 passed**; scoped Ruff + two-source MyPy + diff/LF clean; formatter debt remains outside added lines; no live scrape/alert delivery |
