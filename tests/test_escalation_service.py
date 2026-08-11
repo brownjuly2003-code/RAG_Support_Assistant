@@ -309,3 +309,98 @@ async def test_delivery_metric_failure_is_fail_open(
     )
     assert outcome.delivery_state == "delivered"
     assert outcome.durable is True
+
+
+@pytest.mark.asyncio
+async def test_module_lifecycle_functions_delegate_to_single_owner(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Module APIs are thin wrappers over one EscalationService owner."""
+
+    class RecordingOwner:
+        def __init__(self) -> None:
+            self.calls: list[tuple[Any, ...]] = []
+
+        async def create_escalation(self, **kwargs: Any) -> str:
+            self.calls.append(("create", kwargs))
+            return "create-result"
+
+        def create_escalation_sync(self, **kwargs: Any) -> str:
+            self.calls.append(("create_sync", kwargs))
+            return "create-sync-result"
+
+        async def retry_escalation_delivery(
+            self,
+            ticket_id: str,
+            *,
+            project_root: Path | None = None,
+            allow_states: frozenset[str] | set[str] | None = None,
+        ) -> str:
+            self.calls.append(("retry_one", ticket_id, project_root, allow_states))
+            return "retry-one-result"
+
+        async def retry_failed_deliveries(self, **kwargs: Any) -> str:
+            self.calls.append(("retry_batch", kwargs))
+            return "retry-batch-result"
+
+        def retry_failed_deliveries_sync(self, **kwargs: Any) -> str:
+            self.calls.append(("retry_batch_sync", kwargs))
+            return "retry-batch-sync-result"
+
+    assert isinstance(esc.escalation_service, esc.EscalationService)
+
+    owner = RecordingOwner()
+    monkeypatch.setattr(esc, "escalation_service", owner)
+
+    create_kw = {
+        "tenant_id": "acme",
+        "session_id": "sess-owner",
+        "question": "need human",
+        "source": "manual",
+        "ai_draft": "draft",
+        "reason": "user_request",
+        "trace_id": "tr-1",
+        "project_root": tmp_path,
+        "deliver_inbox": True,
+        "idempotency_key": "key-1",
+    }
+    create_out = await esc.create_escalation(**create_kw)
+    create_sync_out = esc.create_escalation_sync(
+        tenant_id="acme",
+        session_id="sess-sync",
+        question="sync q",
+    )
+    allowed = frozenset({"failed"})
+    retry_one_out = await esc.retry_escalation_delivery(
+        "ticket-42",
+        project_root=tmp_path,
+        allow_states=allowed,
+    )
+    batch_kw = {
+        "limit": 7,
+        "project_root": tmp_path,
+        "states": ("failed", "pending"),
+        "tenant_id": "acme",
+    }
+    batch_out = await esc.retry_failed_deliveries(**batch_kw)
+    batch_sync_out = esc.retry_failed_deliveries_sync(limit=3, tenant_id="acme")
+
+    assert create_out == "create-result"
+    assert create_sync_out == "create-sync-result"
+    assert retry_one_out == "retry-one-result"
+    assert batch_out == "retry-batch-result"
+    assert batch_sync_out == "retry-batch-sync-result"
+    assert owner.calls == [
+        ("create", create_kw),
+        (
+            "create_sync",
+            {
+                "tenant_id": "acme",
+                "session_id": "sess-sync",
+                "question": "sync q",
+            },
+        ),
+        ("retry_one", "ticket-42", tmp_path, allowed),
+        ("retry_batch", batch_kw),
+        ("retry_batch_sync", {"limit": 3, "tenant_id": "acme"}),
+    ]
