@@ -1737,3 +1737,110 @@ def test_sync_mark_completed_writes_index_bind_columns(
         assert job.index_active_collection == "sync__v9"
         assert job.index_previous_collection == "sync__v8"
         assert job.index_manifest_generation == 9
+
+
+@pytest.mark.asyncio
+async def test_async_job_lifecycle_functions_delegate_to_single_owner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """API-side job lifecycle functions remain exact owner-backed wrappers."""
+    from ingestion import jobs as jobs_mod
+
+    class RecordingOwner:
+        def __init__(self) -> None:
+            self.calls: list[tuple[Any, ...]] = []
+
+        async def create_ingestion_job(self, **kwargs: Any) -> str:
+            self.calls.append(("create", kwargs))
+            return "created"
+
+        async def create_or_reuse_ingestion_job(self, **kwargs: Any) -> str:
+            self.calls.append(("create_or_reuse", kwargs))
+            return "reserved"
+
+        async def mark_source_ready(self, job_id: uuid.UUID, tenant_id: str) -> str:
+            self.calls.append(("source_ready", job_id, tenant_id))
+            return "ready"
+
+        async def set_celery_task_id(
+            self,
+            job_id: uuid.UUID,
+            tenant_id: str,
+            celery_task_id: str,
+        ) -> str:
+            self.calls.append(("task_id", job_id, tenant_id, celery_task_id))
+            return "task-set"
+
+        async def mark_job_running(self, job_id: uuid.UUID, tenant_id: str) -> str:
+            self.calls.append(("running", job_id, tenant_id))
+            return "running"
+
+        async def mark_job_completed(
+            self,
+            job_id: uuid.UUID,
+            tenant_id: str,
+            result: dict[str, Any] | None = None,
+        ) -> str:
+            self.calls.append(("completed", job_id, tenant_id, result))
+            return "completed"
+
+        async def mark_job_failed(
+            self,
+            job_id: uuid.UUID,
+            tenant_id: str,
+            error: str,
+        ) -> str:
+            self.calls.append(("failed", job_id, tenant_id, error))
+            return "failed"
+
+        async def get_job_for_tenant(self, job_id: uuid.UUID, tenant_id: str) -> str:
+            self.calls.append(("get", job_id, tenant_id))
+            return "job"
+
+        async def get_job_for_tenant_by_identifier(
+            self,
+            identifier: str,
+            tenant_id: str,
+        ) -> str:
+            self.calls.append(("get_identifier", identifier, tenant_id))
+            return "job-by-identifier"
+
+    assert isinstance(jobs_mod.ingestion_job_service, jobs_mod.IngestionJobService)
+
+    owner = RecordingOwner()
+    monkeypatch.setattr(jobs_mod, "ingestion_job_service", owner)
+    job_id = uuid.uuid4()
+    create_kwargs = {
+        "tenant_id": "acme",
+        "filename": "guide.md",
+        "source_path": "data/uploads/guide.md",
+        "job_id": job_id,
+        "celery_task_id": "ingest-task",
+        "idempotency_key_hash": "key-hash",
+        "payload_fingerprint": "payload-hash",
+    }
+    completion = {"status": "ok"}
+
+    assert await jobs_mod.create_ingestion_job(**create_kwargs) == "created"
+    assert await jobs_mod.create_or_reuse_ingestion_job(**create_kwargs) == "reserved"
+    assert await jobs_mod.mark_source_ready(job_id, "acme") == "ready"
+    assert await jobs_mod.set_celery_task_id(job_id, "acme", "task-2") == "task-set"
+    assert await jobs_mod.mark_job_running(job_id, "acme") == "running"
+    assert await jobs_mod.mark_job_completed(job_id, "acme", completion) == "completed"
+    assert await jobs_mod.mark_job_failed(job_id, "acme", "boom") == "failed"
+    assert await jobs_mod.get_job_for_tenant(job_id, "acme") == "job"
+    assert (
+        await jobs_mod.get_job_for_tenant_by_identifier("task-2", "acme")
+        == "job-by-identifier"
+    )
+    assert owner.calls == [
+        ("create", create_kwargs),
+        ("create_or_reuse", create_kwargs),
+        ("source_ready", job_id, "acme"),
+        ("task_id", job_id, "acme", "task-2"),
+        ("running", job_id, "acme"),
+        ("completed", job_id, "acme", completion),
+        ("failed", job_id, "acme", "boom"),
+        ("get", job_id, "acme"),
+        ("get_identifier", "task-2", "acme"),
+    ]

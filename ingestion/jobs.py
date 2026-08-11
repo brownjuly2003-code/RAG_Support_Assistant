@@ -255,7 +255,7 @@ def reserved_celery_task_id(job_id: uuid.UUID | str) -> str:
     return f"ingest-{job_id}"
 
 
-async def create_ingestion_job(
+async def _create_ingestion_job_impl(
     *,
     tenant_id: str,
     filename: str,
@@ -266,7 +266,7 @@ async def create_ingestion_job(
     payload_fingerprint: str | None = None,
 ) -> IngestionJob:
     """Create a durable queued job (compatibility wrapper; always inserts)."""
-    outcome = await create_or_reuse_ingestion_job(
+    outcome = await _create_or_reuse_ingestion_job_impl(
         tenant_id=tenant_id,
         filename=filename,
         source_path=source_path,
@@ -278,7 +278,7 @@ async def create_ingestion_job(
     return outcome.job
 
 
-async def create_or_reuse_ingestion_job(
+async def _create_or_reuse_ingestion_job_impl(
     *,
     tenant_id: str,
     filename: str,
@@ -341,7 +341,7 @@ async def create_or_reuse_ingestion_job(
             return CreateJobOutcome(job=existing, created=False)
 
 
-async def mark_source_ready(
+async def _mark_source_ready_impl(
     job_id: uuid.UUID,
     tenant_id: str,
 ) -> IngestionJob | None:
@@ -391,7 +391,7 @@ async def mark_source_ready(
         return None
 
 
-async def set_celery_task_id(
+async def _set_celery_task_id_impl(
     job_id: uuid.UUID,
     tenant_id: str,
     celery_task_id: str,
@@ -412,7 +412,10 @@ async def set_celery_task_id(
         return job
 
 
-async def mark_job_running(job_id: uuid.UUID, tenant_id: str) -> IngestionJob | None:
+async def _mark_job_running_impl(
+    job_id: uuid.UUID,
+    tenant_id: str,
+) -> IngestionJob | None:
     async with _async_session() as session:
         result = await session.execute(
             select(IngestionJob).where(
@@ -431,7 +434,7 @@ async def mark_job_running(job_id: uuid.UUID, tenant_id: str) -> IngestionJob | 
         return job
 
 
-async def mark_job_completed(
+async def _mark_job_completed_impl(
     job_id: uuid.UUID,
     tenant_id: str,
     result: dict[str, Any] | None = None,
@@ -461,7 +464,7 @@ async def mark_job_completed(
         return job
 
 
-async def mark_job_failed(
+async def _mark_job_failed_impl(
     job_id: uuid.UUID,
     tenant_id: str,
     error: str,
@@ -486,7 +489,7 @@ async def mark_job_failed(
         return job
 
 
-async def get_job_for_tenant(
+async def _get_job_for_tenant_impl(
     job_id: uuid.UUID,
     tenant_id: str,
 ) -> IngestionJob | None:
@@ -500,7 +503,7 @@ async def get_job_for_tenant(
         return result.scalar_one_or_none()
 
 
-async def get_job_for_tenant_by_identifier(
+async def _get_job_for_tenant_by_identifier_impl(
     identifier: str,
     tenant_id: str,
 ) -> IngestionJob | None:
@@ -530,6 +533,223 @@ async def get_job_for_tenant_by_identifier(
             )
         )
         return result.scalar_one_or_none()
+
+
+class IngestionJobService:
+    """Single owner of the API-side durable ingestion job lifecycle."""
+
+    async def create_ingestion_job(
+        self,
+        *,
+        tenant_id: str,
+        filename: str,
+        source_path: str,
+        job_id: uuid.UUID | None = None,
+        celery_task_id: str | None = None,
+        idempotency_key_hash: str | None = None,
+        payload_fingerprint: str | None = None,
+    ) -> IngestionJob:
+        return await _create_ingestion_job_impl(
+            tenant_id=tenant_id,
+            filename=filename,
+            source_path=source_path,
+            job_id=job_id,
+            celery_task_id=celery_task_id,
+            idempotency_key_hash=idempotency_key_hash,
+            payload_fingerprint=payload_fingerprint,
+        )
+
+    async def create_or_reuse_ingestion_job(
+        self,
+        *,
+        tenant_id: str,
+        filename: str,
+        source_path: str,
+        job_id: uuid.UUID | None = None,
+        celery_task_id: str | None = None,
+        idempotency_key_hash: str | None = None,
+        payload_fingerprint: str | None = None,
+    ) -> CreateJobOutcome:
+        return await _create_or_reuse_ingestion_job_impl(
+            tenant_id=tenant_id,
+            filename=filename,
+            source_path=source_path,
+            job_id=job_id,
+            celery_task_id=celery_task_id,
+            idempotency_key_hash=idempotency_key_hash,
+            payload_fingerprint=payload_fingerprint,
+        )
+
+    async def mark_source_ready(
+        self,
+        job_id: uuid.UUID,
+        tenant_id: str,
+    ) -> IngestionJob | None:
+        return await _mark_source_ready_impl(job_id, tenant_id)
+
+    async def set_celery_task_id(
+        self,
+        job_id: uuid.UUID,
+        tenant_id: str,
+        celery_task_id: str,
+    ) -> IngestionJob | None:
+        return await _set_celery_task_id_impl(job_id, tenant_id, celery_task_id)
+
+    async def mark_job_running(
+        self,
+        job_id: uuid.UUID,
+        tenant_id: str,
+    ) -> IngestionJob | None:
+        return await _mark_job_running_impl(job_id, tenant_id)
+
+    async def mark_job_completed(
+        self,
+        job_id: uuid.UUID,
+        tenant_id: str,
+        result: dict[str, Any] | None = None,
+    ) -> IngestionJob | None:
+        return await _mark_job_completed_impl(job_id, tenant_id, result)
+
+    async def mark_job_failed(
+        self,
+        job_id: uuid.UUID,
+        tenant_id: str,
+        error: str,
+    ) -> IngestionJob | None:
+        return await _mark_job_failed_impl(job_id, tenant_id, error)
+
+    async def get_job_for_tenant(
+        self,
+        job_id: uuid.UUID,
+        tenant_id: str,
+    ) -> IngestionJob | None:
+        return await _get_job_for_tenant_impl(job_id, tenant_id)
+
+    async def get_job_for_tenant_by_identifier(
+        self,
+        identifier: str,
+        tenant_id: str,
+    ) -> IngestionJob | None:
+        return await _get_job_for_tenant_by_identifier_impl(identifier, tenant_id)
+
+
+ingestion_job_service = IngestionJobService()
+
+
+async def create_ingestion_job(
+    *,
+    tenant_id: str,
+    filename: str,
+    source_path: str,
+    job_id: uuid.UUID | None = None,
+    celery_task_id: str | None = None,
+    idempotency_key_hash: str | None = None,
+    payload_fingerprint: str | None = None,
+) -> IngestionJob:
+    """Create a durable queued job (compatibility wrapper; always inserts)."""
+    return await ingestion_job_service.create_ingestion_job(
+        tenant_id=tenant_id,
+        filename=filename,
+        source_path=source_path,
+        job_id=job_id,
+        celery_task_id=celery_task_id,
+        idempotency_key_hash=idempotency_key_hash,
+        payload_fingerprint=payload_fingerprint,
+    )
+
+
+async def create_or_reuse_ingestion_job(
+    *,
+    tenant_id: str,
+    filename: str,
+    source_path: str,
+    job_id: uuid.UUID | None = None,
+    celery_task_id: str | None = None,
+    idempotency_key_hash: str | None = None,
+    payload_fingerprint: str | None = None,
+) -> CreateJobOutcome:
+    """Atomically create or reuse a tenant-scoped idempotent job row.
+
+    When ``idempotency_key_hash`` is set, uniqueness is
+    ``(tenant_id, idempotency_key_hash)``. Concurrent unique-conflict races
+    roll back and re-read; same fingerprint → replayed, different → conflict.
+    """
+    return await ingestion_job_service.create_or_reuse_ingestion_job(
+        tenant_id=tenant_id,
+        filename=filename,
+        source_path=source_path,
+        job_id=job_id,
+        celery_task_id=celery_task_id,
+        idempotency_key_hash=idempotency_key_hash,
+        payload_fingerprint=payload_fingerprint,
+    )
+
+
+async def mark_source_ready(
+    job_id: uuid.UUID,
+    tenant_id: str,
+) -> IngestionJob | None:
+    """Atomically set source_ready_at only for queued, not-yet-ready jobs.
+
+    Race-safe: requires exact tenant, job, ``status == 'queued'``, and
+    ``source_ready_at IS NULL``. Terminal rows (failed/completed/running)
+    cannot transition. On a zero-row update, return an existing
+    queued+already-ready row only for idempotent success; otherwise ``None``.
+    """
+    return await ingestion_job_service.mark_source_ready(job_id, tenant_id)
+
+
+async def set_celery_task_id(
+    job_id: uuid.UUID,
+    tenant_id: str,
+    celery_task_id: str,
+) -> IngestionJob | None:
+    return await ingestion_job_service.set_celery_task_id(
+        job_id,
+        tenant_id,
+        celery_task_id,
+    )
+
+
+async def mark_job_running(
+    job_id: uuid.UUID,
+    tenant_id: str,
+) -> IngestionJob | None:
+    return await ingestion_job_service.mark_job_running(job_id, tenant_id)
+
+
+async def mark_job_completed(
+    job_id: uuid.UUID,
+    tenant_id: str,
+    result: dict[str, Any] | None = None,
+) -> IngestionJob | None:
+    return await ingestion_job_service.mark_job_completed(job_id, tenant_id, result)
+
+
+async def mark_job_failed(
+    job_id: uuid.UUID,
+    tenant_id: str,
+    error: str,
+) -> IngestionJob | None:
+    return await ingestion_job_service.mark_job_failed(job_id, tenant_id, error)
+
+
+async def get_job_for_tenant(
+    job_id: uuid.UUID,
+    tenant_id: str,
+) -> IngestionJob | None:
+    return await ingestion_job_service.get_job_for_tenant(job_id, tenant_id)
+
+
+async def get_job_for_tenant_by_identifier(
+    identifier: str,
+    tenant_id: str,
+) -> IngestionJob | None:
+    """Resolve public job UUID or stored Celery task id; always tenant-scoped."""
+    return await ingestion_job_service.get_job_for_tenant_by_identifier(
+        identifier,
+        tenant_id,
+    )
 
 
 # --- Synchronous worker helpers ------------------------------------------------
