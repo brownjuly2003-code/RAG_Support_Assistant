@@ -83,12 +83,16 @@ class GraphState(TypedDict, total=False):
     doc_grade_outcome: Optional[str]
     answer: Optional[str]
     relevance_score: Optional[float]
+    # Provenance of relevance_score (plan §5.4); set by evaluate / agentic measure.
+    relevance_source: Optional[str]
     quality_score: Optional[int]
     # Provenance of quality_score: "llm" — real self-evaluation; "fixed" —
     # legacy hardcoded constants (must not unlock auto after plan §6.1);
     # "heuristic" — streaming length check; "unmeasured" — agentic/tool path
     # without evaluate/grounding (fail-closed, never auto).
     quality_source: Optional[Literal["llm", "fixed", "heuristic", "unmeasured"]]
+    # Agentic §6.5 measure marker when KB path ran (observability only).
+    agentic_measure: Optional[str]
     claims: list[dict]
     factuality_score: int
     # Plan §5.1: verified | unsupported | not_verified (never fake-perfect on skip).

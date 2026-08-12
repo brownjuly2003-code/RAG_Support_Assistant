@@ -75,6 +75,7 @@ def _online_eval_first_time(signature: str) -> bool:
         return True
 
 if TYPE_CHECKING:
+    from agent.agentic_measure import AgenticTerminalFields
     from utils.circuit_breaker import CircuitBreaker
 
 from agent.judge_policy import (  # noqa: E402
@@ -984,7 +985,7 @@ def _normalize_tool_call(tool_call: dict[str, Any]) -> tuple[str | None, dict[st
 def _agentic_unmeasured_gate(
     *,
     route: Literal["agentic", "human"] = "agentic",
-) -> dict[str, Any]:
+) -> AgenticTerminalFields:
     """Fail-closed quality fields for agentic terminals without evaluate/grounding.
 
     Plan §6.1: never invent quality 80/85/90 or ``quality_source="fixed"``, and
@@ -1003,7 +1004,7 @@ def _agentic_terminal_fields(
     quality_score: int | None = None,
     relevance_score: float | None = None,
     quality_source: str | None = None,
-) -> dict[str, Any]:
+) -> AgenticTerminalFields:
     """Plan §6.5: measured gate when KB docs exist; else §6.1 unmeasured."""
     from agent.agentic_measure import has_kb_context, measure_agentic_terminal
     from agent.calibration import resolve_routing_thresholds
@@ -1079,7 +1080,7 @@ def _agentic_terminal_fields_with_eval(
     quality_score: int | None = None,
     relevance_score: float | None = None,
     quality_source: str | None = None,
-) -> dict[str, Any]:
+) -> AgenticTerminalFields:
     """Plan §6.6: optional LLM evaluate on KB agentic terminals, then §6.5 gate.
 
     When ``agentic_quality_eval`` is enabled and KB docs exist, run the
@@ -1092,7 +1093,7 @@ def _agentic_terminal_fields_with_eval(
         agentic_quality_eval_enabled,
         evaluate_agentic_answer,
     )
-    from agent.agentic_measure import has_kb_context
+    from agent.agentic_measure import AgenticJudgeFields, has_kb_context
 
     # Local import so tests can monkeypatch config.settings.get_settings
     # (same pattern as ConversationSession.ask).
@@ -1101,7 +1102,7 @@ def _agentic_terminal_fields_with_eval(
     except ImportError:
         _get_settings = None  # type: ignore[assignment]
 
-    judge_fields: dict[str, Any] = {}
+    judge_fields: AgenticJudgeFields | None = None
     q_score = quality_score
     r_score = relevance_score
     q_source = quality_source
@@ -1154,7 +1155,7 @@ def _agentic_terminal_fields_with_eval(
         relevance_score=r_score,
         quality_source=q_source,
     )
-    if judge_fields:
+    if judge_fields is not None:
         fields = {**fields, **judge_fields}
     return fields
 

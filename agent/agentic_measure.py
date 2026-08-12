@@ -14,7 +14,7 @@ Confirmation / order-only / empty-KB paths stay unmeasured.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 from agent.grounding import (
     grounding_allows_auto,
@@ -23,6 +23,50 @@ from agent.grounding import (
 )
 
 KB_EMPTY_MARKER = "По базе знаний ничего не найдено."
+
+AgenticQualitySource = Literal["llm", "heuristic", "unmeasured"]
+AgenticRoute = Literal["agentic", "human", "auto"]
+GroundingStatus = Literal["verified", "unsupported", "not_verified"]
+JudgeStatus = Literal["ok", "unavailable", "error", "parse_failure"]
+
+
+class _AgenticTerminalBaseFields(TypedDict):
+    """Fields populated by every agentic terminal payload branch."""
+
+    route: AgenticRoute
+    quality_score: int
+    relevance_score: float
+    quality_source: AgenticQualitySource
+    grounding_status: GroundingStatus
+    fact_verification_skipped: bool
+    factuality_score: int
+
+
+class AgenticJudgeFields(TypedDict):
+    """§6.6 judge observability; optional merge onto terminal payloads."""
+
+    judge_status: JudgeStatus
+    judge_reason: str
+    judge_independent: bool
+
+
+class AgenticTerminalFields(_AgenticTerminalBaseFields, total=False):
+    """Shared agentic terminal producer payload (measure ± evaluate).
+
+    Covers no-KB unmeasured, KB/no-citation, grounded, quality-measured, and
+    optional judge-observability keys. Only keys that a branch actually sets
+    are required at runtime; ``total=False`` models that partial presence.
+    """
+
+    context_docs: list[dict]
+    graded_docs: list[dict]
+    claims: list[dict]
+    relevance_source: str
+    agentic_measure: str
+    knowledge_gap: bool
+    judge_status: JudgeStatus
+    judge_reason: str
+    judge_independent: bool
 
 
 def normalize_context_docs(docs: Sequence[Any]) -> list[dict[str, Any]]:
@@ -49,7 +93,7 @@ def has_kb_context(docs: Sequence[Any] | None) -> bool:
 def unmeasured_agentic_fields(
     *,
     route: Literal["agentic", "human"] = "agentic",
-) -> dict[str, Any]:
+) -> AgenticTerminalFields:
     """§6.1 fail-closed fields (shared with graph helper)."""
     return {
         "route": route,
@@ -102,7 +146,7 @@ def measure_agentic_terminal(
     min_quality: int = 80,
     min_factuality: int = 80,
     min_relevance: float = 0.8,
-) -> dict[str, Any]:
+) -> AgenticTerminalFields:
     """Return state fields for an agentic terminal after optional KB measure.
 
     - No KB docs → unmeasured agentic (route stays agentic).
@@ -119,7 +163,7 @@ def measure_agentic_terminal(
     if not claims:
         # Retrieved context exists but answer has no bound citations → cannot
         # claim verified grounding; keep deliverable as agentic unmeasured scores.
-        return {
+        no_cite: AgenticTerminalFields = {
             **unmeasured_agentic_fields(route="agentic"),
             "context_docs": list(context),
             "graded_docs": list(context),
@@ -128,6 +172,7 @@ def measure_agentic_terminal(
             "fact_verification_skipped": False,
             "agentic_measure": "kb_context_no_citations",
         }
+        return no_cite
 
     status, factuality, skipped = status_for_claims(
         claims, require_citation_bound=True
@@ -137,16 +182,17 @@ def measure_agentic_terminal(
     q_score = 0
     r_score: float | None = None
     r_source = "unmeasured"
-    q_source = "unmeasured"
-    if quality_source in {"llm", "heuristic"} and quality_score is not None:
-        try:
-            q_score = int(quality_score)
-            q_source = str(quality_source)
-            measured_quality = True
-        except (TypeError, ValueError):
-            measured_quality = False
-            q_score = 0
-            q_source = "unmeasured"
+    q_source: AgenticQualitySource = "unmeasured"
+    if quality_source == "llm" or quality_source == "heuristic":
+        if quality_score is not None:
+            try:
+                q_score = int(quality_score)
+                q_source = quality_source
+                measured_quality = True
+            except (TypeError, ValueError):
+                measured_quality = False
+                q_score = 0
+                q_source = "unmeasured"
 
     # Plan §5.4: never derive relevance from quality/100.
     from agent.relevance import measure_retrieval_relevance
@@ -168,7 +214,7 @@ def measure_agentic_terminal(
         r_score = measured_r
         r_source = measured_src
 
-    fields: dict[str, Any] = {
+    fields: AgenticTerminalFields = {
         "context_docs": list(context),
         "graded_docs": list(context),
         "claims": claims,

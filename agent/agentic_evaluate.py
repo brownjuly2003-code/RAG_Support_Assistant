@@ -20,8 +20,12 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from agent.agentic_measure import has_kb_context, normalize_context_docs
-from agent.judge_policy import parse_judge_score, resolve_judge_llm
+from agent.agentic_measure import (
+    AgenticJudgeFields,
+    has_kb_context,
+    normalize_context_docs,
+)
+from agent.judge_policy import JudgeStatus, parse_judge_score, resolve_judge_llm
 from agent.prompts import build_self_eval_prompt
 
 logger = logging.getLogger(__name__)
@@ -36,7 +40,7 @@ class AgenticEvaluateResult:
     quality_score: int | None
     relevance_score: float | None
     quality_source: str | None
-    judge_status: str
+    judge_status: JudgeStatus
     judge_reason: str
     judge_independent: bool
     measured: bool
@@ -58,13 +62,13 @@ class AgenticEvaluateResult:
             out["relevance_score"] = float(self.relevance_score)
         return out
 
-    def as_state_fields(self) -> dict[str, Any]:
+    def as_state_fields(self) -> AgenticJudgeFields:
         """Observability fields; safe to merge without clobbering grounding."""
-        return {
-            "judge_status": self.judge_status,
-            "judge_reason": self.judge_reason,
-            "judge_independent": bool(self.judge_independent),
-        }
+        return AgenticJudgeFields(
+            judge_status=self.judge_status,
+            judge_reason=self.judge_reason,
+            judge_independent=bool(self.judge_independent),
+        )
 
 
 def _default_invoke(llm: Any, prompt: str) -> str:
@@ -87,7 +91,7 @@ def _strip_citation_markers(answer: str) -> str:
 
 def _unmeasured(
     *,
-    status: str,
+    status: JudgeStatus,
     reason: str,
     independent: bool = False,
 ) -> AgenticEvaluateResult:
@@ -134,7 +138,7 @@ def evaluate_agentic_answer(
     )
     if not resolution.ok or resolution.judge_llm is None:
         return _unmeasured(
-            status=str(resolution.status or "unavailable"),
+            status=resolution.status,
             reason=resolution.reason or "no_judge_candidate",
             independent=bool(resolution.independent),
         )
