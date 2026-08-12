@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-188 delivery-state type boundary closed; command 1 has 10 errors; live FAIL unchanged)
+**Date:** 2026-08-12 (Update-189 grade-state assignment closed; command 1 has 9 errors; live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-188**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-189**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-188. Preserve it as DoD input, but use Actual Git + the committed
+> Update-189. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -17,6 +17,17 @@ authoritative open-problem ledger in §1C.
 2. Local code slice ≠ full plan section complete ≠ production release.  
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
+
+**Update-189:** no plan checkbox or release gate changed. `25455f5` narrows
+both `finalize_grade_state` returns locally to `GraphState`, which is necessary
+because their `new_state` assignments share one function scope, and removes
+three adjacent obsolete ignores. Runtime expressions and behavior are
+unchanged. Exact MyPy command 1 moved from **10 to 9 errors** in
+`agent/graph.py` across 72 sources; one claims-list invariance and eight
+agentic TypedDict-expansion findings remain. The successful Grok follow-up
+(`grok-4.5-build`) passed 11 focused tests; Codex passed 3 representative tests
+plus scoped Ruff/diff/LF/protected-hash checks. No provider, migration, deploy,
+push, index, database, dependency, or workflow state changed.
 
 **Update-188:** no plan checkbox or release gate changed. `02df975` replaces
 the imprecise heterogeneous return annotation of `_escalate_to_inbox` with a

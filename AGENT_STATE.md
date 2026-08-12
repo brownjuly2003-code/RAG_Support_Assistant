@@ -1,5 +1,48 @@
 # Agent State
 
+## 2026-08-12 Update-189 — grade-state assignment boundary locally closed ✅ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `25455f5`, ahead of
+> `origin/master` by 322 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **Committed implementation:** `25455f5` changes only `agent/graph.py`. Both
+> `finalize_grade_state(...)` results inside `make_grade_docs_node` are narrowed
+> locally with `cast(GraphState, ...)`; this is required because the two
+> assignments share one function scope. Three adjacent `arg-type` /
+> `return-value` ignores are now unnecessary and were removed. The generic
+> `agent.doc_grade` helper remains unchanged, and no runtime expression,
+> argument, value, branch, log, or control flow changed.
+>
+> **Type/runtime evidence:** the unchanged CI MyPy command 1 reproduced **10
+> errors in 1 file / 72 sources** before the edit and now reports exactly **9
+> errors in the same file / 72 sources**. The `GraphState`/`dict[str, Any]`
+> assignment diagnostic is absent; one claims-list invariance finding and eight
+> agentic TypedDict-expansion findings remain intentionally open. Grok passed
+> **11** focused grade tests; Codex independently passed **3** representative
+> empty/graded/usage tests. Scoped Ruff, `git diff --check`, LF, and protected
+> hashes are clean. Command 1 is still red and must not be called type-green.
+>
+> **Grok truth:** initial `local_grok_cli` run
+> `rag-ver01-grade-state-assignment-20260812-01` used actual
+> `grok-4.5-build` but stopped before source reads/edits after attempting a
+> disallowed compound onboarding listing. The single cause-specific follow-up
+> `rag-ver01-grade-state-assignment-20260812-02`, also actual
+> `grok-4.5-build`, completed normally, discovered the shared-scope inference,
+> made the exact diff, observed MyPy **10→9**, passed **11 tests**, and reported
+> clean Ruff/diff self-review. The QA-follow-up budget is exhausted.
+>
+> **Next safe implementation candidate:** a separate `agent/graph.py` slice for
+> the single claims-list invariance diagnostic now near line ~2133. Trace the
+> `claims_result` declaration and `status_for_claims` signature before choosing
+> whether the producer or consumer should accept a covariant sequence. Do not
+> bundle the eight agentic TypedDict expansions.
+>
+> **Workspace truth:** implementation WIP is none. The four protected owner
+> files stayed byte-identical; unrelated untracked artifacts remain preserved.
+> No provider call, migration, deploy, push, index/database mutation, or
+> dependency/workflow change occurred; no delegated writer remains active.
+
 ## 2026-08-12 Update-188 — delivery-state type boundary locally closed ✅ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `02df975`, ahead of
