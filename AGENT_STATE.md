@@ -1,5 +1,40 @@
 # Agent State
 
+## 2026-08-12 Update-194 — INDEX-DIM rebuild bootstrap fixed; runtime rebuild lock-blocked ⚠ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `1aa9f19`, ahead of
+> `origin/master` by 331 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **Committed implementation:** `1aa9f19` closes the first-versioned-publish
+> rollback gap. When no manifest exists, publishing a new versioned collection
+> now records the resolved legacy collection (for `default`,
+> `rag_docs_default`) as `previous_collection`. Publishing the legacy name
+> itself remains a no-op bootstrap with no artificial previous target. The
+> exact missing rollback target was proved red before the fix.
+>
+> **Verification:** the focused manifest contract passed **12 tests**. The
+> adjacent runtime-switch, lifecycle-fault, retention, and manifest band passed
+> **78 tests**. Scoped Ruff, `vectordb/index_manifest.py` MyPy with
+> `--follow-imports=skip`, `git diff --check`, and protected owner hashes are
+> clean.
+>
+> **Runtime rebuild attempt:** owner authorization covered a versioned 1024D
+> rebuild/publish/rollback. Preflight confirmed legacy `rag_docs_default` has
+> **6 vectors at dimension 3**, with no default manifest or retention inventory.
+> The configured remote path is `mistral-embed` at dimension **1024**. The only
+> build attempt failed closed before embeddings and before any Chroma mutation
+> because the mandatory PostgreSQL advisory-lock service at localhost:5432 was
+> unavailable. Follow-up inspection confirmed no manifest, inventory, or
+> versioned candidate was created and the legacy collection remains 6×3D.
+>
+> **Next exact boundary:** provide or separately authorize a PostgreSQL tenant
+> lock service, then rerun the already-authorized rebuild workflow: build the
+> three canonical docs into a versioned 1024D candidate, validate count/
+> dimension/known-query, publish, prove rollback to the legacy 3D collection
+> with its compatible validator, and reactivate the candidate. Do not bypass
+> the tenant lock, delete collections, or claim the active index is repaired.
+
 ## 2026-08-12 Update-193 — INDEX-DIM runtime guard closed; active index still incompatible ⚠ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `d157b31`, ahead of

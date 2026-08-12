@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-12 — **Update-193** (INDEX-DIM tenant-runtime guard committed; active 3D index remains incompatible and unpublished at 1024D).
+**Обновлено:** 2026-08-12 — **Update-194** (legacy rollback bootstrap committed; 1024D rebuild failed closed because PostgreSQL tenant lock is unavailable).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-193**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-194**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-193; dirty
+**Не использовать:** старые `START HERE` ниже Update-194; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -27,18 +27,18 @@
 
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
-| Последний implementation SHA | `d157b31` — fail-fast tenant-runtime compatibility guard for active Chroma dimensions; preceding type closure `d4583cc` |
-| Последний committed test contract | `d157b31` — active `3D` collection vs declared `1024D` embedder must fail before provider calls, retriever construction, collection mutation, or any of four tenant-cache writes |
-| Последний committed docs/dependency closure | `ad10b54` — Update-192 restart-routing reconciliation; latest dependency closure remains `e400d88` (VER-04) |
-| Actual Git перед этой docs edit | `master...origin/master [ahead 329]` at `d157b31`; refresh remains mandatory and this is not push authority |
-| Что закрыто локально | `INDEX-DIM` runtime detection/cache containment is local-green at `d157b31`; the active collection itself is **not** repaired. GraceKelly artifact containment, generation-provider fail-closed, VER-01 local MyPy, §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не восстанавливает live quality и не означает production ready |
+| Последний implementation SHA | `1aa9f19` — first versioned publish preserves the resolved legacy collection as the rollback target; runtime dimension guard remains `d157b31` |
+| Последний committed test contract | `1aa9f19` — first versioned publish can roll back to legacy instead of writing `previous_collection=null`; `d157b31` still guards active `3D` vs declared `1024D` before runtime cache/retriever mutation |
+| Последний committed docs/dependency closure | `f891114` — Update-193 dimension-guard boundary; latest dependency closure remains `e400d88` (VER-04) |
+| Actual Git перед этой docs edit | `master...origin/master [ahead 331]` at `1aa9f19`; refresh remains mandatory and this is not push authority |
+| Что закрыто локально | `INDEX-DIM` runtime detection/cache containment is local-green at `d157b31`; first-publish legacy rollback bootstrap is local-green at `1aa9f19`; the active collection itself is **not** repaired. GraceKelly artifact containment, generation-provider fail-closed, VER-01 local MyPy, §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не восстанавливает live quality и не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
 | Известный baseline debt | **VER-01 is LOCAL TYPE-GREEN:** exact command 1 is green across 72 sources and exact command 2 is freshly green across 31 sources in the retained Windows Python 3.11 diagnostic environment. Exact Ubuntu/full 222-package-lock equivalence remains unproved |
 | Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none**; ignored v2 input/lock and venv plus INDEX-DIM Grok prompts/test temps are retained artifacts; no active delegated writer |
 | Grok route truth | INDEX-DIM implementation attempt 1 never launched; attempt 2 left a partial scoped diff and stalled with empty logs; the one QA/fix follow-up completed normally in 11 turns using actual `grok-4.5-build` and reported 19 green tests. Codex independently verified 36 tests and corrected one stale matching-index-key cache case. No further Grok run occurred |
-| Что не запускалось | Active-index rebuild/publish/rollback, real provider calls, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana import/provisioning, seeds 43–44, independent judge, and scrape/alert delivery did not run. One post-QG 20-case seed 42 did run and fail fast |
+| Что не запускалось | The authorized rebuild command reached source loading, then failed at PostgreSQL tenant-lock acquisition before embeddings, candidate creation, publish, or rollback. No real embedding-provider call, index/manifest/inventory mutation, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana import/provisioning, seeds 43–44, independent judge, or scrape/alert delivery ran. One post-QG 20-case seed 42 did run and fail fast |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
-| Следующий slice | `INDEX-DIM-REBUILD` is the explicit residual: validated versioned 1024D rebuild → staged validation → controlled publish/rollback evidence. This row is status, not mutation/provider authorization. Never replace/delete the active or retained collection casually; otherwise select a different distinct owner-approved slice |
+| Следующий slice | `INDEX-DIM-REBUILD` remains the explicit residual. Owner authorized the rebuild/provider/index boundary, but the only attempt failed before embeddings/mutation because PostgreSQL advisory locking at localhost:5432 is unavailable. Supply or separately authorize that lock service; never bypass the lock or replace/delete retained collections casually |
 
 ---
 
