@@ -43,6 +43,7 @@ def test_remote_embeddings_batches_normalizes_and_orders(monkeypatch) -> None:
         api_key="secret",
         batch_size=2,
         timeout_sec=10.0,
+        embedding_dimension=3,
     )
 
     vectors = emb.embed_documents(["a", "b", "c"])
@@ -63,10 +64,32 @@ def test_remote_embeddings_batches_normalizes_and_orders(monkeypatch) -> None:
 def test_remote_embeddings_query_returns_single_vector(monkeypatch) -> None:
     monkeypatch.setattr("httpx.post", _fake_post_factory([]))
     emb = manager._RemoteEmbeddings(
-        url="u", model="m", api_key="k", batch_size=32, timeout_sec=5.0
+        url="u",
+        model="m",
+        api_key="k",
+        batch_size=32,
+        timeout_sec=5.0,
+        embedding_dimension=3,
     )
     vec = emb.embed_query("hello")
     assert isinstance(vec, list) and len(vec) == 3
+
+
+def test_remote_embeddings_rejects_response_dimension_mismatch(monkeypatch) -> None:
+    """Configured width must match the remote response; no silent normalize."""
+    monkeypatch.setattr("httpx.post", _fake_post_factory([]))
+    emb = manager._RemoteEmbeddings(
+        url="u",
+        model="m",
+        api_key="k",
+        batch_size=32,
+        timeout_sec=5.0,
+        embedding_dimension=1024,
+    )
+    with pytest.raises(RuntimeError, match=r"dimension 3, expected 1024"):
+        emb.embed_documents(["a"])
+    with pytest.raises(RuntimeError, match=r"dimension 3, expected 1024"):
+        emb.embed_query("hello")
 
 
 def test_build_remote_embeddings_requires_api_key(monkeypatch) -> None:
@@ -77,6 +100,7 @@ def test_build_remote_embeddings_requires_api_key(monkeypatch) -> None:
         embedding_remote_model="m",
         embedding_remote_batch=32,
         embedding_remote_timeout_sec=60.0,
+        embedding_remote_dimension=1024,
     )
     with pytest.raises(RuntimeError, match="MISTRAL_API_KEY is required"):
         manager._build_remote_embeddings(settings)
@@ -94,6 +118,7 @@ def test_get_embeddings_selects_remote_backend(monkeypatch) -> None:
             embedding_remote_model="mistral-embed",
             embedding_remote_batch=32,
             embedding_remote_timeout_sec=60.0,
+            embedding_remote_dimension=1024,
             embedding_model="BAAI/bge-m3",
         ),
         raising=False,
@@ -101,6 +126,7 @@ def test_get_embeddings_selects_remote_backend(monkeypatch) -> None:
     try:
         emb = manager.get_embeddings()
         assert isinstance(emb, manager._RemoteEmbeddings)
+        assert emb.embedding_dimension == 1024
     finally:
         manager._cached_embeddings = None
 
@@ -112,6 +138,7 @@ def test_remote_embedding_settings_defaults(monkeypatch) -> None:
         "RAG_EMBEDDING_REMOTE_MODEL",
         "RAG_EMBEDDING_REMOTE_API_KEY_ENV",
         "RAG_EMBEDDING_REMOTE_BATCH",
+        "RAG_EMBEDDING_REMOTE_DIMENSION",
     ):
         monkeypatch.delenv(var, raising=False)
     from config.settings import Settings
@@ -121,3 +148,4 @@ def test_remote_embedding_settings_defaults(monkeypatch) -> None:
     assert s.embedding_remote_model == "mistral-embed"
     assert s.embedding_remote_api_key_env == "MISTRAL_API_KEY"
     assert s.embedding_remote_batch == 32
+    assert s.embedding_remote_dimension == 1024

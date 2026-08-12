@@ -385,6 +385,14 @@ class Settings:
     embedding_remote_timeout_sec: float = field(
         default_factory=lambda: float(os.getenv("RAG_EMBEDDING_REMOTE_TIMEOUT_SEC", "60"))
     )
+    # Declared output dimension of the remote embedding model (e.g. mistral-embed=1024).
+    # Used for fail-fast compatibility checks against stored Chroma vectors; not a
+    # model-name lookup table — operators must keep this aligned with the remote model.
+    embedding_remote_dimension: int = field(
+        default_factory=lambda: max(
+            1, int(os.getenv("RAG_EMBEDDING_REMOTE_DIMENSION", "1024") or "1024")
+        )
+    )
 
     # --- Reranker (Cross-Encoder) ---
     # "BAAI/bge-reranker-v2-m3"               — multilingual (pairs с дефолтным BGE-M3); дефолт

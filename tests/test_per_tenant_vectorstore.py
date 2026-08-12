@@ -366,3 +366,132 @@ def test_upload_uses_tenant_specific_rebuild(
     assert captured["tenant_id"] == "acme-corp"
     assert response.json()["tenant_id"] == "acme-corp"
     assert "job_id" in response.json()
+
+
+def test_get_retriever_rejects_active_chroma_dimension_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Fail-fast when active Chroma vectors disagree with embedder dimension.
+
+    Tenant runtime must reject a 3D legacy collection against a 1024D embedder
+    before chunk restore, retriever construction, or any cache population, and
+    without calling the embedder or mutating the collection.
+    """
+    from vectordb import manager
+
+    class TrackingEmbeddings:
+        embedding_dimension = 1024
+        embed_query_calls = 0
+        embed_documents_calls = 0
+
+        def embed_query(self, text: str) -> list[float]:
+            self.embed_query_calls += 1
+            raise AssertionError("embed_query must not be called on dimension guard")
+
+        def embed_documents(self, texts: list[str]) -> list[list[float]]:
+            self.embed_documents_calls += 1
+            raise AssertionError("embed_documents must not be called on dimension guard")
+
+    class TrackingCollection:
+        def __init__(self) -> None:
+            self.get_calls: list[dict[str, object]] = []
+            self.mutation_calls = 0
+
+        def count(self) -> int:
+            return 1
+
+        def get(self, *args: object, **kwargs: object) -> dict[str, object]:
+            self.get_calls.append(dict(kwargs))
+            return {"embeddings": [[0.1, 0.2, 0.3]]}
+
+        def delete(self, *args: object, **kwargs: object) -> None:
+            self.mutation_calls += 1
+
+        def delete_collection(self) -> None:
+            self.mutation_calls += 1
+
+        def update(self, *args: object, **kwargs: object) -> None:
+            self.mutation_calls += 1
+
+        def add(self, *args: object, **kwargs: object) -> None:
+            self.mutation_calls += 1
+
+        def upsert(self, *args: object, **kwargs: object) -> None:
+            self.mutation_calls += 1
+
+    class TrackingStore:
+        def __init__(self) -> None:
+            self._collection = TrackingCollection()
+            self.as_retriever_calls = 0
+
+        def as_retriever(self, **kwargs: object) -> object:
+            self.as_retriever_calls += 1
+            raise AssertionError("as_retriever must not be called on dimension mismatch")
+
+    embeddings = TrackingEmbeddings()
+    store = TrackingStore()
+    base_retriever_calls = {"count": 0}
+    restore_calls = {"count": 0}
+
+    def _boom_base_retriever(*args: object, **kwargs: object) -> object:
+        base_retriever_calls["count"] += 1
+        raise AssertionError("base get_retriever must not run on dimension mismatch")
+
+    def _boom_restore(*args: object, **kwargs: object) -> list:
+        restore_calls["count"] += 1
+        raise AssertionError("chunk restore must not run on dimension mismatch")
+
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+    chroma_directory.mkdir(parents=True)
+    monkeypatch.setattr(
+        manager,
+        "get_settings",
+        lambda: SimpleNamespace(
+            vector_backend="chroma",
+            vectordb_chroma_dir=chroma_directory,
+            vectordb_collection_prefix="rag_docs",
+        ),
+    )
+    monkeypatch.setattr(manager._base_manager, "get_retriever", _boom_base_retriever)
+    monkeypatch.setattr(manager, "_restore_chunks_from_store", _boom_restore)
+    manager.reset_retriever_cache()
+    # A prior partial cache state with the same resolved index key must also be
+    # cleared if the compatibility guard rejects the active collection.
+    manager._chunks_cache["default"] = []
+    manager._store_cache["default"] = object()
+    manager._index_cache_keys["default"] = (
+        str(chroma_directory.resolve()),
+        "rag_docs_default",
+        0,
+    )
+
+    with pytest.raises(manager.ActiveCollectionEmbeddingDimensionMismatch) as exc_info:
+        manager.get_retriever(
+            vector_store=store,
+            embeddings=embeddings,
+            tenant_id="default",
+            persist_directory=str(chroma_directory),
+        )
+
+    message = str(exc_info.value)
+    assert "default" in message
+    assert "rag_docs_default" in message
+    assert "3" in message
+    assert "1024" in message
+    assert "rebuild" in message.lower()
+
+    assert embeddings.embed_query_calls == 0
+    assert embeddings.embed_documents_calls == 0
+    assert base_retriever_calls["count"] == 0
+    assert restore_calls["count"] == 0
+    assert store.as_retriever_calls == 0
+    assert store._collection.mutation_calls == 0
+    assert "default" not in manager._retriever_cache
+    assert "default" not in manager._chunks_cache
+    assert "default" not in manager._store_cache
+    assert "default" not in manager._index_cache_keys
+    # Read-only probe: one stored embedding only.
+    assert store._collection.get_calls
+    assert store._collection.get_calls[0].get("limit") == 1
+    assert store._collection.get_calls[0].get("include") == ["embeddings"]

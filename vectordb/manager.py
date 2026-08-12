@@ -51,6 +51,15 @@ _index_cache_keys: dict[str, tuple[str, str, int]] = {}
 _cache_lock = Lock()
 
 
+class ActiveCollectionEmbeddingDimensionMismatch(RuntimeError):
+    """Active Chroma collection vectors disagree with the configured embedder.
+
+    Raised by the tenant-runtime read-only dimension guard before chunk restore,
+    retriever construction, or cache population. Does not rebuild or mutate the
+    collection — operators must publish a compatible index.
+    """
+
+
 @dataclass(frozen=True)
 class IndexPublicationReceipt:
     """Exact Chroma publish receipt captured during one successful build."""
@@ -680,6 +689,126 @@ def get_factcard_documents(
     return list(results)
 
 
+def _embedding_dimension_of(embeddings: Any) -> int | None:
+    """Return a positive declared embedder dimension, or None if unknown."""
+    raw = getattr(embeddings, "embedding_dimension", None)
+    if raw is None:
+        return None
+    try:
+        dimension = int(raw)
+    except (TypeError, ValueError):
+        return None
+    if dimension <= 0:
+        return None
+    return dimension
+
+
+def _vector_width(vector: Any) -> int | None:
+    """Dimension of one stored embedding without ambiguous truth-value checks."""
+    if vector is None:
+        return None
+    shape = getattr(vector, "shape", None)
+    if shape is not None:
+        try:
+            if len(shape) == 0:
+                return None
+            return int(shape[-1])
+        except (TypeError, ValueError, IndexError):
+            return None
+    try:
+        return len(vector)
+    except TypeError:
+        return None
+
+
+def _first_stored_embedding(payload: Any) -> Any | None:
+    """Extract the first embedding row from a Chroma ``get`` payload value."""
+    if payload is None:
+        return None
+    try:
+        count = len(payload)
+    except TypeError:
+        return None
+    if count == 0:
+        return None
+    try:
+        return payload[0]
+    except (TypeError, IndexError, KeyError):
+        return None
+
+
+def _assert_active_chroma_embedding_dimension_compatible(
+    vector_store: Any,
+    embeddings: Any,
+    *,
+    tenant_id: str,
+    collection_name: str | None,
+) -> None:
+    """Fail-fast read-only check: stored Chroma dim vs declared embedder dim.
+
+    Reads at most one already-stored embedding via the collection API. Does not
+    call the embedder/provider, restore chunks, build a retriever, or mutate the
+    collection. Skips when the embedder has no positive declared dimension or
+    the collection is genuinely empty. A required probe that fails to observe a
+    dimension fails closed (never warn-and-skip).
+    """
+    expected = _embedding_dimension_of(embeddings)
+    if expected is None:
+        return
+
+    collection = getattr(vector_store, "_collection", None)
+    if collection is None or not hasattr(collection, "get"):
+        return
+
+    known_non_empty = False
+    count_fn = getattr(collection, "count", None)
+    if callable(count_fn):
+        try:
+            if int(count_fn()) == 0:
+                return
+            known_non_empty = True
+        except Exception:
+            # count() unavailable — fall through to a single-row get probe.
+            pass
+
+    try:
+        payload = collection.get(limit=1, include=["embeddings"])
+    except Exception as exc:
+        # Required probe: never fail open once a dimension check is attempted.
+        raise RuntimeError(
+            f"Unable to probe active Chroma collection embedding dimension "
+            f"for tenant {tenant_id!r}"
+        ) from exc
+
+    embeddings_payload = None if payload is None else payload.get("embeddings")
+    first = _first_stored_embedding(embeddings_payload)
+    if first is None:
+        if known_non_empty:
+            raise RuntimeError(
+                f"Active Chroma collection for tenant {tenant_id!r} is non-empty "
+                "but returned no usable embedding for a dimension probe"
+            )
+        return
+    actual = _vector_width(first)
+    if actual is None:
+        if known_non_empty:
+            raise RuntimeError(
+                f"Active Chroma collection for tenant {tenant_id!r} returned a "
+                "malformed embedding for a dimension probe"
+            )
+        return
+    if actual == expected:
+        return
+
+    active_name = collection_name or "unknown"
+    raise ActiveCollectionEmbeddingDimensionMismatch(
+        f"Active Chroma collection {active_name!r} for tenant {tenant_id!r} "
+        f"stores {actual}-dimensional embeddings, but the configured embedder "
+        f"expects {expected}. Rebuild the tenant index with a compatible "
+        "embedding model before serving retrieval."
+    )
+
+
 def _restore_chunks_from_store(vector_store: Any, tenant: str) -> list[Document] | None:
     """Rebuild the in-memory chunk list from a persisted Chroma collection.
 
@@ -800,10 +929,13 @@ def get_retriever(
     with _cache_lock:
         if current_index_key is not None:
             if _index_cache_keys.get(tenant) != current_index_key:
+                # Evict stale runtime state immediately so a key change cannot
+                # serve prior retriever/chunk/store results. Defer writing the
+                # new index key until a retriever is built successfully below.
                 _retriever_cache.pop(tenant, None)
                 _chunks_cache.pop(tenant, None)
                 _store_cache.pop(tenant, None)
-                _index_cache_keys[tenant] = current_index_key
+                _index_cache_keys.pop(tenant, None)
         elif tenant in _index_cache_keys:
             _retriever_cache.pop(tenant, None)
             _chunks_cache.pop(tenant, None)
@@ -837,6 +969,23 @@ def get_retriever(
             collection_name=active_collection,
         )
 
+    # Chroma-only: reject incompatible active collections before restore/cache.
+    if backend != "qdrant" and vector_store is not None:
+        try:
+            _assert_active_chroma_embedding_dimension_compatible(
+                vector_store,
+                embeddings,
+                tenant_id=tenant,
+                collection_name=active_collection,
+            )
+        except Exception:
+            with _cache_lock:
+                _retriever_cache.pop(tenant, None)
+                _chunks_cache.pop(tenant, None)
+                _store_cache.pop(tenant, None)
+                _index_cache_keys.pop(tenant, None)
+            raise
+
     if chunks is None:
         with _cache_lock:
             chunks = _chunks_cache.get(tenant)
@@ -853,6 +1002,10 @@ def get_retriever(
         if chunks is not None:
             _chunks_cache[tenant] = list(chunks)
         _retriever_cache[tenant] = retriever
+        # Record the resolved index key only after all compatibility checks and
+        # retriever construction succeeded (no premature cache-key population).
+        if current_index_key is not None:
+            _index_cache_keys[tenant] = current_index_key
 
     return retriever
 

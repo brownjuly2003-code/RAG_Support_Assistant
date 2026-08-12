@@ -169,6 +169,8 @@ class _RemoteEmbeddings:
     SentenceTransformer path (``normalize_embeddings=True``) so cosine similarity
     behaves identically across backends. The API key is read from the env var
     *named* by ``api_key_env`` — it is never persisted in settings or logs.
+    ``embedding_dimension`` is the configured expected width; response vectors
+    are validated against it so the declaration cannot silently lie.
     """
 
     def __init__(
@@ -179,12 +181,14 @@ class _RemoteEmbeddings:
         api_key: str,
         batch_size: int,
         timeout_sec: float,
+        embedding_dimension: int = 1024,
     ) -> None:
         self._url = url
         self._model = model
         self._api_key = api_key
         self._batch_size = max(1, int(batch_size))
         self._timeout_sec = float(timeout_sec)
+        self.embedding_dimension = max(1, int(embedding_dimension))
 
     @staticmethod
     def _normalize(vector: list[float]) -> list[float]:
@@ -203,6 +207,7 @@ class _RemoteEmbeddings:
             "Content-Type": "application/json",
         }
         out: list[list[float]] = []
+        expected_dim = self.embedding_dimension
         for start in range(0, len(texts), self._batch_size):
             batch = texts[start : start + self._batch_size]
             response = httpx.post(
@@ -224,7 +229,13 @@ class _RemoteEmbeddings:
                     f"{len(batch)} inputs"
                 )
             for row in rows:
-                out.append(self._normalize([float(x) for x in row.get("embedding") or []]))
+                vector = [float(x) for x in row.get("embedding") or []]
+                if len(vector) != expected_dim:
+                    raise RuntimeError(
+                        f"Remote embeddings returned dimension {len(vector)}, "
+                        f"expected {expected_dim}"
+                    )
+                out.append(self._normalize(vector))
         return out
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
@@ -245,6 +256,12 @@ def _build_remote_embeddings(settings: Any) -> _RemoteEmbeddings:
         )
     url = str(getattr(settings, "embedding_remote_url", ""))
     model = str(getattr(settings, "embedding_remote_model", "mistral-embed"))
+    # Safe default for older settings doubles that omit the field.
+    raw_dimension = getattr(settings, "embedding_remote_dimension", 1024)
+    try:
+        embedding_dimension = max(1, int(raw_dimension or 1024))
+    except (TypeError, ValueError):
+        embedding_dimension = 1024
     logger.info("Using remote embedding backend: %s (model=%s)", url, model)
     return _RemoteEmbeddings(
         url=url,
@@ -252,6 +269,7 @@ def _build_remote_embeddings(settings: Any) -> _RemoteEmbeddings:
         api_key=api_key,
         batch_size=int(getattr(settings, "embedding_remote_batch", 32)),
         timeout_sec=float(getattr(settings, "embedding_remote_timeout_sec", 60.0)),
+        embedding_dimension=embedding_dimension,
     )
 
 
@@ -288,6 +306,21 @@ def get_embeddings(model_name: str | None = None) -> Any:
         """Минимальная LangChain-совместимая обёртка над SentenceTransformer."""
         def __init__(self, st_model: SentenceTransformer):
             self._model = st_model
+            # Read-only declared width from the model metadata — never encode.
+            self.embedding_dimension: int | None = None
+            getter = getattr(st_model, "get_sentence_embedding_dimension", None)
+            if callable(getter):
+                try:
+                    reported = getter()
+                except Exception:
+                    reported = None
+                if reported is not None:
+                    try:
+                        dim = int(reported)
+                    except (TypeError, ValueError):
+                        dim = 0
+                    if dim > 0:
+                        self.embedding_dimension = dim
 
         def embed_documents(self, texts: list[str]) -> list[list[float]]:
             return self._model.encode(texts, normalize_embeddings=True).tolist()
