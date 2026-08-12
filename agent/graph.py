@@ -19,7 +19,7 @@ import threading
 import time
 from collections import OrderedDict
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Literal, Optional, Protocol, cast
+from typing import TYPE_CHECKING, Any, Literal, Optional, Protocol, TypedDict, cast
 
 from langgraph.graph import END, StateGraph
 
@@ -134,7 +134,16 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 
-def _escalate_to_inbox(state: GraphState) -> dict[str, str | None]:
+class _EscalationPayload(TypedDict):
+    """Fixed-key result of ``_escalate_to_inbox`` (both branches)."""
+
+    ticket_id: str | None
+    delivery_state: str
+    user_message: str
+    durable: str
+
+
+def _escalate_to_inbox(state: GraphState) -> _EscalationPayload:
     """Durable escalation via services.escalation (plan §4.3).
 
     Returns ticket_id / delivery_state for the caller. Never claims operator
@@ -227,7 +236,7 @@ def make_handle_error_node() -> Callable[[GraphState], GraphState]:
             ),
             "route": "error_escalation",
             "ticket_id": esc.get("ticket_id"),
-            "delivery_state": esc.get("delivery_state"),
+            "delivery_state": esc["delivery_state"],
         }
 
     return node
