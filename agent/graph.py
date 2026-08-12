@@ -98,6 +98,7 @@ from agent.prompts import (  # noqa: E402
 )
 from agent.response_safety import apply_pre_response_safety  # noqa: E402
 from agent.state import GraphState, create_initial_state  # noqa: E402
+from llm.providers.base import ProviderUnavailable  # noqa: E402
 from tracing.sqlite_trace import finish_trace, log_step, start_trace  # noqa: E402
 
 try:
@@ -1697,6 +1698,45 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
 # ---------------------------------------------------------------------------
 
 
+_GENERATION_PROVIDER_FAILURE_ANSWER = (
+    "Сейчас не удалось получить надёжный ответ. "
+    "Пожалуйста, обратитесь к специалисту поддержки."
+)
+
+
+def _generation_provider_fail_closed(
+    state: GraphState,
+    exc: ProviderUnavailable,
+) -> GraphState:
+    """Fail closed without treating an expected provider outage as a graph bug."""
+    trace_id = state.get("trace_id", "unknown")
+    reason = re.sub(r"[^a-zA-Z0-9_.-]+", "_", str(exc.reason or "unavailable"))[:60]
+    provenance = f"provider_error:{type(exc).__name__}:{reason}"[:120]
+    logger.warning(
+        "[generate] provider unavailable: %s",
+        reason,
+        extra={"trace_id": trace_id},
+    )
+    new_state: GraphState = {
+        **state,  # type: ignore[misc]
+        "answer": _GENERATION_PROVIDER_FAILURE_ANSWER,
+        "claims": [],
+        "quality_score": 0,
+        "relevance_score": 0.0,
+        "factuality_score": 0,
+        "grounding_status": "not_verified",
+        "fact_verification_skipped": True,
+        "generation_error": provenance,
+        "route": "human",
+        "suggested_questions": [],
+        "error": False,
+        "error_message": "",
+        "error_node": "",
+    }
+    log_step(trace_id, "generate", new_state)
+    return new_state
+
+
 def make_generate_node(
     llm_fast: SupportsInvoke,
     llm_strong: SupportsInvoke,
@@ -1746,6 +1786,8 @@ def make_generate_node(
                         duration_ms=(time.monotonic() - t0) * 1000,
                         tool_calls=state.get("tool_calls") or None,
                     )
+                except ProviderUnavailable as exc:
+                    return _generation_provider_fail_closed(state, exc)
                 except Exception as exc:
                     return _make_error_state(state, "generate", exc)
                 span.set_attribute("rag.answer_length", len(str(answer or "")))
@@ -1780,7 +1822,12 @@ def make_generate_node(
                     }
                 )
 
-            new_state: GraphState = {**state, "answer": answer, "citations": citations}
+            new_state: GraphState = {
+                **state,
+                "answer": answer,
+                "citations": citations,
+                "generation_error": None,
+            }
             if complexity == "simple":
                 # Plan §5.1: simple path skips verify_facts — not a free 100.
                 from agent.grounding import status_for_skip
@@ -2622,6 +2669,8 @@ def _route_after_retrieve(state: GraphState) -> str:
 def _route_after_generate(state: GraphState) -> str:
     if state.get("error"):
         return "error"
+    if state.get("generation_error"):
+        return "safety"
     if state.get("complexity") == "simple":
         return "evaluate"
     return "verify"
@@ -2785,6 +2834,7 @@ def build_support_graph(
             "error": "handle_error",
             "verify": "verify_facts",
             "evaluate": "evaluate",
+            "safety": "response_safety",
         },
     )
     workflow.add_conditional_edges(

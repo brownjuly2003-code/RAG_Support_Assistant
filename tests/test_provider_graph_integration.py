@@ -16,6 +16,7 @@ def test_build_support_graph_uses_provider_runtime_when_llm_missing(
     class _FakeWorkflow:
         def __init__(self, *_args, **_kwargs) -> None:
             self.nodes: list[tuple[str, object]] = []
+            self.conditional_edges: list[tuple[str, object, dict[str, str]]] = []
 
         def add_node(self, name: str, node) -> None:
             self.nodes.append((name, node))
@@ -26,8 +27,8 @@ def test_build_support_graph_uses_provider_runtime_when_llm_missing(
         def add_edge(self, *_args, **_kwargs) -> None:
             return None
 
-        def add_conditional_edges(self, *_args, **_kwargs) -> None:
-            return None
+        def add_conditional_edges(self, source, route, mapping) -> None:
+            self.conditional_edges.append((source, route, dict(mapping)))
 
         def compile(self):
             return self
@@ -42,9 +43,22 @@ def test_build_support_graph_uses_provider_runtime_when_llm_missing(
     monkeypatch.setattr(graph, "build_provider_runtime", lambda settings: captured.setdefault("runtime", runtime))
     monkeypatch.setattr("config.settings.get_settings", lambda: SimpleNamespace(quality_threshold=80))
 
-    graph.build_support_graph(retriever=object(), llm=None)
+    support_graph = graph.build_support_graph(retriever=object(), llm=None)
 
     assert captured["runtime"] is runtime
+    generate_routes = [
+        mapping
+        for source, _route, mapping in support_graph.conditional_edges
+        if source == "generate"
+    ]
+    assert generate_routes == [
+        {
+            "error": "handle_error",
+            "verify": "verify_facts",
+            "evaluate": "evaluate",
+            "safety": "response_safety",
+        }
+    ]
 
 
 def test_make_generate_node_copies_provider_response_metadata_into_state(
@@ -128,6 +142,59 @@ def test_make_generate_node_marks_provider_failure_as_graph_error(
     assert "RuntimeError: provider unavailable" in (result["error_message"] or "")
     assert result.get("answer") != "Извините, при обработке запроса произошла внутренняя ошибка."
     assert graph._route_after_generate(result) == "error"
+
+
+def test_make_generate_node_fails_closed_on_provider_unavailable(
+    monkeypatch,
+) -> None:
+    import agent.graph as graph
+    from llm.providers import ProviderUnavailable
+
+    class _UnavailableLLM:
+        provider_id = "gracekelly"
+        model_name = "claude-sonnet-5"
+
+        def invoke(self, prompt: str, **kwargs) -> str:
+            _ = prompt, kwargs
+            raise ProviderUnavailable(
+                "browser output was not a model answer",
+                provider_id="gracekelly",
+                reason="invalid_response",
+            )
+
+    monkeypatch.setattr(graph, "trace_llm_call", lambda **kwargs: None)
+    monkeypatch.setattr(graph, "log_step", lambda trace_id, node_name, state: None)
+
+    llm = _UnavailableLLM()
+    node = graph.make_generate_node(llm, llm)
+    state = create_initial_state(
+        question="Может ли E20 появиться из-за перегиба?",
+        trace_id="trace-generate-provider-unavailable",
+    )
+    state["complexity"] = "simple"
+    state["graded_docs"] = [
+        {
+            "page_content": "E20 может возникнуть из-за перегиба сливного шланга.",
+            "metadata": {"source": "errors_e10_e30.md"},
+        }
+    ]
+
+    result = node(state)
+
+    assert result["error"] is False
+    assert result["error_node"] == ""
+    assert result["error_message"] == ""
+    assert result["route"] == "human"
+    assert result["grounding_status"] == "not_verified"
+    assert result["factuality_score"] == 0
+    assert result["quality_score"] == 0
+    assert result["relevance_score"] == 0.0
+    assert result["generation_error"] == (
+        "provider_error:ProviderUnavailable:invalid_response"
+    )
+    assert "специалист" in (result["answer"] or "").lower()
+    assert result["graded_docs"] == state["graded_docs"]
+    assert graph._route_after_generate(result) == "safety"
 
 
 def test_classify_complexity_node_uses_generate_with_schema_when_available(
