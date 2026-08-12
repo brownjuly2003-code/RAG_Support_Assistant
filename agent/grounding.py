@@ -65,7 +65,7 @@ def _claim_effectively_supported(
 
 
 def status_for_claims(
-    claims: list[Mapping[str, Any]],
+    claims: Sequence[Mapping[str, Any]],
     *,
     require_citation_bound: bool = False,
 ) -> tuple[GroundingStatus, int, bool]:
