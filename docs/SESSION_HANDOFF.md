@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-12 — **Update-175** (PythonMemoryGuard enforced; default hybrid memory-blocked).
+**Обновлено:** 2026-08-12 — **Update-176** (bounded formal live provider gate PASS).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-175**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-176**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-175; dirty
+**Не использовать:** старые `START HERE` ниже Update-176; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -29,14 +29,14 @@
 |-------------------------|-------------------|
 | Последний implementation SHA | `c53f724` — §9.5d3 PipelineRunner streaming execution/deadline owner |
 | Последний committed test contract | `fce19ba` — isolate the tenant vector-store routing test from the real categorizer/LLM path |
-| Последний committed handoff до Update-175 | `aa6c712` — Update-174 Python 3.13 full-gate evidence; SHA этого docs-коммита всегда брать из Actual Git |
-| Actual Git перед этой docs edit | `master...origin/master [ahead 301]` at `aa6c712`; refresh remains mandatory |
+| Последний committed handoff до Update-176 | `7279451` — Update-175 memory-guard enforcement evidence; SHA этого docs-коммита всегда брать из Actual Git |
+| Actual Git перед этой docs edit | `master...origin/master [ahead 302]` at `7279451`; refresh remains mandatory |
 | Что закрыто локально | §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, PipelineRunner capacity + sync + streaming execution, VER-03, and VER-07; это не закрывает весь §9 и не означает production ready |
-| Последний local gate | `PythonMemoryGuard` Running/Enabled; bounded hybrid smoke PID 11984 killed at **4044.1 MiB private / 801.4 MiB working set** against **1024 MiB** limit |
+| Последний live gate | one direct-Mistral formal §7.6 case: **1/1 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=true`; not breadth or whole-release evidence |
 | Известный baseline debt | no full locked-CI claim; ordinary router MyPy retains two pre-existing `no-redef` findings, and older `api/app.py`/legacy formatter debt remains outside recent changed lines |
 | Worktree boundary | four protected tracked owner files remain dirty; owned implementation/test WIP **none**; unrelated untracked artifacts are preserved; active writer/test process none |
 | Grok route truth | `local_grok_cli`, `grok-4.5` (actual `grok-4.5-build`); one verification-only run ended normally after the single authorized pytest command |
-| Что не запускалось | push, deploy, migration 019–023, Grafana import/provisioning, live provider/quality 3×20, scrape/alert delivery; scheduler task was enabled/started but its definition/script were not edited |
+| Что не запускалось | push, deploy, migration 019–023, Grafana import/provisioning, live provider/quality 3×20, independent judge, scrape/alert delivery; one bounded formal provider case did run |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
 | Следующий slice | none preselected; do not retry production-reranker hybrid locally without a design expected below 1 GiB; other residuals need a separately selected authorized boundary |
 
@@ -50,10 +50,10 @@
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
 | Latest **committed test contract** | `fce19ba` — contextual-ingestion routing isolation |
-| Latest **committed docs before this Update** | `aa6c712` — Update-174 Python 3.13 full-gate evidence |
+| Latest **committed docs before this Update** | `7279451` — Update-175 memory-guard enforcement evidence |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 301]` at `aa6c712` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer/test process **none**; owned implementation/test WIP **none**; if these three handoff files are dirty, Update-175 docs WIP is present |
+| Branch advisory | observed `master...origin/master [ahead 302]` at `7279451` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer/test process **none**; owned implementation/test WIP **none**; if these three handoff files are dirty, Update-176 docs WIP is present |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
@@ -62,20 +62,21 @@
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-175 resolves OPS-01 and closes the local default-hybrid attempt:** the
-existing `PythonMemoryGuard` task is Running/Enabled and proved enforcement by
-killing only smoke PID 11984 at **4044.1 MiB private / 801.4 MiB working set**
-against its **1024 MiB** limit. The process died during production reranker
-loading, before retrieval/provider execution. Default hybrid is therefore
-memory-blocked under the mandated ceiling, not quality-proved. No live 3×20
-gate, migration, deploy, push, task-definition/script edit, or product-code
-change occurs in this Update. The full open/gated truth remains in §1C and
-§2A/§12.
+**Update-176 adds bounded formal §7.6 evidence:** one direct-Mistral seed-43
+case completed with 1/1 effective case, zero infrastructure failures, complete
+Section 5 metrics, and authoritative child `evidence_valid=true` /
+`release_passed=true`. Both sides passed `warranty-no-receipt-where`; total
+reported provider cost was $0.000199. This is one-case route/gate acceptance,
+not scheduled breadth, independent-judge, quality ×3, or whole-release proof.
+No migration, deploy, push, DB persistence, or product-code change occurred.
+Ignored local evidence: `reports/regression/20260812T084811Z-ministral-3b-latest-vs-mistral-small-latest.{json,md}`
+and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.json`.
 
 **Last known verification:**
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **7.6 bounded live provider** | run `20260812T084811Z-b195b7a9`: direct Mistral, seed 43, one case; **1/1 effective**, zero infrastructure failures, Section 5 complete, authoritative child evidence/release PASS; both sides refusal rate 1.0, so no breadth/quality/whole-release claim |
 | **VER-03 Python 3.13 unit+coverage gate** | **LOCAL-CLOSED:** fresh CI-shaped run passes **1851 tests / 4 skipped / 187 warnings in 753.44s** at **77.04%** coverage (threshold **72%**); no locked Python 3.11, integration/live, or production claim |
 | **9.5d3 PipelineRunner streaming execution/deadline owner** | Grok TDD transcript **2 failed → 6 passed**, first focused band **32 passed**; QA follow-up added event-worker and exception-fallback ownership; Codex independent owner/provider-token stream band **7 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d2 PipelineRunner sync execution/deadline owner** | ownership **2 failed / 2 passed → 4 passed**; owner/concurrency/request-timeout/stream-capacity/chat-streaming band **22 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
@@ -123,9 +124,10 @@ change occurs in this Update. The full open/gated truth remains in §1C and
 | **8.5** | 16 passed (widget + Playwright) |
 | **DEP-01** | npm audit high=0 |
 
-Full suite / live multi-service / migrate / push / deploy / formal live
-provider gate were **not** run. The live quality gate was attempted only
-through failing seed 42; live ×3 / release / production are **not** claimed.
+Full suite / live multi-service / migrate / push / deploy were **not** run. One
+bounded formal provider case passed; scheduled breadth and independent judge
+did not run. The live quality gate remains the failing seed-42 attempt; live ×3
+/ release / production are **not** claimed.
 
 ### 1A. Lightweight GraceKelly + SQLite smoke
 
@@ -296,7 +298,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-175)
+### 1C. Authoritative open-problem ledger (Update-176)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -326,7 +328,7 @@ override this snapshot.
 | **REL-03** | **DEFERRED** | Multi-replica durable session/version ownership is not implemented. | Product SLA/consistency decision before implementation. |
 | **REL-04** | **DEFERRED** | `STREAMING_RAG_PARITY` still defaults `false`; local parity/token contracts do not flip production behavior. | Product rollout decision plus acceptance evidence. |
 | **REL-05** | **OPEN** | Calibration seed is synthetic; no production dual-annotator human sample or agreement/cost evidence exists. | Collect authorized human-labelled sample and reissue calibration artifact. |
-| **REL-06** | **GATED** | Formal §7.6 live provider gate has scaffold/readiness only; mock/smoke is not release evidence. | Secrets + explicit `--execute` opt-in. |
+| **REL-06** | **PARTIAL LIVE EVIDENCE** | Direct-Mistral run `20260812T084811Z-b195b7a9` executed one seed-43 case with valid complete child evidence and release PASS. The outer wrapper correctly delegates authority and remains non-evidence. | Scheduled breadth and an independent-judge run still need a separately authorized execution; do not extrapolate one no-receipt case to whole-release quality. |
 | **REL-07** | **GATED** | Live IdP/OIDC drill and production `WIDGET_ALLOWED_ORIGINS` evidence are absent; widget E2E is Chromium-only local evidence. | Live IdP/prod-config authority and cross-environment acceptance. |
 | **REL-08** | **OPEN** | Cache, seven telemetry signals, dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, and PipelineRunner capacity + sync + streaming execution owners are local-green. SLA-gated sessions, live scrape/alert delivery, and §10 full verification/canary/rollback remain open. | No ungated local architecture owner is preselected; continue only from an explicit owner request or documented safe residual, then run the required release gates. |
 
@@ -382,7 +384,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-175 in AGENT_STATE.md + §0A/§1C in this file
+5. Read ONLY top Update-176 in AGENT_STATE.md + §0A/§1C in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. VER-03 is local-green; do not repeat it without a changed boundary
 8. Do not invent another QG item; QG-01–QG-04 are local-only closures
@@ -403,11 +405,10 @@ The table is routing information only. It grants no permission to execute a
 provider call, enable a task, mutate an index, apply migrations, push, or deploy.
 
 **Not authorized without opt-in:** push, deploy, live PostgreSQL/Redis/Celery,
-unrelated live provider/quality execute with secrets, `alembic upgrade`
+another live provider/quality execute with secrets, `alembic upgrade`
 (incl. **019–023**), destructive Git, production claims, bulk plan checkbox
-edits. The authorizations for the recorded one-call GraceKelly/Sonnet 5 smoke
-and the completed seed-42 quality attempt have been consumed; do not infer
-permission for another paid call.
+edits. The authorization for the Update-176 one-case provider run has been
+consumed; do not infer permission for another paid call.
 
 ---
 
@@ -421,7 +422,7 @@ permission for another paid call.
 | **4** pipeline + escalation | **4.1–4.8** local | parity default still **off** (product decision) |
 | **5** grounding fail-closed | **5.1–5.7** local | one valid live seed-42 report exists but **FAILS** quality; seeds 43–44 and passing ×3 evidence remain open |
 | **6** judge / safety / agentic | **6.1–6.7** local | production human dual-annotator sample |
-| **7** eval gate | **7.1–7.7** local | live execute with secrets; mock≠release; optional more depth |
+| **7** eval gate | **7.1–7.7** local + one-case direct-provider live PASS | scheduled breadth + independent judge remain open; mock≠release |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
 | **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5d3 owner slices local** | SessionService SLA decision; live alert delivery |
 | **10** final verification | not started | after 1–9 + opt-in evidence |
@@ -698,7 +699,7 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-175:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-176:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -884,10 +885,10 @@ Never log secret values.
 | Sync pipeline execution has one owner? | **Yes local** (`d865b06`): PipelineRunner owns executor submission, shielded wall deadline, and timeout capacity handoff for sync `/api/ask` |
 | Streaming pipeline execution has one owner? | **Yes local** (`c53f724`): PipelineRunner owns graph/event executor submission, queue and shielded-future deadlines, and timeout capacity handoff; router keeps SSE semantics and compatibility seams |
 | Agentic injection safety test current? | **Yes local** (`356a530`): mock follows `search_kb_docs(text, docs)` and the full safety/agentic band is green |
-| Canonical restart capsule reconciled? | **Yes as of Update-175**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
-| All known open problems indexed? | **Yes in §1C as of Update-175**; Actual Git/new evidence overrides the snapshot |
+| Canonical restart capsule reconciled? | **Yes as of Update-176**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
+| All known open problems indexed? | **Yes in §1C as of Update-176**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Active writer/test process **none**; owned implementation/test WIP **none**; Update-175 handoff files may be dirty until their docs-only commit |
+| WIP / active writer? | Active writer/test process **none**; owned implementation/test WIP **none**; Update-176 handoff files may be dirty until their docs-only commit |

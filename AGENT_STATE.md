@@ -1,5 +1,35 @@
 # Agent State
 
+## 2026-08-12 Update-176 — bounded formal live provider gate PASS ⚠ START HERE
+
+> **Authorized live slice:** at committed HEAD `7279451`, Codex ran exactly one
+> paid formal §7.6 case through `scripts/live_provider_gate.py --mode live
+> --live --execute`, comparing direct Mistral `ministral-3b-latest` with
+> `mistral-small-latest`. The run used seed 43, `--max-cases 1`, `--no-persist`,
+> remote `mistral-embed`, the retained six-document 1024-dimension index, and
+> forced vector-only retrieval. No secret value was logged.
+>
+> **Authoritative child evidence:** run `20260812T084811Z-b195b7a9` completed in
+> about 104 seconds with 1/1 effective case, zero infrastructure failures,
+> complete Section 5 metrics, `evidence_valid=true`, and
+> `release_passed=true`. Both baseline and candidate passed
+> `warranty-no-receipt-where`; context coverage was FULL. Reported cost was
+> $0.000033 baseline plus $0.000166 candidate. The ignored local evidence is
+> `reports/regression/20260812T084811Z-ministral-3b-latest-vs-mistral-small-latest.{json,md}`;
+> wrapper metadata is in
+> `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.json`.
+>
+> **Honest boundary:** the outer wrapper intentionally remains
+> `evidence_valid=false` and delegates verdict authority to the child report.
+> This is a one-case direct-provider acceptance, not scheduled breadth, an
+> independent-judge run, §5 quality ×3, or whole-project release evidence.
+> Both sides recorded refusal rate 1.0 on this no-receipt case. REL-06 therefore
+> has **PARTIAL LIVE EVIDENCE**, not full closure.
+>
+> **Operations:** `PythonMemoryGuard` stayed Running and logged no new kill.
+> No migration 019–023, deploy, push, index mutation, database persistence,
+> product-code change, or additional provider run occurred.
+
 ## 2026-08-12 Update-175 — PythonMemoryGuard enforced; default hybrid memory-blocked ⚠ START HERE
 
 > **Authorized operational change:** at committed HEAD `aa6c712`, Codex enabled

@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-175 PythonMemoryGuard enforced; default hybrid memory-blocked)
+**Date:** 2026-08-12 (Update-176 bounded formal live provider gate PASS)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-175**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-176**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-175. Preserve it as DoD input, but use Actual Git + the committed
+> Update-176. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,14 +18,14 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-175:** the existing `PythonMemoryGuard` task is Running/Enabled and
-proved its unchanged 1024 MiB enforcement by killing only default-hybrid smoke
-PID 11984 at **4044.1 MiB private / 801.4 MiB working set**. The smoke died
-during production reranker loading, before retrieval/provider execution.
-OPS-01 is local-closed; default hybrid is memory-blocked, not quality-proved.
-Actual Git before this docs edit was `master...origin/master [ahead 301]` at
-`aa6c712`. No migration, deploy, push, live 3×20 gate, scheduler definition
-edit, product-code change, plan closure, or release claim follows.
+**Update-176:** one direct-Mistral formal §7.6 case completed with 1/1 effective
+case, zero infrastructure failures, complete Section 5 metrics, and
+authoritative child `evidence_valid=true` / `release_passed=true`. Both models
+passed `warranty-no-receipt-where`; reported cost was $0.000199. This is
+one-case live route/gate evidence, not scheduled breadth, independent-judge,
+quality ×3, or whole-release proof. Actual Git before this docs edit was
+`master...origin/master [ahead 302]` at `7279451`. No migration, deploy, push,
+DB persistence, product-code change, plan closure, or release claim follows.
 
 ---
 
@@ -39,7 +39,7 @@ edit, product-code change, plan closure, or release claim follows.
 | **4** unified pipeline + escalation | **4.1–4.8 local** | **OPEN** parity default still off (product) | partial |
 | **5** grounding fail-closed | **5.1–5.7 + QG-01/QG-02/QG-03A/QG-03B/QG-04 + HYBRID-MEM env local** | **OPEN** one valid seed-42 run exists but **FAILS**; passing ×3 evidence remains open | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
-| **7** eval gate fail-closed | **7.1–7.7 local** | OPEN (live execute; mock≠release; optional more depth) | **yes** |
+| **7** eval gate fail-closed | **7.1–7.7 local + one-case direct-provider live PASS** | OPEN (scheduled breadth + independent judge) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5d3 owner slices local** | OPEN (SLA-gated sessions, live alert delivery) | soft |
 | **10** final verification / canary | Python 3.13 unit+coverage attempted: coverage green, suite red; corrective rerun timed out | OPEN | **yes** |
@@ -252,7 +252,7 @@ Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 | 7.x | residual | — | live execute with secrets; optional further depth |
 
 **7.2 residual:** CI still runs `--mock-experiment-runtime` as **smoke** (documented non-evidence).  
-**7.6 residual:** scaffold only — real paid live evidence needs opt-in + secrets + `--execute`.  
+**7.6 residual:** one authorized direct-provider case now has valid complete child evidence and release PASS; scheduled breadth and independent-judge evidence remain open.
 **7.7 residual:** still synthetic curated (not production human labels); optional deeper still.
 
 ### Dataset depth (7.7)
@@ -352,10 +352,10 @@ QG-01–QG-04 remain local-only without live replay. No ungated local slice is
 preselected; remaining work requires a separately selected authorized boundary,
 a product/SLA decision, or human-labelled evidence.
 
-Gated alternatives remain: live provider/quality ×3 (`--execute` + secrets +
-fresh opt-in), a real dual-annotator human sample, or the product decision to
-default `STREAMING_RAG_PARITY=true`. The default hybrid path now requires a
-sub-1-GiB design change before any local replay.
+Gated alternatives remain: further live provider breadth/independent judge,
+quality ×3 (`--execute` + secrets + fresh opt-in), a real dual-annotator human
+sample, or the product decision to default `STREAMING_RAG_PARITY=true`. The
+default hybrid path requires a sub-1-GiB design change before local replay.
 
 This list is not authorization. The executable boundary and current facts are
 spelled out in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §2A. In a new
@@ -371,10 +371,11 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-175)
+## Last-known verification snapshot (Update-176)
 
 | Band | Last known |
 |------|------------|
+| **7.6 bounded live provider** | run `20260812T084811Z-b195b7a9`: direct Mistral, seed 43, one case; **1/1 effective**, zero infrastructure failures, complete Section 5 metrics, authoritative child evidence/release PASS; both sides refusal rate 1.0, so scheduled breadth, independent judge, quality ×3, and whole-release claims remain open |
 | **OPS-01 / HYBRID-MEM** | `PythonMemoryGuard` Running/Enabled; one default-hybrid smoke killed only PID 11984 at **4044.1 MiB private / 801.4 MiB working set** against **1024 MiB**, during reranker loading before retrieval/provider execution; default hybrid remains memory-blocked and has no quality claim |
 | **VER-03 Python 3.13 unit+coverage gate** | **LOCAL-CLOSED:** fresh CI-shaped run passes **1851 tests / 4 skipped / 187 warnings in 753.44s** at **77.04%** coverage (threshold **72%**); no locked Python 3.11, integration/live-service, migration, image/Helm, or release-green claim |
 | **9.5d3 PipelineRunner streaming execution/deadline owner** | Grok TDD transcript **2 failed → 6 passed**, first focused band **32 passed**; QA follow-up added event-worker and exception-fallback ownership; Codex independent owner/provider-token stream band **7 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
