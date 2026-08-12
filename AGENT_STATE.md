@@ -1,5 +1,38 @@
 # Agent State
 
+## 2026-08-12 Update-182 — VER-01 second bounded exact-lock attempt ⚠ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `121d59b`, ahead of
+> `origin/master` by 311 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **Bounded Grok verification:** `local_grok_cli` used requested `grok-4.5`
+> (actual `grok-4.5-build`) with web/subagents disabled. WSL2 Ubuntu 22.04 had
+> `uv 0.11.16` and Python **3.11.15**. The old PID 323 and prior retained
+> `/tmp` environment were absent after WSL restart, so this was a fresh
+> environment boundary rather than a raw retry.
+>
+> **Exact-lock result:** a fresh venv at
+> `/tmp/rag-ver01-py311-20260812d` resolved all **222** hashed packages in
+> 17.12s, but the only install attempt hit its explicit **480-second timeout**
+> while downloading/installing the large Linux GPU dependency set (`torch`,
+> NVIDIA CUDA/cuDNN/cuBLAS, Triton, NCCL, and peers). Install exit was nonzero;
+> both exact CI MyPy commands were correctly not started and no retry ran.
+>
+> **Conclusion / anti-repeat:** VER-01 remains **OPEN / ENV-BLOCKED**. Two
+> bounded WSL installs have now failed to reach runnable MyPy, so do not raw
+> retry this local route. The next distinct route is a fresh Linux CI runner
+> (requires separate remote/push authority) or a separately justified lock
+> architecture change; neither is authorized by this handoff. Do not claim
+> locked Python 3.11, MyPy, CI, or release green.
+>
+> **Workspace truth:** project code and tracked verification inputs were not
+> edited. Protected owner-file hashes remained byte-identical and the tracked
+> status stayed at the four pre-existing dirty owner files. No provider call,
+> migration, deploy, push, index/database mutation, or product-code change
+> occurred. Active installer/MyPy process is not claimed from the failed
+> PowerShell process-audit wrapper; the delegated Grok process ended normally.
+
 ## 2026-08-12 Update-181 — VER-01 exact-lock environment attempt ⚠ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `5e6e480`, ahead of

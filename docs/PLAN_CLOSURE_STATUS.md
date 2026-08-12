@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-181 VER-01 exact-lock attempt; live FAIL unchanged)
+**Date:** 2026-08-12 (Update-182 VER-01 second bounded exact-lock attempt; live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-181**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-182**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-181. Preserve it as DoD input, but use Actual Git + the committed
+> Update-182. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -17,6 +17,17 @@ authoritative open-problem ledger in §1C.
 2. Local code slice ≠ full plan section complete ≠ production release.  
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
+
+**Update-182:** no plan checkbox or release gate changed. A fresh WSL2
+Ubuntu 22.04 / Python 3.11.15 venv resolved all **222** exact hashed packages,
+but its only install attempt hit the explicit **480-second timeout** while
+processing the large Linux GPU dependency set. Install exit was nonzero, so
+both exact CI MyPy commands were correctly not run. This is the second bounded
+WSL install that failed to reach runnable MyPy; raw local retry is now
+exhausted. VER-01 remains **OPEN / ENV-BLOCKED**. A distinct fresh Linux CI
+route requires remote/push authority, and changing the lock architecture is a
+separate task. No product code, provider, migration, deploy, push, index, or
+database mutation occurred.
 
 **Update-181:** no plan checkbox or release gate changed. VER-01 remains
 **OPEN / ENV-BLOCKED**. Windows Python 3.11 cannot install the Linux-target
