@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-12 — **Update-189** (grade-state assignment closed; command 1 has 9 errors; live FAIL unchanged).
+**Обновлено:** 2026-08-12 — **Update-190** (claims sequence contract closed; command 1 has 8 errors; live FAIL unchanged).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-189**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-190**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-189; dirty
+**Не использовать:** старые `START HERE` ниже Update-190; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -27,18 +27,18 @@
 
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
-| Последний implementation SHA | `25455f5` — narrows both grade-state helper boundaries to `GraphState` and removes the assignment finding without runtime behavior change; preceding type slice `02df975` |
+| Последний implementation SHA | `acc76ee` — widens read-only `status_for_claims` to a covariant sequence and removes the claims-list invariance finding without runtime behavior change; preceding type slice `25455f5` |
 | Последний committed test contract | `e400d88` — Starlette TestClient must have `httpx2` pinned in the dev input and hashed lock; preceding product contract `dbd2b28` covers ProviderUnavailable generation routing |
 | Последний committed docs/dependency closure | `810906b` — Update-185 VER-01 type-debt findings; latest dependency closure remains `e400d88` (VER-04) |
-| Actual Git перед этой docs edit | `master...origin/master [ahead 322]` at `25455f5`; refresh remains mandatory and this is not push authority |
+| Actual Git перед этой docs edit | `master...origin/master [ahead 324]` at `acc76ee`; refresh remains mandatory and this is not push authority |
 | Что закрыто локально | GraceKelly timestamp/prompt-echo containment, generation-provider fail-closed, and the VER-04 repository/CI dependency contract; current global Python is not dev-lock-synchronized and still warns. §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не восстанавливает live quality и не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
-| Известный baseline debt | **VER-01 remains LOCAL-DIAGNOSTIC-CLOSED / PARTIAL TYPE-GATE:** command 2 is locally green at 31 sources. `25455f5` moved command 1 from 10 to **9 `agent/graph.py` errors / 72 sources**; one claims-list invariance and eight agentic TypedDict-expansion findings remain. Linux/full-lock CI equivalence remains unproved |
+| Известный baseline debt | **VER-01 remains LOCAL-DIAGNOSTIC-CLOSED / PARTIAL TYPE-GATE:** command 2 is locally green at 31 sources. `acc76ee` moved command 1 from 9 to **8 `agent/graph.py` errors / 72 sources**; all eight are the agentic TypedDict-expansion family. Linux/full-lock CI equivalence remains unproved |
 | Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none**; ignored v2 input/lock and venv are retained under `.tmp/`; active delegated writer none known |
-| Grok route truth | initial `local_grok_cli` run `rag-ver01-grade-state-assignment-20260812-01` (`grok-4.5-build`) stopped before edits on disallowed compound onboarding discovery. Its single cause-specific follow-up `...-02` (`grok-4.5-build`) completed, found the shared-scope inference, observed MyPy 10→9, passed 11 tests, and self-reviewed clean Ruff/diff; follow-up budget is exhausted |
+| Grok route truth | `local_grok_cli` run `rag-ver01-claims-sequence-20260812-01` used actual `grok-4.5-build`, completed normally, made one annotation change, observed MyPy 9→8, passed 26 tests, and self-reviewed clean Ruff/diff; no QA follow-up was needed |
 | Что не запускалось | Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana import/provisioning, seeds 43–44, independent judge, and scrape/alert delivery did not run. One post-QG 20-case seed 42 did run and fail fast |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
-| Следующий slice | **One `agent/graph.py` claims-invariance slice:** refresh the exact 9-error baseline, trace `claims_result` and `status_for_claims` near line 2133, and keep the eight agentic TypedDict-expansion findings separate |
+| Следующий slice | **One diagnostic/implementation slice for the eight agentic TypedDict expansions:** refresh the exact 8-error baseline, fully trace `_agentic_terminal_fields_with_eval` and `_agentic_unmeasured_gate`, and prefer precise shared payload contracts over eight local suppressions |
 
 ---
 
@@ -52,13 +52,13 @@
 | Latest **committed test contract** | `e400d88` — exact `httpx2` dev-input + hashed-lock contract; latest product contract remains `dbd2b28` ProviderUnavailable safety routing |
 | Latest **committed docs before this Update** | `810906b` — Update-185 VER-01 type-gate findings |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 322]` at `25455f5` before this docs edit — **refresh mandatory; no push authorization** |
-| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored v2 input/lock/venv remain under `.tmp/`; if these three handoff files are dirty, Update-189 docs WIP is present |
+| Branch advisory | observed `master...origin/master [ahead 324]` at `acc76ee` before this docs edit — **refresh mandatory; no push authorization** |
+| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored v2 input/lock/venv remain under `.tmp/`; if these three handoff files are dirty, Update-190 docs WIP is present |
 | Locally complete (documented scopes) | GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28` + TestClient backend `e400d88`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/04/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | one-file `agent/graph.py` slice for the claims-list invariance mismatch after exact 9-error baseline refresh; keep all eight agentic expansion findings separate. WSL raw retry remains exhausted. Live recovery still needs an authorized GraceKelly/routing boundary or a fresh paid gate |
+| Next ordered | one diagnostic/implementation slice for the eight agentic expansion sites after exact 8-error baseline refresh; trace both shared helper contracts before editing. WSL raw retry remains exhausted. Live recovery still needs an authorized GraceKelly/routing boundary or a fresh paid gate |
 | Gates | WSL was used only for isolated dependency verification; Docker daemon was unavailable. No push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
@@ -76,15 +76,24 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 
 | Question | Durable answer |
 |----------|----------------|
-| What is the current docs baseline? | `25455f5` before this docs-only Update; Actual Git must override the embedded SHA after commit. |
+| What is the current docs baseline? | `acc76ee` before this docs-only Update; Actual Git must override the embedded SHA after commit. |
 | Is an owned writer/test still running? | No. Executor, QA, and both independent MyPy commands completed; no related process remains. |
 | Is the memory guard active? | **Yes.** `PythonMemoryGuard` was freshly verified `Running`; unchanged contract is 1024 MiB / 10 seconds. |
 | What does §5 prove? | The post-QG vector-only seed 42 is valid live evidence but **FAILS** quality: 25% candidate vs 90% baseline, 13 regressions. Seeds 43–44 and passing ×3 evidence do not exist. |
 | What does local artifact containment prove? | Retained output classification found 12 timestamp-only and 6 prompt-echo candidate answers. `63aa5df` rejects those shapes; `dbd2b28` routes the resulting provider outage human/not_verified without automatic ticket registration. No live recovery is inferred. |
 | What does §7.6 prove? | One direct-Mistral seed-43 case passed with valid complete child evidence. It proves the bounded route/gate attempt only, not scheduled breadth, independent judge, §5 ×3, or whole release. |
 | What does hybrid prove? | Default production reranker exceeded 1 GiB and was killed before retrieval/provider execution. Hybrid quality remains unknown; raw local retry is forbidden. |
-| What is the full local Python gate? | Python 3.13 CI-shaped unit+coverage is local-green: **1851 passed / 4 skipped**, coverage **77.04%** ≥ 72%. VER-01 Python 3.11 lightweight command 2 is green across 31 sources; command 1 now has 9 `agent/graph.py` errors / 72 sources. Ubuntu/full-lock CI and release gates remain open. |
-| What is preauthorized next? | Only one narrow `agent/graph.py` command-1 slice for the claims-list invariance mismatch near line 2133. Do not bundle agentic TypedDict expansions, raw-retry WSL, or claim Linux CI equivalence. GraceKelly edit, routing/fallback cost change, paid call, migration 019–023, deploy, or push needs separate exact authority. |
+| What is the full local Python gate? | Python 3.13 CI-shaped unit+coverage is local-green: **1851 passed / 4 skipped**, coverage **77.04%** ≥ 72%. VER-01 Python 3.11 lightweight command 2 is green across 31 sources; command 1 now has 8 `agent/graph.py` errors / 72 sources, all in the agentic expansion family. Ubuntu/full-lock CI and release gates remain open. |
+| What is preauthorized next? | Only one bounded `agent/graph.py` slice after tracing the two shared agentic payload helpers behind all eight remaining expansion sites. Do not add eight local ignores/casts, raw-retry WSL, or claim Linux CI equivalence. GraceKelly edit, routing/fallback cost change, paid call, migration 019–023, deploy, or push needs separate exact authority. |
+
+**Update-190 implementation evidence:** `acc76ee` changes read-only
+`status_for_claims` from invariant `list[Mapping[str, Any]]` to covariant
+`Sequence[Mapping[str, Any]]`. Exact MyPy command 1 moved from **9 to 8
+errors** across 72 sources; the claims arg-type error is absent and all
+remaining errors are agentic TypedDict expansions. Grok (`grok-4.5-build`)
+passed 26 focused tests; Codex independently passed 3 caller tests plus scoped
+Ruff/diff/LF/protected hashes. Command 1 remains red and Linux/full-lock CI is
+unproved.
 
 **Update-189 implementation evidence:** `25455f5` narrows both
 `finalize_grade_state` results to `GraphState` at their graph boundary and

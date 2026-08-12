@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-189 grade-state assignment closed; command 1 has 9 errors; live FAIL unchanged)
+**Date:** 2026-08-12 (Update-190 claims sequence contract closed; command 1 has 8 errors; live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-189**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-190**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-189. Preserve it as DoD input, but use Actual Git + the committed
+> Update-190. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -17,6 +17,16 @@ authoritative open-problem ledger in §1C.
 2. Local code slice ≠ full plan section complete ≠ production release.  
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
+
+**Update-190:** no plan checkbox or release gate changed. `acc76ee` widens the
+read-only `status_for_claims` collection contract from invariant `list` to
+covariant `Sequence`; the function body and all runtime behavior are
+unchanged. Exact MyPy command 1 moved from **9 to 8 errors** in
+`agent/graph.py` across 72 sources, and all remaining findings are the agentic
+TypedDict-expansion family. Grok (`grok-4.5-build`) passed 26 focused tests;
+Codex passed 3 representative caller tests plus scoped
+Ruff/diff/LF/protected-hash checks. No provider, migration, deploy, push,
+index, database, dependency, or workflow state changed.
 
 **Update-189:** no plan checkbox or release gate changed. `25455f5` narrows
 both `finalize_grade_state` returns locally to `GraphState`, which is necessary

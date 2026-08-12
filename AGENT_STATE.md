@@ -1,5 +1,46 @@
 # Agent State
 
+## 2026-08-12 Update-190 — claims sequence contract locally closed ✅ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `acc76ee`, ahead of
+> `origin/master` by 324 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **Committed implementation:** `acc76ee` changes one annotation in
+> `agent/grounding.py`: read-only `status_for_claims` now accepts
+> `Sequence[Mapping[str, Any]]` instead of invariant
+> `list[Mapping[str, Any]]`. The function only tests emptiness, iterates, and
+> calls `len`; it never mutates the collection. The adjacent citation helper
+> already uses the same covariant contract. Algorithm, callers, values, return
+> type, and runtime behavior are unchanged.
+>
+> **Type/runtime evidence:** the unchanged CI MyPy command 1 reproduced **9
+> errors in 1 file / 72 sources** before the edit and now reports exactly **8
+> errors in `agent/graph.py` / 72 sources**. The claims `arg-type` diagnostic
+> is absent; all remaining errors are the pre-existing agentic TypedDict
+> expansion group. Grok passed **26** focused grounding/citation/agentic tests;
+> Codex independently passed **3** representative caller tests. Scoped Ruff,
+> `git diff --check`, LF, and protected hashes are clean. Command 1 remains red.
+>
+> **Grok truth:** `local_grok_cli` run
+> `rag-ver01-claims-sequence-20260812-01` used actual `grok-4.5-build`, completed
+> normally in 9 turns, made the exact one-line diff, observed MyPy **9→8**,
+> passed **26 tests**, and reported clean Ruff/diff self-review. No QA follow-up
+> was needed.
+>
+> **Next safe implementation candidate:** the remaining eight command-1 errors
+> form one agentic TypedDict-expansion family at several return sites. Begin a
+> separate diagnostic slice by fully tracing the two shared helpers
+> `_agentic_terminal_fields_with_eval` and `_agentic_unmeasured_gate` against
+> the exact `GraphState` keys they return. Prefer precise shared payload
+> contracts over eight local casts/ignores, but do not assume both helpers have
+> the same shape before inspection.
+>
+> **Workspace truth:** implementation WIP is none. The four protected owner
+> files stayed byte-identical; unrelated untracked artifacts remain preserved.
+> No provider call, migration, deploy, push, index/database mutation, or
+> dependency/workflow change occurred; no delegated writer remains active.
+
 ## 2026-08-12 Update-189 — grade-state assignment boundary locally closed ✅ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `25455f5`, ahead of
