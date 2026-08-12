@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-179 GraceKelly artifact containment; live FAIL unchanged)
+**Date:** 2026-08-12 (Update-180 next-session reconciliation; live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-179**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-180**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-179. Preserve it as DoD input, but use Actual Git + the committed
+> Update-180. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -17,6 +17,14 @@ authoritative open-problem ledger in §1C.
 2. Local code slice ≠ full plan section complete ≠ production release.  
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
+
+**Update-180:** no plan checkbox or release gate changed. `e400d88` closes the
+repository/CI Starlette TestClient dependency contract by pinning `httpx2
+2.10.0` in the dev input and hashed lock. Its strict-warning isolated band
+passed 33 tests; the new-stack audit found no known vulnerabilities, while the
+full 222-package dev-lock audit timed out and remains unclaimed. The current
+global Python is not lock-synchronized and still emits the warning. No
+provider call, migration, runtime mutation, push, or deploy occurred.
 
 **Update-179:** offline classification of the retained post-QG seed-42 report
 found 12 timestamp-only and 6 prompt-echo candidate answers; the other two were
@@ -65,7 +73,7 @@ use only non-sensitive test data and recheck external terms before enabling it.
 
 ---
 
-## Current live-quality incident (Update-179)
+## Current live-quality incident (Update-179 evidence; unchanged in Update-180)
 
 The post-QG native vector-only run produced valid complete child evidence for
 seed 42 but failed the quality gate: candidate pass 25% (baseline 90%, required
@@ -381,10 +389,11 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-179)
+## Last-known verification snapshot (Update-180)
 
 | Band | Last known |
 |------|------------|
+| **VER-04 Starlette TestClient backend** | `e400d88`: repository dependency contract **1 failed → green**; isolated strict-warning TestClient band **33 passed** and request returned 200 through `httpx2 2.10.0`; scoped Ruff/diff clean; narrowed new-stack audit found no known vulnerabilities. Current global Python is not lock-synchronized and still warns; full 222-package dev-lock audit timed out after 124 seconds and is not claimed green. |
 | **GraceKelly artifact guard** | `63aa5df`: focused TDD **3 failed → 17 passed**; independent provider/failover band **28 passed**; scoped Ruff/MyPy/diff clean; no live call |
 | **Generation-provider fail-closed** | `dbd2b28`: focused TDD **1 failed → 1 passed**; missing conditional edge separately reproduced red then corrected once; final provider-graph/error/verifier/safety band **31 passed**; scoped Ruff/narrowed MyPy/diff clean; no live call |
 | **7.6 bounded live provider** | run `20260812T084811Z-b195b7a9`: direct Mistral, seed 43, one case; **1/1 effective**, zero infrastructure failures, complete Section 5 metrics, authoritative child evidence/release PASS; both sides refusal rate 1.0, so scheduled breadth, independent judge, quality ×3, and whole-release claims remain open |

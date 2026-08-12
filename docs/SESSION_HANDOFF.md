@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-12 — **Update-179** (GraceKelly artifact containment; live FAIL unchanged).
+**Обновлено:** 2026-08-12 — **Update-180** (next-session reconciliation + VER-04; live FAIL unchanged).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-179**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-180**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-179; dirty
+**Не использовать:** старые `START HERE` ниже Update-180; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -28,13 +28,13 @@
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
 | Последний implementation SHA | `dbd2b28` — generation-provider fail-closed safety routing; preceding provider artifact guard `63aa5df` |
-| Последний committed test contract | `dbd2b28` — ProviderUnavailable generation path + registered `safety → response_safety` edge |
-| Последний committed handoff до Update-179 | `227e25d` — Update-178 post-QG live failure record; SHA этого docs-коммита всегда брать из Actual Git |
-| Actual Git перед этой docs edit | `master...origin/master [ahead 307]` at `dbd2b28`; refresh remains mandatory |
-| Что закрыто локально | GraceKelly timestamp/prompt-echo containment plus generation-provider fail-closed; §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07; это не восстанавливает live quality и не означает production ready |
+| Последний committed test contract | `e400d88` — Starlette TestClient must have `httpx2` pinned in the dev input and hashed lock; preceding product contract `dbd2b28` covers ProviderUnavailable generation routing |
+| Последний committed docs/dependency closure | `e400d88` — VER-04 local closure; preceding canonical Update-179 handoff `4c91c8b` |
+| Actual Git перед этой docs edit | `master...origin/master [ahead 309]` at `e400d88`; refresh remains mandatory and this is not push authority |
+| Что закрыто локально | GraceKelly timestamp/prompt-echo containment, generation-provider fail-closed, and the VER-04 repository/CI dependency contract; current global Python is not dev-lock-synchronized and still warns. §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не восстанавливает live quality и не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
 | Известный baseline debt | no full locked-CI claim; ordinary router MyPy retains two pre-existing `no-redef` findings, and older `api/app.py`/legacy formatter debt remains outside recent changed lines |
-| Worktree boundary | four protected tracked owner files remain dirty; owned implementation/test WIP **none**; unrelated untracked artifacts are preserved; active writer/test process none |
+| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); owned implementation/test WIP **none**; Git listed 5,186 untracked paths while warning that several retained pytest directories were unreadable, so treat the count as a lower bound; active delegated writer none known |
 | Grok route truth | `local_grok_cli`, `grok-4.5` (actual `grok-4.5-build`); one verification-only run ended normally after the single authorized pytest command |
 | Что не запускалось | push, deploy, migration 019–023, Grafana import/provisioning, seeds 43–44, independent judge, scrape/alert delivery; one post-QG 20-case seed 42 did run and fail fast |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
@@ -49,12 +49,12 @@
 | Latest **committed implementation** | `dbd2b28` — generation-provider fail-closed; provider artifact guard `63aa5df` immediately precedes it |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
-| Latest **committed test contract** | `dbd2b28` — ProviderUnavailable safety routing and conditional-edge wiring |
-| Latest **committed docs before this Update** | `227e25d` — Update-178 post-QG live failure evidence |
+| Latest **committed test contract** | `e400d88` — exact `httpx2` dev-input + hashed-lock contract; latest product contract remains `dbd2b28` ProviderUnavailable safety routing |
+| Latest **committed docs before this Update** | `e400d88` — VER-04 local closure; preceding Update-179 canonical reconciliation is `4c91c8b` |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 307]` at `dbd2b28` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer/test process **none**; owned implementation/test WIP **none**; if these three handoff files are dirty, Update-179 docs WIP is present |
-| Locally complete (documented scopes) | GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/05/06/07** |
+| Branch advisory | observed `master...origin/master [ahead 309]` at `e400d88` before this docs edit — **refresh mandatory; no push authorization** |
+| Active writer / WIP | active delegated writer **none known**; owned implementation/test WIP **none**; if these three handoff files are dirty, Update-180 docs WIP is present |
+| Locally complete (documented scopes) | GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28` + TestClient backend `e400d88`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/04/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
@@ -76,8 +76,8 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 
 | Question | Durable answer |
 |----------|----------------|
-| What is the current docs baseline? | `227e25d` before this docs-only Update; Actual Git must override the embedded SHA after commit. |
-| Is an owned writer/test still running? | **No.** Fresh process inspection found no live-provider, regression, or hybrid slice process. |
+| What is the current docs baseline? | `e400d88` before this docs-only Update; Actual Git must override the embedded SHA after commit. |
+| Is an owned writer/test still running? | No active delegated writer is known. Update-180 was docs-only and did not perform a fresh OS-wide process audit; verify before any cleanup or overlapping write. |
 | Is the memory guard active? | **Yes.** `PythonMemoryGuard` was freshly verified `Running`; unchanged contract is 1024 MiB / 10 seconds. |
 | What does §5 prove? | The post-QG vector-only seed 42 is valid live evidence but **FAILS** quality: 25% candidate vs 90% baseline, 13 regressions. Seeds 43–44 and passing ×3 evidence do not exist. |
 | What does local artifact containment prove? | Retained output classification found 12 timestamp-only and 6 prompt-echo candidate answers. `63aa5df` rejects those shapes; `dbd2b28` routes the resulting provider outage human/not_verified without automatic ticket registration. No live recovery is inferred. |
@@ -334,7 +334,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-179)
+### 1C. Authoritative open-problem ledger (Update-180)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -375,7 +375,7 @@ override this snapshot.
 | **VER-01** | **ENV / BASELINE BLOCKER** | Installed `mypy 2.3.0` / `numpy 2.5.1` differ from locks `1.19.1` / `2.4.4`. QG-03A changed-file Mypy with `--follow-imports=skip` reported 9 pre-existing `typeddict-item` errors outside changed lines; a narrowed run disabling only that code passed. The 9.1c ordinary scoped run likewise reported two pre-existing `no-redef` and three `unused-ignore` errors outside changed lines; disabling only those confirmed codes passed the four changed source files. Full-import checking also stops on unlocked NumPy stubs under target 3.11. | Use a locked environment and reconcile existing type debt separately; do not call full or ordinary changed-file MyPy green. |
 | **VER-02** | **LOCAL-CLOSED** | `3a37fd2` casts the final runtime-guarded callable to `FaultAction`. The exact failure reproduced before the edit; afterward narrowed MyPy passed, 11 lifecycle tests passed, Ruff passed, and package `vectordb` MyPy checked 10 sources under `--follow-imports=skip`. | Do not reopen without a code/environment change. Do not extrapolate this to VER-01, full imports, the repository, locked Python 3.11, or CI. |
 | **VER-03** | **LOCAL-CLOSED** | Fresh Python 3.13 CI-shaped unit+coverage gate passes **1851 tests / 4 skipped / 187 warnings in 753.44s** at **77.04%** coverage (threshold **72%**). The historical aggregate-only direct-CLI failure does not recur after `fce19ba`. | Do not repeat without a changed code/environment boundary. This does not close locked Python 3.11, integration/live services, migrations, image/Helm, canary, rollback, or release. |
-| **VER-04** | **LOCAL-CLOSED** | `requirements-dev.txt` and its hashed lock pin `httpx2 2.10.0`, the backend Starlette 1.3+ selects before its deprecated `httpx` fallback. The dependency contract reproduced red before the pin; afterward the strict-warning TestClient band passed **33 tests**, and an isolated real request returned 200 through `httpx2` without the warning. The narrowed new-stack audit found no known vulnerabilities. | Do not reopen without a Starlette/TestClient or dependency change. The full 222-package dev-lock audit timed out after 124 seconds, so this does not claim a fresh whole-lock security audit. |
+| **VER-04** | **REPO-CLOSED / HOST-ENV STALE** | `requirements-dev.txt` and its hashed lock pin `httpx2 2.10.0`, the backend Starlette 1.3+ selects before its deprecated `httpx` fallback. The dependency contract reproduced red before the pin; afterward an isolated strict-warning TestClient band passed **33 tests**, and a real request returned 200 through `httpx2` without the warning. The narrowed new-stack audit found no known vulnerabilities. The current global Python is not synchronized to the dev lock and still emits the warning. | Install the hashed dev lock in a clean environment before claiming host/CI closure. Do not reopen the repository contract without a Starlette/TestClient or dependency change. The full 222-package dev-lock audit timed out after 124 seconds, so no fresh whole-lock security audit is claimed. |
 | **VER-05** | **LOCAL-CLOSED** | `4b0fba7` replaces the stale zero-caller assertion with the exact intentional allowlist `["api/routers/admin_ops.py"]` and renames the test accordingly. The original assert reproduced red; the independent retention/admin band passed 51 tests, scoped Ruff and diff checks passed. | Do not reopen without a new caller or contract change. Whole-file Ruff format debt predates this slice and was not reformatted here. |
 | **VER-06** | **LOCAL-CLOSED** | `356a530` updates the exact stale agentic-injection test to patch `agent.tools.search_kb_docs` and return `(formatted_text, raw_docs)`. The failure reproduced before the edit; afterward the exact test and the 44-test response-safety/agentic band passed. | Do not reopen without another agentic KB boundary change. File-wide formatter debt predates this test-only slice. |
 | **VER-07** | **LOCAL-CLOSED** | `fd23317` aligns the stale trace-retention assertion with the existing tenant-aware audit contract. The exact failure reproduced **1 failed → 1 passed**; the adjacent retention/tenant/audit band passed **22 tests**. | Do not reopen without a tenant/audit boundary change; this does not establish full-suite or production evidence. |
@@ -420,7 +420,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-179 in AGENT_STATE.md + §0A/§0B/§1C in this file
+5. Read ONLY top Update-180 in AGENT_STATE.md + §0A/§0B/§1C in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. VER-03 is local-green; do not repeat it without a changed boundary
 8. Do not invent another QG item; QG-01–QG-04 are local-only closures
@@ -707,7 +707,7 @@ preselected. SessionService requires an explicit multi-replica SLA/consistency
 decision and is not an autonomous candidate.
 
 QG-01–QG-04, the browser-artifact containment at `63aa5df`/`dbd2b28`,
-VER-05/06/07, §9.1a–9.4a, and their focused gates are locally closed; do not
+VER-04/05/06/07, §9.1a–9.4a, and their focused gates are locally closed; do not
 replay them without new code or evidence. `gracekelly-mixed` has no fallback,
 so do not add a paid or local fallback without an explicit routing/cost
 decision and acceptance contract.
@@ -738,7 +738,7 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-179:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-180:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -881,6 +881,9 @@ Never log secret values.
 | 69 | **9.5d3** | `c53f724` | make PipelineRunner own streaming graph/event submission, wait deadlines, and timeout handoff |
 | 70 | docs | resolve through Actual Git | Update-166 §9.5d3 closure; do not add a follow-up solely for its self-SHA |
 | 71 | docs | resolve through Actual Git | Update-167 VER-03 full-gate evidence and dirty-WIP routing; no implementation closure |
+| 72 | docs | `4c91c8b` | commit the Update-179 GraceKelly artifact-containment handoff; no new live recovery claim |
+| 73 | **VER-04** | `e400d88` | pin the Starlette TestClient `httpx2` backend in the dev input and hashed lock; retain direct application `httpx` |
+| 74 | docs | resolve through Actual Git | Update-180 next-session reconciliation; no implementation, provider, migration, push, deploy, or release change |
 
 ---
 
@@ -924,10 +927,11 @@ Never log secret values.
 | Sync pipeline execution has one owner? | **Yes local** (`d865b06`): PipelineRunner owns executor submission, shielded wall deadline, and timeout capacity handoff for sync `/api/ask` |
 | Streaming pipeline execution has one owner? | **Yes local** (`c53f724`): PipelineRunner owns graph/event executor submission, queue and shielded-future deadlines, and timeout capacity handoff; router keeps SSE semantics and compatibility seams |
 | Agentic injection safety test current? | **Yes local** (`356a530`): mock follows `search_kb_docs(text, docs)` and the full safety/agentic band is green |
-| Canonical restart capsule reconciled? | **Yes as of Update-179**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
-| All known open problems indexed? | **Yes in §1C as of Update-179**; Actual Git/new evidence overrides the snapshot |
+| Starlette TestClient warning closed? | **Repository contract yes; current host no** (`e400d88`): `httpx2 2.10.0` is pinned in the dev input and hashed lock; isolated strict-warning band **33 passed**. The global Python still warns because it is not lock-synchronized. Full 222-package lock audit timed out and is not claimed green. |
+| Canonical restart capsule reconciled? | **Yes as of Update-180**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
+| All known open problems indexed? | **Yes in §1C as of Update-180**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **Partial:** one direct-Mistral seed-43 case has valid complete child evidence and release PASS; scheduled breadth and independent-judge execution remain open |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Active writer/test process **none**; owned implementation/test WIP **none**; Update-179 handoff files may be dirty until their docs-only commit |
+| WIP / active writer? | Owned implementation/test WIP **none**; active delegated writer **none known**; Update-180 handoff files may be dirty until their docs-only commit |

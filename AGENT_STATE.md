@@ -1,5 +1,42 @@
 # Agent State
 
+## 2026-08-12 Update-180 — next-session reconciliation + VER-04 closure ✅ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `e400d88`, ahead of
+> `origin/master` by 309 commits. Refresh Git first in the next session; this
+> count is an observation, not durable authorization to push.
+>
+> **New committed state since Update-179:** `4c91c8b` committed the canonical
+> GraceKelly artifact-containment handoff. `e400d88` then closed the **VER-04
+> repository/CI dependency contract** by pinning `httpx2 2.10.0` in the dev
+> input and hashed lock, while
+> retaining the application's direct `httpx` dependency. The dependency
+> contract reproduced **1 failed** before the pin; the strict-warning
+> TestClient band then passed **33 tests**, and an isolated real request used
+> `httpx2` without `StarletteDeprecationWarning`. The narrowed new-stack audit
+> found no known vulnerabilities. A full 222-package dev-lock audit timed out
+> after 124 seconds, so no fresh whole-lock security-green claim exists. The
+> current global Python is not synchronized to that lock and still emitted the
+> warning during Update-180 docs verification; treat host-env closure as open.
+>
+> **Workspace truth:** owned implementation/test WIP is **none**. Four tracked
+> owner files remain dirty and protected: `BACKLOG.md`, `README.md`,
+> `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`. Unrelated untracked
+> artifacts remain preserved; the active untracked plan is DoD input, not Git
+> routing authority. No active delegated writer is known.
+>
+> **Product/release truth is unchanged:** post-QG seed 42 remains the
+> authoritative **LIVE FAIL** at candidate 25% versus baseline 90%, with 13
+> regressions. Seeds 43–44, passing quality ×3, locked Python 3.11, full
+> integration/live services, migrations 019–023, canary, rollback, deploy, and
+> production release evidence remain open. No provider call, migration,
+> runtime mutation, push, or deploy occurred in Update-180.
+>
+> **Next route:** no slice is preselected or preauthorized. Another paid run,
+> GraceKelly edit, routing/fallback change, migration, deploy, or push needs a
+> fresh exact target and authority. Read only this block plus
+> `docs/SESSION_HANDOFF.md` §0A/§0B/§1C before selecting work.
+
 ## 2026-08-12 Update-179 — GraceKelly artifact containment ✅ LOCAL ONLY START HERE
 
 > **Local diagnosis:** exact offline classification of the retained
