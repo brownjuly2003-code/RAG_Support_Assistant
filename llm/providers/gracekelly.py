@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from collections.abc import AsyncIterator
 from typing import Any
@@ -16,6 +17,28 @@ from llm.providers.base import (
     parse_structured_output,
     validate_structured_output,
 )
+
+# Browser chrome artifacts observed from GraceKelly orchestrate responses
+# (e.g. wall-clock timestamps scraped from the UI instead of model output).
+_TIMESTAMP_ONLY_RE = re.compile(r"^\d{1,2}:\d{2}\s*[AaPp][Mm]$")
+
+
+def _is_browser_artifact_answer(answer: str, prompt: str) -> bool:
+    text = answer.strip()
+    if not text:
+        return False
+    if _TIMESTAMP_ONLY_RE.fullmatch(text):
+        return True
+    prompt_text = prompt.strip()
+    if not prompt_text:
+        return False
+    if text == prompt_text:
+        return True
+    if text.startswith(prompt_text):
+        suffix = text[len(prompt_text) :].strip()
+        if not suffix or _TIMESTAMP_ONLY_RE.fullmatch(suffix):
+            return True
+    return False
 
 
 class GraceKellyProvider:
@@ -204,6 +227,12 @@ class GraceKellyProvider:
             or metadata.get("answer")
             or ""
         ).strip()
+        if _is_browser_artifact_answer(text, prompt):
+            raise ProviderUnavailable(
+                "GraceKelly returned a browser artifact instead of a model answer",
+                provider_id=self.provider_id,
+                reason="invalid_response",
+            )
         tool_calls = result.get("tool_calls") or data.get("tool_calls") or metadata.get("tool_calls")
         structured_output = (
             result.get("structured_output")

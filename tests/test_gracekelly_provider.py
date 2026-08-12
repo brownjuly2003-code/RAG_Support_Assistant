@@ -424,3 +424,162 @@ def test_gracekelly_provider_routes_simple_requests_to_orchestrate(
     assert captured["json"]["requested_models"] == ["mistral-small"]
     assert "tools" not in captured["json"]
     assert response.text == "Простой ответ"
+
+
+def _orchestrate_answer_payload(answer: str) -> dict[str, Any]:
+    return {
+        "answer": answer,
+        "task_type": "support",
+        "complexity_level": "simple",
+        "pattern_used": "single_call",
+        "reliability_level": "quick",
+        "was_decomposed": False,
+        "used_consensus": False,
+        "used_roles": False,
+        "total_llm_calls": 1,
+        "model_id": "mistral-small",
+    }
+
+
+def _patch_orchestrate_answer(monkeypatch: pytest.MonkeyPatch, answer: str) -> None:
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: _FakeResponse(status_code=200))
+    monkeypatch.setattr(
+        "httpx.post",
+        lambda *args, **kwargs: _FakeResponse(payload=_orchestrate_answer_payload(answer)),
+    )
+
+
+@pytest.mark.parametrize(
+    "artifact_answer",
+    [
+        "5:41 AM",
+        "12:09 pm",
+    ],
+)
+def test_gracekelly_provider_rejects_timestamp_only_browser_artifact(
+    monkeypatch: pytest.MonkeyPatch,
+    artifact_answer: str,
+) -> None:
+    from llm.providers.base import ProviderUnavailable
+
+    _patch_orchestrate_answer(monkeypatch, artifact_answer)
+    provider = _build_provider()
+
+    with pytest.raises(ProviderUnavailable) as exc_info:
+        provider.generate(
+            [{"role": "user", "content": "Куда обращаться при E30 после отключения устройства?"}]
+        )
+
+    assert exc_info.value.provider_id == "gracekelly"
+    assert exc_info.value.reason == "invalid_response"
+
+
+def test_gracekelly_provider_rejects_prompt_echo_browser_artifact(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from llm.providers.base import ProviderUnavailable, flatten_messages
+
+    user_content = (
+        "Ты — ассистент службы поддержки.\n"
+        "Тебе дан контекст из базы знаний и вопрос пользователя.\n"
+        "--------------------\n"
+        "КОНТЕКСТ:\n"
+        "[Документ 1 | source=warranty.md]\n"
+        "Гарантия на продукцию составляет 12 месяцев.\n"
+        "--------------------\n"
+        "ВОПРОС:\n"
+        "На какой срок нужно сохранять чек для гарантии?\n"
+        "Сформулируй понятный, краткий и точный ответ для пользователя:"
+    )
+    messages = [{"role": "user", "content": user_content}]
+    prompt = flatten_messages(messages)
+    artifact_answer = f"{prompt}\n7:02 AM"
+
+    _patch_orchestrate_answer(monkeypatch, artifact_answer)
+    provider = _build_provider()
+
+    with pytest.raises(ProviderUnavailable) as exc_info:
+        provider.generate(messages)
+
+    assert exc_info.value.provider_id == "gracekelly"
+    assert exc_info.value.reason == "invalid_response"
+
+
+def test_gracekelly_provider_accepts_normal_short_answer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_orchestrate_answer(monkeypatch, "Обратитесь в сервисный центр.")
+    provider = _build_provider()
+
+    response = provider.generate(
+        [{"role": "user", "content": "Куда обращаться при E30 после отключения устройства?"}]
+    )
+
+    assert response.text == "Обратитесь в сервисный центр."
+
+
+def test_gracekelly_provider_accepts_answer_quoting_small_prompt_portion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    question = "На какой срок нужно сохранять чек для гарантии?"
+    answer = (
+        f"По вопросу «{question}»: сохраняйте чек 12 месяцев с момента покупки."
+    )
+    _patch_orchestrate_answer(monkeypatch, answer)
+    provider = _build_provider()
+
+    response = provider.generate([{"role": "user", "content": question}])
+
+    assert response.text == answer
+
+
+def test_gracekelly_provider_accepts_answer_containing_time_in_larger_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    answer = "Служба поддержки работает с 9:00 AM до 6:00 PM по будням."
+    _patch_orchestrate_answer(monkeypatch, answer)
+    provider = _build_provider()
+
+    response = provider.generate([{"role": "user", "content": "Какой график работы поддержки?"}])
+
+    assert response.text == answer
+
+
+def test_gracekelly_provider_accepts_structured_output_response(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: _FakeResponse(status_code=200))
+    monkeypatch.setattr(
+        "httpx.post",
+        lambda *args, **kwargs: _FakeResponse(
+            payload={
+                "answer": '{"relevant": true, "topic": "warranty"}',
+                "structured_output": {"relevant": True, "topic": "warranty"},
+                "task_type": "support",
+                "complexity_level": "simple",
+                "pattern_used": "single_call",
+                "reliability_level": "quick",
+                "was_decomposed": False,
+                "used_consensus": False,
+                "used_roles": False,
+                "total_llm_calls": 1,
+                "model_id": "mistral-small",
+            }
+        ),
+    )
+    provider = _build_provider()
+
+    response = provider.generate_with_schema(
+        [{"role": "user", "content": "Классифицируй вопрос о гарантии."}],
+        {
+            "type": "object",
+            "properties": {
+                "relevant": {"type": "boolean"},
+                "topic": {"type": "string"},
+            },
+            "required": ["relevant", "topic"],
+        },
+    )
+
+    assert response.structured_output == {"relevant": True, "topic": "warranty"}
+    assert "warranty" in response.text
