@@ -248,6 +248,14 @@ def test_type_check_tooling_is_locked_for_ci() -> None:
     assert re.search(r"^mypy==", locked, flags=re.MULTILINE)
 
 
+def test_starlette_testclient_backend_is_locked_for_ci() -> None:
+    requirements = (PROJECT_ROOT / "requirements-dev.txt").read_text(encoding="utf-8")
+    locked = (PROJECT_ROOT / "requirements-dev.lock").read_text(encoding="utf-8")
+
+    assert re.search(r"^httpx2==", requirements, flags=re.MULTILINE)
+    assert re.search(r"^httpx2==", locked, flags=re.MULTILINE)
+
+
 def test_pytest_plugins_are_locked_for_ci() -> None:
     requirements = (PROJECT_ROOT / "requirements-dev.txt").read_text(encoding="utf-8")
     locked = (PROJECT_ROOT / "requirements-dev.lock").read_text(encoding="utf-8")
