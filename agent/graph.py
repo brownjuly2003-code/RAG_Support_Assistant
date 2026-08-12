@@ -1536,15 +1536,18 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
             model = _get_llm_model_name(llm) or ""
 
             if not context_docs:
-                new_state = finalize_grade_state(
-                    state,
-                    graded=[],
-                    context_docs=[],
-                    filtered_count=0,
-                    grader_errors=0,
+                new_state = cast(
+                    GraphState,
+                    finalize_grade_state(
+                        state,
+                        graded=[],
+                        context_docs=[],
+                        filtered_count=0,
+                        grader_errors=0,
+                    ),
                 )
                 log_step(trace_id, "grade_docs", new_state)
-                return new_state  # type: ignore[return-value]
+                return new_state
 
             graded: list[dict[str, Any]] = []
             filtered_count = 0
@@ -1685,17 +1688,20 @@ def make_grade_docs_node(llm: SupportsInvoke) -> Callable[[GraphState], GraphSta
                 span.set_attribute("rag.output_docs", len(graded))
                 span.set_attribute("rag.grader_errors", grader_errors)
 
-            new_state = finalize_grade_state(
-                state,
-                graded=graded,
-                context_docs=context_docs,
-                filtered_count=filtered_count,
-                grader_errors=grader_errors,
+            new_state = cast(
+                GraphState,
+                finalize_grade_state(
+                    state,
+                    graded=graded,
+                    context_docs=context_docs,
+                    filtered_count=filtered_count,
+                    grader_errors=grader_errors,
+                ),
             )
             if usage_recorded:
-                new_state = _apply_llm_usage(new_state, usage)  # type: ignore[arg-type]
+                new_state = _apply_llm_usage(new_state, usage)
             log_step(trace_id, "grade_docs", new_state)
-            return new_state  # type: ignore[return-value]
+            return new_state
         except Exception as exc:
             return _make_error_state(state, "grade_docs", exc)
 
