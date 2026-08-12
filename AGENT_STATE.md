@@ -1,5 +1,47 @@
 # Agent State
 
+## 2026-08-12 Update-181 — VER-01 exact-lock environment attempt ⚠ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `5e6e480`, ahead of
+> `origin/master` by 310 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **Why this ran:** all documented local implementation slices through
+> `9.5d3` are already closed at their scoped contracts, so they must not be
+> reselected from the stale untracked plan. The remaining local verification
+> target was **VER-01**: distinguish the stale global Python environment from
+> the checked-in Python 3.11 dependency contract.
+>
+> **Windows result:** `uv` installed isolated CPython **3.11.13**. Installing
+> `requirements-dev.lock` failed before package installation because that lock
+> is explicitly compiled for Linux and requires `nvidia-cufile==1.15.1.6`,
+> which has no Windows wheel. A temporary Windows/Python-3.11 hashed lock under
+> `.tmp/ver01-py311-20260812/` resolved **199 packages**, but its installation
+> did not finish within the bounded diagnostic path. No MyPy gate ran and no
+> Windows-lock result is CI/release evidence.
+>
+> **Linux/WSL result:** Docker Desktop's Linux daemon was unavailable, so the
+> exact checked-in lock was attempted in WSL2 Ubuntu 22.04 x86_64 with Python
+> **3.11.15** and `uv`. The isolated venv was
+> `/tmp/rag-ver01-py311-20260812c`; its cache was
+> `/tmp/rag-ver01-uv-cache-20260812c`. The single install process remained
+> active for **5m34s**, had written about **1.34 GB**, and had not installed a
+> runnable `mypy` before the turn budget ended. PID 323 was then terminated
+> cleanly; no installer/test/writer was intentionally left active.
+>
+> **Honest conclusion / next route:** VER-01 remains **OPEN / ENV-BLOCKED**.
+> Do not claim locked Python 3.11, MyPy, test, CI, or release green. A later
+> authorized verification turn may first confirm no old PID is active, then
+> resume the same WSL venv/cache with a deliberately sufficient bounded
+> install window, or use a fresh Linux CI runner. Only after an exact-lock
+> install succeeds should it run the two MyPy commands from `.github/workflows/ci.yml`.
+> Do not regenerate or commit a Windows lock as a substitute.
+>
+> **Workspace truth:** project code and tracked verification inputs were not
+> edited. The four protected owner files remain dirty; unrelated untracked
+> artifacts remain preserved. No Grok run, provider call, migration, deploy,
+> push, index/database mutation, or product-code change occurred.
+
 ## 2026-08-12 Update-180 — next-session reconciliation + VER-04 closure ✅ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `e400d88`, ahead of

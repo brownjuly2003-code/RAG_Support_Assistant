@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-180 next-session reconciliation; live FAIL unchanged)
+**Date:** 2026-08-12 (Update-181 VER-01 exact-lock attempt; live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-180**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-181**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-180. Preserve it as DoD input, but use Actual Git + the committed
+> Update-181. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -17,6 +17,18 @@ authoritative open-problem ledger in §1C.
 2. Local code slice ≠ full plan section complete ≠ production release.  
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
+
+**Update-181:** no plan checkbox or release gate changed. VER-01 remains
+**OPEN / ENV-BLOCKED**. Windows Python 3.11 cannot install the Linux-target
+hashed lock because `nvidia-cufile` has no Windows wheel. WSL2 Ubuntu 22.04
+x86_64 with Python 3.11.15 accepted the exact lock, but the isolated install
+was still running after 5m34s and had not produced runnable MyPy before its PID
+was terminated. No MyPy/test gate ran. The retained Linux paths are
+`/tmp/rag-ver01-py311-20260812c` and
+`/tmp/rag-ver01-uv-cache-20260812c`; a later verification turn may resume them
+with a sufficient bounded window or use fresh Linux CI. This is setup evidence,
+not locked-CI evidence. No code, provider, migration, deploy, push, index, or
+database mutation occurred.
 
 **Update-180:** no plan checkbox or release gate changed. `e400d88` closes the
 repository/CI Starlette TestClient dependency contract by pinning `httpx2
@@ -51,7 +63,7 @@ push, or scheduler change occurred.
 | **7** eval gate fail-closed | **7.1–7.7 local + one-case direct-provider live PASS** | OPEN (scheduled breadth + independent judge) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5d3 owner slices local** | OPEN (SLA-gated sessions, live alert delivery) | soft |
-| **10** final verification / canary | Python 3.13 CI-shaped unit+coverage local-green: **1851 passed / 4 skipped**, **77.04%** ≥ 72% | **OPEN** locked Python 3.11, integration/live services, migrations, image/Helm, canary and rollback | **yes** |
+| **10** final verification / canary | Python 3.13 CI-shaped unit+coverage local-green: **1851 passed / 4 skipped**, **77.04%** ≥ 72%; VER-01 exact-lock Linux setup attempted but incomplete | **OPEN** locked Python 3.11 MyPy/tests, integration/live services, migrations, image/Helm, canary and rollback | **yes** |
 
 **Project / production release: NOT claimed.**
 
