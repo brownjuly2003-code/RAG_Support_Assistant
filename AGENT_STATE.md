@@ -1,5 +1,35 @@
 # Agent State
 
+## 2026-08-12 Update-173 — VER-03 wider predecessor window green ✅ START HERE
+
+> **Fresh bounded verification:** at committed HEAD `cda1254`, Grok reran the
+> exact Update-171 20-file predecessor window plus
+> `test_direct_cli_resolves_project_imports` once with a fresh repository-local
+> basetemp. The run completed **340 passed / 2 warnings in 108.73s**; the direct
+> CLI node passed in **5.77s** and diagnostic coverage was **29%** with the
+> intentionally scoped `--cov-fail-under=0`.
+>
+> **Diagnostic conclusion:** after the committed contextual-ingestion isolation
+> correction `fce19ba`, neither this wider predecessor window nor the already
+> green adjacent nine-file window reproduces the Update-169 aggregate-only
+> direct-CLI failure. No runtime, timeout, or further test correction is
+> justified. The historical full gate remains red (**1839 passed / 1 failed /
+> 15 skipped**, **77.06%** coverage), so VER-03 and release remain open; this
+> bounded green result is not a full-suite or locked-CI claim.
+>
+> **Grok/workspace truth:** one `local_grok_cli` run used `grok-4.5` (actual
+> `grok-4.5-build`) and ended normally after the single authorized pytest
+> command. Codex independently verified the result artifact, clean scoped diff,
+> fresh basetemp, and unchanged protected-file hashes. Active writer/test
+> process **none**; implementation/test WIP **none**; protected dirty files and
+> unrelated untracked artifacts remain unchanged.
+>
+> **Next route:** the bounded VER-03 order/load diagnostic is exhausted and no
+> ungated local architecture slice is preselected. Do not repeat either green
+> predecessor band or the unchanged full suite. Continue only from a fresh
+> code/environment boundary or explicit owner priority. No live action,
+> migration, scheduler mutation, push, or deploy occurred.
+
 ## 2026-08-11 Update-172 — contextual-ingestion routing test isolated ✅ START HERE
 
 > **Committed test correction:** `fce19ba` (`test(ingestion): isolate

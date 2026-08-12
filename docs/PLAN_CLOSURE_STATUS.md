@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-11 (Update-172 contextual-ingestion routing test isolated)
+**Date:** 2026-08-12 (Update-173 VER-03 wider predecessor window green)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-172**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-173**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-172. Preserve it as DoD input, but use Actual Git + the committed
+> Update-173. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,14 +18,15 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-172:** `fce19ba` isolates the vector-store routing test from the real
-categorizer/LLM dependency. Its former 60-second timeout now passes under the
-same coverage contract in **5.06s**; the contextual file and an independent
-routing+categorizer band are green. Actual Git before this docs edit was
-`master...origin/master [ahead 298]` at `fce19ba`. This closes no plan
-section or release gate. SLA-gated sessions,
-live scrape/alert delivery, VER-03, and other live/gated work remain explicit in
-[`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
+**Update-173:** after `fce19ba`, the exact 20-file predecessor window plus
+direct CLI passes **340 tests / 2 warnings in 108.73s**; the target passes in
+**5.77s** and diagnostic coverage is **29%**. The adjacent nine-file band also
+remains green, so the Update-169 aggregate-only failure is not reproduced and
+no product/test correction is justified. Actual Git before this docs edit was
+`master...origin/master [ahead 299]` at `cda1254`. This closes no plan section
+or release gate. SLA-gated sessions, live scrape/alert delivery, VER-03, and
+other live/gated work remain explicit in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
+§0A/§1C.
 
 ---
 
@@ -346,13 +347,14 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-The fresh VER-03 full gate is red only on an aggregate-only direct-CLI failure,
-while the immediate predecessor window is green. The contextual-ingestion
-timeout that blocked the next earlier window is corrected at `fce19ba`. The
-documented local residual is one hypothesis-driven rerun of that exact 20-file
-window plus direct CLI with a fresh basetemp. Do not repeat the green band or
+The fresh VER-03 full gate is historically red only on an aggregate-only
+direct-CLI failure. That failure is not reproduced by the exact node, the
+adjacent nine-file window, or the exact 20-file predecessor window plus CLI;
+the wider run is **340 passed / 2 warnings in 108.73s** with target **5.77s**.
+The bounded diagnostic is exhausted. Do not repeat either green band or the
 unchanged full suite, guess at larger timeouts, or replay QG-01–QG-04 without
-new evidence.
+new evidence. No ungated local slice is preselected; require a fresh
+code/environment boundary or explicit owner priority.
 
 Gated alternatives remain: live provider/quality ×3 (`--execute` + secrets +
 fresh opt-in), memory-guard enablement plus a bounded hybrid attempt, a real
@@ -373,11 +375,11 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-172)
+## Last-known verification snapshot (Update-173)
 
 | Band | Last known |
 |------|------------|
-| **VER-03 Python 3.13 unit+coverage gate** | adjacent nine-file band remains green; `fce19ba` corrects the contextual blocker in the next earlier window and its exact coverage node passes in **5.06s**, but the wider window has not been rerun. Fresh full run remains **1839 passed / 1 failed / 15 skipped / 187 warnings** at **77.06%** coverage; no direct-CLI root cause or full-suite/locked-CI/release-green claim |
+| **VER-03 Python 3.13 unit+coverage gate** | exact 20-file predecessor window + direct CLI passes **340 tests / 2 warnings in 108.73s**; target **5.77s**; diagnostic coverage **29%**. The adjacent nine-file band also remains green, so the Update-169 aggregate-only failure is not reproduced. Fresh full run remains **1839 passed / 1 failed / 15 skipped / 187 warnings** at **77.06%** coverage; no full-suite/locked-CI/release-green claim |
 | **9.5d3 PipelineRunner streaming execution/deadline owner** | Grok TDD transcript **2 failed → 6 passed**, first focused band **32 passed**; QA follow-up added event-worker and exception-fallback ownership; Codex independent owner/provider-token stream band **7 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d2 PipelineRunner sync execution/deadline owner** | ownership **2 failed / 2 passed → 4 passed**; owner/concurrency/request-timeout/stream-capacity/chat-streaming band **22 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d1 PipelineRunner capacity lifecycle owner** | ownership **2 failed → 2 passed**; pipeline concurrency/stream-capacity/request-timeout/chat-streaming band **20 passed**; Ruff/narrowed MyPy/format/diff/LF/protected hashes green |
