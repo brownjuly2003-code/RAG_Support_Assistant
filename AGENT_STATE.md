@@ -1,5 +1,49 @@
 # Agent State
 
+## 2026-08-12 Update-184 — VER-01 lightweight lock v2 compiled; execution blocked ⚠ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `775a5d8`, ahead of
+> `origin/master` by 313 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **New verified evidence:** Grok `local_grok_cli` requested `grok-4.5`
+> (actual `grok-4.5-build`) and compiled
+> `.tmp/ver01-typecheck-direct-v2.lock` successfully from all direct production
+> requirements plus the five exact MyPy/toolchain pins. `uv pip compile`
+> resolved **54 packages**. Independent Codex parsing confirmed **54 package
+> entries**, **0** Torch/Triton/NVIDIA entries, and **0 version mismatches**
+> against `requirements-dev.lock`. The input SHA-256 is
+> `32E4F08B69C5B7810CE97410A1FFBD8F83D7B31717111ABDF0D7FB763E21F043`;
+> the generated lock SHA-256 is
+> `5C310940C564128B6227C695187665ED733A3A6B95503C327A6D435A660751EB`.
+>
+> **Grok verification boundary:** three real delegated sessions exhausted the
+> turn budget. The first stopped when it requested a compound PowerShell file
+> write. The corrected executor compiled the lock, then requested a denied
+> multiline `python -c` inspection. The independent read-only auditor reached
+> its direct-package recount, then made the same denied `python -c` request.
+> Both final sessions ended `Cancelled` with no stderr. Therefore Grok did not
+> complete its requested self-review or independent method verdict.
+>
+> **Honest classification:** `VER-01` remains **OPEN / EXECUTION-BLOCKED**.
+> The lightweight lock's resolution and exact version consistency are proven;
+> venv creation, hashed installation, MyPy version confirmation, and both CI
+> MyPy commands were **not run**. Do not infer repository type health, locked
+> Python 3.11, CI, or release status from the compile result.
+>
+> **Exact next slice:** reuse the two immutable v2 artifacts above; do not
+> recompile them merely to verify. Create a fresh Python 3.11 venv, install the
+> v2 lock with `--no-deps --require-hashes`, run both unchanged CI MyPy
+> commands, and classify every diagnostic against missing dependency surface.
+> Any Grok prompt must use approved `rg`/read/edit operations rather than
+> multiline `python -c`. Do not edit CI or manifests unless that execution is
+> complete and a separate repository contract is justified.
+>
+> **Workspace truth:** no tracked source, test, dependency manifest, workflow,
+> or product file changed. The four protected owner-file hashes stayed
+> byte-identical; no provider call, migration, deploy, push, index/database
+> mutation, or product-code change occurred. No delegated writer remains.
+
 ## 2026-08-12 Update-183 — VER-01 lightweight lock diagnostic ⚠ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `5454c41`, ahead of
