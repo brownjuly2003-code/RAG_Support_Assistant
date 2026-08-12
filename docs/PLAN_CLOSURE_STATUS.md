@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-186 stream no-redef closed; type gate remains red; live FAIL unchanged)
+**Date:** 2026-08-12 (Update-187 API command 2 locally green; command 1 remains red; live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-186**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-187**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-186. Preserve it as DoD input, but use Actual Git + the committed
+> Update-187. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -17,6 +17,19 @@ authoritative open-problem ledger in §1C.
 2. Local code slice ≠ full plan section complete ≠ production release.  
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
+
+**Update-187:** no plan checkbox or release gate changed. `370a429` closes
+only the three strict `api/app.py` findings: the cache helper return is typed
+locally across `--follow-imports=skip`, the optional widget callable is checked
+explicitly against `None`, and the stale `_receive` ignore is removed. Exact
+MyPy command 2 moved from **3 errors in 1 file** to **Success across 31
+sources**. Codex passed three independent key runtime tests plus scoped
+Ruff/diff/LF/protected-hash checks. The local Grok writer produced the scoped
+diff but was budget-cancelled before final JSON; its actual model, self-review,
+and test count are not claimed. Command 1 still has the prior **11
+`agent/graph.py` errors / 72 sources**; Linux/full-lock CI remains unproved.
+No provider, migration, deploy, push, index, database, dependency, or workflow
+state changed.
 
 **Update-186:** no plan checkbox or release gate changed. `fbebe5e` removes
 only the two repeated legacy annotations in `api/routers/conversation.py`;

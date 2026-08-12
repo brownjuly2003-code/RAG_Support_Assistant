@@ -1,5 +1,49 @@
 # Agent State
 
+## 2026-08-12 Update-187 — API command-2 type gate locally closed ✅ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `370a429`, ahead of
+> `origin/master` by 318 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **Committed implementation:** `370a429` closes only the three remaining
+> strict MyPy findings in `api/app.py`: a local `str | None` cast documents the
+> already-typed cache helper across the intentional `--follow-imports=skip`
+> boundary; the optional widget helper now uses an explicit `is not None`
+> branch; and the stale `_receive` `method-assign` ignore is removed. Calls,
+> arguments, return values, middleware order, and body-limit behavior are
+> unchanged.
+>
+> **Gate evidence:** the exact unchanged MyPy command 2 reproduced **3 errors
+> in 1 file / 31 sources** before the edit and now reports **Success: no issues
+> found in 31 source files**. Codex independently passed three key runtime
+> contracts covering cache-key normalization, widget frame headers, and
+> received-byte enforcement; scoped Ruff, `git diff --check`, protected-file
+> hashes, and LF checks are clean. The first runtime attempt used the retained
+> typecheck-only venv and failed during pytest plugin import because that venv
+> intentionally lacks `pydantic_core`; the one narrowed run with project Python
+> passed **3 tests**.
+>
+> **Grok truth:** `local_grok_cli` run
+> `rag-ver01-api-app-gate-20260812-01` requested `grok-4.5` and produced the
+> exact scoped diff. It was cancelled once after the six-poll/ten-minute budget
+> boundary because the status helper stopped returning; stdout/stderr remained
+> empty, so Grok's actual model identity, final self-review, and test count are
+> deliberately unclaimed. No duplicate or QA follow-up run was launched;
+> Codex verified the retained diff independently.
+>
+> **Remaining VER-01 debt / next safe candidate:** command 2 is locally green,
+> but command 1 still has the previously measured **11 `agent/graph.py`
+> errors / 72 sources**. Keep the next slice in that file only, beginning with
+> the nullable `delivery_state` TypedDict assignment after refreshing the exact
+> command-1 baseline. Linux/full-lock CI equivalence remains unproved.
+>
+> **Workspace truth:** implementation WIP is none. The four protected owner
+> files stayed byte-identical; unrelated untracked artifacts remain preserved.
+> No provider call, migration, deploy, push, index/database mutation, or
+> dependency/workflow change occurred; the Grok writer was terminated and no
+> delegated writer remains active.
+
 ## 2026-08-12 Update-186 — stream no-redef type slice locally closed ✅ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `fbebe5e`, ahead of
