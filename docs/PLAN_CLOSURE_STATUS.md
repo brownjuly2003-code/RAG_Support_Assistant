@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-177 next-session transparency reconciliation)
+**Date:** 2026-08-12 (Update-178 post-QG live quality seed 42 FAIL)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-177**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-178**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-177. Preserve it as DoD input, but use Actual Git + the committed
+> Update-178. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,14 +18,13 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-177:** docs-only reconciliation separates three non-equivalent facts:
-§5 seed 42 is a valid vector-only quality **FAIL**; §7.6 has a valid one-case
-direct-provider **PASS** but lacks scheduled breadth/independent judge; default
-hybrid is **MEMORY-BLOCKED** under the enforced 1 GiB limit. The stale §10
-aggregate-red text is corrected: Python 3.13 unit+coverage is local-green at
-1851 passed / 4 skipped and 77.04% coverage. Actual Git before this docs edit
-was `master...origin/master [ahead 303]` at `e4879b4`. No runtime or external
-action, plan closure, or release claim follows.
+**Update-178:** an authorized post-QG §5 vector-only seed-42 run produced valid
+complete evidence but quality **FAILS**: candidate 25% versus baseline 90%, 13
+regressions, and 0 new passes. Two GraceKelly browser tasks hit the same
+`Locator.click` timeout; the formal report still has 20/20 effective cases and
+zero infrastructure failures. Fail-fast skipped seeds 43–44, so passing ×3
+evidence still does not exist. No product code, active index, database,
+migration, deploy, push, or scheduler definition changed.
 
 ---
 
@@ -37,7 +36,7 @@ action, plan closure, or release claim follows.
 | **2** index lifecycle | **2.1–2.6g local residual closed** | **OPEN** live PG/Redis/Celery/Chroma | yes for live index ops |
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.8 local** | **OPEN** parity default still off (product) | partial |
-| **5** grounding fail-closed | **5.1–5.7 + QG-01/QG-02/QG-03A/QG-03B/QG-04 + HYBRID-MEM env local** | **OPEN** one valid seed-42 run exists but **FAILS**; passing ×3 evidence remains open | **yes** quality |
+| **5** grounding fail-closed | **5.1–5.7 + QG-01/QG-02/QG-03A/QG-03B/QG-04 + HYBRID-MEM env local** | **OPEN** post-QG seed 42 has valid complete evidence but **FAILS** at 25% candidate vs 90% baseline; passing ×3 remains open | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local + one-case direct-provider live PASS** | OPEN (scheduled breadth + independent judge) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
@@ -64,21 +63,23 @@ use only non-sensitive test data and recheck external terms before enabling it.
 
 ---
 
-## Current live-quality incident (Update-139)
+## Current live-quality incident (Update-178)
 
-The native vector-only run produced valid child evidence for seed 42 but failed
-the quality gate: candidate pass 65% (baseline 70%, required ≥85%), four
-regressions, context precision 0.1499, context recall 0.65, FULL 0.60, MISS 6,
-faithfulness 0.30, and answer relevancy 0.4855. Seeds 43–44 did not run, so no
-valid three-run aggregate or release evidence exists.
+The post-QG native vector-only run produced valid complete child evidence for
+seed 42 but failed the quality gate: candidate pass 25% (baseline 90%, required
+≥85%), 13 regressions, 0 new passes, context precision 0.3012, context recall
+0.725, FULL 0.70, MISS 5, faithfulness 0.7101, and answer relevancy 0.30.
+Two GraceKelly browser tasks hit the same `Locator.click` 5-second timeout and
+several candidate answers were timestamps. Seeds 43–44 did not run, so no valid
+three-run aggregate or release evidence exists.
 
 | Incident slice | Local status | Live status |
 |----------------|--------------|-------------|
-| **QG-01** `warranty-receipt-storage` | fixed at `c3ae4f4` | not replayed; no live recovery claim |
-| **QG-02** `error-e20-hose-kink` | fixed at `1304ff4` (routing-test baseline `c157796`) | not replayed; no live recovery claim |
-| **QG-03A** `error-e20-filter-or-pump` verifier outage | fixed at `80c2603`; retained trace proved `verify_facts` transport failure and answer overwrite | not replayed; no live or E20 keyword recovery claim |
-| **QG-03B** same case content path | fixed at `5662ea7`; relevant contextual-header shells now resolve to content-bearing chunks from the same logical source | not replayed; no live or E20 keyword recovery claim |
-| **QG-04** `error-e30` | shared cause fixed at `5662ea7`; exact retained five-document replay guarded at `5f8bb78` | not replayed live; no E30 keyword recovery claim |
+| **QG-01** `warranty-receipt-storage` | fixed at `c3ae4f4` | replayed and regressed; candidate exposed prompt text plus a timestamp |
+| **QG-02** `error-e20-hose-kink` | fixed at `1304ff4` (routing-test baseline `c157796`) | replayed and regressed; candidate returned a timestamp |
+| **QG-03A** `error-e20-filter-or-pump` verifier outage | fixed at `80c2603`; retained trace proved `verify_facts` transport failure and answer overwrite | replayed and regressed; candidate returned a timestamp |
+| **QG-03B** same case content path | fixed at `5662ea7`; relevant contextual-header shells now resolve to content-bearing chunks from the same logical source | live replay did not recover the E20 answer |
+| **QG-04** `error-e30` | shared cause fixed at `5662ea7`; exact retained five-document replay guarded at `5f8bb78` | replayed and regressed; candidate returned a timestamp |
 
 The active collection remains dimension 3 while the remote embedding lane is
 dimension 1024. The successful diagnostic run used a retained six-document
@@ -120,11 +121,11 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 28 | §5.5 live quality metrics gate scaffold | **done** `a901692` |
 | 29 | §5.6 exact live child report → DoD wire | **done** `fb72dd2` |
 | 30 | §5.7 producer emits all 7 canonical metrics | **done** `13bf255` |
-| 31 | QG-01 vector parent expansion | **done local** `c3ae4f4`; no live replay |
-| 32 | QG-02 generation failure routing | **done local** `1304ff4`; no live replay |
-| 33 | QG-03A verifier-outage routing | **done local** `80c2603`; no live replay |
-| 34 | QG-03B contextual-header grading | **done local** `5662ea7`; no live replay |
-| 35 | QG-04 retained E30 replay | **done local** `5f8bb78`; production fix shared with `5662ea7`; no live replay |
+| 31 | QG-01 vector parent expansion | **done local** `c3ae4f4`; post-QG live replay still failed |
+| 32 | QG-02 generation failure routing | **done local** `1304ff4`; post-QG live replay still failed |
+| 33 | QG-03A verifier-outage routing | **done local** `80c2603`; post-QG live replay still failed |
+| 34 | QG-03B contextual-header grading | **done local** `5662ea7`; post-QG live replay still failed |
+| 35 | QG-04 retained E30 replay | **done local** `5f8bb78`; post-QG live replay still failed |
 | 36 | HYBRID-MEM child environment propagation | **done local** `3c90368`; watchdog enforced in Update-175; default hybrid memory-blocked above 1 GiB |
 | 37 | §9.1a bounded Redis fallback | **done local** `db65e37`; no live Redis |
 | 38 | §9.1b Redis reconnect backoff | **done local** `eb8466e`; no live Redis |
@@ -203,7 +204,7 @@ Do **not** fake-close §1 or §10 with mock-only evidence.
 | **5.5** | **done local** | `a901692` live quality metrics gate scaffold |
 | **5.6** | **done local** | `fb72dd2` exact child report parse + release-honest DoD wire |
 | **5.7** | **done local** | `13bf255` canonical metric producer + completeness provenance |
-| Live DoD evidence | **open / failing** | one valid seed-42 run fails; seeds 43–44 and passing ×3 remain opt-in |
+| Live DoD evidence | **open / failing** | post-QG valid seed-42 run fails at 25% candidate vs 90% baseline; seeds 43–44 and passing ×3 remain opt-in |
 
 **Residual after 5.7:** the producer emits all seven canonical metrics with
 candidate-only provenance and fails real release runs closed on incomplete
@@ -348,9 +349,9 @@ Local green slices alone **do not** close the plan.
 OPS-01 is enforced and default hybrid is memory-blocked above the 1 GiB local
 ceiling before retrieval/provider execution. Do not retry it locally without a
 narrowed design expected below that limit. VER-03 remains local-green, and
-QG-01–QG-04 remain local-only without live replay. No ungated local slice is
-preselected; remaining work requires a separately selected authorized boundary,
-a product/SLA decision, or human-labelled evidence.
+QG-01–QG-04 remain locally green but their post-QG seed-42 live replay failed.
+The next safe boundary is local diagnosis of candidate/browser behavior; do not
+spend another paid seed before that diagnosis and fresh authorization.
 
 Gated alternatives remain: further live provider breadth/independent judge,
 quality ×3 (`--execute` + secrets + fresh opt-in), a real dual-annotator human
@@ -371,7 +372,7 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-177)
+## Last-known verification snapshot (Update-178)
 
 | Band | Last known |
 |------|------------|
@@ -404,8 +405,8 @@ full repository, locked Python-3.11, CI, or production verification result.
 | **9.1a bounded Redis fallback** | TTL/cap red **2 failed** → focused **2 passed**; partial-delete count red **1 failed** → green **1 passed**; final Redis/cache band **13 passed** with two known warnings; Ruff check/format + scoped MyPy + diff clean; no live Redis |
 | **VER-02** | exact MyPy red **1 error** → green **1 source**; lifecycle/lock band **11 passed**; Ruff clean; package `vectordb` MyPy **10 sources** with `--follow-imports=skip`; VER-01/full locked CI remain open |
 | **HYBRID-MEM env** | TDD red **1 failed** → focused **2 passed**; independent live-quality/regression band **57 passed**; Ruff + changed-file Mypy + diff clean; real lightweight Windows child saw the key present and blank; no model/hybrid/live run |
-| **QG-04** | exact retained five-document replay **1 passed**; independent grading/fail-closed/relevance/provider/fact-verification band **31 passed**; scoped Ruff + diff clean; production fix shared with `5662ea7`; no live replay |
-| **QG-03B** | TDD red **1 failed** → focused green **1 passed**; independent grading/fail-closed/relevance/provider band **24 passed**; scoped Ruff + changed-file Mypy + diff clean; no live replay |
+| **QG-04** | exact local replay **1 passed** and independent band **31 passed**; post-QG live seed 42 still regressed on `error-e30` |
+| **QG-03B** | TDD red **1 failed** → focused green **1 passed** and independent band **24 passed**; post-QG live seed 42 did not recover the E20 candidate answer |
 | **QG-03A** | Grok red 1 failed → focused **6 passed** + Ruff; independent verifier/grounding/citation/graph-error/judge/provider band **49 passed** + Ruff + diff clean; ordinary changed-file Mypy exposed 9 pre-existing `typeddict-item` errors outside changed lines, narrowed run passed; no locked/full-Mypy claim |
 | **QG-02** | TDD red 1 failed → green 1 passed; final focused **1 passed**; adjacent provider graph/error/model-routing/judge **31 passed**; Ruff + changed-file Mypy (`--follow-imports=skip`) + diff clean; no full locked-Mypy claim |
 | **QG-01** | TDD red 2 failed / 9 passed → focused **11 passed**; independent parent/base/reranker **34 passed**; scoped Ruff + changed-file Mypy + diff clean; broader `vectordb` Mypy last had one unchanged-file error |

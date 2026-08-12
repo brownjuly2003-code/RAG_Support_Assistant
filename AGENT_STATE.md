@@ -1,5 +1,36 @@
 # Agent State
 
+## 2026-08-12 Update-178 — post-QG live quality seed 42 FAIL ⚠ START HERE
+
+> **Authorized paid/live slice:** at committed HEAD `c9bd46c`, Codex ran the
+> existing §5 live quality gate with baseline `ministral-3b-latest`, candidate
+> `gracekelly-mixed`, seed 42 first of required seeds 42–44, 20 cases,
+> `--no-persist`, remote `mistral-embed`, the retained six-document
+> 1024-dimension index, vector-only retrieval, and the child reranker disabled.
+> Temporary GraceKelly `886b277` served `claude-sonnet-5` on port 8012.
+>
+> **Authoritative child evidence:** run `20260812T093713Z-6121aab5` completed
+> 20/20 effective cases with zero infrastructure failures and complete §5
+> metrics. Evidence is valid but quality **FAILS**: candidate pass rate 25%
+> versus baseline 90% and floor 85%; 13 regressions, 0 new passes; precision
+> 0.3012, recall 0.725, FULL 0.70, MISS 5, faithfulness 0.7101, answer
+> relevancy 0.30, and unverified-auto rate 0. Two GraceKelly browser tasks hit
+> the same `Locator.click` 5-second timeout; the formal report still records
+> zero infrastructure-failure cases, so this is quality evidence, not a
+> transport-invalid run.
+>
+> **Fail-fast / operations:** the outer gate returned `LIVE_EXECUTED_FAIL`
+> after child exit 1 and did not start seeds 43–44. No active index or database
+> was mutated. Temporary port 8012 was closed; no live-slice process remained;
+> `PythonMemoryGuard` remained Running/Enabled and recorded no new kill.
+> Exact ignored evidence paths and SHA-256 values are indexed in
+> `docs/SESSION_HANDOFF.md` §0B. No product code, migration, deploy, push, or
+> scheduler definition changed.
+>
+> **Next-session boundary:** do not spend another live seed before diagnosing
+> the observed candidate outputs/browser click timeouts locally. Passing §5 ×3
+> evidence still does not exist; another paid run needs fresh authorization.
+
 ## 2026-08-12 Update-177 — next-session transparency reconciliation ✅ START HERE
 
 > **Purpose:** docs-only reconciliation at committed HEAD `e4879b4`. No product
