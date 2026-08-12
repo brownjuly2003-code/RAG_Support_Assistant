@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-190 claims sequence contract closed; command 1 has 8 errors; live FAIL unchanged)
+**Date:** 2026-08-12 (Update-191 local VER-01 MyPy gate green; Linux/full-lock proof and live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-190**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-191**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-190. Preserve it as DoD input, but use Actual Git + the committed
+> Update-191. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -17,6 +17,19 @@ authoritative open-problem ledger in §1C.
 2. Local code slice ≠ full plan section complete ≠ production release.  
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
+
+**Update-191:** no plan checkbox or release gate changed. `d4583cc` expresses
+the real shared agentic terminal payload as inherited `TypedDict` contracts:
+quality/grounding keys are required, while KB-measure and judge-observability
+keys are optional where runtime legitimately omits them. `GraphState` declares
+the already-emitted `relevance_source` and `agentic_measure` keys; no eight-site
+suppressions were added and runtime behavior is unchanged. Exact MyPy command
+1 moved from **8 errors to Success across 72 sources**, and exact command 2 is
+freshly **Success across 31 sources**. Codex passed 32 focused agentic tests
+plus Ruff/diff/LF/protected-hash checks. Grok's first run used actual
+`grok-4.5-build` but cancelled before reads; its follow-up wrote the scoped
+diff but was budget-stopped with empty logs, so follow-up model/tests are not
+claimed. VER-01 is **LOCAL TYPE-GREEN**, not Ubuntu/full-lock CI-green.
 
 **Update-190:** no plan checkbox or release gate changed. `acc76ee` widens the
 read-only `status_for_claims` collection contract from invariant `list` to
@@ -170,7 +183,7 @@ push, or scheduler change occurred.
 | **7** eval gate fail-closed | **7.1–7.7 local + one-case direct-provider live PASS** | OPEN (scheduled breadth + independent judge) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5d3 owner slices local** | OPEN (SLA-gated sessions, live alert delivery) | soft |
-| **10** final verification / canary | Python 3.13 CI-shaped unit+coverage local-green: **1851 passed / 4 skipped**, **77.04%** ≥ 72%; VER-01 exact-lock Linux setup attempted but incomplete | **OPEN** locked Python 3.11 MyPy/tests, integration/live services, migrations, image/Helm, canary and rollback | **yes** |
+| **10** final verification / canary | Python 3.13 CI-shaped unit+coverage local-green: **1851 passed / 4 skipped**, **77.04%** ≥ 72%; VER-01 retained Windows Python 3.11 MyPy command 1 **72/72 green** and command 2 **31/31 green** | **OPEN** exact Ubuntu/full 222-package-lock equivalence, integration/live services, migrations, image/Helm, canary and rollback | **yes** |
 
 **Project / production release: NOT claimed.**
 

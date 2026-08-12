@@ -1,5 +1,52 @@
 # Agent State
 
+## 2026-08-12 Update-191 — local VER-01 MyPy gate closed ✅ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `d4583cc`, ahead of
+> `origin/master` by 326 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **Committed implementation:** `d4583cc` gives the shared agentic terminal
+> producers precise `TypedDict` contracts. Required quality/grounding fields
+> live in an inherited base payload; measured KB and judge-observability fields
+> remain optional because legitimate no-KB and no-evaluate branches omit them.
+> `GraphState` now declares the already-emitted `relevance_source` and
+> `agentic_measure` observability keys. Eight call-site casts/ignores were not
+> added. Runtime payload values, key-presence semantics, routing, calls, and
+> control flow are unchanged.
+>
+> **Type/runtime evidence:** exact MyPy command 1 moved from **8 errors in
+> `agent/graph.py` / 72 sources** to **Success: no issues found in 72 source
+> files**. Exact command 2 is freshly **Success across 31 sources**. Codex also
+> passed all **32** focused agentic measure/evaluate/tool tests under the full
+> project Python, plus scoped Ruff, `git diff --check`, LF, and protected hash
+> checks. The retained lightweight Python 3.11 environment remains intentionally
+> typecheck-only: its pytest attempt stopped at missing `pydantic_core` before
+> collection, so no runtime claim is based on that environment.
+>
+> **Grok truth:** `local_grok_cli` run
+> `rag-ver01-agentic-contracts-20260812-01` used actual `grok-4.5-build` but
+> cancelled before source reads after requesting disallowed onboarding
+> pipelines. Cause-specific follow-up
+> `rag-ver01-agentic-contracts-20260812-02` produced the scoped four-file diff,
+> then exceeded the bounded writer window and was stopped once; it exited with
+> empty stdout/stderr, so its actual model, tests, and self-review are
+> deliberately unclaimed. Codex found and corrected one over-narrow no-KB
+> return contract before the green independent gate. No QA follow-up ran.
+>
+> **Honest closure / next boundary:** VER-01 is now **LOCAL TYPE-GREEN** for
+> both unchanged CI MyPy command lines in the retained Windows Python 3.11
+> diagnostic environment. Exact Ubuntu execution with the full 222-package
+> hashed dev lock remains unproved; therefore CI/release/production readiness
+> is not claimed. The two previous WSL install attempts are exhausted and must
+> not be raw-retried. A fresh Linux CI route requires explicit remote/push
+> authority, or a genuinely distinct local environment hypothesis.
+>
+> **Workspace truth:** implementation WIP is none. The four protected owner
+> files stayed byte-identical; unrelated untracked artifacts remain preserved.
+> No provider call, migration, deploy, push, index/database mutation, or
+> dependency/workflow change occurred; no delegated writer remains active.
+
 ## 2026-08-12 Update-190 — claims sequence contract locally closed ✅ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `acc76ee`, ahead of
