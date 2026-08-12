@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-184 VER-01 lightweight lock v2 compiled; execution blocked; live FAIL unchanged)
+**Date:** 2026-08-12 (Update-185 VER-01 executed; type gate red; live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-184**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-185**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-184. Preserve it as DoD input, but use Actual Git + the committed
+> Update-185. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -17,6 +17,19 @@ authoritative open-problem ledger in §1C.
 2. Local code slice ≠ full plan section complete ≠ production release.  
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
+
+**Update-185:** no plan checkbox or release gate changed. The retained
+54-package hashed lock installed successfully into a fresh Windows CPython
+3.11.13 venv and both unchanged CI MyPy command lines completed under MyPy
+1.19.1. Command 1 reported **11 errors in `agent/graph.py` / 72 sources**;
+command 2 reported **5 errors in `api/routers/conversation.py` and
+`api/app.py` / 31 sources**. Codex reproduced both exact sets. Independent
+Grok source/history QA classified the outcome `TYPE-DEBT-CONFIRMED`; focused
+Codex checks confirmed the API gate-coupling and stale suppression. VER-01 is
+therefore **LOCAL-DIAGNOSTIC-CLOSED / TYPE-GATE RED**, not environment-blocked
+and not CI-green. Exact Ubuntu/full-lock equivalence remains unproved. No
+tracked source, test, manifest, workflow, provider, migration, deploy, push,
+index, or database state changed.
 
 **Update-184:** no plan checkbox or release gate changed. Grok compiled the
 new hashed VER-01 v2 lock successfully: **54 packages**, zero

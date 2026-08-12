@@ -1,5 +1,58 @@
 # Agent State
 
+## 2026-08-12 Update-185 — VER-01 executed; repository type debt confirmed ⚠ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `05cbc19`, ahead of
+> `origin/master` by 314 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **Execution completed:** Grok `local_grok_cli` run
+> `rag-ver01-v2-execution-20260812-01` used requested `grok-4.5` (actual
+> `grok-4.5-build`). A fresh Windows CPython **3.11.13** venv installed all
+> **54** packages from the retained hashed v2 lock with `--no-deps
+> --require-hashes`; install exited zero and MyPy **1.19.1** was runnable.
+> Both unchanged CI MyPy command lines then completed without import, plugin,
+> crash, timeout, or killed-process failures.
+>
+> **Type result:** command 1 exited 1 with **11 errors in 1 file / 72 sources**:
+> `agent/graph.py` has one nullable `delivery_state` TypedDict assignment, one
+> `GraphState`/`dict` assignment mismatch, one invariant-list argument mismatch,
+> and eight loose-dict expansions into TypedDict-shaped state. Command 2 exited
+> 1 with **5 errors in 2 files / 31 sources**: two same-scope `no-redef`
+> findings in `api/routers/conversation.py`, plus `no-any-return`,
+> `truthy-function`, and `unused-ignore` in `api/app.py`. Codex independently
+> reproduced both exact outputs.
+>
+> **Independent QA:** read-only Grok run
+> `rag-ver01-mypy-qa-20260812-02` inspected declarations, data flow, CI config,
+> and focused Git history. It classified the result `TYPE-DEBT-CONFIRMED`.
+> Codex independently checked the three environment-sensitive API findings:
+> `no-any-return` is caused by the checked-in `warn_return_any` plus the CI
+> `--follow-imports=skip` boundary although the helper is annotated;
+> `truthy-function` is a project-local function-object guard; and the
+> `method-assign` ignore is stale under the current gate. The unused agent
+> override warning from command 2 is expected because that split command does
+> not check agent modules.
+>
+> **Honest classification:** VER-01 is **LOCAL-DIAGNOSTIC-CLOSED / TYPE-GATE
+> RED**. This establishes runnable lightweight Python 3.11 diagnostics and
+> repository/gate-coupled type debt; it does **not** establish Ubuntu/full-lock
+> CI equivalence, locked CI green, or release readiness. Windows direct-only
+> 54 packages still differ from the Ubuntu 222-package environment.
+>
+> **Next safe implementation candidate:** one atomic low-risk stream typing
+> slice in `api/routers/conversation.py`: eliminate only the two same-scope
+> redeclarations while preserving parity and legacy behavior, then run command
+> 2 plus focused streaming tests. Keep the three `api/app.py` findings and the
+> four distinct `agent/graph.py` ownership groups for later separate slices;
+> do not bundle all 16 findings into one cleanup.
+>
+> **Workspace truth:** the v2 input/lock hashes stayed unchanged and no tracked
+> source, test, manifest, or workflow changed. The four protected owner-file
+> hashes stayed byte-identical. No provider call, migration, deploy, push,
+> index/database mutation, or product-code change occurred; no Grok writer or
+> MyPy process remains active.
+
 ## 2026-08-12 Update-184 — VER-01 lightweight lock v2 compiled; execution blocked ⚠ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `775a5d8`, ahead of

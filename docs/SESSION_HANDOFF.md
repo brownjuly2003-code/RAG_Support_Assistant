@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-12 — **Update-184** (VER-01 lightweight lock v2 compiled; execution blocked; live FAIL unchanged).
+**Обновлено:** 2026-08-12 — **Update-185** (VER-01 executed; type gate red; live FAIL unchanged).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-184**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-185**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-184; dirty
+**Не использовать:** старые `START HERE` ниже Update-185; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -29,16 +29,16 @@
 |-------------------------|-------------------|
 | Последний implementation SHA | `dbd2b28` — generation-provider fail-closed safety routing; preceding provider artifact guard `63aa5df` |
 | Последний committed test contract | `e400d88` — Starlette TestClient must have `httpx2` pinned in the dev input and hashed lock; preceding product contract `dbd2b28` covers ProviderUnavailable generation routing |
-| Последний committed docs/dependency closure | `775a5d8` — Update-183 lightweight-lock diagnostic; latest dependency closure remains `e400d88` (VER-04) |
-| Actual Git перед этой docs edit | `master...origin/master [ahead 313]` at `775a5d8`; refresh remains mandatory and this is not push authority |
+| Последний committed docs/dependency closure | `05cbc19` — Update-184 lightweight-lock compile boundary; latest dependency closure remains `e400d88` (VER-04) |
+| Actual Git перед этой docs edit | `master...origin/master [ahead 314]` at `05cbc19`; refresh remains mandatory and this is not push authority |
 | Что закрыто локально | GraceKelly timestamp/prompt-echo containment, generation-provider fail-closed, and the VER-04 repository/CI dependency contract; current global Python is not dev-lock-synchronized and still warns. §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не восстанавливает live quality и не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
-| Известный baseline debt | **VER-01 remains OPEN / EXECUTION-BLOCKED:** the new hashed lightweight lock resolves 54 packages, has zero GPU entries, and matches the dev-lock versions 54/54. The fresh venv/install and both exact MyPy commands did not run, so no lightweight-lock MyPy verdict exists. Ordinary router MyPy retains two pre-existing `no-redef` findings, and older `api/app.py`/legacy formatter debt remains outside recent changed lines |
-| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); owned implementation/test WIP **none**; ignored v2 input/lock are retained under `.tmp/`; active delegated writer none known |
-| Grok route truth | Three real `local_grok_cli` sessions used requested `grok-4.5` (actual `grok-4.5-build`). Executor run `rag-ver01-light-v2-20260812-03` compiled the 54-package lock; it and independent auditor `rag-ver01-light-audit-20260812-02` were then policy-cancelled on denied multiline `python -c` checks. Self-review and independent method verdict did not complete |
-| Что не запускалось | The v2 venv was not created; install and both exact CI MyPy commands did not run. Push, deploy, migration 019–023, Grafana import/provisioning, seeds 43–44, independent judge, scrape/alert delivery also did not run. One post-QG 20-case seed 42 did run and fail fast |
+| Известный baseline debt | **VER-01 is LOCAL-DIAGNOSTIC-CLOSED / TYPE-GATE RED:** the 54-package hashed install succeeded and both exact MyPy commands completed. Command 1 has 11 errors in `agent/graph.py`; command 2 has two `no-redef` errors in `api/routers/conversation.py` and three gate/source findings in `api/app.py`. No missing-import/plugin/crash evidence exists; Linux/full-lock CI equivalence remains unproved |
+| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); owned implementation/test WIP **none**; ignored v2 input/lock and venv are retained under `.tmp/`; active delegated writer none known |
+| Grok route truth | `local_grok_cli` executor `rag-ver01-v2-execution-20260812-01` completed venv/install/both MyPy commands and self-review with actual `grok-4.5-build`. Independent read-only QA `rag-ver01-mypy-qa-20260812-02` completed source/history analysis and classified `TYPE-DEBT-CONFIRMED`; Codex reproduced both exact diagnostic sets |
+| Что не запускалось | Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana import/provisioning, seeds 43–44, independent judge, and scrape/alert delivery did not run. One post-QG 20-case seed 42 did run and fail fast |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
-| Следующий slice | **VER-01 v2 execution is the exact local candidate:** preserve and reuse the verified input/lock hashes, create a fresh Python 3.11 venv, install with `--no-deps --require-hashes`, run both unchanged CI MyPy commands, and classify every diagnostic. Do not recompile or use multiline `python -c`; no paid/local fallback, GraceKelly edit, or paid seed without fresh authority |
+| Следующий slice | **Stream no-redef is the exact local candidate:** change only `api/routers/conversation.py` so `graph_result` and `suggested_questions` are annotated once per generator scope; preserve parity/legacy behavior and verify command 2 plus focused streaming tests. Do not bundle `api.app.py` or `agent/graph.py` type debt into that slice |
 
 ---
 
@@ -50,15 +50,15 @@
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
 | Latest **committed test contract** | `e400d88` — exact `httpx2` dev-input + hashed-lock contract; latest product contract remains `dbd2b28` ProviderUnavailable safety routing |
-| Latest **committed docs before this Update** | `775a5d8` — Update-183 lightweight-lock diagnostic |
+| Latest **committed docs before this Update** | `05cbc19` — Update-184 lightweight-lock compile boundary |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 313]` at `775a5d8` before this docs edit — **refresh mandatory; no push authorization** |
-| Active writer / WIP | active delegated writer **none known**; all three Grok sessions stopped. Owned implementation/test WIP **none**; ignored v2 input/lock remain under `.tmp/`; if these three handoff files are dirty, Update-184 docs WIP is present |
+| Branch advisory | observed `master...origin/master [ahead 314]` at `05cbc19` before this docs edit — **refresh mandatory; no push authorization** |
+| Active writer / WIP | active delegated writer **none known**; all Grok/MyPy processes stopped. Owned implementation/test WIP **none**; ignored v2 input/lock/venv remain under `.tmp/`; if these three handoff files are dirty, Update-185 docs WIP is present |
 | Locally complete (documented scopes) | GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28` + TestClient backend `e400d88`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/04/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | VER-01 v2 venv/install and both exact MyPy commands using the already compiled 54-package lock; no recompile or workflow/manifest edit until the execution is complete. WSL raw retry remains exhausted. Live recovery still needs an authorized GraceKelly/routing boundary or a fresh paid gate |
+| Next ordered | one-file stream no-redef slice in `api/routers/conversation.py`; command 2 should lose exactly its two router findings before any separate `api.app.py` or agent typing slice. WSL raw retry remains exhausted. Live recovery still needs an authorized GraceKelly/routing boundary or a fresh paid gate |
 | Gates | WSL was used only for isolated dependency verification; Docker daemon was unavailable. No push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
@@ -76,15 +76,15 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 
 | Question | Durable answer |
 |----------|----------------|
-| What is the current docs baseline? | `775a5d8` before this docs-only Update; Actual Git must override the embedded SHA after commit. |
-| Is an owned writer/test still running? | No. All three Grok sessions stopped; no venv install or MyPy process was started. |
+| What is the current docs baseline? | `05cbc19` before this docs-only Update; Actual Git must override the embedded SHA after commit. |
+| Is an owned writer/test still running? | No. Executor, QA, and both independent MyPy commands completed; no related process remains. |
 | Is the memory guard active? | **Yes.** `PythonMemoryGuard` was freshly verified `Running`; unchanged contract is 1024 MiB / 10 seconds. |
 | What does §5 prove? | The post-QG vector-only seed 42 is valid live evidence but **FAILS** quality: 25% candidate vs 90% baseline, 13 regressions. Seeds 43–44 and passing ×3 evidence do not exist. |
 | What does local artifact containment prove? | Retained output classification found 12 timestamp-only and 6 prompt-echo candidate answers. `63aa5df` rejects those shapes; `dbd2b28` routes the resulting provider outage human/not_verified without automatic ticket registration. No live recovery is inferred. |
 | What does §7.6 prove? | One direct-Mistral seed-43 case passed with valid complete child evidence. It proves the bounded route/gate attempt only, not scheduled breadth, independent judge, §5 ×3, or whole release. |
 | What does hybrid prove? | Default production reranker exceeded 1 GiB and was killed before retrieval/provider execution. Hybrid quality remains unknown; raw local retry is forbidden. |
-| What is the full local Python gate? | Python 3.13 CI-shaped unit+coverage is local-green: **1851 passed / 4 skipped**, coverage **77.04%** ≥ 72%. VER-01 v2 lock compile is green at 54 packages / zero GPU / zero dev-lock mismatches, but it has no venv/install/MyPy verdict; locked Python 3.11 and release gates remain open. |
-| What is preauthorized next? | Only the local VER-01 v2 execution described above, using the retained verified artifacts. Do not recompile or edit CI/manifests before both exact commands run; do not raw-retry WSL. GraceKelly edit, routing/fallback cost change, paid call, migration 019–023, deploy, or push needs separate exact authority. |
+| What is the full local Python gate? | Python 3.13 CI-shaped unit+coverage is local-green: **1851 passed / 4 skipped**, coverage **77.04%** ≥ 72%. VER-01 Python 3.11 lightweight install is runnable but both exact MyPy commands are red at **11 + 5 errors**. Ubuntu/full-lock CI and release gates remain open. |
+| What is preauthorized next? | Only the one-file stream no-redef slice described above. Do not broaden it into `api.app.py` or agent typing, raw-retry WSL, or claim Linux CI equivalence. GraceKelly edit, routing/fallback cost change, paid call, migration 019–023, deploy, or push needs separate exact authority. |
 
 **Ignored VER-01 v2 diagnostic artifacts — preserve and reuse:**
 
@@ -95,6 +95,14 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 
 Their presence proves lock construction only. It does not prove installation,
 MyPy execution, CI, or release status.
+
+**Update-185 execution evidence:** the retained lock installed successfully in
+`.tmp/ver01-py311-light-v2` with Python 3.11.13 and MyPy 1.19.1. Exact command
+1 reported 11 errors in `agent/graph.py` after checking 72 sources; exact
+command 2 reported 5 errors in `api/routers/conversation.py` and `api/app.py`
+after checking 31 sources. Codex reproduced both sets. This closes the local
+diagnostic question as type-red; it does not turn the artifact into a committed
+CI lock or prove Ubuntu/full-lock behavior.
 
 **Ignored evidence inventory — preserve; do not regenerate merely to verify:**
 
