@@ -1367,7 +1367,7 @@ async def ask_stream(
                 route = "auto" if quality >= int(getattr(settings, "quality_threshold", 80)) else "human"
             else:
                 route = "auto" if quality >= 70 else "human"
-            suggested_questions: list[str] = []
+            suggested_questions = []
             if route == "auto":
                 try:
                     from agent.prompts import build_suggested_questions_prompt  # noqa: PLC0415
@@ -1404,7 +1404,7 @@ async def ask_stream(
                     )
             trace_id_value = ""
             graph_appended_history = False
-            graph_result: dict[str, Any] | None = None
+            graph_result = None
             if graph_task is not None:
                 try:
                     graph_result = await pipeline_runner.wait_stream_future_result(
