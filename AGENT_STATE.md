@@ -1,5 +1,50 @@
 # Agent State
 
+## 2026-08-12 Update-183 — VER-01 lightweight lock diagnostic ⚠ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `5454c41`, ahead of
+> `origin/master` by 312 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **Root cause confirmed:** the shared Linux/Python-3.11
+> `requirements-dev.lock` contains **222** packages. Exactly **17** entries are
+> the `torch` / Triton / NVIDIA GPU stack pulled through the production
+> `sentence-transformers` dependency. Both prior WSL installs stopped before
+> MyPy because this runtime dependency graph was still downloading/installing;
+> neither result is evidence of a type-check failure.
+>
+> **Lightweight diagnostic 1:** a fresh Windows CPython **3.11.13** venv with
+> only `mypy 1.19.1` installed in seconds, then the first exact CI strict-scope
+> command reported **17 errors in 3 files**. This does not establish repository
+> type debt because typed runtime packages such as PyJWT and SQLAlchemy were
+> absent; the experiment proved that MyPy-only is not a faithful CI contract.
+> The second CI command did not run after the first nonzero exit.
+>
+> **Lightweight diagnostic 2:** `uv pip compile --no-deps`, constrained by the
+> checked-in dev lock, produced a **50-package / 0-GPU-package** direct
+> dependency lock and installed it quickly. MyPy did not start because its own
+> transitive package `librt` was absent. The single correction explicitly
+> added MyPy's toolchain dependencies but used stale local
+> `typing-extensions==4.16.0`; resolution failed against the checked-in lock's
+> `typing-extensions==4.15.0`. The two-attempt diagnostic budget then ended.
+>
+> **Exact next slice:** continue only from the proven lightweight-lock
+> architecture. Generate the direct-dependency lock with the versions already
+> pinned in `requirements-dev.lock`: `mypy==1.19.1`, `librt==0.9.0`,
+> `mypy-extensions==1.1.0`, `pathspec==1.1.1`, and
+> `typing-extensions==4.15.0`. Install it with `--no-deps --require-hashes` in
+> a fresh Python 3.11 venv, then run the same two CI MyPy commands. Do not edit
+> CI/manifests or commit a new lock until both commands pass and governance
+> tests define the separate-lock contract. Do not repeat MyPy-only, the
+> 50-package lock without toolchain closure, `typing-extensions==4.16.0`, or
+> the full WSL dev-lock install.
+>
+> **Workspace truth:** no tracked file, dependency manifest, CI workflow, or
+> product code changed in the diagnostic turn. Temporary inputs/venvs remained
+> under ignored `.tmp/`. The four protected owner-file hashes stayed
+> byte-identical. No Grok run, provider call, migration, deploy, push,
+> index/database mutation, or product-code change occurred.
+
 ## 2026-08-12 Update-182 — VER-01 second bounded exact-lock attempt ⚠ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `121d59b`, ahead of

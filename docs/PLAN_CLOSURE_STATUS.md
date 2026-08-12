@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-182 VER-01 second bounded exact-lock attempt; live FAIL unchanged)
+**Date:** 2026-08-12 (Update-183 VER-01 lightweight-lock diagnostic; live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-182**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-183**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-182. Preserve it as DoD input, but use Actual Git + the committed
+> Update-183. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -17,6 +17,21 @@ authoritative open-problem ledger in §1C.
 2. Local code slice ≠ full plan section complete ≠ production release.  
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
+
+**Update-183:** no plan checkbox or release gate changed. Root-cause evidence
+now separates the type-check contract from runtime installation: the shared
+dev lock has 222 packages, including 17 `torch`/Triton/NVIDIA GPU entries.
+A MyPy-only venv was fast but produced non-authoritative errors because typed
+runtime packages were absent. A constrained `--no-deps` direct lock installed
+50 packages with zero GPU entries, but MyPy could not start without its own
+toolchain dependencies. The single correction failed before installation
+because it requested `typing-extensions 4.16.0` while the checked-in lock pins
+`4.15.0`. VER-01 remains **OPEN / ENV-BLOCKED**; no CI MyPy green claim exists.
+The next distinct experiment must use the checked-in toolchain versions
+`mypy 1.19.1`, `librt 0.9.0`, `mypy-extensions 1.1.0`, `pathspec 1.1.1`, and
+`typing-extensions 4.15.0`, run both exact CI commands, and only then consider
+a repository lock/workflow contract. No tracked source, manifest, provider,
+migration, deploy, push, index, or database state changed.
 
 **Update-182:** no plan checkbox or release gate changed. A fresh WSL2
 Ubuntu 22.04 / Python 3.11.15 venv resolved all **222** exact hashed packages,
