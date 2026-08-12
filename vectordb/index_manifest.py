@@ -199,10 +199,17 @@ def publish_active_collection(
     require_tenant_index_lock(lock_token, tenant_id)
     active_collection = _validate_collection_name(active_collection)
     current = read_index_manifest(tenant_id, chroma_directory=chroma_directory)
+    previous_collection: str | None = (
+        current.active_collection
+        if current is not None
+        else _legacy_collection_name(tenant_id)
+    )
+    if previous_collection == active_collection:
+        previous_collection = None
     manifest = IndexVersionManifest(
         schema_version=_SCHEMA_VERSION,
         active_collection=active_collection,
-        previous_collection=current.active_collection if current is not None else None,
+        previous_collection=previous_collection,
         generation=current.generation + 1 if current is not None else 1,
         updated_at=datetime.now(timezone.utc).isoformat(),
     )

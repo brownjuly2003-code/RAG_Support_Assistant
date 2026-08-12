@@ -1773,7 +1773,7 @@ def test_build_publication_receipt_chroma_first_and_second_publish(
     assert first.publication is not None
     assert first.publication.tenant_id == "acme"
     assert first.publication.active_collection == first.store.collection_name
-    assert first.publication.previous_collection is None
+    assert first.publication.previous_collection == "rag_docs_acme"
     assert first.publication.manifest_generation == 1
     assert type(first.publication.manifest_generation) is int
     assert first.publication.manifest_generation > 0

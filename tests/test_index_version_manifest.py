@@ -53,6 +53,31 @@ def test_missing_manifest_resolves_legacy_collection(tmp_path: Path) -> None:
     ).exists()
 
 
+def test_first_versioned_publish_preserves_legacy_rollback_target(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest = _manifest_module()
+    chroma_directory = tmp_path / "vectordb" / "chroma"
+
+    with _held_tenant_lock(monkeypatch, "acme") as lock_token:
+        published = manifest.publish_active_collection(
+            "acme",
+            "rag_docs-v-acme-0123456789abcdef",
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+        rolled_back = manifest.rollback_active_collection(
+            "acme",
+            lock_token=lock_token,
+            chroma_directory=chroma_directory,
+        )
+
+    assert published.previous_collection == "rag_docs_acme"
+    assert rolled_back.active_collection == "rag_docs_acme"
+    assert rolled_back.previous_collection == published.active_collection
+
+
 def test_manifest_paths_are_tenant_safe_and_stay_in_the_registry(
     tmp_path: Path,
 ) -> None:
@@ -134,7 +159,7 @@ def test_atomic_publish_preserves_previous_collection_and_increments_generation(
         )
 
     assert first.active_collection == "rag_docs_acme_v1"
-    assert first.previous_collection is None
+    assert first.previous_collection == "rag_docs_acme"
     assert first.generation == 1
     assert second.active_collection == "rag_docs_acme_v2"
     assert second.previous_collection == "rag_docs_acme_v1"
@@ -219,7 +244,7 @@ def test_rollback_without_previous_fails_closed_and_preserves_manifest(
 
         manifest.publish_active_collection(
             "acme",
-            "rag_docs_acme_v1",
+            "rag_docs_acme",
             lock_token=lock_token,
             chroma_directory=chroma_directory,
         )
