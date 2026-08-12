@@ -1,5 +1,32 @@
 # Agent State
 
+## 2026-08-12 Update-174 — VER-03 Python 3.13 full gate green ✅ START HERE
+
+> **Fresh CI-shaped acceptance:** at committed HEAD `42931e0`, Codex ran the
+> Python 3.13 unit+coverage command from `.github/workflows/ci.yml` with a fresh
+> repository-local basetemp. It completed **1851 passed / 4 skipped / 187
+> warnings in 753.44s** with **77.04%** coverage, above the configured **72%**
+> threshold. Exit code was zero.
+>
+> **Closure truth:** the Update-169 aggregate-only
+> `test_direct_cli_resolves_project_imports` failure did not recur after the
+> committed contextual-ingestion isolation `fce19ba`. VER-03 is now
+> **LOCAL-CLOSED** for the current Python 3.13 environment. This does not prove
+> the locked Python 3.11 leg, integration/live services, migrations, image/Helm,
+> provider quality, canary, rollback, or production release.
+>
+> **Workspace truth:** no source or test file changed during the acceptance
+> run. Codex verified the fresh basetemp, unchanged protected dirty-file hashes,
+> and absence of an active pytest process afterward. Grok was not used in this
+> slice, avoiding a duplicate aggregate run. Implementation/test WIP **none**;
+> protected dirty files and unrelated untracked artifacts remain preserved.
+>
+> **Next route:** no ungated local implementation slice is preselected. The
+> remaining plan items require live/deploy authority, a product/SLA decision,
+> or external human-labelled evidence. Do not repeat this green full gate
+> without a changed code/environment boundary. No live action, migration,
+> scheduler mutation, push, or deploy occurred.
+
 ## 2026-08-12 Update-173 — VER-03 wider predecessor window green ✅ START HERE
 
 > **Fresh bounded verification:** at committed HEAD `cda1254`, Grok reran the
