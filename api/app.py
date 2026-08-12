@@ -938,12 +938,15 @@ def _cache_key(
     """Build the versioned LLM response-cache key, or ``None`` to fail closed."""
     from cache.namespace import build_llm_response_cache_key
 
-    return build_llm_response_cache_key(
-        tenant,
-        question,
-        settings=settings if settings is not None else get_settings(),
-        user_id=user_id,
-        session_id=session_id,
+    return cast(
+        str | None,
+        build_llm_response_cache_key(
+            tenant,
+            question,
+            settings=settings if settings is not None else get_settings(),
+            user_id=user_id,
+            session_id=session_id,
+        ),
     )
 
 
@@ -1798,7 +1801,11 @@ async def _security_headers(request: Request, call_next: Any) -> Any:
         frame_ancestors_csp = None  # type: ignore[assignment]
         is_widget_static_path = None  # type: ignore[assignment]
 
-    widget_path = bool(is_widget_static_path and is_widget_static_path(path))
+    widget_path = (
+        bool(is_widget_static_path(path))
+        if is_widget_static_path is not None
+        else False
+    )
     for name, value in _SECURITY_HEADERS.items():
         if widget_path and name == "X-Frame-Options":
             # Framing controlled by path-specific CSP frame-ancestors only.
@@ -1974,7 +1981,7 @@ async def _body_size_limit(request: Request, call_next: Any) -> Any:
 
     # Trust boundary: count *actually received* ASGI body bytes (chunked /
     # missing / understated Content-Length cannot bypass the cap).
-    request._receive = make_limited_receive(request.receive, limit=limit)  # type: ignore[method-assign]
+    request._receive = make_limited_receive(request.receive, limit=limit)
 
     try:
         return await call_next(request)
