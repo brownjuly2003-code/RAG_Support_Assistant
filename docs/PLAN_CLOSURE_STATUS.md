@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-174 VER-03 Python 3.13 full gate green)
+**Date:** 2026-08-12 (Update-175 PythonMemoryGuard enforced; default hybrid memory-blocked)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-174**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-175**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-174. Preserve it as DoD input, but use Actual Git + the committed
+> Update-175. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,14 +18,14 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-174:** the fresh Python 3.13 CI-shaped unit+coverage gate passes
-**1851 tests / 4 skipped / 187 warnings in 753.44s** at **77.04%** coverage,
-above the configured **72%** threshold. The Update-169 aggregate-only direct-CLI
-failure does not recur after `fce19ba`; VER-03 is local-closed. Actual Git
-before this docs edit was `master...origin/master [ahead 300]` at `42931e0`.
-This does not close locked Python 3.11, live/integration services, migrations,
-image/Helm, canary, rollback, plan, or release gates. Remaining work stays
-explicit in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §0A/§1C.
+**Update-175:** the existing `PythonMemoryGuard` task is Running/Enabled and
+proved its unchanged 1024 MiB enforcement by killing only default-hybrid smoke
+PID 11984 at **4044.1 MiB private / 801.4 MiB working set**. The smoke died
+during production reranker loading, before retrieval/provider execution.
+OPS-01 is local-closed; default hybrid is memory-blocked, not quality-proved.
+Actual Git before this docs edit was `master...origin/master [ahead 301]` at
+`aa6c712`. No migration, deploy, push, live 3×20 gate, scheduler definition
+edit, product-code change, plan closure, or release claim follows.
 
 ---
 
@@ -83,13 +83,12 @@ valid three-run aggregate or release evidence exists.
 The active collection remains dimension 3 while the remote embedding lane is
 dimension 1024. The successful diagnostic run used a retained six-document
 compatible copy and vector-only retrieval. It does not prove default hybrid
-quality. An earlier hybrid attempt loaded the default reranker after an empty
-environment value failed to propagate and reached about 2.12 GiB. `3c90368`
-now provides an explicit `--disable-child-reranker` path; focused tests and a
-real lightweight Windows child prove that the child receives the key as present
-and blank. No hybrid/model run followed. The `PythonMemoryGuard` task was last
-read-only verified **Disabled** in Update-133, so hybrid execution remains
-operationally gated.
+quality. `3c90368` provides an explicit `--disable-child-reranker` path;
+focused tests and a real lightweight Windows child prove that the child
+receives the key as present and blank. Update-175 enabled the unchanged 1 GiB
+watchdog; one bounded default-hybrid smoke was killed at **4044.1 MiB private /
+801.4 MiB working set** during reranker loading. OPS-01 is enforced, while
+default hybrid remains memory-blocked and has no quality evidence.
 
 Detailed defect, environment, release, workspace, and external-boundary facts
 are maintained in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §1C. Do not
@@ -126,7 +125,7 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 33 | QG-03A verifier-outage routing | **done local** `80c2603`; no live replay |
 | 34 | QG-03B contextual-header grading | **done local** `5662ea7`; no live replay |
 | 35 | QG-04 retained E30 replay | **done local** `5f8bb78`; production fix shared with `5662ea7`; no live replay |
-| 36 | HYBRID-MEM child environment propagation | **done local** `3c90368`; memory guard and hybrid replay remain gated |
+| 36 | HYBRID-MEM child environment propagation | **done local** `3c90368`; watchdog enforced in Update-175; default hybrid memory-blocked above 1 GiB |
 | 37 | §9.1a bounded Redis fallback | **done local** `db65e37`; no live Redis |
 | 38 | §9.1b Redis reconnect backoff | **done local** `eb8466e`; no live Redis |
 | 39 | human sample / opt-in live ×3 evidence | **external/data authority required** |
@@ -346,17 +345,17 @@ Local green slices alone **do not** close the plan.
 
 ## Next session pick (one only)
 
-VER-03 is local-green: the fresh Python 3.13 CI-shaped run passes **1851 tests /
-4 skipped / 187 warnings in 753.44s** at **77.04%** coverage against the
-configured **72%** threshold. Do not repeat it without a changed code or
-environment boundary, and do not replay QG-01–QG-04 without new evidence. No
-ungated local slice is preselected; remaining work requires live/deploy
-authority, a product/SLA decision, or human-labelled evidence.
+OPS-01 is enforced and default hybrid is memory-blocked above the 1 GiB local
+ceiling before retrieval/provider execution. Do not retry it locally without a
+narrowed design expected below that limit. VER-03 remains local-green, and
+QG-01–QG-04 remain local-only without live replay. No ungated local slice is
+preselected; remaining work requires a separately selected authorized boundary,
+a product/SLA decision, or human-labelled evidence.
 
 Gated alternatives remain: live provider/quality ×3 (`--execute` + secrets +
-fresh opt-in), memory-guard enablement plus a bounded hybrid attempt, a real
-dual-annotator human sample, or the product decision to default
-`STREAMING_RAG_PARITY=true`.
+fresh opt-in), a real dual-annotator human sample, or the product decision to
+default `STREAMING_RAG_PARITY=true`. The default hybrid path now requires a
+sub-1-GiB design change before any local replay.
 
 This list is not authorization. The executable boundary and current facts are
 spelled out in [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) §2A. In a new
@@ -372,10 +371,11 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-174)
+## Last-known verification snapshot (Update-175)
 
 | Band | Last known |
 |------|------------|
+| **OPS-01 / HYBRID-MEM** | `PythonMemoryGuard` Running/Enabled; one default-hybrid smoke killed only PID 11984 at **4044.1 MiB private / 801.4 MiB working set** against **1024 MiB**, during reranker loading before retrieval/provider execution; default hybrid remains memory-blocked and has no quality claim |
 | **VER-03 Python 3.13 unit+coverage gate** | **LOCAL-CLOSED:** fresh CI-shaped run passes **1851 tests / 4 skipped / 187 warnings in 753.44s** at **77.04%** coverage (threshold **72%**); no locked Python 3.11, integration/live-service, migration, image/Helm, or release-green claim |
 | **9.5d3 PipelineRunner streaming execution/deadline owner** | Grok TDD transcript **2 failed → 6 passed**, first focused band **32 passed**; QA follow-up added event-worker and exception-fallback ownership; Codex independent owner/provider-token stream band **7 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |
 | **9.5d2 PipelineRunner sync execution/deadline owner** | ownership **2 failed / 2 passed → 4 passed**; owner/concurrency/request-timeout/stream-capacity/chat-streaming band **22 passed**; Ruff/format/scoped MyPy/diff/LF/protected hashes green |

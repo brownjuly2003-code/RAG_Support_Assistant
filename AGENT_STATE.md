@@ -1,5 +1,35 @@
 # Agent State
 
+## 2026-08-12 Update-175 — PythonMemoryGuard enforced; default hybrid memory-blocked ⚠ START HERE
+
+> **Authorized operational change:** at committed HEAD `aa6c712`, Codex enabled
+> and started the existing Task Scheduler task `PythonMemoryGuard`. The task is
+> now **Running / Enabled** and launches the unchanged watchdog with
+> `LimitMb=1024`, `IntervalSeconds=10`, and `DryRun=False`. The external script
+> and task definition were inspected but not edited.
+>
+> **Bounded hybrid smoke:** Codex copied the retained compatible 1024-dimension
+> Chroma diagnostic index to `.tmp/hybrid-memory-smoke-20260812` and started one
+> retrieval-only `hybrid` smoke with remote `mistral-embed`, BM25, and the
+> production `BAAI/bge-reranker-v2-m3` on CPU. The first command stopped before
+> model loading because the direct entrypoint had not loaded `.env`; one
+> narrowed correction loaded it without exposing the secret.
+>
+> **Enforcement evidence:** during that final attempt, the watchdog killed only
+> smoke `python.exe` PID `11984` at **4044.1 MiB observed private memory**
+> (**801.4 MiB working set**) against the **1024 MiB** limit. The process exited
+> during reranker weight loading, before the `retriever_type` marker, query
+> execution, or a Mistral provider request. The task remained Running/Enabled
+> afterward and no smoke process survived.
+>
+> **Conclusion / anti-repeat:** OPS-01 is **LOCAL-CLOSED / ENFORCED**. Default
+> hybrid with the production reranker is **MEMORY-BLOCKED** under the mandated
+> 1 GiB ceiling; it is not quality evidence and must not be retried locally
+> without a narrowed design expected to stay below 1 GiB. Vector-only seed 42
+> remains the authoritative live result and still FAILS quality. No migration,
+> deploy, push, live 3×20 gate, Task Scheduler definition edit, or product-code
+> change occurred.
+
 ## 2026-08-12 Update-174 — VER-03 Python 3.13 full gate green ✅ START HERE
 
 > **Fresh CI-shaped acceptance:** at committed HEAD `42931e0`, Codex ran the

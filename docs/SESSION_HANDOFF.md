@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-12 — **Update-174** (VER-03 Python 3.13 full gate green).
+**Обновлено:** 2026-08-12 — **Update-175** (PythonMemoryGuard enforced; default hybrid memory-blocked).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-174**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-175**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-174; dirty
+**Не использовать:** старые `START HERE` ниже Update-175; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -29,16 +29,16 @@
 |-------------------------|-------------------|
 | Последний implementation SHA | `c53f724` — §9.5d3 PipelineRunner streaming execution/deadline owner |
 | Последний committed test contract | `fce19ba` — isolate the tenant vector-store routing test from the real categorizer/LLM path |
-| Последний committed handoff до Update-174 | `42931e0` — Update-173 predecessor-window evidence; SHA этого docs-коммита всегда брать из Actual Git |
-| Actual Git перед этой docs edit | `master...origin/master [ahead 300]` at `42931e0`; refresh remains mandatory |
+| Последний committed handoff до Update-175 | `aa6c712` — Update-174 Python 3.13 full-gate evidence; SHA этого docs-коммита всегда брать из Actual Git |
+| Actual Git перед этой docs edit | `master...origin/master [ahead 301]` at `aa6c712`; refresh remains mandatory |
 | Что закрыто локально | §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, PipelineRunner capacity + sync + streaming execution, VER-03, and VER-07; это не закрывает весь §9 и не означает production ready |
-| Последний local gate | Python 3.13 CI-shaped unit+coverage **1851 passed / 4 skipped / 187 warnings in 753.44s**; coverage **77.04%** ≥ **72%** |
+| Последний local gate | `PythonMemoryGuard` Running/Enabled; bounded hybrid smoke PID 11984 killed at **4044.1 MiB private / 801.4 MiB working set** against **1024 MiB** limit |
 | Известный baseline debt | no full locked-CI claim; ordinary router MyPy retains two pre-existing `no-redef` findings, and older `api/app.py`/legacy formatter debt remains outside recent changed lines |
 | Worktree boundary | four protected tracked owner files remain dirty; owned implementation/test WIP **none**; unrelated untracked artifacts are preserved; active writer/test process none |
 | Grok route truth | `local_grok_cli`, `grok-4.5` (actual `grok-4.5-build`); one verification-only run ended normally after the single authorized pytest command |
-| Что не запускалось | push, deploy, migration 019–023, Grafana import/provisioning, live service/provider/quality/scrape/alert delivery, scheduler mutation |
+| Что не запускалось | push, deploy, migration 019–023, Grafana import/provisioning, live provider/quality 3×20, scrape/alert delivery; scheduler task was enabled/started but its definition/script were not edited |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
-| Следующий slice | none preselected; remaining work needs live/deploy authority, product/SLA choice, or human-labelled evidence; do not repeat the green full gate without a changed boundary |
+| Следующий slice | none preselected; do not retry production-reranker hybrid locally without a design expected below 1 GiB; other residuals need a separately selected authorized boundary |
 
 ---
 
@@ -50,10 +50,10 @@
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
 | Latest **committed test contract** | `fce19ba` — contextual-ingestion routing isolation |
-| Latest **committed docs before this Update** | `42931e0` — Update-173 predecessor-window evidence |
+| Latest **committed docs before this Update** | `aa6c712` — Update-174 Python 3.13 full-gate evidence |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 300]` at `42931e0` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer/test process **none**; owned implementation/test WIP **none**; if these three handoff files are dirty, Update-174 docs WIP is present |
+| Branch advisory | observed `master...origin/master [ahead 301]` at `aa6c712` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer/test process **none**; owned implementation/test WIP **none**; if these three handoff files are dirty, Update-175 docs WIP is present |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
@@ -62,15 +62,15 @@
 | Gates | **no Docker/WSL**; no push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
-**Update-174 locally closes VER-03:** the fresh Python 3.13 CI-shaped
-unit+coverage gate passes **1851 tests / 4 skipped / 187 warnings in 753.44s**
-at **77.04%** coverage against the configured **72%** threshold. The historical
-aggregate-only direct-CLI failure does not recur after `fce19ba`. This is not a
-locked Python 3.11, integration/live-service, migration, image/Helm,
-provider-quality, canary, rollback, or production-release claim. No live
-Grafana import/provisioning, scrape, alert delivery, provider, service, index,
-migration, scheduler, push, or deploy action occurs in this Update. The full
-open/gated truth remains in §1C and §2A/§12.
+**Update-175 resolves OPS-01 and closes the local default-hybrid attempt:** the
+existing `PythonMemoryGuard` task is Running/Enabled and proved enforcement by
+killing only smoke PID 11984 at **4044.1 MiB private / 801.4 MiB working set**
+against its **1024 MiB** limit. The process died during production reranker
+loading, before retrieval/provider execution. Default hybrid is therefore
+memory-blocked under the mandated ceiling, not quality-proved. No live 3×20
+gate, migration, deploy, push, task-definition/script edit, or product-code
+change occurs in this Update. The full open/gated truth remains in §1C and
+§2A/§12.
 
 **Last known verification:**
 
@@ -102,7 +102,7 @@ open/gated truth remains in §1C and §2A/§12.
 | **9.1b Redis reconnect backoff** | recovery red **2 failed** → green **2 passed**; focused Redis file **9 passed**; final Redis/cache band **15 passed** with two known warnings; Ruff check/format + scoped MyPy + diff clean; no live Redis |
 | **9.1a bounded Redis fallback** | TTL/cap red **2 failed** → focused **2 passed**; partial-delete-count red **1 failed** → green **1 passed**; final Redis/cache band **13 passed** with two known deprecation warnings; Ruff check/format + scoped MyPy + diff clean; no live Redis |
 | **VER-02 lifecycle fault type debt** | narrowed MyPy red **1 error** → green **1 source**; lifecycle/lock band **11 passed**; Ruff clean; package `vectordb` MyPy **10 source files** under `--follow-imports=skip`; no full/locked-CI claim |
-| **HYBRID-MEM child env propagation** | TDD red **1 failed** → focused **2 passed**; independent live-quality/regression band **57 passed**; scoped Ruff + changed-file Mypy + diff clean; real lightweight child observed `RAG_RERANKER_MODEL` present with value `""`; no model/hybrid/live run |
+| **HYBRID-MEM** | child-env propagation remains local-green; authorized default-hybrid smoke reached production reranker loading and was killed by the 1 GiB guard at **4044.1 MiB private / 801.4 MiB working set** before retrieval/provider execution; no quality claim |
 | **QG-04 retained E30 replay** | exact five-document replay **1 passed**; independent grading/fail-closed/relevance/provider/fact-verification band **31 passed**; scoped Ruff + diff clean; production fix shared with `5662ea7`; no live replay |
 | **QG-03B contextual-header grading** | TDD red **1 failed** → focused green **1 passed**; independent grading/fail-closed/relevance/provider band **24 passed**; scoped Ruff + changed-file Mypy + diff clean; no live replay |
 | **QG-03A verifier-outage routing** | Grok TDD red **1 failed** → focused **6 passed** + Ruff; independent verifier/grounding/citation/graph-error/judge/provider band **49 passed** + Ruff + diff clean; ordinary local Mypy exposed 9 pre-existing `typeddict-item` errors outside changed lines, while the one narrowed run disabling only that code passed both changed source files; no locked/full-Mypy claim |
@@ -278,8 +278,9 @@ causes.
 listener on `8012` was verified and stopped, and the port is closed. Port
 `8011` still belongs to the pre-existing PID 3048 and was untouched. The
 compatible temporary index remains for offline diagnostics. At handoff time,
-`PythonMemoryGuard` remained `Disabled`; changing Task Scheduler state was not
-authorized.
+`PythonMemoryGuard` is now Running/Enabled after the explicit Update-175
+authorization; its first bounded enforcement smoke killed only the over-limit
+hybrid process.
 
 **QG-01 closure:** `c3ae4f4` fixes the `warranty-receipt-storage` cause only.
 The vector fast path now applies bounded same-source parent expansion after
@@ -295,7 +296,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-174)
+### 1C. Authoritative open-problem ledger (Update-175)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -313,7 +314,7 @@ override this snapshot.
 | **QG-LIVE** | **LOCAL-ONLY** | QG-01 (`c3ae4f4`), QG-02 (`1304ff4`), QG-03A (`80c2603`), QG-03B (`5662ea7`), and QG-04 (`5f8bb78` evidence over `5662ea7`) are locally closed, but no live replay followed. The saved seed-42 report therefore remains FAIL. | Re-evaluate only with fresh owner opt-in; never claim live recovery from local tests. |
 | **LIVE-QUALITY** | **OPEN / FAIL** | Only seed 42 of required seeds 42–44 ran. Candidate pass 65% vs baseline 70%/floor 85%; 4 regressions; precision 0.1499, recall 0.65, FULL 0.60, MISS 6, faithfulness 0.30, relevancy 0.4855. The outer 3-run report is not valid aggregate evidence. | Fresh explicit paid/live opt-in for any new seed or 3×20 run. Passing §5 evidence does not exist. |
 | **INDEX-DIM** | **OPEN** | Active `rag_docs_default` is dimension 3 and incompatible with remote 1024-dimension embeddings. A compatible six-document diagnostic copy is retained under `.tmp/live-quality-native-index-20260809/chroma`; the active collection was not rebuilt. | Dedicated validated rebuild/publish scope; do not replace or delete collections casually. |
-| **HYBRID-MEM** | **LOCAL-ONLY / OPS GATED** | `3c90368` adds explicit `--disable-child-reranker` propagation; two focused tests, the 57-test band, and a real lightweight child prove `RAG_RERANKER_MODEL` reaches the Windows child as present and blank. The earlier default reranker still reached about 2.12 GiB, and the authoritative quality result remains vector-only. | Do not run hybrid while `PythonMemoryGuard` is disabled. Enabling/changing the scheduler guard and any bounded hybrid attempt require fresh explicit authority; no default-hybrid quality recovery is claimed. |
+| **HYBRID-MEM** | **LOCAL-CLOSED / MEMORY-BLOCKED** | `3c90368` proves blank child-reranker propagation. Update-175 enabled the 1 GiB watchdog and one bounded default-hybrid smoke was killed during production reranker loading at **4044.1 MiB private / 801.4 MiB working set**, before retrieval/provider execution. | Do not retry this high-memory path locally. A future design must be expected to stay below 1 GiB; vector-only seed 42 remains the authoritative quality FAIL. |
 | **LIVE-LATENCY** | **OPEN** | Seed 42 took about 2 h 9 min. Mean latency was 81,878.8 ms baseline vs 304,456.7 ms candidate. | Profile only in a separately authorized bounded run; do not raw-retry the aggregate. |
 
 #### Release / plan DoD
@@ -340,7 +341,7 @@ override this snapshot.
 | **VER-05** | **LOCAL-CLOSED** | `4b0fba7` replaces the stale zero-caller assertion with the exact intentional allowlist `["api/routers/admin_ops.py"]` and renames the test accordingly. The original assert reproduced red; the independent retention/admin band passed 51 tests, scoped Ruff and diff checks passed. | Do not reopen without a new caller or contract change. Whole-file Ruff format debt predates this slice and was not reformatted here. |
 | **VER-06** | **LOCAL-CLOSED** | `356a530` updates the exact stale agentic-injection test to patch `agent.tools.search_kb_docs` and return `(formatted_text, raw_docs)`. The failure reproduced before the edit; afterward the exact test and the 44-test response-safety/agentic band passed. | Do not reopen without another agentic KB boundary change. File-wide formatter debt predates this test-only slice. |
 | **VER-07** | **LOCAL-CLOSED** | `fd23317` aligns the stale trace-retention assertion with the existing tenant-aware audit contract. The exact failure reproduced **1 failed → 1 passed**; the adjacent retention/tenant/audit band passed **22 tests**. | Do not reopen without a tenant/audit boundary change; this does not establish full-suite or production evidence. |
-| **OPS-01** | **DISABLED** | `PythonMemoryGuard` was read-only verified `Disabled` on 2026-08-09; last run was 2026-07-01. The 2.12 GiB child therefore had no configured 1 GiB enforcement. | Enabling/changing Task Scheduler requires explicit authority; do not run memory-heavy hybrid commands meanwhile. |
+| **OPS-01** | **LOCAL-CLOSED / ENFORCED** | `PythonMemoryGuard` is Running/Enabled with the unchanged 1024 MiB / 10-second watchdog. Its bounded smoke killed only PID 11984 at 4044.1 MiB observed private memory and logged the command/reason. | Keep enabled; inspect `D:\SystemState\PythonMemoryGuard\logs\kills-YYYY-MM-DD.log` after any future Python memory event. Changing limit/task definition still needs explicit authority. |
 | **OPS-02** | **ENV LIMIT** | The system pytest temp root can return access denied. | Use a unique writable repository basetemp; do not raw-retry the inaccessible path. |
 | **OPS-03** | **ENV LIMIT** | Git/PowerShell commands intermittently exceeded 10 s or timed out; root cause is not established. `login:false`, `git -C`, scoped plumbing commands, and a 30 s read-only timeout completed. | Avoid parallel full-worktree scans and raw retries; preserve the cycle budget. |
 
@@ -381,7 +382,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-174 in AGENT_STATE.md + §0A/§1C in this file
+5. Read ONLY top Update-175 in AGENT_STATE.md + §0A/§1C in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. VER-03 is local-green; do not repeat it without a changed boundary
 8. Do not invent another QG item; QG-01–QG-04 are local-only closures
@@ -393,7 +394,7 @@ override this snapshot.
 |-----------|---------------|------------------------|
 | VER-03 Python 3.13 gate | **LOCAL-CLOSED:** **1851 passed / 4 skipped**, **77.04%** coverage at threshold **72%** | Reopen only after a changed code/environment boundary; this is not locked Python 3.11 or release evidence |
 | §9 residuals | Cache, telemetry (**7/7**), dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, and PipelineRunner capacity + sync + streaming execution are local-green | No item preselected; SessionService needs an SLA decision and live alert delivery needs opt-in; no ungated local architecture owner is currently named |
-| HYBRID-MEM | Blank child environment propagation is local-green at `3c90368`; default hybrid quality is unproved; memory guard is last known disabled | Fresh explicit authority for Task Scheduler state and a separately bounded hybrid attempt; verify the guard before any model load |
+| HYBRID-MEM | Guard is enforced; production-reranker hybrid exceeded the 1 GiB ceiling and was killed before retrieval/provider execution | Do not retry locally without a narrowed design expected below 1 GiB; no hybrid quality claim exists |
 | Live quality ×3 | Only seed 42 ran and **failed**; seeds 43–44 and a valid passing aggregate do not exist | Fresh paid/live opt-in, compatible index, provider prerequisites, and fail-closed evidence collection |
 | INDEX-DIM | Active `rag_docs_default` is dimension 3; remote embeddings are 1024; retained compatible copy is diagnostic evidence only | Dedicated validated rebuild/publish scope; never replace/delete the active or retained collection casually |
 | Release / migrations / deploy / push | Plan and production remain open | Exact target-specific owner authorization plus the relevant full gate |
@@ -654,11 +655,11 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 ## 7. Next named candidate
 
-VER-03 is local-green after a fresh Python 3.13 CI-shaped unit+coverage run:
-**1851 passed / 4 skipped / 187 warnings in 753.44s**, coverage **77.04%** at a
-configured **72%** threshold. Do not repeat it without a changed code or
-environment boundary. No ungated local slice is preselected; remaining work
-needs live/deploy authority, a product/SLA decision, or human-labelled evidence.
+OPS-01 is enforced and default hybrid is conclusively memory-blocked under the
+1 GiB local ceiling. Do not retry the production reranker locally without a
+narrowed design expected below that limit. VER-03 remains local-green. No
+ungated local slice is preselected; remaining work needs a separately selected
+authorized boundary, a product/SLA decision, or human-labelled evidence.
 
 Completed lifecycle-owner boundaries are TraceService `9c207b6`,
 EscalationService `03057aa`, IngestionJobService API `84fbdf7`, ingestion worker
@@ -697,7 +698,7 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-174:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-175:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -883,10 +884,10 @@ Never log secret values.
 | Sync pipeline execution has one owner? | **Yes local** (`d865b06`): PipelineRunner owns executor submission, shielded wall deadline, and timeout capacity handoff for sync `/api/ask` |
 | Streaming pipeline execution has one owner? | **Yes local** (`c53f724`): PipelineRunner owns graph/event executor submission, queue and shielded-future deadlines, and timeout capacity handoff; router keeps SSE semantics and compatibility seams |
 | Agentic injection safety test current? | **Yes local** (`356a530`): mock follows `search_kb_docs(text, docs)` and the full safety/agentic band is green |
-| Canonical restart capsule reconciled? | **Yes as of Update-174**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
-| All known open problems indexed? | **Yes in §1C as of Update-174**; Actual Git/new evidence overrides the snapshot |
+| Canonical restart capsule reconciled? | **Yes as of Update-175**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
+| All known open problems indexed? | **Yes in §1C as of Update-175**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Active writer/test process **none**; owned implementation/test WIP **none**; Update-174 handoff files may be dirty until their docs-only commit |
+| WIP / active writer? | Active writer/test process **none**; owned implementation/test WIP **none**; Update-175 handoff files may be dirty until their docs-only commit |
