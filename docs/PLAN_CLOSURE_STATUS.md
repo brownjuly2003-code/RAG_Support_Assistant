@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-176 bounded formal live provider gate PASS)
+**Date:** 2026-08-12 (Update-177 next-session transparency reconciliation)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-176**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-177**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-176. Preserve it as DoD input, but use Actual Git + the committed
+> Update-177. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,14 +18,14 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-176:** one direct-Mistral formal §7.6 case completed with 1/1 effective
-case, zero infrastructure failures, complete Section 5 metrics, and
-authoritative child `evidence_valid=true` / `release_passed=true`. Both models
-passed `warranty-no-receipt-where`; reported cost was $0.000199. This is
-one-case live route/gate evidence, not scheduled breadth, independent-judge,
-quality ×3, or whole-release proof. Actual Git before this docs edit was
-`master...origin/master [ahead 302]` at `7279451`. No migration, deploy, push,
-DB persistence, product-code change, plan closure, or release claim follows.
+**Update-177:** docs-only reconciliation separates three non-equivalent facts:
+§5 seed 42 is a valid vector-only quality **FAIL**; §7.6 has a valid one-case
+direct-provider **PASS** but lacks scheduled breadth/independent judge; default
+hybrid is **MEMORY-BLOCKED** under the enforced 1 GiB limit. The stale §10
+aggregate-red text is corrected: Python 3.13 unit+coverage is local-green at
+1851 passed / 4 skipped and 77.04% coverage. Actual Git before this docs edit
+was `master...origin/master [ahead 303]` at `e4879b4`. No runtime or external
+action, plan closure, or release claim follows.
 
 ---
 
@@ -42,7 +42,7 @@ DB persistence, product-code change, plan closure, or release claim follows.
 | **7** eval gate fail-closed | **7.1–7.7 local + one-case direct-provider live PASS** | OPEN (scheduled breadth + independent judge) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5d3 owner slices local** | OPEN (SLA-gated sessions, live alert delivery) | soft |
-| **10** final verification / canary | Python 3.13 unit+coverage attempted: coverage green, suite red; corrective rerun timed out | OPEN | **yes** |
+| **10** final verification / canary | Python 3.13 CI-shaped unit+coverage local-green: **1851 passed / 4 skipped**, **77.04%** ≥ 72% | **OPEN** locked Python 3.11, integration/live services, migrations, image/Helm, canary and rollback | **yes** |
 
 **Project / production release: NOT claimed.**
 
@@ -371,7 +371,7 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-176)
+## Last-known verification snapshot (Update-177)
 
 | Band | Last known |
 |------|------------|

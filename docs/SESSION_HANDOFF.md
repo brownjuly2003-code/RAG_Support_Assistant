@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-12 — **Update-176** (bounded formal live provider gate PASS).
+**Обновлено:** 2026-08-12 — **Update-177** (next-session transparency reconciliation).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-176**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-177**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-176; dirty
+**Не использовать:** старые `START HERE` ниже Update-177; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -29,8 +29,8 @@
 |-------------------------|-------------------|
 | Последний implementation SHA | `c53f724` — §9.5d3 PipelineRunner streaming execution/deadline owner |
 | Последний committed test contract | `fce19ba` — isolate the tenant vector-store routing test from the real categorizer/LLM path |
-| Последний committed handoff до Update-176 | `7279451` — Update-175 memory-guard enforcement evidence; SHA этого docs-коммита всегда брать из Actual Git |
-| Actual Git перед этой docs edit | `master...origin/master [ahead 302]` at `7279451`; refresh remains mandatory |
+| Последний committed handoff до Update-177 | `e4879b4` — Update-176 bounded live-provider evidence; SHA этого docs-коммита всегда брать из Actual Git |
+| Actual Git перед этой docs edit | `master...origin/master [ahead 303]` at `e4879b4`; refresh remains mandatory |
 | Что закрыто локально | §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, PipelineRunner capacity + sync + streaming execution, VER-03, and VER-07; это не закрывает весь §9 и не означает production ready |
 | Последний live gate | one direct-Mistral formal §7.6 case: **1/1 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=true`; not breadth or whole-release evidence |
 | Известный baseline debt | no full locked-CI claim; ordinary router MyPy retains two pre-existing `no-redef` findings, and older `api/app.py`/legacy formatter debt remains outside recent changed lines |
@@ -50,10 +50,10 @@
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
 | Latest **committed test contract** | `fce19ba` — contextual-ingestion routing isolation |
-| Latest **committed docs before this Update** | `7279451` — Update-175 memory-guard enforcement evidence |
+| Latest **committed docs before this Update** | `e4879b4` — Update-176 bounded live-provider evidence |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 302]` at `7279451` before this docs edit — **refresh mandatory** |
-| Active writer / WIP | active writer/test process **none**; owned implementation/test WIP **none**; if these three handoff files are dirty, Update-176 docs WIP is present |
+| Branch advisory | observed `master...origin/master [ahead 303]` at `e4879b4` before this docs edit — **refresh mandatory** |
+| Active writer / WIP | active writer/test process **none**; owned implementation/test WIP **none**; if these three handoff files are dirty, Update-177 docs WIP is present |
 | Locally complete (documented scopes) | **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
@@ -71,6 +71,32 @@ not scheduled breadth, independent-judge, quality ×3, or whole-release proof.
 No migration, deploy, push, DB persistence, or product-code change occurred.
 Ignored local evidence: `reports/regression/20260812T084811Z-ministral-3b-latest-vs-mistral-small-latest.{json,md}`
 and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.json`.
+
+### 0B. Zero-guess restart card
+
+| Question | Durable answer |
+|----------|----------------|
+| What is the current docs baseline? | `e4879b4` before this docs-only Update; Actual Git must override the embedded SHA after commit. |
+| Is an owned writer/test still running? | **No.** Fresh process inspection found no live-provider, regression, or hybrid slice process. |
+| Is the memory guard active? | **Yes.** `PythonMemoryGuard` was freshly verified `Running`; unchanged contract is 1024 MiB / 10 seconds. |
+| What does §5 prove? | Seed 42 vector-only is valid live evidence but **FAILS** quality. Seeds 43–44 and passing ×3 evidence do not exist. |
+| What does §7.6 prove? | One direct-Mistral seed-43 case passed with valid complete child evidence. It proves the bounded route/gate attempt only, not scheduled breadth, independent judge, §5 ×3, or whole release. |
+| What does hybrid prove? | Default production reranker exceeded 1 GiB and was killed before retrieval/provider execution. Hybrid quality remains unknown; raw local retry is forbidden. |
+| What is the full local Python gate? | Python 3.13 CI-shaped unit+coverage is local-green: **1851 passed / 4 skipped**, coverage **77.04%** ≥ 72%. Locked Python 3.11 and release gates remain open. |
+| What is preauthorized next? | **Nothing.** A paid call, migration 019–023, deploy, or push needs a separately selected exact target and current authorization. |
+
+**Ignored evidence inventory — preserve; do not regenerate merely to verify:**
+
+| Artifact | Bytes | SHA-256 | Authority |
+|----------|------:|--------|-----------|
+| `reports/regression/20260812T084811Z-ministral-3b-latest-vs-mistral-small-latest.json` | 7,838 | `3E766339F20F9D73E0F09A72951E3A646A8562BF54EC2DB5C6FF589D52277A23` | authoritative child report |
+| `reports/regression/20260812T084811Z-ministral-3b-latest-vs-mistral-small-latest.md` | 1,193 | `B9CF2B57CE6BC77E2655B4833B0120D453DE22F0298C4E378795E03692F0B98E` | human-readable child report |
+| `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.json` | 1,299 | `C48F380EBA8097B0A4D4423CC909A75DD02F44AFA29BC240757FD1DFC4576C3E` | wrapper metadata; intentionally not verdict authority |
+
+These files are ignored by repository policy. Their absence in `git status`
+does not mean evidence is missing; verify existence and hash before relying on
+them. If a file is absent or its hash differs, report the gap and do not rerun
+the paid call automatically.
 
 **Last known verification:**
 
@@ -298,7 +324,7 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-176)
+### 1C. Authoritative open-problem ledger (Update-177)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
@@ -351,7 +377,7 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 295]` at `c68911d` before Update-170 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
+| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 303]` at `e4879b4` before Update-177 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
 | **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
 | **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. The two `.grok-prompts/dashboard-artifact-9-3a-*.md` controls remain, while their dashboard pytest basetemps are absent. `cache-namespace-9-1c.md` and its prompt are historical. | They are not implementation WIP. Do not bulk-delete or stage them, and do not relaunch the same Grok prompt without new evidence or a narrowed hypothesis. |
@@ -384,7 +410,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-176 in AGENT_STATE.md + §0A/§1C in this file
+5. Read ONLY top Update-177 in AGENT_STATE.md + §0A/§0B/§1C in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. VER-03 is local-green; do not repeat it without a changed boundary
 8. Do not invent another QG item; QG-01–QG-04 are local-only closures
@@ -699,7 +725,7 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-176:** `AGENT_STATE.md`, this file, and
+**Owned handoff paths for Update-177:** `AGENT_STATE.md`, this file, and
 `docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
 has already closed the diff; never stage the protected tracked files with them.
 
@@ -885,10 +911,10 @@ Never log secret values.
 | Sync pipeline execution has one owner? | **Yes local** (`d865b06`): PipelineRunner owns executor submission, shielded wall deadline, and timeout capacity handoff for sync `/api/ask` |
 | Streaming pipeline execution has one owner? | **Yes local** (`c53f724`): PipelineRunner owns graph/event executor submission, queue and shielded-future deadlines, and timeout capacity handoff; router keeps SSE semantics and compatibility seams |
 | Agentic injection safety test current? | **Yes local** (`356a530`): mock follows `search_kb_docs(text, docs)` and the full safety/agentic band is green |
-| Canonical restart capsule reconciled? | **Yes as of Update-176**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
-| All known open problems indexed? | **Yes in §1C as of Update-176**; Actual Git/new evidence overrides the snapshot |
+| Canonical restart capsule reconciled? | **Yes as of Update-177**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
+| All known open problems indexed? | **Yes in §1C as of Update-177**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
-| Formal §7.6 live provider evidence? | **No** (scaffold only); the separate lightweight smoke is not the formal gate |
+| Formal §7.6 live provider evidence? | **Partial:** one direct-Mistral seed-43 case has valid complete child evidence and release PASS; scheduled breadth and independent-judge execution remain open |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Active writer/test process **none**; owned implementation/test WIP **none**; Update-176 handoff files may be dirty until their docs-only commit |
+| WIP / active writer? | Active writer/test process **none**; owned implementation/test WIP **none**; Update-177 handoff files may be dirty until their docs-only commit |

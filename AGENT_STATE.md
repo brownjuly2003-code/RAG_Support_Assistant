@@ -1,5 +1,35 @@
 # Agent State
 
+## 2026-08-12 Update-177 — next-session transparency reconciliation ✅ START HERE
+
+> **Purpose:** docs-only reconciliation at committed HEAD `e4879b4`. No product
+> code, test contract, provider call, migration, deploy, push, index, database,
+> scheduler definition, or runtime configuration changed in this Update.
+>
+> **Do not merge these three outcomes:** (1) formal §5 vector-only seed 42 is
+> valid evidence but **FAILS** quality; seeds 43–44 and passing ×3 evidence do
+> not exist. (2) Formal §7.6 direct-provider run
+> `20260812T084811Z-b195b7a9` is a **PASS for one seed-43 case**, but is only
+> partial live evidence: no scheduled breadth or independent-judge execution.
+> (3) Default production-reranker hybrid is **MEMORY-BLOCKED** by the enforced
+> 1 GiB watchdog and has no quality result.
+>
+> **Current operations:** `PythonMemoryGuard` was freshly verified Running;
+> no live-provider/regression/hybrid slice process remained. The three ignored
+> live evidence files, sizes, and SHA-256 values are indexed in
+> `docs/SESSION_HANDOFF.md` §0B so a future session can verify them without
+> rerunning a paid call.
+>
+> **Corrected stale status:** the Python 3.13 CI-shaped unit+coverage gate is
+> **LOCAL-CLOSED** at 1851 passed / 4 skipped and 77.04% coverage. It is not
+> still the older aggregate-red/timed-out state, and it is not locked Python
+> 3.11, integration, migration, image/Helm, canary, rollback, or release proof.
+>
+> **Next-session boundary:** no next slice is preauthorized by this handoff.
+> Another paid provider run, migration 019–023, deploy, or push needs its own
+> exact target and current authorization. Do not retry default hybrid locally
+> without a design expected to remain below 1 GiB.
+
 ## 2026-08-12 Update-176 — bounded formal live provider gate PASS ⚠ START HERE
 
 > **Authorized live slice:** at committed HEAD `7279451`, Codex ran exactly one
