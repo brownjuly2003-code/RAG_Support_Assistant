@@ -1,5 +1,45 @@
 # Agent State
 
+## 2026-08-12 Update-186 — stream no-redef type slice locally closed ✅ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `fbebe5e`, ahead of
+> `origin/master` by 316 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **Committed implementation:** `fbebe5e` removes only the two repeated type
+> annotations in the legacy `ask_stream` path of
+> `api/routers/conversation.py`. The initial values remain exactly `[]` and
+> `None`; parity/legacy branching, result payloads, runtime values, ignores,
+> and tests are unchanged. This resolves the same-function-scope
+> `suggested_questions` and `graph_result` `no-redef` findings without a
+> behavioral refactor.
+>
+> **TDD/static evidence:** the unchanged CI MyPy command 2 reproduced **5
+> errors in 2 files / 31 sources** before the edit. Afterward, Grok and Codex
+> independently observed exactly **3 errors in 1 file / 31 sources**: both
+> `conversation.py` findings are absent and only the pre-existing
+> `api/app.py` `no-any-return`, `truthy-function`, and `unused-ignore` remain.
+> The command is still red and must not be called type-green.
+>
+> **Runtime/static verification:** Grok `local_grok_cli` run
+> `rag-ver01-stream-no-redef-20260812-01` used actual `grok-4.5-build` and
+> passed **19** focused streaming tests. Codex independently passed **11** key
+> parity/legacy streaming tests. Scoped Ruff, `git diff --check`, and LF checks
+> are clean. No QA follow-up was needed because the one-file diff is exactly
+> two annotation removals and all requested behavioral gates passed.
+>
+> **Next safe implementation candidate:** a separate `api/app.py` gate-hygiene
+> slice for the remaining three command-2 findings. Preserve the typed cache
+> helper and address the `--follow-imports=skip` return boundary locally;
+> replace the function-object truthiness guard explicitly; remove the stale
+> `_receive` ignore only when the same exact gate proves it unused. Do not mix
+> this with the 11 `agent/graph.py` findings.
+>
+> **Workspace truth:** implementation WIP is none. The four protected owner
+> files stayed byte-identical; unrelated untracked artifacts remain preserved.
+> No provider call, migration, deploy, push, index/database mutation, or
+> dependency/workflow change occurred; no delegated writer remains active.
+
 ## 2026-08-12 Update-185 — VER-01 executed; repository type debt confirmed ⚠ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `05cbc19`, ahead of

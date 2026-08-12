@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-185 VER-01 executed; type gate red; live FAIL unchanged)
+**Date:** 2026-08-12 (Update-186 stream no-redef closed; type gate remains red; live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-185**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-186**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-185. Preserve it as DoD input, but use Actual Git + the committed
+> Update-186. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -17,6 +17,16 @@ authoritative open-problem ledger in §1C.
 2. Local code slice ≠ full plan section complete ≠ production release.  
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
+
+**Update-186:** no plan checkbox or release gate changed. `fbebe5e` removes
+only the two repeated legacy annotations in `api/routers/conversation.py`;
+runtime initial values and streaming behavior remain unchanged. Exact MyPy
+command 2 moved from **5 errors in 2 files** to **3 errors solely in
+`api/app.py`**; it remains red. Grok passed 19 focused streaming tests, Codex
+passed 11 independent key tests, and scoped Ruff/diff/LF checks are clean. The
+remaining three API findings and all 11 `agent/graph.py` findings remain open
+as separate slices. No provider, migration, deploy, push, index, database,
+dependency, or workflow state changed.
 
 **Update-185:** no plan checkbox or release gate changed. The retained
 54-package hashed lock installed successfully into a fresh Windows CPython
