@@ -1,5 +1,35 @@
 # Agent State
 
+## 2026-08-12 Update-179 — GraceKelly artifact containment ✅ LOCAL ONLY START HERE
+
+> **Local diagnosis:** exact offline classification of the retained
+> `20260812T093713Z-6121aab5` child report found browser-shaped output in
+> **18/20** candidate answers: 12 timestamp-only values and 6 verbatim prompt
+> echoes. The other two answers were the existing failed-escalation fallback.
+> This explains the dominant candidate failure shape without another provider
+> call; it does not replace the authoritative live verdict.
+>
+> **Committed containment:** `63aa5df` makes `GraceKellyProvider` reject the
+> two evidenced browser-artifact classes with bounded
+> `ProviderUnavailable(reason="invalid_response")`. `dbd2b28` makes expected
+> generation-provider outages fail closed to `human` / `not_verified` through
+> response safety, without traceback-bearing graph state or automatic
+> `handle_error` ticket registration. Unexpected `RuntimeError` continues to
+> use the durable error-escalation path.
+>
+> **Verification:** provider guard TDD was **3 failed → 17 passed** and its
+> independent provider/failover band passed **28 tests**. Generation fail-closed
+> TDD was **1 failed → 1 passed**; a missing `safety → response_safety` edge was
+> then proven red and corrected once. The final graph/provider-safety band
+> passed **31 tests**; scoped Ruff, narrowed MyPy, and diff checks were clean.
+>
+> **Honest boundary / next:** `gracekelly-mixed` declares no fallback, so these
+> commits contain unsafe output but do **not** recover candidate quality.
+> Post-QG seed 42 remains the authoritative **LIVE FAIL**; seeds 43–44 and
+> passing ×3 evidence do not exist. Do not add a paid or local fallback without
+> an explicit routing/cost decision, edit `D:\GraceKelly` without separate
+> authority, or run another paid seed without fresh opt-in.
+
 ## 2026-08-12 Update-178 — post-QG live quality seed 42 FAIL ⚠ START HERE
 
 > **Authorized paid/live slice:** at committed HEAD `c9bd46c`, Codex ran the

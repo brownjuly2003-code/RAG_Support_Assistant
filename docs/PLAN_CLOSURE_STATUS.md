@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-178 post-QG live quality seed 42 FAIL)
+**Date:** 2026-08-12 (Update-179 GraceKelly artifact containment; live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-178**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-179**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-178. Preserve it as DoD input, but use Actual Git + the committed
+> Update-179. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -18,13 +18,15 @@ authoritative open-problem ledger in §1C.
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
 
-**Update-178:** an authorized post-QG §5 vector-only seed-42 run produced valid
-complete evidence but quality **FAILS**: candidate 25% versus baseline 90%, 13
-regressions, and 0 new passes. Two GraceKelly browser tasks hit the same
-`Locator.click` timeout; the formal report still has 20/20 effective cases and
-zero infrastructure failures. Fail-fast skipped seeds 43–44, so passing ×3
-evidence still does not exist. No product code, active index, database,
-migration, deploy, push, or scheduler definition changed.
+**Update-179:** offline classification of the retained post-QG seed-42 report
+found 12 timestamp-only and 6 prompt-echo candidate answers; the other two were
+failed-escalation fallbacks. `63aa5df` rejects the evidenced browser artifacts,
+and `dbd2b28` routes the resulting generation-provider outage human/not_verified
+without automatic ticket registration. The authoritative live verdict remains
+**FAIL** (candidate 25% versus baseline 90%, 13 regressions, 0 new passes), and
+`gracekelly-mixed` declares no fallback. Seeds 43–44 and passing ×3 evidence do
+not exist. No new provider call, index/database mutation, migration, deploy,
+push, or scheduler change occurred.
 
 ---
 
@@ -36,7 +38,7 @@ migration, deploy, push, or scheduler definition changed.
 | **2** index lifecycle | **2.1–2.6g local residual closed** | **OPEN** live PG/Redis/Celery/Chroma | yes for live index ops |
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.8 local** | **OPEN** parity default still off (product) | partial |
-| **5** grounding fail-closed | **5.1–5.7 + QG-01/QG-02/QG-03A/QG-03B/QG-04 + HYBRID-MEM env local** | **OPEN** post-QG seed 42 has valid complete evidence but **FAILS** at 25% candidate vs 90% baseline; passing ×3 remains open | **yes** quality |
+| **5** grounding fail-closed | **5.1–5.7 + QG-01/QG-02/QG-03A/QG-03B/QG-04 + GraceKelly artifact containment + HYBRID-MEM env local** | **OPEN** post-QG seed 42 has valid complete evidence but **FAILS** at 25% candidate vs 90% baseline; passing ×3 remains open | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
 | **7** eval gate fail-closed | **7.1–7.7 local + one-case direct-provider live PASS** | OPEN (scheduled breadth + independent judge) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
@@ -63,15 +65,18 @@ use only non-sensitive test data and recheck external terms before enabling it.
 
 ---
 
-## Current live-quality incident (Update-178)
+## Current live-quality incident (Update-179)
 
 The post-QG native vector-only run produced valid complete child evidence for
 seed 42 but failed the quality gate: candidate pass 25% (baseline 90%, required
 ≥85%), 13 regressions, 0 new passes, context precision 0.3012, context recall
 0.725, FULL 0.70, MISS 5, faithfulness 0.7101, and answer relevancy 0.30.
-Two GraceKelly browser tasks hit the same `Locator.click` 5-second timeout and
-several candidate answers were timestamps. Seeds 43–44 did not run, so no valid
-three-run aggregate or release evidence exists.
+Two GraceKelly browser tasks hit the same `Locator.click` 5-second timeout.
+Offline classification found browser-shaped output in 18/20 candidate answers:
+12 timestamp-only values and 6 prompt echoes; the remaining two were failed-
+escalation fallbacks. `63aa5df` and `dbd2b28` contain these shapes locally but
+do not recover quality. Seeds 43–44 did not run, so no valid three-run aggregate
+or release evidence exists.
 
 | Incident slice | Local status | Live status |
 |----------------|--------------|-------------|
@@ -80,6 +85,7 @@ three-run aggregate or release evidence exists.
 | **QG-03A** `error-e20-filter-or-pump` verifier outage | fixed at `80c2603`; retained trace proved `verify_facts` transport failure and answer overwrite | replayed and regressed; candidate returned a timestamp |
 | **QG-03B** same case content path | fixed at `5662ea7`; relevant contextual-header shells now resolve to content-bearing chunks from the same logical source | live replay did not recover the E20 answer |
 | **QG-04** `error-e30` | shared cause fixed at `5662ea7`; exact retained five-document replay guarded at `5f8bb78` | replayed and regressed; candidate returned a timestamp |
+| **QG-LIVE artifact containment** | `63aa5df` rejects timestamp-only/prompt-echo answers; `dbd2b28` sends expected generation-provider outages human/not_verified through response safety | not live-replayed; `gracekelly-mixed` has no fallback and the authoritative seed-42 verdict remains FAIL |
 
 The active collection remains dimension 3 while the remote embedding lane is
 dimension 1024. The successful diagnostic run used a retained six-document
@@ -349,9 +355,12 @@ Local green slices alone **do not** close the plan.
 OPS-01 is enforced and default hybrid is memory-blocked above the 1 GiB local
 ceiling before retrieval/provider execution. Do not retry it locally without a
 narrowed design expected below that limit. VER-03 remains local-green, and
-QG-01–QG-04 remain locally green but their post-QG seed-42 live replay failed.
-The next safe boundary is local diagnosis of candidate/browser behavior; do not
-spend another paid seed before that diagnosis and fresh authorization.
+QG-01–QG-04 remain locally green, and the candidate/browser output shapes are
+locally contained at `63aa5df`/`dbd2b28`; their post-QG seed-42 live replay
+still failed. No ungated local implementation is preselected. A next provider
+step needs separate authority for `D:\GraceKelly`, or an explicit routing/cost
+decision before adding any fallback. Do not spend another paid seed without a
+fresh exact opt-in.
 
 Gated alternatives remain: further live provider breadth/independent judge,
 quality ×3 (`--execute` + secrets + fresh opt-in), a real dual-annotator human
@@ -372,10 +381,12 @@ full repository, locked Python-3.11, CI, or production verification result.
 
 ---
 
-## Last-known verification snapshot (Update-178)
+## Last-known verification snapshot (Update-179)
 
 | Band | Last known |
 |------|------------|
+| **GraceKelly artifact guard** | `63aa5df`: focused TDD **3 failed → 17 passed**; independent provider/failover band **28 passed**; scoped Ruff/MyPy/diff clean; no live call |
+| **Generation-provider fail-closed** | `dbd2b28`: focused TDD **1 failed → 1 passed**; missing conditional edge separately reproduced red then corrected once; final provider-graph/error/verifier/safety band **31 passed**; scoped Ruff/narrowed MyPy/diff clean; no live call |
 | **7.6 bounded live provider** | run `20260812T084811Z-b195b7a9`: direct Mistral, seed 43, one case; **1/1 effective**, zero infrastructure failures, complete Section 5 metrics, authoritative child evidence/release PASS; both sides refusal rate 1.0, so scheduled breadth, independent judge, quality ×3, and whole-release claims remain open |
 | **OPS-01 / HYBRID-MEM** | `PythonMemoryGuard` Running/Enabled; one default-hybrid smoke killed only PID 11984 at **4044.1 MiB private / 801.4 MiB working set** against **1024 MiB**, during reranker loading before retrieval/provider execution; default hybrid remains memory-blocked and has no quality claim |
 | **VER-03 Python 3.13 unit+coverage gate** | **LOCAL-CLOSED:** fresh CI-shaped run passes **1851 tests / 4 skipped / 187 warnings in 753.44s** at **77.04%** coverage (threshold **72%**); no locked Python 3.11, integration/live-service, migration, image/Helm, or release-green claim |
