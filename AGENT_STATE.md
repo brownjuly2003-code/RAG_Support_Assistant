@@ -1,5 +1,60 @@
 # Agent State
 
+## 2026-08-12 Update-193 — INDEX-DIM runtime guard closed; active index still incompatible ⚠ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `d157b31`, ahead of
+> `origin/master` by 329 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **Committed implementation:** `d157b31` closes the tenant-runtime detection
+> gap for an already-active Chroma collection. Built-in local and remote
+> embedders now expose a declared positive vector dimension; remote responses
+> are checked against that declaration; `RAG_EMBEDDING_REMOTE_DIMENSION`
+> defaults to `1024`. Before chunk restoration, retriever construction, or
+> cache publication, `vectordb.manager.get_retriever()` reads at most one
+> stored embedding and compares its width with the declared embedder width.
+> A mismatch raises `ActiveCollectionEmbeddingDimensionMismatch`, clears all
+> four tenant runtime caches, and requires a compatible rebuild. The guard
+> makes no embedding/provider call and does not write, delete, rebuild, or
+> publish any collection or manifest.
+>
+> **Test evidence:** the exact missing-guard regression was proved red by
+> temporarily removing only the guard call: it reached forbidden chunk
+> restoration instead of rejecting `3 != 1024`. An adversarial stale-cache
+> variant was separately proved red: a matching prior index key left stale
+> chunks behind on mismatch. After the final correction, Codex independently
+> passed **36** focused vector-manager/remote/base-manager tests, scoped Ruff,
+> and `git diff --check`. The mismatch test asserts zero provider calls, zero
+> collection mutations, no chunk restore/retriever construction, and absence
+> of tenant entries in retriever/chunk/store/index-key caches.
+>
+> **Grok truth:** the first launcher attempt never created metadata and did not
+> start. The second `local_grok_cli` implementation run produced a partial
+> scoped diff but stalled with empty stdout/stderr and was stopped once, so its
+> model, red/green sequence, and self-review are unclaimed. The single QA/fix
+> follow-up completed normally in 11 turns with actual `grok-4.5-build` and
+> self-reported **19 passed** plus clean Ruff/diff review. Codex independently
+> verified the result, then found and corrected the stale matching-index-key
+> cache case; no further delegated run was launched.
+>
+> **Critical residual — do not collapse these states:** the active legacy
+> `rag_docs_default` collection is still dimension **3**, while configured
+> remote embeddings are dimension **1024**. Runtime now fails fast instead of
+> serving/caching an incompatible retriever, but retrieval and live quality are
+> not recovered. The compatible six-document diagnostic copy remains under
+> `.tmp/live-quality-native-index-20260809/chroma`. No active collection was
+> rebuilt, replaced, deleted, or published. A validated versioned rebuild plus
+> controlled publication/rollback is a separate gated slice; never treat the
+> retained diagnostic copy as already-published production state.
+>
+> **Workspace truth:** implementation/test WIP is none. Protected owner files
+> `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`
+> remained byte-identical and dirty for unrelated reasons. The two untracked
+> `.grok-prompts/index-dim-runtime-guard-*.md` files and repo-local pytest temp
+> directories are control/evidence artifacts, not WIP; do not stage or rerun
+> them casually. No writer remains active. No provider call, index mutation,
+> migration, deploy, push, or release action occurred.
+
 ## 2026-08-12 Update-191 — local VER-01 MyPy gate closed ✅ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `d4583cc`, ahead of

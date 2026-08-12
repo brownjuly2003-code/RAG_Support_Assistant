@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-12 — **Update-192** (active VER-01 routing reconciled to local type-green; Linux/full-lock proof and live FAIL unchanged).
+**Обновлено:** 2026-08-12 — **Update-193** (INDEX-DIM tenant-runtime guard committed; active 3D index remains incompatible and unpublished at 1024D).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-191**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-193**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-191; dirty
+**Не использовать:** старые `START HERE` ниже Update-193; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -27,18 +27,18 @@
 
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
-| Последний implementation SHA | `d4583cc` — precise shared agentic terminal `TypedDict` contracts close the final eight local MyPy findings without call-site suppressions; preceding type slice `acc76ee` |
-| Последний committed test contract | `e400d88` — Starlette TestClient must have `httpx2` pinned in the dev input and hashed lock; preceding product contract `dbd2b28` covers ProviderUnavailable generation routing |
-| Последний committed docs/dependency closure | `f95ec99` — Update-191 local MyPy gate closure; latest dependency closure remains `e400d88` (VER-04) |
-| Actual Git перед этой docs edit | `master...origin/master [ahead 327]` at `f95ec99`; refresh remains mandatory and this is not push authority |
-| Что закрыто локально | GraceKelly timestamp/prompt-echo containment, generation-provider fail-closed, and the VER-04 repository/CI dependency contract; current global Python is not dev-lock-synchronized and still warns. §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не восстанавливает live quality и не означает production ready |
+| Последний implementation SHA | `d157b31` — fail-fast tenant-runtime compatibility guard for active Chroma dimensions; preceding type closure `d4583cc` |
+| Последний committed test contract | `d157b31` — active `3D` collection vs declared `1024D` embedder must fail before provider calls, retriever construction, collection mutation, or any of four tenant-cache writes |
+| Последний committed docs/dependency closure | `ad10b54` — Update-192 restart-routing reconciliation; latest dependency closure remains `e400d88` (VER-04) |
+| Actual Git перед этой docs edit | `master...origin/master [ahead 329]` at `d157b31`; refresh remains mandatory and this is not push authority |
+| Что закрыто локально | `INDEX-DIM` runtime detection/cache containment is local-green at `d157b31`; the active collection itself is **not** repaired. GraceKelly artifact containment, generation-provider fail-closed, VER-01 local MyPy, §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не восстанавливает live quality и не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
 | Известный baseline debt | **VER-01 is LOCAL TYPE-GREEN:** exact command 1 is green across 72 sources and exact command 2 is freshly green across 31 sources in the retained Windows Python 3.11 diagnostic environment. Exact Ubuntu/full 222-package-lock equivalence remains unproved |
-| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none**; ignored v2 input/lock and venv are retained under `.tmp/`; no active delegated writer |
-| Grok route truth | `local_grok_cli` run `rag-update192-handoff-routing-20260812-01` used actual `grok-4.5-build`, completed normally in 7 turns, changed only this handoff, and self-reported clean scoped review. Codex independently found and corrected stale top metadata before the final gate; no QA follow-up ran |
-| Что не запускалось | Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana import/provisioning, seeds 43–44, independent judge, and scrape/alert delivery did not run. One post-QG 20-case seed 42 did run and fail fast |
+| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none**; ignored v2 input/lock and venv plus INDEX-DIM Grok prompts/test temps are retained artifacts; no active delegated writer |
+| Grok route truth | INDEX-DIM implementation attempt 1 never launched; attempt 2 left a partial scoped diff and stalled with empty logs; the one QA/fix follow-up completed normally in 11 turns using actual `grok-4.5-build` and reported 19 green tests. Codex independently verified 36 tests and corrected one stale matching-index-key cache case. No further Grok run occurred |
+| Что не запускалось | Active-index rebuild/publish/rollback, real provider calls, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana import/provisioning, seeds 43–44, independent judge, and scrape/alert delivery did not run. One post-QG 20-case seed 42 did run and fail fast |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
-| Следующий slice | No further local type-debt item is preauthorized by this closure. Refresh Actual Git and the open-problem ledger, then select one distinct named slice. Do not raw-retry exhausted WSL installs; exact Linux CI needs explicit remote/push authority or a genuinely new local hypothesis |
+| Следующий slice | `INDEX-DIM-REBUILD` is the explicit residual: validated versioned 1024D rebuild → staged validation → controlled publish/rollback evidence. This row is status, not mutation/provider authorization. Never replace/delete the active or retained collection casually; otherwise select a different distinct owner-approved slice |
 
 ---
 
@@ -46,19 +46,19 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **committed implementation** | `d4583cc` — precise agentic terminal payload contracts close both local VER-01 MyPy commands; preceding type slice `acc76ee` |
+| Latest **committed implementation** | `d157b31` — read-only tenant-runtime dimension guard blocks incompatible active Chroma before restore/retriever/cache; preceding type closure `d4583cc` |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
-| Latest **committed test contract** | `e400d88` — exact `httpx2` dev-input + hashed-lock contract; latest product contract remains `dbd2b28` ProviderUnavailable safety routing |
-| Latest **committed docs before this Update** | `f95ec99` — Update-191 local MyPy gate closure |
+| Latest **committed test contract** | `d157b31` — stored vector width must equal the declared embedder width without calling the embedder; mismatch clears all tenant runtime caches |
+| Latest **committed docs before this Update** | `ad10b54` — Update-192 restart-routing reconciliation |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 327]` at `f95ec99` before this docs edit — **refresh mandatory; no push authorization** |
-| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored v2 input/lock/venv remain under `.tmp/`; if this handoff file is dirty, Update-192 docs WIP is present |
-| Locally complete (documented scopes) | GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28` + TestClient backend `e400d88`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/04/05/06/07** |
+| Branch advisory | observed `master...origin/master [ahead 329]` at `d157b31` before this docs edit — **refresh mandatory; no push authorization** |
+| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored v2 input/lock/venv and INDEX-DIM control/test artifacts remain local; if these two handoff docs are dirty, Update-193 docs WIP is present |
+| Locally complete (documented scopes) | INDEX-DIM runtime guard `d157b31` + GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28` + TestClient backend `e400d88`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/04/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | refresh Actual Git and the open-problem ledger, then select one distinct named local slice. WSL raw retry remains exhausted. Live recovery still needs an authorized GraceKelly/routing boundary or a fresh paid gate |
+| Next ordered | `INDEX-DIM-REBUILD` only as a separately authorized, validated versioned rebuild/publish scope; guard closure alone does not repair retrieval. WSL raw retry remains exhausted. Live recovery still needs an authorized index/provider/routing boundary or a fresh paid gate |
 | Gates | WSL was used only for isolated dependency verification; Docker daemon was unavailable. No push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
@@ -76,15 +76,24 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 
 | Question | Durable answer |
 |----------|----------------|
-| What is the current docs baseline? | `f95ec99` before this docs-only Update; Actual Git must override the embedded SHA after commit. |
-| Is an owned writer/test still running? | No. Executor, QA, and both independent MyPy commands completed; no related process remains. |
+| What is the current docs baseline? | `ad10b54` before this docs-only Update; Actual Git must override the embedded SHA after commit. |
+| Is an owned writer/test still running? | No. Grok implementation/QA processes and independent INDEX-DIM tests completed; no related process remains. |
 | Is the memory guard active? | **Yes.** `PythonMemoryGuard` was freshly verified `Running`; unchanged contract is 1024 MiB / 10 seconds. |
 | What does §5 prove? | The post-QG vector-only seed 42 is valid live evidence but **FAILS** quality: 25% candidate vs 90% baseline, 13 regressions. Seeds 43–44 and passing ×3 evidence do not exist. |
 | What does local artifact containment prove? | Retained output classification found 12 timestamp-only and 6 prompt-echo candidate answers. `63aa5df` rejects those shapes; `dbd2b28` routes the resulting provider outage human/not_verified without automatic ticket registration. No live recovery is inferred. |
 | What does §7.6 prove? | One direct-Mistral seed-43 case passed with valid complete child evidence. It proves the bounded route/gate attempt only, not scheduled breadth, independent judge, §5 ×3, or whole release. |
 | What does hybrid prove? | Default production reranker exceeded 1 GiB and was killed before retrieval/provider execution. Hybrid quality remains unknown; raw local retry is forbidden. |
 | What is the full local Python gate? | Python 3.13 CI-shaped unit+coverage is local-green: **1851 passed / 4 skipped**, coverage **77.04%** ≥ 72%. VER-01 retained Windows Python 3.11 MyPy command 1 is green across 72 sources and command 2 is green across 31 sources. Ubuntu/full 222-package-lock CI and release gates remain open. |
-| What is preauthorized next? | Nothing beyond this completed local type slice. Refresh the open ledger and choose one distinct safe local item. Do not raw-retry WSL or claim Linux CI equivalence. GraceKelly edit, routing/fallback cost change, paid call, migration 019–023, deploy, or push needs separate exact authority. |
+| What is preauthorized next? | Nothing beyond the completed runtime guard. `INDEX-DIM-REBUILD` remains a named residual, not authorization to mutate/publish an index or call a provider. Do not raw-retry WSL or claim Linux CI equivalence. GraceKelly edit, routing/fallback cost change, paid call, migration 019–023, deploy, or push needs separate exact authority. |
+
+**Update-193 implementation evidence:** `d157b31` adds a read-only one-vector
+active Chroma preflight at the tenant-runtime boundary, declares built-in
+embedder widths, validates remote response width, and defers/clears all four
+tenant caches on compatibility failure. The exact missing-guard and stale
+matching-index-key cache cases were each proved red before their corrections.
+The independent final gate passed **36 tests**, scoped Ruff, and
+`git diff --check`. No provider call, active-index/manifest mutation,
+rebuild/publication, migration, push, deploy, or live-quality replay occurred.
 
 **Update-191 implementation evidence:** `d4583cc` adds precise shared agentic
 terminal payload contracts and declares the two observability keys already
@@ -176,6 +185,7 @@ the paid call automatically.
 
 | Slice | Last known gate |
 |-------|-----------------|
+| **INDEX-DIM guard** | `d157b31`: exact missing-guard red reached forbidden chunk restore; stale matching-key cache red retained chunks; final independent vector-manager/remote/base-manager band **36 passed**; scoped Ruff and `git diff --check` clean; zero real provider calls and zero index/manifest mutations |
 | **GraceKelly artifact guard** | `63aa5df`: focused TDD **3 failed → 17 passed**; independent provider/failover band **28 passed**; scoped Ruff/MyPy/diff clean; no live call |
 | **Generation-provider fail-closed** | `dbd2b28`: focused TDD **1 failed → 1 passed**; missing `safety → response_safety` mapping separately reproduced red and corrected once; final graph/provider-safety band **31 passed**; scoped Ruff/narrowed MyPy/diff clean; no live call |
 | **§5 post-QG live quality** | run `20260812T093713Z-6121aab5`: 20/20 effective, zero infrastructure failures, complete metrics, authoritative child evidence valid / release FAIL; candidate 25% vs baseline 90%, 13 regressions, 0 new passes; outer fail-fast stopped seeds 43–44 |
@@ -404,15 +414,16 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-192 reconciliation; historical IDs from Update-180)
+### 1C. Authoritative open-problem ledger (Update-193 reconciliation; historical IDs from Update-180)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
 `DEFERRED` needs a product/SLA decision; `LOCAL-ONLY` means code is fixed but
 the relevant live outcome has not been re-proved. Actual Git and newer evidence
-override this snapshot. Active VER-01 status below reflects Update-191 local
-type-green evidence; historical Update-180/181/182/183/185/190 blocks elsewhere
-remain dated and are not rewritten.
+override this snapshot. Active INDEX-DIM status below separates the closed
+runtime guard from the still-incompatible active collection; active VER-01
+status reflects Update-191 local type-green evidence. Historical blocks remain
+dated and are not rewritten.
 
 #### Product / RAG quality
 
@@ -423,7 +434,8 @@ remain dated and are not rewritten.
 | **QG-04** | **LOCAL-ONLY** | Retained trace showed E30 content at retrieve, then only its header shell at grade; low-quality generation triggered a retry whose retrieval was empty. Current `5662ea7` replay restores the E30 body at the first loss boundary, and `5f8bb78` guards the exact five-document verdict pattern. | No live replay; do not infer E30 keyword recovery or reopen without new code/evidence. |
 | **QG-LIVE** | **LOCAL-CONTAINED / LIVE FAIL** | Offline classification of all 20 retained candidate answers found 12 timestamp-only, 6 prompt echoes, and 2 failed-escalation fallbacks. `63aa5df` rejects the evidenced browser artifacts as `invalid_response`; `dbd2b28` routes expected generation-provider outages human/not_verified through response safety without traceback state or automatic ticket registration. | `gracekelly-mixed` has no fallback, so quality recovery is unproved. A GraceKelly/root extraction fix or routing/fallback cost decision needs separate authority; do not claim live recovery. |
 | **LIVE-QUALITY** | **OPEN / FAIL** | Post-QG seed 42 of required seeds 42–44 ran with valid complete evidence: precision 0.3012, recall 0.725, FULL 0.70, MISS 5, faithfulness 0.7101, relevancy 0.30, unverified-auto 0. Candidate pass 25% vs baseline 90%/floor 85%; 13 regressions. | Fail-fast skipped seeds 43–44. Passing §5 evidence does not exist; another paid run needs fresh authorization after an approved provider/routing boundary. |
-| **INDEX-DIM** | **OPEN** | Active `rag_docs_default` is dimension 3 and incompatible with remote 1024-dimension embeddings. A compatible six-document diagnostic copy is retained under `.tmp/live-quality-native-index-20260809/chroma`; the active collection was not rebuilt. | Dedicated validated rebuild/publish scope; do not replace or delete collections casually. |
+| **INDEX-DIM-GUARD** | **LOCAL-CLOSED** | `d157b31` declares built-in embedder dimensions, validates remote response width, and makes tenant runtime read one stored Chroma embedding before chunk restore/retriever/cache. `3 != 1024` raises a bounded rebuild-required error, performs no provider call or collection mutation, and leaves no tenant retriever/chunk/store/index-key cache. Independent final gate: **36 passed**, Ruff and diff clean. | Do not reopen without a dimension/cache boundary change. This is containment/diagnosis only, not index compatibility or quality recovery. |
+| **INDEX-DIM-REBUILD** | **OPEN / MUTATION-GATED** | Active `rag_docs_default` remains dimension **3** and incompatible with configured remote dimension **1024**. The compatible six-document copy under `.tmp/live-quality-native-index-20260809/chroma` is retained diagnostic evidence only; it was not published. | Separate validated versioned rebuild → staged checks → controlled publication/rollback evidence. Never replace/delete the active or retained collection casually; no provider/index mutation authority is implied by this ledger. |
 | **HYBRID-MEM** | **LOCAL-CLOSED / MEMORY-BLOCKED** | `3c90368` proves blank child-reranker propagation. Update-175 enabled the 1 GiB watchdog and one bounded default-hybrid smoke was killed during production reranker loading at **4044.1 MiB private / 801.4 MiB working set**, before retrieval/provider execution. | Do not retry this high-memory path locally. A future design must be expected to stay below 1 GiB; vector-only seed 42 remains the authoritative quality FAIL. |
 | **LIVE-LATENCY** | **OPEN** | Seed 42 took about 2 h 9 min. Mean latency was 81,878.8 ms baseline vs 304,456.7 ms candidate. | Profile only in a separately authorized bounded run; do not raw-retry the aggregate. |
 
@@ -459,7 +471,7 @@ remain dated and are not rewritten.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 304]` at `c9bd46c` before Update-178 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
+| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 329]` at `d157b31` before Update-193 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
 | **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
 | **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. The two `.grok-prompts/dashboard-artifact-9-3a-*.md` controls remain, while their dashboard pytest basetemps are absent. `cache-namespace-9-1c.md` and its prompt are historical. | They are not implementation WIP. Do not bulk-delete or stage them, and do not relaunch the same Grok prompt without new evidence or a narrowed hypothesis. |
@@ -492,7 +504,7 @@ remain dated and are not rewritten.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-191 in AGENT_STATE.md + §0A/§0B/§1C in this file
+5. Read ONLY top Update-193 in AGENT_STATE.md + §0A/§0B/§1C in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. VER-03 is local-green; do not repeat it without a changed boundary
 8. Do not invent another QG item; QG-01–QG-04 are local-only closures
@@ -507,7 +519,8 @@ remain dated and are not rewritten.
 | §9 residuals | Cache, telemetry (**7/7**), dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, and PipelineRunner capacity + sync + streaming execution are local-green | No item preselected; SessionService needs an SLA decision and live alert delivery needs opt-in; no ungated local architecture owner is currently named |
 | HYBRID-MEM | Guard is enforced; production-reranker hybrid exceeded the 1 GiB ceiling and was killed before retrieval/provider execution | Do not retry locally without a narrowed design expected below 1 GiB; no hybrid quality claim exists |
 | Live quality ×3 | Post-QG seed 42 ran with valid evidence and **failed** at 25% candidate vs 90% baseline; seeds 43–44 and a valid passing aggregate do not exist | Diagnose candidate/browser behavior locally first; any new paid seed needs fresh opt-in |
-| INDEX-DIM | Active `rag_docs_default` is dimension 3; remote embeddings are 1024; retained compatible copy is diagnostic evidence only | Dedicated validated rebuild/publish scope; never replace/delete the active or retained collection casually |
+| INDEX-DIM guard | **LOCAL-CLOSED at `d157b31`:** tenant runtime fails before provider/retriever/cache/mutation when stored width differs from declared embedder width | Do not reopen without a dimension/cache boundary change; guard closure is not index repair |
+| INDEX-DIM rebuild | **OPEN / MUTATION-GATED:** active `rag_docs_default` is still 3D; configured remote embeddings are 1024D; retained compatible copy is diagnostic evidence only | Separate validated versioned rebuild/stage/publish/rollback scope; never replace/delete the active or retained collection casually |
 | Release / migrations / deploy / push | Plan and production remain open | Exact target-specific owner authorization plus the relevant full gate |
 
 The table is routing information only. It grants no permission to execute a
@@ -526,7 +539,7 @@ consumed; do not infer permission for another paid call.
 | Plan § | Local | Residual / blockers |
 |--------|-------|---------------------|
 | **1** live multi-tenant / backup / RPO | partial chart/docs | **opt-in live** — Gate A open |
-| **2** index lifecycle | **2.1–2.6g** local residual closed | live PG/Redis/Celery/Chroma + migrate drills |
+| **2** index lifecycle | **2.1–2.6g + INDEX-DIM runtime guard** local | active 3D→1024D validated rebuild/publication; live PG/Redis/Celery/Chroma + migrate drills |
 | **3** execution / session / budget | **3.1a–3.1i** local | multi-replica durable session (**DEFER** without SLA; design exists) |
 | **4** pipeline + escalation | **4.1–4.8** local | parity default still **off** (product decision) |
 | **5** grounding fail-closed | **5.1–5.7** local | one valid live seed-42 report exists but **FAILS** quality; seeds 43–44 and passing ×3 evidence remain open |
@@ -549,6 +562,12 @@ evidence and closes no plan DoD.
 native GraceKelly + SQLite. Its one-call live acceptance does not substitute
 for the formal §5 quality ×3 or §7.6 provider-gate evidence.
 
+`d157b31` adds a separate fail-fast runtime compatibility guard for active
+Chroma collections. It prevents an incompatible retriever from being restored
+or cached, but it does not make the existing 3D collection usable with the
+configured 1024D remote embedder. Therefore it closes no live-quality or
+release DoD and does not authorize a rebuild/publication.
+
 The Update-130 seed-42 quality sidecar is formal live §5 evidence, but it is a
 failed single run rather than a passing ×3 aggregate. It closes neither §5 DoD
 nor release readiness.
@@ -563,6 +582,12 @@ nor release readiness.
 |-------|-----|---------|
 | OpenCode Zen trial/free | `faaa815` | fixed free model/profile, endpoint identity, fail-fast key, live-gate/workflow/Helm plumbing, safety docs |
 | Lightweight GraceKelly RAG smoke | `99c6be5` | existing Chroma lexical context → exact `claude-sonnet-5` request → SQLite success record; provider failures persist no PASS row |
+
+### Index compatibility containment
+
+| Slice | SHA | Surface |
+|-------|-----|---------|
+| **INDEX-DIM guard** | `d157b31` | declared local/remote embedder width + remote response validation + read-only one-vector active Chroma preflight + fail-closed four-cache eviction; no rebuild/publish |
 
 ### §5 grounding / quality (recent focus)
 
@@ -767,9 +792,15 @@ Full suite / live / migrate — **not** the default gate for a single slice.
 
 OPS-01 is enforced and default hybrid is conclusively memory-blocked under the
 1 GiB local ceiling. Do not retry the production reranker locally without a
-narrowed design expected below that limit. VER-03 remains local-green. No
-ungated local slice is preselected; remaining work needs a separately selected
-authorized boundary, a product/SLA decision, or human-labelled evidence.
+narrowed design expected below that limit. VER-03 remains local-green.
+`INDEX-DIM-GUARD` is locally closed at `d157b31`; do not reimplement or
+re-probe it. The named residual is **INDEX-DIM-REBUILD**: a versioned 1024D
+candidate build, staged compatibility/content checks, and controlled
+publication/rollback evidence. Because that scope can call an embedding
+provider and mutate/publish index state, this handoff records it but does not
+authorize it. Otherwise no ungated local slice is preselected; remaining work
+needs a separately selected authorized boundary, a product/SLA decision, or
+human-labelled evidence.
 
 Completed lifecycle-owner boundaries are TraceService `9c207b6`,
 EscalationService `03057aa`, IngestionJobService API `84fbdf7`, ingestion worker
@@ -811,9 +842,9 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff path for Update-192:** this file only. Actual Git decides
-whether its docs-only commit has already closed the diff; never stage the
-protected tracked files with it.
+**Owned handoff paths for Update-193:** `AGENT_STATE.md` and this file only.
+Actual Git decides whether the docs-only commit has already closed the diff;
+never stage the protected tracked files with it.
 
 **Owned implementation/test WIP:** none. The former topology-test WIP is
 committed at `eb764da`; the retained pytest basetemps are evidence/artifacts,
@@ -837,6 +868,12 @@ checkbox edits), architecture HTML, etc. Preserve these unrelated artifacts.
 `.tmp/live-quality-native-index-20260809/chroma` is retained diagnostic
 evidence, not implementation WIP. It contains the compatible dimension-1024
 collection used by seed 42; do not rebuild, stage, or delete it casually.
+
+The untracked
+`.grok-prompts/index-dim-runtime-guard-20260812.md` and
+`.grok-prompts/index-dim-runtime-guard-qa-20260812.md` files plus
+`.tmp/pytest-index-dim-*` directories are historical control/test evidence for
+`d157b31`, not active WIP. Do not relaunch or stage them casually.
 
 There is no owned untracked implementation WIP. The retained
 `cache-namespace-9-1c.md` and
@@ -870,6 +907,7 @@ are absent.
 | Gate | Env | Default |
 |------|-----|---------|
 | Streaming parity | `STREAMING_RAG_PARITY` | **false** |
+| Declared remote embedding width | `RAG_EMBEDDING_REMOTE_DIMENSION` | `1024`; must match the configured remote model and active index |
 | Live provider gate | `RAG_LIVE_PROVIDER_GATE` | off |
 | Live quality metrics gate | `RAG_LIVE_QUALITY_METRICS_GATE` | off |
 | Live-quality child reranker override | CLI `--disable-child-reranker` with `--mode live --execute` | off; when explicit, child receives `RAG_RERANKER_MODEL=""` |
@@ -957,6 +995,8 @@ Never log secret values.
 | 72 | docs | `4c91c8b` | commit the Update-179 GraceKelly artifact-containment handoff; no new live recovery claim |
 | 73 | **VER-04** | `e400d88` | pin the Starlette TestClient `httpx2` backend in the dev input and hashed lock; retain direct application `httpx` |
 | 74 | docs | resolve through Actual Git | Update-180 next-session reconciliation; no implementation, provider, migration, push, deploy, or release change |
+| 75 | **INDEX-DIM guard** | `d157b31` | fail fast on active Chroma dimension mismatch before provider/retriever/cache/mutation; active index remains 3D |
+| 76 | docs | resolve through Actual Git | Update-193 separates guard closure from the still-gated 1024D rebuild/publish residual |
 
 ---
 
@@ -1002,10 +1042,11 @@ Never log secret values.
 | Agentic injection safety test current? | **Yes local** (`356a530`): mock follows `search_kb_docs(text, docs)` and the full safety/agentic band is green |
 | Starlette TestClient warning closed? | **Repository contract yes; current host no** (`e400d88`): `httpx2 2.10.0` is pinned in the dev input and hashed lock; isolated strict-warning band **33 passed**. Neither WSL nor lightweight diagnostics produced a faithful locked MyPy environment, so no host/locked closure is inferred. Full 222-package lock audit timed out and is not claimed green. |
 | VER-01 exact-lock MyPy green? | **Local yes / exact Ubuntu full-lock CI no.** Both exact MyPy commands are green locally (72/72 and 31/31 under retained Windows Python 3.11). Exact Ubuntu execution with the full 222-package hashed dev lock remains unproved; do not equate local type-green with Linux CI or release. |
-| Canonical restart capsule reconciled? | **Yes as of Update-192** (active routing reconciled to Update-191 evidence); Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
-| All known open problems indexed? | **Yes in §1C as of Update-192**; Actual Git/new evidence overrides the snapshot |
+| Active index dimension safe? | **Runtime containment yes / index compatibility no.** `d157b31` blocks and clears caches on `3 != 1024` without provider/mutation; active `rag_docs_default` is still 3D and requires a separately authorized validated rebuild/publish |
+| Canonical restart capsule reconciled? | **Yes as of Update-193** (INDEX-DIM guard vs rebuild states separated); Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
+| All known open problems indexed? | **Yes in §1C as of Update-193**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **Partial:** one direct-Mistral seed-43 case has valid complete child evidence and release PASS; scheduled breadth and independent-judge execution remain open |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Owned implementation/test WIP **none**; no active writer. Lightweight artifacts are ignored under `.tmp/`; if this handoff file is dirty, Update-192 docs-only routing WIP is present until committed |
+| WIP / active writer? | Owned implementation/test WIP **none**; no active writer. Lightweight and INDEX-DIM artifacts are ignored/untracked evidence; if `AGENT_STATE.md` or this handoff is dirty, Update-193 docs-only routing WIP is present until committed |
