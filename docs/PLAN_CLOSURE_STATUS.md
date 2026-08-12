@@ -1,13 +1,13 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-187 API command 2 locally green; command 1 remains red; live FAIL unchanged)
+**Date:** 2026-08-12 (Update-188 delivery-state type boundary closed; command 1 has 10 errors; live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-187**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-188**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
 > Actual Git note: the active plan file was observed **untracked** before
-> Update-187. Preserve it as DoD input, but use Actual Git + the committed
+> Update-188. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
 
@@ -17,6 +17,17 @@ authoritative open-problem ledger in §1C.
 2. Local code slice ≠ full plan section complete ≠ production release.  
 3. Actual Git wins over any SHA embedded here.  
 4. Quality > speed; one named atomic slice per user turn.
+
+**Update-188:** no plan checkbox or release gate changed. `02df975` replaces
+the imprecise heterogeneous return annotation of `_escalate_to_inbox` with a
+fixed-key private `TypedDict` and reads its required `delivery_state` key
+directly. Both runtime branches already guarantee that key, so behavior is
+unchanged. Exact MyPy command 1 moved from **11 to 10 errors** in
+`agent/graph.py` across the same 72 sources; the aggregate remains red. Grok
+(`grok-4.5-build`) and Codex each observed the delta and **6 focused tests
+passed**; scoped Ruff/diff/LF/protected-hash checks are clean. No provider,
+migration, deploy, push, index, database, dependency, or workflow state
+changed.
 
 **Update-187:** no plan checkbox or release gate changed. `370a429` closes
 only the three strict `api/app.py` findings: the cache helper return is typed

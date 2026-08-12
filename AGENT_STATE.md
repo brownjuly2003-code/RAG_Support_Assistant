@@ -1,5 +1,47 @@
 # Agent State
 
+## 2026-08-12 Update-188 — delivery-state type boundary locally closed ✅ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `02df975`, ahead of
+> `origin/master` by 320 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **Committed implementation:** `02df975` changes only `agent/graph.py`. A
+> private `_EscalationPayload` `TypedDict` replaces the imprecise
+> `dict[str, str | None]` return annotation on `_escalate_to_inbox`, and the
+> consumer reads its required `delivery_state` key directly. The successful
+> producer already guarantees `DeliveryState`; the exception branch already
+> returns `"failed"`. Runtime values, dictionary keys, calls, exception flow,
+> and escalation behavior are unchanged.
+>
+> **Type/runtime evidence:** the unchanged CI MyPy command 1 reproduced **11
+> errors in 1 file / 72 sources** before the edit and now reports exactly **10
+> errors in the same file / 72 sources**. The nullable `delivery_state`
+> `typeddict-item` diagnostic is absent; the remaining assignment, invariant
+> list, and eight loose-dict expansion findings remain intentionally open.
+> Codex independently passed all **6** tests in
+> `tests/test_graph_error_handling.py`; scoped Ruff, `git diff --check`, LF,
+> and protected-file hash checks are clean. Command 1 is still red and must not
+> be called type-green.
+>
+> **Grok truth:** `local_grok_cli` run
+> `rag-ver01-delivery-state-20260812-01` used actual `grok-4.5-build`. Its
+> self-check observed MyPy **11→10**, **6 passed**, clean Ruff/diff, and the
+> exact final diff. The run then stopped `cancelled` only at a disallowed
+> `python -c` protected-hash command; Codex performed that hash check directly.
+> No duplicate or QA follow-up run was needed.
+>
+> **Next safe implementation candidate:** keep a separate `agent/graph.py`
+> slice for the single `GraphState`/`dict[str, Any]` assignment mismatch now at
+> line ~1696. Refresh the exact command-1 baseline and trace `new_state` through
+> `_apply_llm_usage` before changing annotations. Do not bundle the invariant
+> claims list or the eight agentic TypedDict expansions.
+>
+> **Workspace truth:** implementation WIP is none. The four protected owner
+> files stayed byte-identical; unrelated untracked artifacts remain preserved.
+> No provider call, migration, deploy, push, index/database mutation, or
+> dependency/workflow change occurred; no delegated writer remains active.
+
 ## 2026-08-12 Update-187 — API command-2 type gate locally closed ✅ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `370a429`, ahead of
