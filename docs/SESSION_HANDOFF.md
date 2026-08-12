@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-12 — **Update-191** (both local VER-01 MyPy commands green; Linux/full-lock proof still open; live FAIL unchanged).
+**Обновлено:** 2026-08-12 — **Update-192** (active VER-01 routing reconciled to local type-green; Linux/full-lock proof and live FAIL unchanged).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -29,13 +29,13 @@
 |-------------------------|-------------------|
 | Последний implementation SHA | `d4583cc` — precise shared agentic terminal `TypedDict` contracts close the final eight local MyPy findings without call-site suppressions; preceding type slice `acc76ee` |
 | Последний committed test contract | `e400d88` — Starlette TestClient must have `httpx2` pinned in the dev input and hashed lock; preceding product contract `dbd2b28` covers ProviderUnavailable generation routing |
-| Последний committed docs/dependency closure | `810906b` — Update-185 VER-01 type-debt findings; latest dependency closure remains `e400d88` (VER-04) |
-| Actual Git перед этой docs edit | `master...origin/master [ahead 326]` at `d4583cc`; refresh remains mandatory and this is not push authority |
+| Последний committed docs/dependency closure | `f95ec99` — Update-191 local MyPy gate closure; latest dependency closure remains `e400d88` (VER-04) |
+| Actual Git перед этой docs edit | `master...origin/master [ahead 327]` at `f95ec99`; refresh remains mandatory and this is not push authority |
 | Что закрыто локально | GraceKelly timestamp/prompt-echo containment, generation-provider fail-closed, and the VER-04 repository/CI dependency contract; current global Python is not dev-lock-synchronized and still warns. §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не восстанавливает live quality и не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
 | Известный baseline debt | **VER-01 is LOCAL TYPE-GREEN:** exact command 1 is green across 72 sources and exact command 2 is freshly green across 31 sources in the retained Windows Python 3.11 diagnostic environment. Exact Ubuntu/full 222-package-lock equivalence remains unproved |
-| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none**; ignored v2 input/lock and venv are retained under `.tmp/`; active delegated writer none known |
-| Grok route truth | First run `rag-ver01-agentic-contracts-20260812-01` used actual `grok-4.5-build` and cancelled before source reads on forbidden onboarding pipelines. Follow-up `...-02` wrote the scoped diff but was budget-stopped with empty logs; its actual model/tests are unclaimed. Codex corrected one return contract and independently verified the final result; no QA follow-up ran |
+| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none**; ignored v2 input/lock and venv are retained under `.tmp/`; no active delegated writer |
+| Grok route truth | `local_grok_cli` run `rag-update192-handoff-routing-20260812-01` used actual `grok-4.5-build`, completed normally in 7 turns, changed only this handoff, and self-reported clean scoped review. Codex independently found and corrected stale top metadata before the final gate; no QA follow-up ran |
 | Что не запускалось | Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana import/provisioning, seeds 43–44, independent judge, and scrape/alert delivery did not run. One post-QG 20-case seed 42 did run and fail fast |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
 | Следующий slice | No further local type-debt item is preauthorized by this closure. Refresh Actual Git and the open-problem ledger, then select one distinct named slice. Do not raw-retry exhausted WSL installs; exact Linux CI needs explicit remote/push authority or a genuinely new local hypothesis |
@@ -50,10 +50,10 @@
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
 | Latest **committed test contract** | `e400d88` — exact `httpx2` dev-input + hashed-lock contract; latest product contract remains `dbd2b28` ProviderUnavailable safety routing |
-| Latest **committed docs before this Update** | Resolve with Actual Git; Update-190 is the immediately preceding durable handoff |
+| Latest **committed docs before this Update** | `f95ec99` — Update-191 local MyPy gate closure |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 326]` at `d4583cc` before this docs edit — **refresh mandatory; no push authorization** |
-| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored v2 input/lock/venv remain under `.tmp/`; if these three handoff files are dirty, Update-191 docs WIP is present |
+| Branch advisory | observed `master...origin/master [ahead 327]` at `f95ec99` before this docs edit — **refresh mandatory; no push authorization** |
+| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored v2 input/lock/venv remain under `.tmp/`; if this handoff file is dirty, Update-192 docs WIP is present |
 | Locally complete (documented scopes) | GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28` + TestClient backend `e400d88`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/04/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
@@ -76,7 +76,7 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 
 | Question | Durable answer |
 |----------|----------------|
-| What is the current docs baseline? | `d4583cc` before this docs-only Update; Actual Git must override the embedded SHA after commit. |
+| What is the current docs baseline? | `f95ec99` before this docs-only Update; Actual Git must override the embedded SHA after commit. |
 | Is an owned writer/test still running? | No. Executor, QA, and both independent MyPy commands completed; no related process remains. |
 | Is the memory guard active? | **Yes.** `PythonMemoryGuard` was freshly verified `Running`; unchanged contract is 1024 MiB / 10 seconds. |
 | What does §5 prove? | The post-QG vector-only seed 42 is valid live evidence but **FAILS** quality: 25% candidate vs 90% baseline, 13 regressions. Seeds 43–44 and passing ×3 evidence do not exist. |
@@ -404,13 +404,15 @@ corrected separately at `c157796`. The other two regressions remain separate;
 no paid 3×20 rerun or live quality recovery is claimed. A paid retry still
 requires fresh explicit opt-in.
 
-### 1C. Authoritative open-problem ledger (Update-180)
+### 1C. Authoritative open-problem ledger (Update-192 reconciliation; historical IDs from Update-180)
 
 This ledger is the next-session source for **known** open problems. `OPEN`
 means unresolved locally; `GATED` needs fresh external/live authority;
 `DEFERRED` needs a product/SLA decision; `LOCAL-ONLY` means code is fixed but
 the relevant live outcome has not been re-proved. Actual Git and newer evidence
-override this snapshot.
+override this snapshot. Active VER-01 status below reflects Update-191 local
+type-green evidence; historical Update-180/181/182/183/185/190 blocks elsewhere
+remain dated and are not rewritten.
 
 #### Product / RAG quality
 
@@ -442,7 +444,7 @@ override this snapshot.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **VER-01** | **OPEN / ENV-BLOCKED** | Global Windows remains stale. The shared Linux lock has 222 packages, including 17 GPU-stack entries, and two WSL installs failed before MyPy. A MyPy-only Python 3.11 venv installed fast but produced 17 non-authoritative errors because typed runtime packages were absent. A constrained direct lock installed 50 packages with 0 GPU entries, then MyPy failed to start because its closure was missing. The one correction failed at resolution: requested `typing-extensions 4.16.0` conflicted with the checked-in `4.15.0`. No faithful two-command MyPy verdict exists. | Do not repeat full WSL, MyPy-only, closure-less direct lock, or `typing-extensions 4.16.0`. Next: direct packages plus exact checked-in toolchain pins (`mypy 1.19.1`, `librt 0.9.0`, `mypy-extensions 1.1.0`, `pathspec 1.1.1`, `typing-extensions 4.15.0`), `--no-deps --require-hashes`, fresh Python 3.11, both unchanged CI commands. Edit CI/manifests only after green evidence plus governance tests. |
+| **VER-01** | **LOCAL TYPE-GREEN / LINUX-CI OPEN** | Product commit `d4583cc` closed the final eight command-1 MyPy diagnostics. Exact unchanged MyPy command 1 is locally green across **72/72** sources and exact command 2 across **31/31** sources under the retained Windows Python 3.11 diagnostic environment. Runtime product evidence remains the existing Python 3.13 32-test focused band plus historical full unit/coverage; no full Python 3.11 runtime gate is claimed. Exact Ubuntu execution with the full 222-package hashed dev lock remains unproved. Two earlier full WSL installation paths are exhausted. | Do not raw-retry exhausted WSL installs or the completed direct-package/toolchain experiment. Local Windows MyPy green is not Ubuntu/full-lock CI green and not release/production evidence. Exact Linux CI needs explicit remote/push authority or a genuinely distinct local environment hypothesis. No push, remote CI, migration, live provider/index/service operation, deploy, or production/release proof exists from Update-191. |
 | **VER-02** | **LOCAL-CLOSED** | `3a37fd2` casts the final runtime-guarded callable to `FaultAction`. The exact failure reproduced before the edit; afterward narrowed MyPy passed, 11 lifecycle tests passed, Ruff passed, and package `vectordb` MyPy checked 10 sources under `--follow-imports=skip`. | Do not reopen without a code/environment change. Do not extrapolate this to VER-01, full imports, the repository, locked Python 3.11, or CI. |
 | **VER-03** | **LOCAL-CLOSED** | Fresh Python 3.13 CI-shaped unit+coverage gate passes **1851 tests / 4 skipped / 187 warnings in 753.44s** at **77.04%** coverage (threshold **72%**). The historical aggregate-only direct-CLI failure does not recur after `fce19ba`. | Do not repeat without a changed code/environment boundary. This does not close locked Python 3.11, integration/live services, migrations, image/Helm, canary, rollback, or release. |
 | **VER-04** | **REPO-CLOSED / HOST-ENV STALE** | `requirements-dev.txt` and its hashed lock pin `httpx2 2.10.0`, the backend Starlette 1.3+ selects before its deprecated `httpx` fallback. The dependency contract reproduced red before the pin; afterward an isolated strict-warning TestClient band passed **33 tests**, and a real request returned 200 through `httpx2` without the warning. The narrowed new-stack audit found no known vulnerabilities. The current global Python is not synchronized to the dev lock and still emits the warning. | Install the hashed dev lock in a clean environment before claiming host/CI closure. Do not reopen the repository contract without a Starlette/TestClient or dependency change. The full 222-package dev-lock audit timed out after 124 seconds, so no fresh whole-lock security audit is claimed. |
@@ -490,7 +492,7 @@ override this snapshot.
 2. cd D:\RAG_Support_Assistant
 3. git status --short --branch
 4. git log -12 --oneline          # actual Git wins
-5. Read ONLY top Update-183 in AGENT_STATE.md + §0A/§0B/§1C in this file
+5. Read ONLY top Update-191 in AGENT_STATE.md + §0A/§0B/§1C in this file
 6. Confirm there is no active writer; protect §8 dirty/untracked boundaries
 7. VER-03 is local-green; do not repeat it without a changed boundary
 8. Do not invent another QG item; QG-01–QG-04 are local-only closures
@@ -500,7 +502,7 @@ override this snapshot.
 
 | Candidate | Current truth | Boundary before action |
 |-----------|---------------|------------------------|
-| VER-01 Python 3.11 lightweight-lock MyPy | **OPEN / ENV-BLOCKED:** direct lock proved 50 packages / 0 GPU entries, but the faithful MyPy toolchain closure has not yet been installed or run | Use the five exact toolchain pins from §1C, compile/install with `--no-deps --require-hashes`, then run both unchanged CI MyPy commands. Do not edit repository contracts before green evidence |
+| VER-01 Python 3.11 lightweight-lock MyPy | **LOCAL TYPE-GREEN / LINUX-CI OPEN:** both exact MyPy commands are locally green (72/72 and 31/31) under retained Windows Python 3.11; exact Ubuntu/full 222-package-lock CI remains unproved | Do not raw-retry exhausted WSL installs. Linux CI requires explicit remote/push authority or a genuinely distinct local environment hypothesis; do not claim release/production from local type-green |
 | VER-03 Python 3.13 gate | **LOCAL-CLOSED:** **1851 passed / 4 skipped**, **77.04%** coverage at threshold **72%** | Reopen only after a changed code/environment boundary; this is not locked Python 3.11 or release evidence |
 | §9 residuals | Cache, telemetry (**7/7**), dashboard, Astro 7 / DEP-01, TraceService, EscalationService, API/worker IngestionJobService, and PipelineRunner capacity + sync + streaming execution are local-green | No item preselected; SessionService needs an SLA decision and live alert delivery needs opt-in; no ungated local architecture owner is currently named |
 | HYBRID-MEM | Guard is enforced; production-reranker hybrid exceeded the 1 GiB ceiling and was killed before retrieval/provider execution | Do not retry locally without a narrowed design expected below 1 GiB; no hybrid quality claim exists |
@@ -532,7 +534,7 @@ consumed; do not infer permission for another paid call.
 | **7** eval gate | **7.1–7.7** local + one-case direct-provider live PASS | scheduled breadth + independent judge remain open; mock≠release |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
 | **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5d3 owner slices local** | SessionService SLA decision; live alert delivery |
-| **10** final verification | Python 3.13 unit+coverage local-green; VER-01 exact-lock attempt incomplete | locked Python 3.11 MyPy/tests, then remaining gates after 1–9 + opt-in evidence |
+| **10** final verification | Python 3.13 unit+coverage local-green; both local VER-01 MyPy commands green (72/72, 31/31 Windows 3.11) | exact Ubuntu/full-lock MyPy CI, integration/live, migrations, image/Helm, canary/rollback remain open after 1–9 + opt-in evidence |
 
 **Release / production: NOT claimable** until §1 live + §5 live quality evidence +
 §6–8 residual + §10.
@@ -809,9 +811,9 @@ in a new turn; do not invent another local QG item.
 **Protected dirty tracked (leave alone):**
 `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 
-**Owned handoff paths for Update-180:** `AGENT_STATE.md`, this file, and
-`docs/PLAN_CLOSURE_STATUS.md`. Actual Git decides whether their docs-only commit
-has already closed the diff; never stage the protected tracked files with them.
+**Owned handoff path for Update-192:** this file only. Actual Git decides
+whether its docs-only commit has already closed the diff; never stage the
+protected tracked files with it.
 
 **Owned implementation/test WIP:** none. The former topology-test WIP is
 committed at `eb764da`; the retained pytest basetemps are evidence/artifacts,
@@ -999,11 +1001,11 @@ Never log secret values.
 | Streaming pipeline execution has one owner? | **Yes local** (`c53f724`): PipelineRunner owns graph/event executor submission, queue and shielded-future deadlines, and timeout capacity handoff; router keeps SSE semantics and compatibility seams |
 | Agentic injection safety test current? | **Yes local** (`356a530`): mock follows `search_kb_docs(text, docs)` and the full safety/agentic band is green |
 | Starlette TestClient warning closed? | **Repository contract yes; current host no** (`e400d88`): `httpx2 2.10.0` is pinned in the dev input and hashed lock; isolated strict-warning band **33 passed**. Neither WSL nor lightweight diagnostics produced a faithful locked MyPy environment, so no host/locked closure is inferred. Full 222-package lock audit timed out and is not claimed green. |
-| VER-01 exact-lock MyPy green? | **No.** The full lock is GPU-heavy; the direct lock removed GPU packages but has not yet passed both exact commands with the correct toolchain closure. The next pins are recorded in §1C; do not repeat failed variants. |
-| Canonical restart capsule reconciled? | **Yes as of Update-183**; Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
-| All known open problems indexed? | **Yes in §1C as of Update-183**; Actual Git/new evidence overrides the snapshot |
+| VER-01 exact-lock MyPy green? | **Local yes / exact Ubuntu full-lock CI no.** Both exact MyPy commands are green locally (72/72 and 31/31 under retained Windows Python 3.11). Exact Ubuntu execution with the full 222-package hashed dev lock remains unproved; do not equate local type-green with Linux CI or release. |
+| Canonical restart capsule reconciled? | **Yes as of Update-192** (active routing reconciled to Update-191 evidence); Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
+| All known open problems indexed? | **Yes in §1C as of Update-192**; Actual Git/new evidence overrides the snapshot |
 | Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **Partial:** one direct-Mistral seed-43 case has valid complete child evidence and release PASS; scheduled breadth and independent-judge execution remain open |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Owned implementation/test WIP **none**; no delegated writer ran in Update-183. Lightweight artifacts are ignored under `.tmp/`; Update-183 handoff files may be dirty until their docs-only commit |
+| WIP / active writer? | Owned implementation/test WIP **none**; no active writer. Lightweight artifacts are ignored under `.tmp/`; if this handoff file is dirty, Update-192 docs-only routing WIP is present until committed |
