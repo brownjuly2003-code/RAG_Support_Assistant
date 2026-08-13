@@ -1,5 +1,36 @@
 # Agent State
 
+## 2026-08-13 Update-201 — Windows INDEX-DIM activation WSL-blocked ⚠ START HERE
+
+> **Actual Git before this blocked runtime slice:** Windows `master` at
+> `426442a`, ahead of `origin/master` by 338 commits. Resolve this Update's
+> commit through Actual Git; neither the observed count nor this documentation
+> grants push or broader system-mutation authority.
+>
+> **Root-cause evidence:** PostgreSQL ports `5432`/`55432` and native
+> PostgreSQL services/tools were absent. Docker Desktop 4.84.0 and both Docker
+> VHDX files exist, their inherited ACLs include SYSTEM full control, and free
+> space was 54.70 GiB on C: / 137.86 GiB on D:. The current blocker is below
+> Docker/PostgreSQL: a sequential Ubuntu WSL attach fails with
+> `Wsl/Service/CreateInstance/MountVhd/HCS/E_ACCESSDENIED` against
+> `D:\WSL\Ubuntu-22.04\ext4.vhdx`. One narrowed `wsl --shutdown` correction
+> followed by one attach recheck produced the same result, so the retry budget
+> is exhausted. Do not raw-retry Docker or WSL startup in the next session
+> without a changed system-state hypothesis.
+>
+> **Fail-closed result:** no advisory lock was acquired, so the activation
+> runbook stopped before preflight rerun, snapshot, target copy, Chroma open,
+> manifest/retention publication, or rollback. Canonical staging, the working
+> Windows Chroma target, and the four protected owner-dirty files were not
+> changed. No PostgreSQL/Docker service, delegated writer, provider call,
+> migration, deploy, push, or release remains active.
+>
+> **Next exact boundary:** an owner/system-admin action must make WSL VHD
+> attachment work or provide a separately authorized reachable PostgreSQL
+> `DATABASE_URL`. Only after that changed evidence may a later session prove
+> normal `default` tenant-lock acquisition/release and resume the existing
+> snapshot → import → publish → rollback → restore → reactivate contract.
+
 ## 2026-08-13 Update-200 — next-session activation handoff reconciled ✅ START HERE
 
 > **Actual Git before this docs-only slice:** Windows `master` at `bac1939`,

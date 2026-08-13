@@ -16,6 +16,9 @@ must stop before the next mutation boundary.
   directory; copying and activation remain separate authorized operations.
 - [x] Attempt activation and stop before snapshot/copy when the mandatory
   PostgreSQL advisory-lock service is unavailable.
+- [x] Diagnose the unchanged retry boundary: WSL VHD attachment fails with
+  `Wsl/Service/CreateInstance/MountVhd/HCS/E_ACCESSDENIED`; one narrowed
+  `wsl --shutdown` correction did not change the result.
 - [ ] Establish and verify a reachable PostgreSQL tenant-lock service.
 - [ ] Create and verify the snapshot before copying, then run
   dimension/content/E20 smoke, prove snapshot restore, and reactivate.
@@ -31,8 +34,8 @@ must stop before the next mutation boundary.
 | Windows target | Unchanged legacy tree at exact fingerprint below |
 | Snapshot | `.tmp/index-dim-windows-target-snapshot-before-activation` — absent |
 | Manifest / retention registry | `data/vectordb/index-manifests` / `data/vectordb/index-retention` — absent |
-| Lock service | PostgreSQL at `127.0.0.1:5432` was unreachable; bounded Docker Desktop start did not expose a daemon |
-| Runtime | Docker Desktop stopped; no temporary PostgreSQL service was left running |
+| Lock service | PostgreSQL ports `5432`/`55432` are unavailable; Docker and Ubuntu WSL startup are blocked below PostgreSQL by VHD attach `E_ACCESSDENIED` |
+| Runtime | Docker Desktop stopped; WSL attach still fails after one `wsl --shutdown`; no temporary PostgreSQL service was left running |
 
 Opening canonical staging with `chromadb.PersistentClient` is forbidden. The
 Update-199 probe proved candidate `3 × 1024`, all three sources, and E20 top-1,
@@ -72,7 +75,9 @@ The proposed snapshot path remained absent.
 1. Refresh Git and protect the four owner-dirty files: `BACKLOG.md`,
    `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`.
 2. Confirm no project Python/uvicorn/Celery process has the target open.
-3. Make the configured PostgreSQL `DATABASE_URL` reachable. Acquire and release
+3. Require changed system-state evidence that WSL VHD attachment works, or a
+   separately authorized reachable PostgreSQL `DATABASE_URL`. Do not raw-retry
+   the unchanged Docker/WSL startup path. Acquire and release
    the normal `default` tenant advisory-lock context as a connectivity probe.
    Stop if this fails; never bypass the lock or forge a token.
 4. Run the verified preflight command above. Stop unless both tree hashes and
