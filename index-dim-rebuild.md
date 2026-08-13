@@ -40,8 +40,11 @@ the rollback path. Import or activation in a working runtime is out of scope.
   reactivation generation `3`; final `previous_collection=rag_docs_default`.
 - Known query `Что означает ошибка E20?` returned `errors_e10_e30.md`; no
   source collection was deleted.
+- Imported Chroma artifact (56 MiB observed):
+  `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813/.runtime/windows-chroma`.
 - Non-secret result artifact:
-  `.runtime/index-dim-rebuild-result.json`, SHA-256
+  `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813/.runtime/index-dim-rebuild-result.json`,
+  SHA-256
   `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382`.
 - Independent persisted-state inspection passed. The corrected focused gate
   used the actual `tests/test_index_version_manifest.py` path and passed
@@ -49,3 +52,6 @@ the rollback path. Import or activation in a working runtime is out of scope.
   injection; one pre-existing Starlette deprecation warning remains.
 - This artifact did not replace the working Windows Chroma directory or the
   primary Mac corpus. Import/activation is a separate target-specific slice.
+- Restart state is **artifact-closed / activation-open**. The Windows target is
+  `D:\RAG_Support_Assistant\data\vectordb\chroma`; do not overwrite it without
+  a recoverable snapshot plus dimension/content/E20 smoke and rollback checks.

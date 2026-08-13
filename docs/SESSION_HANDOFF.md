@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-13 — **Update-195** (isolated Mac 1024D rebuild artifact and publish/rollback/reactivation proof verified; working runtimes unchanged).
+**Обновлено:** 2026-08-13 — **Update-196** (exact Mac artifact map, current docs baseline, and activation boundary reconciled for restart).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-195**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-196**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-195; dirty
+**Не использовать:** старые `START HERE` ниже Update-196; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -29,13 +29,14 @@
 |-------------------------|-------------------|
 | Последний implementation SHA | `1aa9f19` — first versioned publish preserves the resolved legacy collection as the rollback target; runtime dimension guard remains `d157b31` |
 | Последний committed test contract | `1aa9f19` — first versioned publish can roll back to legacy instead of writing `previous_collection=null`; `d157b31` still guards active `3D` vs declared `1024D` before runtime cache/retriever mutation |
-| Последний committed docs/dependency closure | `7ed9cd3` — Update-194 lock-blocked rebuild record; latest dependency closure remains `e400d88` (VER-04) |
-| Actual Git перед этой docs edit | `master...origin/master [ahead 332]` at `7ed9cd3`; refresh remains mandatory and this is not push authority |
+| Последний committed docs/dependency closure | `46b51b2` — Update-195 verified Mac artifact record; latest dependency closure remains `e400d88` (VER-04) |
+| Actual Git перед этой docs edit | `master...origin/master [ahead 333]` at `46b51b2`; resolve Update-196 through Actual Git after commit; this is not push authority |
+| Где лежит Mac-артефакт | Checkout `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813`; imported Chroma copy `.runtime/windows-chroma` (56 MiB observed); evidence `.runtime/index-dim-rebuild-result.json`, SHA-256 `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382` |
 | Что закрыто локально | `INDEX-DIM` runtime detection/cache containment is local-green at `d157b31`; first-publish legacy rollback bootstrap is local-green at `1aa9f19`; an isolated Mac copy now has a verified 3×1024 versioned artifact plus publish → rollback → reactivate evidence. The working Windows index and primary Mac corpus are unchanged. GraceKelly containment, generation fail-closed, VER-01 local MyPy, §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
 | Известный baseline debt | **VER-01 is LOCAL TYPE-GREEN:** exact command 1 is green across 72 sources and exact command 2 is freshly green across 31 sources in the retained Windows Python 3.11 diagnostic environment. Exact Ubuntu/full 222-package-lock equivalence remains unproved |
-| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none**; `index-dim-rebuild.md` is the owned evidence note for this closure; ignored control/test artifacts remain; no active delegated writer |
-| Grok route truth | No Grok run was used for Update-195. Earlier INDEX-DIM implementation attempt 1 never launched; attempt 2 stalled after a partial diff; its sole QA/fix follow-up completed with actual `grok-4.5-build`. Codex later independently verified and corrected that code. |
+| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none**; Update-196 owns only `AGENT_STATE.md`, this handoff, `PLAN_CLOSURE_STATUS.md`, and `index-dim-rebuild.md`; ignored control/test artifacts remain; no active delegated writer |
+| Grok route truth | No Grok run was used for Updates 195–196. Earlier INDEX-DIM implementation attempt 1 never launched; attempt 2 stalled after a partial diff; its sole QA/fix follow-up completed with actual `grok-4.5-build`. Codex later independently verified and corrected that code. |
 | Что не запускалось | No working Windows-index replacement, primary Mac corpus mutation, collection deletion, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana provisioning, seeds 43–44, independent judge, or scrape/alert delivery ran. The isolated Mac rebuild did make one authorized Mistral embedding call path and mutate only the imported Chroma copy; its temporary PostgreSQL service is stopped. |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
 | Следующий slice | The isolated `INDEX-DIM-REBUILD` artifact is verified. Activation/import into a working runtime remains a separate state-changing slice: choose the exact target, snapshot it, then define smoke and rollback checks. Never overwrite/delete either retained corpus casually |
@@ -50,9 +51,9 @@
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
 | Latest **committed test contract** | `1aa9f19` — first versioned publish can roll back to the resolved legacy collection; `d157b31` still enforces the stored/declared width guard |
-| Latest **committed docs before this Update** | `7ed9cd3` — Update-194 lock-blocked rebuild record |
+| Latest **committed docs before this Update** | `46b51b2` — Update-195 verified Mac artifact record |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 332]` at `7ed9cd3` before this docs edit — **refresh mandatory; no push authorization** |
+| Branch advisory | observed `master...origin/master [ahead 333]` at `46b51b2` before this docs edit — **refresh mandatory; no push authorization** |
 | Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored control/test artifacts remain local; this Update owns only the three status docs and `index-dim-rebuild.md` |
 | Locally complete (documented scopes) | isolated INDEX-DIM Mac artifact/lifecycle proof + INDEX-DIM runtime guard `d157b31` + rollback bootstrap `1aa9f19` + GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28` + TestClient backend `e400d88`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/04/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
@@ -76,15 +77,34 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 
 | Question | Durable answer |
 |----------|----------------|
-| What is the current docs baseline? | `ad10b54` before this docs-only Update; Actual Git must override the embedded SHA after commit. |
-| Is an owned writer/test still running? | No. Grok implementation/QA processes and independent INDEX-DIM tests completed; no related process remains. |
-| Is the memory guard active? | **Yes.** `PythonMemoryGuard` was freshly verified `Running`; unchanged contract is 1024 MiB / 10 seconds. |
+| What is the current docs baseline? | `46b51b2` (Update-195) before this docs-only Update-196; Actual Git must override the embedded SHA after commit. |
+| Is an owned writer/test still running? | No related writer/test is known active. Grok implementation/QA processes and independent INDEX-DIM tests completed; Update-196 started none. |
+| Is the memory guard active? | Last durable verification recorded `PythonMemoryGuard` as `Running`, with a 1024 MiB / 10-second contract. Update-196 did not recheck it; verify current scheduler state before relying on it. |
 | What does §5 prove? | The post-QG vector-only seed 42 is valid live evidence but **FAILS** quality: 25% candidate vs 90% baseline, 13 regressions. Seeds 43–44 and passing ×3 evidence do not exist. |
 | What does local artifact containment prove? | Retained output classification found 12 timestamp-only and 6 prompt-echo candidate answers. `63aa5df` rejects those shapes; `dbd2b28` routes the resulting provider outage human/not_verified without automatic ticket registration. No live recovery is inferred. |
 | What does §7.6 prove? | One direct-Mistral seed-43 case passed with valid complete child evidence. It proves the bounded route/gate attempt only, not scheduled breadth, independent judge, §5 ×3, or whole release. |
 | What does hybrid prove? | Default production reranker exceeded 1 GiB and was killed before retrieval/provider execution. Hybrid quality remains unknown; raw local retry is forbidden. |
 | What is the full local Python gate? | Python 3.13 CI-shaped unit+coverage is local-green: **1851 passed / 4 skipped**, coverage **77.04%** ≥ 72%. VER-01 retained Windows Python 3.11 MyPy command 1 is green across 72 sources and command 2 is green across 31 sources. Ubuntu/full 222-package-lock CI and release gates remain open. |
 | What is preauthorized next? | No new state-changing slice. The isolated INDEX-DIM artifact is complete, but importing/activating it in a working runtime requires a target-specific snapshot/smoke/rollback boundary. Do not raw-retry WSL or claim Linux CI equivalence. GraceKelly edit, routing/fallback cost change, paid call, migration 019–023, deploy, or push needs separate exact authority. |
+
+### 0C. Exact INDEX-DIM artifact map
+
+| Item | Durable value | Interpretation |
+|------|---------------|----------------|
+| SSH route | `deproject-mac` | Read-only inspection is safe; mutation still requires a named target slice |
+| Build checkout | `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813` at `7ed9cd3` | This is the exact code checkout used for the rebuild; later Windows commits are docs-only |
+| Imported Windows copy | `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813/.runtime/windows-chroma` | 56 MiB observed; isolated copy only, not the Windows working directory |
+| Evidence JSON | `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813/.runtime/index-dim-rebuild-result.json` | SHA-256 `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382` |
+| Candidate | `rag_docs-v-default-3f2b79fbe1246ab3`, 3 vectors × 1024 | Final isolated manifest generation 3 points here; previous is legacy `rag_docs_default` |
+| Primary Mac corpus | `/Users/julia/RAG_Support_Assistant/data/vectordb/chroma` | Not mutated; last inspected `rag_docs_default` was 5589 × 1024 |
+| Windows working corpus | `D:\RAG_Support_Assistant\data\vectordb\chroma` | Not replaced; captured legacy baseline was `rag_docs_default`, 6 × 3 |
+| Temporary resources | `/tmp/mistral-key-20260813` absent; PostgreSQL port `55432` stopped | No credential file or isolated database service was left active |
+
+The next session must not rebuild merely to rediscover this state. Start with
+Actual Git and this table. If activation is explicitly selected, verify the
+artifact hash, snapshot the exact target, import without deleting the retained
+corpus, run dimension/content/E20 smoke checks, and keep a tested rollback.
+Otherwise select a different documented residual and leave both corpora alone.
 
 **Update-193 implementation evidence:** `d157b31` adds a read-only one-vector
 active Chroma preflight at the tenant-runtime boundary, declares built-in

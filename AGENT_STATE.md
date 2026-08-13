@@ -1,5 +1,37 @@
 # Agent State
 
+## 2026-08-13 Update-196 — next-session INDEX-DIM artifact map reconciled ✅ START HERE
+
+> **Baseline before this docs-only update:** Windows `master` at `46b51b2`,
+> ahead of `origin/master` by 333 commits. Resolve this Update's commit through
+> Actual Git; the baseline is not push authority.
+>
+> **Why this update exists:** Update-195 recorded the correct lifecycle result,
+> but two restart-card SHA fields still pointed to older docs commits and the
+> artifact path was only relative. No implementation or runtime result changed.
+>
+> **Exact Mac artifact map:** SSH alias `deproject-mac`; isolated build checkout
+> `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813` at `7ed9cd3`;
+> imported Chroma copy
+> `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813/.runtime/windows-chroma`
+> (56 MiB observed); result JSON
+> `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813/.runtime/index-dim-rebuild-result.json`.
+> Its SHA-256 is
+> `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382`.
+>
+> **Fresh read-only verification:** both Mac paths exist, the result hash still
+> matches, `/tmp/mistral-key-20260813` is absent, and no process listens on the
+> isolated PostgreSQL port `55432`. This check did not rerun embeddings/tests or
+> mutate either corpus.
+>
+> **Restart rule:** state is **artifact-closed / activation-open**. The isolated
+> artifact passed the 3×1024 publish → rollback → reactivate proof, but the
+> working Windows Chroma directory was not replaced and the primary Mac corpus
+> was not mutated. A next session must first refresh Git, then select one exact
+> activation target and define its snapshot, smoke, and rollback. Do not infer
+> production readiness, deploy authority, push authority, or permission to
+> delete retained collections.
+
 ## 2026-08-13 Update-195 — isolated Mac INDEX-DIM rebuild artifact verified ✅ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `7ed9cd3`, ahead of

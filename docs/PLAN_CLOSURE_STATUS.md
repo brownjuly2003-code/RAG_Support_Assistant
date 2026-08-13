@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-13 (Update-195 isolated Mac INDEX-DIM artifact verified; working runtimes and live FAIL unchanged)
+**Date:** 2026-08-13 (Update-196 restart map reconciled; INDEX-DIM artifact, working runtimes, and live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-195**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-196**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
@@ -10,6 +10,12 @@ authoritative open-problem ledger in §1C.
 > Update-191. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
+
+**Update-196:** documentation-only reconciliation. The authoritative handoff
+now records Windows baseline `46b51b2`, Mac build checkout `7ed9cd3`, absolute
+artifact paths, the verified SHA-256, and the explicit distinction between a
+completed isolated artifact and an unperformed working-runtime activation. No
+plan status, checkbox, implementation, test result, or runtime state changed.
 
 **Update-195:** no plan checkbox or release gate changed. An isolated Mac copy
 of the Windows 6×3 Chroma baseline produced a versioned 3×1024 candidate and
