@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-12 (Update-191 local VER-01 MyPy gate green; Linux/full-lock proof and live FAIL unchanged)
+**Date:** 2026-08-13 (Update-195 isolated Mac INDEX-DIM artifact verified; working runtimes and live FAIL unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-191**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-195**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
@@ -10,6 +10,14 @@ authoritative open-problem ledger in §1C.
 > Update-191. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
+
+**Update-195:** no plan checkbox or release gate changed. An isolated Mac copy
+of the Windows 6×3 Chroma baseline produced a versioned 3×1024 candidate and
+passed publish → rollback → reactivate, persisted-state inspection, the known
+E20 query, and **73 focused tests**. The primary Mac 5589×1024 corpus and the
+working Windows index were not mutated. The artifact is ready for a separately
+scoped import/activation with a target snapshot, smoke, and rollback; this is
+not production or live-quality evidence.
 
 **Rules:**
 
@@ -175,7 +183,7 @@ push, or scheduler change occurred.
 | Plan § | Local implementation | Full section DoD | Blocks release |
 |--------|----------------------|------------------|----------------|
 | **1** live multi-tenant / backup / RPO | partial chart/docs only | **OPEN** (opt-in live) | **yes** Gate A |
-| **2** index lifecycle | **2.1–2.6g local residual closed** | **OPEN** live PG/Redis/Celery/Chroma | yes for live index ops |
+| **2** index lifecycle | **2.1–2.6g local residual closed + isolated 3×1024 rebuild/publish/rollback/reactivation artifact verified** | **OPEN** working-runtime activation and live PG/Redis/Celery/Chroma | yes for live index ops |
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.8 local** | **OPEN** parity default still off (product) | partial |
 | **5** grounding fail-closed | **5.1–5.7 + QG-01/QG-02/QG-03A/QG-03B/QG-04 + GraceKelly artifact containment + HYBRID-MEM env local** | **OPEN** post-QG seed 42 has valid complete evidence but **FAILS** at 25% candidate vs 90% baseline; passing ×3 remains open | **yes** quality |
@@ -494,13 +502,14 @@ Local green slices alone **do not** close the plan.
 
 OPS-01 is enforced and default hybrid is memory-blocked above the 1 GiB local
 ceiling before retrieval/provider execution. Do not retry it locally without a
-narrowed design expected below that limit. VER-03 remains local-green, and
-QG-01–QG-04 remain locally green, and the candidate/browser output shapes are
-locally contained at `63aa5df`/`dbd2b28`; their post-QG seed-42 live replay
-still failed. No ungated local implementation is preselected. A next provider
-step needs separate authority for `D:\GraceKelly`, or an explicit routing/cost
-decision before adding any fallback. Do not spend another paid seed without a
-fresh exact opt-in.
+narrowed design expected below that limit. The isolated INDEX-DIM artifact is
+verified; importing or activating it in a working runtime is a separate
+target-specific mutation requiring a recoverable snapshot, smoke, and
+rollback. VER-03 and QG-01–QG-04 remain locally green, while the post-QG
+seed-42 live replay still failed. No ungated local implementation is
+preselected. A next provider step needs separate authority for
+`D:\GraceKelly`, or an explicit routing/cost decision before adding any
+fallback. Do not spend another paid seed without a fresh exact opt-in.
 
 Gated alternatives remain: further live provider breadth/independent judge,
 quality ×3 (`--execute` + secrets + fresh opt-in), a real dual-annotator human

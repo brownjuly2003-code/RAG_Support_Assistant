@@ -1,5 +1,40 @@
 # Agent State
 
+## 2026-08-13 Update-195 — isolated Mac INDEX-DIM rebuild artifact verified ✅ START HERE
+
+> **Actual Git before this docs-only update:** `master` at `7ed9cd3`, ahead of
+> `origin/master` by 332 commits. Refresh Git first in the next session; this
+> observation is not push authority.
+>
+> **Artifact closure:** an isolated Mac checkout at exact Windows HEAD
+> `7ed9cd3` imported a copy of the incompatible Windows Chroma baseline
+> (`rag_docs_default`, 6 vectors at dimension 3). The existing tenant-locked
+> lifecycle built `rag_docs-v-default-3f2b79fbe1246ab3` from the three
+> canonical demo documents (3 vectors at dimension 1024), published it at
+> generation 1, rolled back to the legacy collection at generation 2, and
+> reactivated the candidate at generation 3. The known E20 query returned
+> `errors_e10_e30.md`; no collection was deleted.
+>
+> **Evidence and verification:** the non-secret result is retained on the Mac
+> at `.runtime/index-dim-rebuild-result.json`, SHA-256
+> `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382`.
+> Independent persisted-state inspection passed, followed by **73 passed**
+> lifecycle/manifest/runtime-switch/retention tests (one pre-existing Starlette
+> deprecation warning). The temporary PostgreSQL service is stopped and the
+> temporary credential file is absent.
+>
+> **Isolation boundary:** this proves a portable rebuilt artifact and the full
+> publish → rollback → reactivate path inside
+> `~/RAG_Support_Assistant-index-rebuild-20260813`. It did **not** replace the
+> working Windows Chroma directory or mutate the primary Mac corpus
+> (`rag_docs_default`, 5589 vectors at dimension 1024). No deploy, migration,
+> push, release, or production-readiness claim occurred.
+>
+> **Next exact boundary:** installing or activating the isolated artifact in a
+> working runtime is a separate state-changing slice. First select the exact
+> target, take a recoverable snapshot, and define acceptance/rollback checks;
+> do not copy over, delete, or relabel either retained corpus casually.
+
 ## 2026-08-12 Update-194 — INDEX-DIM rebuild bootstrap fixed; runtime rebuild lock-blocked ⚠ START HERE
 
 > **Actual Git before this docs-only update:** `master` at `1aa9f19`, ahead of
