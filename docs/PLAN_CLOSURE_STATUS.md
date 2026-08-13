@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-13 (Update-198 Windows INDEX-DIM preflight ready; activation open)
+**Date:** 2026-08-13 (Update-199 Windows INDEX-DIM activation lock-blocked)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-198**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-199**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
@@ -10,6 +10,21 @@ authoritative open-problem ledger in §1C.
 > Update-191. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
+
+**Update-199:** no plan checkbox or release gate changed. The exact activation
+preflight passed again, but the state-changing path stopped before snapshot or
+copy because the mandatory PostgreSQL advisory-lock service was unavailable and
+Docker Desktop did not expose a daemon within the bounded startup attempt. A
+read-only-looking `PersistentClient` smoke proved the staged candidate is
+`3 × 1024` with the three expected sources and E20 top-1, but changed Chroma
+persistence bytes; that copy was quarantined and canonical staging was freshly
+restored from the verified Mac path to exact SHA
+`1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96`.
+The Windows target remains exact SHA
+`5c9eff00707d725a06c1a4f442833e675525d888d4d200f85049d9a77963842e`;
+snapshot, manifest, and retention registry remain absent. No lock bypass,
+activation, provider call, deletion, migration, deploy, push, or release action
+occurred.
 
 **Update-198:** no plan checkbox or release gate changed. A new read-only
 Windows activation preflight verifies the exact staged source/evidence hash,

@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-13 — **Update-198** (Windows INDEX-DIM activation preflight ready; activation not run).
+**Обновлено:** 2026-08-13 — **Update-199** (Windows INDEX-DIM activation stopped fail-closed at the PostgreSQL lock boundary).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-198**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-199**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-198; dirty
+**Не использовать:** старые `START HERE` ниже Update-199; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -27,19 +27,19 @@
 
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
-| Последний implementation SHA | Resolve Update-198 through Actual Git — read-only Windows INDEX-DIM activation preflight; prior runtime implementation remains `1aa9f19` / `d157b31` |
-| Последний committed test contract | Resolve Update-198 through Actual Git — fail-closed evidence/source/target/snapshot readiness; §7.8 remains `bc9ee2b` |
-| Последний committed docs/dependency closure | Resolve Update-198 through Actual Git — Windows readiness boundary; latest dependency closure remains `e400d88` (VER-04) |
-| Actual Git перед этой edit | `master...origin/master [ahead 335]` at `bc9ee2b`; resolve Update-198 through Actual Git after commit; this is not push authority |
+| Последний implementation SHA | `0cba9d1` — read-only Windows INDEX-DIM activation preflight; Update-199 is docs-only and did not change product code |
+| Последний committed test contract | `0cba9d1` — fail-closed evidence/source/target/snapshot readiness; §7.8 remains `bc9ee2b` |
+| Последний committed docs/dependency closure | Resolve Update-199 through Actual Git — activation lock blocker; latest dependency closure remains `e400d88` (VER-04) |
+| Actual Git перед этой edit | `master...origin/master [ahead 336]` at `0cba9d1`; resolve Update-199 through Actual Git after commit; this is not push authority |
 | Где лежит Mac-артефакт | Checkout `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813`; imported Chroma copy `.runtime/windows-chroma` (56 MiB observed); evidence `.runtime/index-dim-rebuild-result.json`, SHA-256 `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382` |
 | Что закрыто локально | `INDEX-DIM` runtime detection/cache containment is local-green at `d157b31`; first-publish legacy rollback bootstrap is local-green at `1aa9f19`; an isolated Mac copy now has a verified 3×1024 versioned artifact plus publish → rollback → reactivate evidence. The working Windows index and primary Mac corpus are unchanged. GraceKelly containment, generation fail-closed, VER-01 local MyPy, §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
 | Известный baseline debt | **VER-01 is LOCAL TYPE-GREEN:** exact command 1 is green across 72 sources and exact command 2 is freshly green across 31 sources in the retained Windows Python 3.11 diagnostic environment. Exact Ubuntu/full 222-package-lock equivalence remains unproved |
-| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none after Update-198 commit**; ignored local staging/prompt/test artifacts remain; no active delegated writer |
+| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none**; canonical ignored staging was freshly restored to its exact SHA, and the Chroma-opened copy is quarantined separately; no active delegated writer |
 | Grok route truth | Update-197 attempt 1 (`grok-4.5-build`) was cancelled before reads/edits at a compound onboarding request. Cause-specific attempt 2 used `local_grok_cli` / actual `grok-4.5-build`, completed in 16 turns, and produced the scoped four-file diff. Codex independently reviewed and verified it; no QA follow-up was needed. |
-| Что не запускалось | No working Windows-index replacement, primary Mac corpus mutation, collection deletion, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana provisioning, seeds 43–44, independent judge, or scrape/alert delivery ran. The isolated Mac rebuild did make one authorized Mistral embedding call path and mutate only the imported Chroma copy; its temporary PostgreSQL service is stopped. |
+| Что не запускалось | No working Windows-index replacement, target snapshot, manifest publish, primary Mac corpus mutation, collection deletion, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana provisioning, seeds 43–44, independent judge, or scrape/alert delivery ran. The bounded Docker Desktop startup did not expose a daemon and left no service running. |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
-| Следующий slice | Windows target/source/evidence readiness is verified by the read-only preflight. A later state-changing activation must first create and verify the named snapshot, then import, smoke, and restore on failure; do not overwrite/delete either retained corpus casually |
+| Следующий slice | Make the mandatory PostgreSQL advisory-lock service reachable first. Then rerun the exact preflight, create/verify the named snapshot, copy without opening the canonical source, publish under the tenant lock, run smoke, prove restore, and reactivate; do not bypass the lock or overwrite/delete retained corpora casually |
 
 ---
 
@@ -77,8 +77,8 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 
 | Question | Durable answer |
 |----------|----------------|
-| What is the current docs baseline? | `bc9ee2b` before Update-198; Actual Git must override the embedded SHA after commit. |
-| Is an owned writer/test still running? | No related writer/test is active. The preflight and focused gates completed. |
+| What is the current docs baseline? | `0cba9d1` before Update-199; Actual Git must override the embedded SHA after commit. |
+| Is an owned writer/test still running? | No related writer/test is active. Docker Desktop is not running; no temporary PostgreSQL service started. |
 | Is the memory guard active? | Last durable verification recorded `PythonMemoryGuard` as `Running`, with a 1024 MiB / 10-second contract. Update-197 did not recheck it; verify current scheduler state before relying on it. |
 | What does §5 prove? | The post-QG vector-only seed 42 is valid live evidence but **FAILS** quality: 25% candidate vs 90% baseline, 13 regressions. Seeds 43–44 and passing ×3 evidence do not exist. |
 | What does local artifact containment prove? | Retained output classification found 12 timestamp-only and 6 prompt-echo candidate answers. `63aa5df` rejects those shapes; `dbd2b28` routes the resulting provider outage human/not_verified without automatic ticket registration. No live recovery is inferred. |
@@ -98,7 +98,7 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 | Candidate | `rag_docs-v-default-3f2b79fbe1246ab3`, 3 vectors × 1024 | Final isolated manifest generation 3 points here; previous is legacy `rag_docs_default` |
 | Primary Mac corpus | `/Users/julia/RAG_Support_Assistant/data/vectordb/chroma` | Not mutated; last inspected `rag_docs_default` was 5589 × 1024 |
 | Windows working corpus | `D:\RAG_Support_Assistant\data\vectordb\chroma` | Not replaced; captured legacy baseline was `rag_docs_default`, 6 × 3 |
-| Temporary resources | `/tmp/mistral-key-20260813` absent; PostgreSQL port `55432` stopped | No credential file or isolated database service was left active |
+| Temporary resources | `/tmp/mistral-key-20260813` absent; PostgreSQL ports `5432`/`55432` unavailable; Docker Desktop stopped | No credential file, Docker daemon, or isolated database service was left active |
 
 The next session must not rebuild merely to rediscover this state. Start with
 Actual Git and this table. If activation is explicitly selected, verify the
@@ -456,7 +456,7 @@ dated and are not rewritten.
 | **QG-LIVE** | **LOCAL-CONTAINED / LIVE FAIL** | Offline classification of all 20 retained candidate answers found 12 timestamp-only, 6 prompt echoes, and 2 failed-escalation fallbacks. `63aa5df` rejects the evidenced browser artifacts as `invalid_response`; `dbd2b28` routes expected generation-provider outages human/not_verified through response safety without traceback state or automatic ticket registration. | `gracekelly-mixed` has no fallback, so quality recovery is unproved. A GraceKelly/root extraction fix or routing/fallback cost decision needs separate authority; do not claim live recovery. |
 | **LIVE-QUALITY** | **OPEN / FAIL** | Post-QG seed 42 of required seeds 42–44 ran with valid complete evidence: precision 0.3012, recall 0.725, FULL 0.70, MISS 5, faithfulness 0.7101, relevancy 0.30, unverified-auto 0. Candidate pass 25% vs baseline 90%/floor 85%; 13 regressions. | Fail-fast skipped seeds 43–44. Passing §5 evidence does not exist; another paid run needs fresh authorization after an approved provider/routing boundary. |
 | **INDEX-DIM-GUARD** | **LOCAL-CLOSED** | `d157b31` declares built-in embedder dimensions, validates remote response width, and makes tenant runtime read one stored Chroma embedding before chunk restore/retriever/cache. `3 != 1024` raises a bounded rebuild-required error, performs no provider call or collection mutation, and leaves no tenant retriever/chunk/store/index-key cache. Independent final gate: **36 passed**, Ruff and diff clean. | Do not reopen without a dimension/cache boundary change. This is containment/diagnosis only, not index compatibility or quality recovery. |
-| **INDEX-DIM-REBUILD** | **ARTIFACT-CLOSED / WINDOWS PREFLIGHT READY / ACTIVATION OPEN** | The isolated Mac artifact remains verified. Update-198 added a read-only Windows preflight: source 631 files / 56,309,636 bytes / `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96`; target 627 files / 55,885,536 bytes / `5c9eff00707d725a06c1a4f442833e675525d888d4d200f85049d9a77963842e`; evidence SHA/schema valid; candidate 3×1024; **10 tests**, Ruff, scoped MyPy, and diff clean. | Working Windows Chroma is unchanged and no snapshot exists. A later state-changing slice must create/verify the snapshot, import, run dimension/content/E20 smoke, and restore on failure. |
+| **INDEX-DIM-REBUILD** | **ARTIFACT-CLOSED / WINDOWS PREFLIGHT READY / ACTIVATION LOCK-BLOCKED** | The isolated Mac artifact remains verified. Update-198 added a read-only preflight; Update-199 reconfirmed exact source SHA `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96` and unchanged target SHA `5c9eff00707d725a06c1a4f442833e675525d888d4d200f85049d9a77963842e`. A staged-copy smoke proved candidate 3×1024/content/E20 top-1, then the opened copy was quarantined and canonical staging was restored from Mac. | Mandatory PostgreSQL advisory lock was unavailable and bounded Docker startup failed. Working Windows Chroma is unchanged; snapshot/manifest/retention registry are absent. Next attempt must restore the lock service before snapshot/import and must not open canonical source directly. |
 | **HYBRID-MEM** | **LOCAL-CLOSED / MEMORY-BLOCKED** | `3c90368` proves blank child-reranker propagation. Update-175 enabled the 1 GiB watchdog and one bounded default-hybrid smoke was killed during production reranker loading at **4044.1 MiB private / 801.4 MiB working set**, before retrieval/provider execution. | Do not retry this high-memory path locally. A future design must be expected to stay below 1 GiB; vector-only seed 42 remains the authoritative quality FAIL. |
 | **LIVE-LATENCY** | **OPEN** | Seed 42 took about 2 h 9 min. Mean latency was 81,878.8 ms baseline vs 304,456.7 ms candidate. | Profile only in a separately authorized bounded run; do not raw-retry the aggregate. |
 

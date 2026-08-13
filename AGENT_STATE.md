@@ -1,5 +1,49 @@
 # Agent State
 
+## 2026-08-13 Update-199 — Windows INDEX-DIM activation lock-blocked ⚠ START HERE
+
+> **Baseline before this slice:** Windows `master` at `0cba9d1`, ahead of
+> `origin/master` by 336 commits. This Update is docs-only; resolve its commit
+> through Actual Git and do not infer push authority.
+>
+> **Activation attempt:** the exact Update-198 preflight returned `ready=true`
+> against staged source SHA
+> `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96`
+> and Windows target SHA
+> `5c9eff00707d725a06c1a4f442833e675525d888d4d200f85049d9a77963842e`.
+> No project runtime was active. Activation then stopped before snapshot/copy
+> because the mandatory PostgreSQL advisory-lock service was unavailable at
+> `127.0.0.1:5432`; Docker Desktop did not expose its daemon within the bounded
+> 55-second startup attempt. `docker desktop stop` confirmed it was not left
+> running. No alternate lock bypass was attempted.
+>
+> **Source-copy correction:** a direct `PersistentClient` acceptance probe on
+> the staged source passed candidate count/dimension/content/E20 top-1
+> (`3 × 1024`, `errors_e10_e30.md`) but changed Chroma persistence bytes, so the
+> following source-hash check failed closed. That opened copy was preserved at
+> `.tmp/index-dim-windows-chroma-source-opened-20260813`; a fresh copy was
+> downloaded from the exact verified Mac artifact path. The final read-only
+> fingerprint restored the canonical 631-file / 56,309,636-byte source SHA
+> `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96`.
+> Do not open the canonical source copy through Chroma again; open only an
+> activation copy after the target snapshot exists.
+>
+> **Fail-closed final state:** the working Windows target remains 627 files /
+> 55,885,536 bytes / SHA
+> `5c9eff00707d725a06c1a4f442833e675525d888d4d200f85049d9a77963842e`.
+> The named snapshot, `data/vectordb/index-manifests`, and
+> `data/vectordb/index-retention` are absent. No target copy, manifest publish,
+> rollback, collection deletion, provider call, migration, deploy, push, or
+> release action occurred. The four protected owner-dirty files stayed
+> byte-identical.
+>
+> **Next exact boundary:** provide a working PostgreSQL advisory-lock service
+> (or an exact reachable `DATABASE_URL`) before retrying. Then rerun preflight,
+> create and verify the target snapshot, copy the candidate, publish only under
+> the tenant lock, run dimension/content/E20 acceptance, prove snapshot restore,
+> and reactivate the candidate. A second Docker-start variation was not tried in
+> this turn because the operational retry budget was exhausted.
+
 ## 2026-08-13 Update-198 — Windows INDEX-DIM activation preflight ready ✅ START HERE
 
 > **Baseline before this slice:** Windows `master` at `bc9ee2b`, ahead of
