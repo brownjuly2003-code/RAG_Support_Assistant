@@ -1,5 +1,41 @@
 # Agent State
 
+## 2026-08-13 Update-197 — §7.8 curated required-slice depth 4 ✅ START HERE
+
+> **Baseline before this slice:** Windows `master` at `24ca711`, ahead of
+> `origin/master` by 334 commits. Resolve this Update's commit through Actual
+> Git; the baseline is not push authority.
+>
+> **Committed scope:** the offline regression corpus now contains **76 unique
+> cases**. Every required slice has depth at least **4**; `multi_turn` remains
+> at 5. `MIN_CASES_PER_REQUIRED_SLICE` and the versioned manifest both require
+> 4. The nine new cases cover `multi_tenant`, `claim_citation`, `no_answer`,
+> `tools`, `streaming`, `adversarial`, `pii`, `durable_escalation`, and
+> `context_recall` using only facts from `demo/seed_docs.py` or explicit safe
+> refusal/escalation contracts. Existing 67 JSONL rows were not reformatted.
+>
+> **Test-first evidence:** before the production/data edits, the updated guard
+> produced the expected **3 failed / 17 passed** at the old floor and row count.
+> Grok then reported **20 passed**, clean scoped Ruff, and clean diff checks.
+> Independent Codex verification on a separate basetemp freshly passed the
+> same **20 tests**, scoped Ruff, `git diff --check`, and a structural audit of
+> 76/76 unique IDs, manifest/constant equality, and slice counts
+> `4/4/4/4/4/5/4/4/4/4`.
+>
+> **Grok truth:** implementation attempt 1 used actual `grok-4.5-build` but was
+> cancelled after two turns at an unapproved compound onboarding request; it
+> made no file edit. The cause-specific second `local_grok_cli` run used actual
+> `grok-4.5-build`, completed in 16 turns, and changed only the four allowed
+> implementation/data/test paths. No QA follow-up was needed after independent
+> review found no scoped defect.
+>
+> **Boundaries:** this is synthetic, offline dataset/guard depth only. It does
+> not provide production human labels, live provider or independent-judge
+> evidence, passing §5 quality ×3, release, deploy, migration, index activation,
+> or push authority. The four protected owner-dirty files stayed byte-identical;
+> no live service, provider, index, corpus, or database was touched. No new
+> ungated local candidate is preselected.
+
 ## 2026-08-13 Update-196 — next-session INDEX-DIM artifact map reconciled ✅ START HERE
 
 > **Baseline before this docs-only update:** Windows `master` at `46b51b2`,

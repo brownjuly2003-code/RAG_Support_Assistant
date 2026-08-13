@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-13 (Update-196 restart map reconciled; INDEX-DIM artifact, working runtimes, and live FAIL unchanged)
+**Date:** 2026-08-13 (Update-197 §7.8 curated floor 4; live/release state unchanged)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-196**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-197**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
@@ -10,6 +10,14 @@ authoritative open-problem ledger in §1C.
 > Update-191. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
+
+**Update-197:** no release gate changed. The offline curated corpus now has
+**76 unique cases** and every required slice has depth at least **4**
+(`multi_turn=5`). The updated guard demonstrated the expected red state at the
+old floor/data, then Grok and independent Codex gates each passed **20 tests**;
+scoped Ruff, diff, manifest equality, unique-ID, and slice-count checks are
+clean. This remains synthetic local evidence, not human-labelled, live-provider,
+independent-judge, §5 quality ×3, or release evidence.
 
 **Update-196:** documentation-only reconciliation. The authoritative handoff
 now records Windows baseline `46b51b2`, Mac build checkout `7ed9cd3`, absolute
@@ -194,7 +202,7 @@ push, or scheduler change occurred.
 | **4** unified pipeline + escalation | **4.1–4.8 local** | **OPEN** parity default still off (product) | partial |
 | **5** grounding fail-closed | **5.1–5.7 + QG-01/QG-02/QG-03A/QG-03B/QG-04 + GraceKelly artifact containment + HYBRID-MEM env local** | **OPEN** post-QG seed 42 has valid complete evidence but **FAILS** at 25% candidate vs 90% baseline; passing ×3 remains open | **yes** quality |
 | **6** judge / safety / agentic parity | **6.1–6.7 local** | OPEN (production human dual-annotator sample) | **yes** |
-| **7** eval gate fail-closed | **7.1–7.7 local + one-case direct-provider live PASS** | OPEN (scheduled breadth + independent judge) | **yes** |
+| **7** eval gate fail-closed | **7.1–7.8 local + one-case direct-provider live PASS** | OPEN (scheduled breadth + independent judge) | **yes** |
 | **8** widget / edge security | **8.1–8.5 local** | OPEN (live IdP; prod allowlist ops) | yes |
 | **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5d3 owner slices local** | OPEN (SLA-gated sessions, live alert delivery) | soft |
 | **10** final verification / canary | Python 3.13 CI-shaped unit+coverage local-green: **1851 passed / 4 skipped**, **77.04%** ≥ 72%; VER-01 retained Windows Python 3.11 MyPy command 1 **72/72 green** and command 2 **31/31 green** | **OPEN** exact Ubuntu/full 222-package-lock equivalence, integration/live services, migrations, image/Helm, canary and rollback | **yes** |
@@ -272,6 +280,7 @@ User priority: **quality over speed**, close plan thoroughly and honestly.
 | 19 | §6.5 measured agentic KB gate | **done** `431893c` |
 | 20 | §7.6 live provider gate scaffold | **done** `d1ae4d6` |
 | 21 | §7.7 deeper curated corpus (≥3/slice) | **done** `47e255a` |
+| 21a | §7.8 required-slice depth ≥4 | **done** (resolve Update-197 through Actual Git) |
 | 22 | §6.6 agentic LLM evaluate wire | **done** `69c6fdf` |
 | 23 | §6.7 human calibration readiness + CLI | **done** `c707c46` |
 | 24 | §4.6 outbox retry schedule | **done** `11acfec` |
@@ -410,27 +419,28 @@ Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 | **7.5** | **done local** | `4eceed3` | CI write + upload + require-wire baseline artifact |
 | **7.6** | **done local** | `d1ae4d6` | scheduled live provider gate scaffold (opt-in) |
 | **7.7** | **done local** | `47e255a` | min 3 cases per required slice; 67 cases |
+| **7.8** | **done local** | resolve through Actual Git | min 4 cases per required slice; 76 unique cases |
 | 7.x | residual | — | live execute with secrets; optional further depth |
 
 **7.2 residual:** CI still runs `--mock-experiment-runtime` as **smoke** (documented non-evidence).  
 **7.6 residual:** one authorized direct-provider case now has valid complete child evidence and release PASS; scheduled breadth and independent-judge evidence remain open.
-**7.7 residual:** still synthetic curated (not production human labels); optional deeper still.
+**7.8 residual:** still synthetic curated (not production human labels); optional deeper still.
 
-### Dataset depth (7.7)
+### Dataset depth (7.8)
 
 | Slice | Count |
 |-------|------:|
-| multi_tenant | 3 |
+| multi_tenant | 4 |
 | multi_turn | 5 |
-| claim_citation | 3 |
-| no_answer | 3 |
-| tools | 3 |
-| streaming | 3 |
-| adversarial | 3 |
-| pii | 3 |
-| durable_escalation | 3 |
-| context_recall | 3 |
-| **total** | **67** |
+| claim_citation | 4 |
+| no_answer | 4 |
+| tools | 4 |
+| streaming | 4 |
+| adversarial | 4 |
+| pii | 4 |
+| durable_escalation | 4 |
+| context_recall | 4 |
+| **total** | **76** |
 
 ---
 
@@ -532,7 +542,7 @@ retry, scheduler change, index mutation, migration, push, or deploy.
 `--follow-imports=skip`. It changes no plan checkbox and does not establish a
 full repository, locked Python-3.11, CI, or production verification result.
 
-**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.7, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2f**, **9.3a–9.5d3 completed slices**, VER-06, or VER-07 without a changed boundary.
+**Do not re-select** 2.x–3.x, **4.1–4.8**, **5.1–5.7**, 6.1–6.7, 7.1–7.8, 8.1–8.5, **9.1a–9.1c**, **9.2a–9.2f**, **9.3a–9.5d3 completed slices**, VER-06, or VER-07 without a changed boundary.
 
 ---
 
@@ -585,7 +595,7 @@ full repository, locked Python-3.11, CI, or production verification result.
 | **5.4** | 56 passed (relevance + agentic + grounding/judge) |
 | **4.8** | 16 passed (provider tokens + node SSE + parity) |
 | **6.7** | 19 passed; seed NOT_READY |
-| **7.7** | 8 passed (depth) |
+| **7.8** | Grok + independent Codex: 20 passed (depth 4 / 76 unique cases) |
 | **DEP-01** | npm audit high=0 |
 
 Full suite / locked CI Mypy / passing live ×3 / migrate / push / deploy:

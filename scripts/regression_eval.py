@@ -80,7 +80,7 @@ class CaseRunResult(BaseModel):
     infrastructure_error: bool = False
 
 
-# Plan §7.4 required coverage dimensions; §7.7 raises depth floor per slice.
+# Plan §7.4 required coverage dimensions; §7.8 raises depth floor per slice.
 REQUIRED_DATASET_SLICES: frozenset[str] = frozenset(
     {
         "multi_tenant",
@@ -95,8 +95,8 @@ REQUIRED_DATASET_SLICES: frozenset[str] = frozenset(
         "context_recall",
     }
 )
-# Plan §7.7: deeper curated corpus — at least this many cases per required slice.
-MIN_CASES_PER_REQUIRED_SLICE = 3
+# Plan §7.8: deeper curated corpus — at least this many cases per required slice.
+MIN_CASES_PER_REQUIRED_SLICE = 4
 
 
 def _utc_now() -> datetime:
@@ -838,7 +838,7 @@ def validate_dataset_slice_coverage(
     required_slices: frozenset[str] | set[str] | None = None,
     min_cases_per_slice: int = MIN_CASES_PER_REQUIRED_SLICE,
 ) -> dict[str, Any]:
-    """Plan §7.4/§7.7: required slices with a minimum depth per slice."""
+    """Plan §7.4/§7.8: required slices with a minimum depth per slice."""
     required = frozenset(required_slices or REQUIRED_DATASET_SLICES)
     if min_cases_per_slice < 1:
         raise ValueError("min_cases_per_slice must be >= 1")

@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
   "dataset": "curated_cases.jsonl",
-  "updated": "2026-08-08",
-  "plan_slice": "7.7",
+  "updated": "2026-08-13",
+  "plan_slice": "7.8",
   "required_slices": [
     "multi_tenant",
     "multi_turn",
@@ -15,6 +15,6 @@
     "durable_escalation",
     "context_recall"
   ],
-  "min_cases_per_slice": 3,
-  "notes": "Regression-eval dataset (scripts.regression_eval.CuratedCase). Plan §7.7 raises per-slice depth floor from 1 to 3. Distinct from evaluation.dataset.CuratedCase learning schema."
+  "min_cases_per_slice": 4,
+  "notes": "Regression-eval dataset (scripts.regression_eval.CuratedCase). Plan §7.8 raises per-slice depth floor from 3 to 4 (offline curated corpus only; no live provider execution claimed). Distinct from evaluation.dataset.CuratedCase learning schema."
 }

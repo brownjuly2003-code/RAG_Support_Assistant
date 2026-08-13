@@ -1,4 +1,4 @@
-"""Plan §7.4: versioned curated dataset slices + context_recall threshold."""
+"""Plan §7.4/§7.8: versioned curated dataset slices + context_recall threshold."""
 
 from __future__ import annotations
 
@@ -33,14 +33,17 @@ def test_manifest_lists_required_slices() -> None:
     assert raw["schema_version"] == 2
     assert set(raw["required_slices"]) == set(REQUIRED_DATASET_SLICES)
     assert raw["dataset"] == "curated_cases.jsonl"
-    # Plan §7.7 depth floor.
+    # Plan §7.8 depth floor.
     assert raw["min_cases_per_slice"] >= MIN_CASES_PER_REQUIRED_SLICE
-    assert MIN_CASES_PER_REQUIRED_SLICE >= 3
+    assert MIN_CASES_PER_REQUIRED_SLICE >= 4
+    assert raw["min_cases_per_slice"] >= 4
 
 
 def test_curated_dataset_loads_and_covers_required_slices() -> None:
     cases = load_curated_cases(DATASET)
-    assert len(cases) >= 60
+    assert len(cases) >= 76
+    case_ids = [c.case_id for c in cases]
+    assert len(case_ids) == len(set(case_ids))
     report = validate_dataset_slice_coverage(cases)
     assert report["ok"] is True, report["reasons"]
     assert report["missing_slices"] == []
@@ -78,7 +81,7 @@ def test_validate_dataset_reports_missing_slice() -> None:
 
 
 def test_validate_dataset_reports_shallow_slice_depth() -> None:
-    """Plan §7.7: a single case per slice is no longer enough."""
+    """Plan §7.8: three cases per slice is no longer enough under the default floor."""
     cases = [
         CuratedCase(
             case_id=f"mt-{i}",
@@ -87,10 +90,10 @@ def test_validate_dataset_reports_shallow_slice_depth() -> None:
             slices=["multi_tenant"],
             expected=CaseExpectation(),
         )
-        for i in range(2)
+        for i in range(3)
     ]
-    # Explicit floor 3; two multi_tenant cases → missing depth.
-    report = validate_dataset_slice_coverage(cases, min_cases_per_slice=3)
+    # Default/new floor 4; three multi_tenant cases → missing depth.
+    report = validate_dataset_slice_coverage(cases)
     assert report["ok"] is False
     assert "multi_tenant" in report["missing_slices"]
 

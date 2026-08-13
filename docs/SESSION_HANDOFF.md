@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-13 — **Update-196** (exact Mac artifact map, current docs baseline, and activation boundary reconciled for restart).
+**Обновлено:** 2026-08-13 — **Update-197** (§7.8 curated required-slice depth 4; live/release state unchanged).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-196**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-197**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-196; dirty
+**Не использовать:** старые `START HERE` ниже Update-197; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -28,15 +28,15 @@
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
 | Последний implementation SHA | `1aa9f19` — first versioned publish preserves the resolved legacy collection as the rollback target; runtime dimension guard remains `d157b31` |
-| Последний committed test contract | `1aa9f19` — first versioned publish can roll back to legacy instead of writing `previous_collection=null`; `d157b31` still guards active `3D` vs declared `1024D` before runtime cache/retriever mutation |
-| Последний committed docs/dependency closure | `46b51b2` — Update-195 verified Mac artifact record; latest dependency closure remains `e400d88` (VER-04) |
-| Actual Git перед этой docs edit | `master...origin/master [ahead 333]` at `46b51b2`; resolve Update-196 through Actual Git after commit; this is not push authority |
+| Последний committed test contract | Resolve Update-197 through Actual Git — §7.8 requires 76 unique curated cases and depth ≥4 for every required slice; index contracts at `1aa9f19`/`d157b31` are unchanged |
+| Последний committed docs/dependency closure | Resolve Update-197 through Actual Git — dataset/handoff closure; latest dependency closure remains `e400d88` (VER-04) |
+| Actual Git перед этой edit | `master...origin/master [ahead 334]` at `24ca711`; resolve Update-197 through Actual Git after commit; this is not push authority |
 | Где лежит Mac-артефакт | Checkout `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813`; imported Chroma copy `.runtime/windows-chroma` (56 MiB observed); evidence `.runtime/index-dim-rebuild-result.json`, SHA-256 `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382` |
 | Что закрыто локально | `INDEX-DIM` runtime detection/cache containment is local-green at `d157b31`; first-publish legacy rollback bootstrap is local-green at `1aa9f19`; an isolated Mac copy now has a verified 3×1024 versioned artifact plus publish → rollback → reactivate evidence. The working Windows index and primary Mac corpus are unchanged. GraceKelly containment, generation fail-closed, VER-01 local MyPy, §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
 | Известный baseline debt | **VER-01 is LOCAL TYPE-GREEN:** exact command 1 is green across 72 sources and exact command 2 is freshly green across 31 sources in the retained Windows Python 3.11 diagnostic environment. Exact Ubuntu/full 222-package-lock equivalence remains unproved |
-| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none**; Update-196 owns only `AGENT_STATE.md`, this handoff, `PLAN_CLOSURE_STATUS.md`, and `index-dim-rebuild.md`; ignored control/test artifacts remain; no active delegated writer |
-| Grok route truth | No Grok run was used for Updates 195–196. Earlier INDEX-DIM implementation attempt 1 never launched; attempt 2 stalled after a partial diff; its sole QA/fix follow-up completed with actual `grok-4.5-build`. Codex later independently verified and corrected that code. |
+| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none after Update-197 commit**; ignored prompt/test artifacts remain; no active delegated writer |
+| Grok route truth | Update-197 attempt 1 (`grok-4.5-build`) was cancelled before reads/edits at a compound onboarding request. Cause-specific attempt 2 used `local_grok_cli` / actual `grok-4.5-build`, completed in 16 turns, and produced the scoped four-file diff. Codex independently reviewed and verified it; no QA follow-up was needed. |
 | Что не запускалось | No working Windows-index replacement, primary Mac corpus mutation, collection deletion, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana provisioning, seeds 43–44, independent judge, or scrape/alert delivery ran. The isolated Mac rebuild did make one authorized Mistral embedding call path and mutate only the imported Chroma copy; its temporary PostgreSQL service is stopped. |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
 | Следующий slice | The isolated `INDEX-DIM-REBUILD` artifact is verified. Activation/import into a working runtime remains a separate state-changing slice: choose the exact target, snapshot it, then define smoke and rollback checks. Never overwrite/delete either retained corpus casually |
@@ -55,7 +55,7 @@
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
 | Branch advisory | observed `master...origin/master [ahead 333]` at `46b51b2` before this docs edit — **refresh mandatory; no push authorization** |
 | Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored control/test artifacts remain local; this Update owns only the three status docs and `index-dim-rebuild.md` |
-| Locally complete (documented scopes) | isolated INDEX-DIM Mac artifact/lifecycle proof + INDEX-DIM runtime guard `d157b31` + rollback bootstrap `1aa9f19` + GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28` + TestClient backend `e400d88`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.7** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/04/05/06/07** |
+| Locally complete (documented scopes) | isolated INDEX-DIM Mac artifact/lifecycle proof + INDEX-DIM runtime guard `d157b31` + rollback bootstrap `1aa9f19` + GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28` + TestClient backend `e400d88`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.8** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/04/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
@@ -77,9 +77,9 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 
 | Question | Durable answer |
 |----------|----------------|
-| What is the current docs baseline? | `46b51b2` (Update-195) before this docs-only Update-196; Actual Git must override the embedded SHA after commit. |
-| Is an owned writer/test still running? | No related writer/test is known active. Grok implementation/QA processes and independent INDEX-DIM tests completed; Update-196 started none. |
-| Is the memory guard active? | Last durable verification recorded `PythonMemoryGuard` as `Running`, with a 1024 MiB / 10-second contract. Update-196 did not recheck it; verify current scheduler state before relying on it. |
+| What is the current docs baseline? | `24ca711` before Update-197; Actual Git must override the embedded SHA after commit. |
+| Is an owned writer/test still running? | No related writer/test is active. Both Update-197 Grok attempts stopped and the independent Codex gate completed. |
+| Is the memory guard active? | Last durable verification recorded `PythonMemoryGuard` as `Running`, with a 1024 MiB / 10-second contract. Update-197 did not recheck it; verify current scheduler state before relying on it. |
 | What does §5 prove? | The post-QG vector-only seed 42 is valid live evidence but **FAILS** quality: 25% candidate vs 90% baseline, 13 regressions. Seeds 43–44 and passing ×3 evidence do not exist. |
 | What does local artifact containment prove? | Retained output classification found 12 timestamp-only and 6 prompt-echo candidate answers. `63aa5df` rejects those shapes; `dbd2b28` routes the resulting provider outage human/not_verified without automatic ticket registration. No live recovery is inferred. |
 | What does §7.6 prove? | One direct-Mistral seed-43 case passed with valid complete child evidence. It proves the bounded route/gate attempt only, not scheduled breadth, independent judge, §5 ×3, or whole release. |
@@ -252,7 +252,8 @@ the paid call automatically.
 | **4.8** | 16 passed (provider tokens + node SSE + parity); Ruff clean |
 | **4.7** | included in 4.8 band |
 | **6.7** | 19 passed (calibration); seed readiness NOT_READY (synthetic) |
-| **7.7** | 8 passed (curated depth); 67 cases |
+| **7.8** | Grok + independent Codex: 20 passed; curated floor 4; 76 unique cases |
+| **7.7** | historical 8 passed (curated floor 3); 67 cases |
 | **7.6** | 21 passed (live-gate + workflows) |
 | **8.5** | 16 passed (widget + Playwright) |
 | **DEP-01** | npm audit high=0 |
@@ -498,22 +499,22 @@ dated and are not rewritten.
 | **WS-05** | **LOCAL-CLOSED** | `eb764da` aligns the deployment assertion with the canonical queue metric and implemented collision-resistant tenant-name marker. The exact test reproduced stale `ten-03`, then passed **1 test** after one narrowed correction; scoped gates were green. | Do not reopen without changed deployment reliability evidence. This focused closure does not close VER-03 or establish a full-suite claim. |
 | **EXT-01** | **EXTERNAL / UNPUSHED** | `D:\GraceKelly` is `main...origin/main [ahead 1]` at `886b277`, with untracked `issues.md`. Port `8011` still listens under PID 3048 on the pre-existing command; `8012` is closed. | Do not claim `8011` serves `886b277`; external push/restart needs separate authority. |
 
-### Dataset snapshot (7.7)
+### Dataset snapshot (7.8)
 
 | Slice | Count |
 |-------|------:|
-| multi_tenant | 3 |
+| multi_tenant | 4 |
 | multi_turn | 5 (2 sessions) |
-| claim_citation | 3 |
-| no_answer | 3 |
-| tools | 3 |
-| streaming | 3 |
-| adversarial | 3 |
-| pii | 3 |
-| durable_escalation | 3 |
-| context_recall | 3 |
-| **total cases** | **67** |
-| `MIN_CASES_PER_REQUIRED_SLICE` | **3** |
+| claim_citation | 4 |
+| no_answer | 4 |
+| tools | 4 |
+| streaming | 4 |
+| adversarial | 4 |
+| pii | 4 |
+| durable_escalation | 4 |
+| context_recall | 4 |
+| **total cases** | **76** |
+| `MIN_CASES_PER_REQUIRED_SLICE` | **4** |
 
 ---
 
@@ -564,7 +565,7 @@ consumed; do not infer permission for another paid call.
 | **4** pipeline + escalation | **4.1–4.8** local | parity default still **off** (product decision) |
 | **5** grounding fail-closed | **5.1–5.7** local | one valid live seed-42 report exists but **FAILS** quality; seeds 43–44 and passing ×3 evidence remain open |
 | **6** judge / safety / agentic | **6.1–6.7** local | production human dual-annotator sample |
-| **7** eval gate | **7.1–7.7** local + one-case direct-provider live PASS | scheduled breadth + independent judge remain open; mock≠release |
+| **7** eval gate | **7.1–7.8** local + one-case direct-provider live PASS | scheduled breadth + independent judge remain open; mock≠release |
 | **8** widget / edge | **8.1–8.5** local | live IdP; `WIDGET_ALLOWED_ORIGINS` in prod |
 | **9** cache / architecture / SLO | **9.1a–9.1c + 9.2a–9.2f + 9.3a–9.5d3 owner slices local** | SessionService SLA decision; live alert delivery |
 | **10** final verification | Python 3.13 unit+coverage local-green; both local VER-01 MyPy commands green (72/72, 31/31 Windows 3.11) | exact Ubuntu/full-lock MyPy CI, integration/live, migrations, image/Helm, canary/rollback remain open after 1–9 + opt-in evidence |
@@ -653,6 +654,7 @@ nor release readiness.
 | **7.1–7.5** | `94ac64e`…`4eceed3` | fail-closed + mock SMOKE + baseline + curated + CI |
 | **7.6** | `d1ae4d6` | live provider gate scaffold (opt-in) |
 | **7.7** | `47e255a` | depth ≥3/slice; **67** cases |
+| **7.8** | resolve through Actual Git | depth ≥4/slice; **76 unique** cases |
 
 ### §8 + DEP-01
 
@@ -844,7 +846,7 @@ in a new turn; do not invent another local QG item.
 
 - live multi-service / migrate / push / deploy / live provider·quality execute
 - re-select through **8.5** / **4.1–4.8** / **5.1–5.7** / **6.1–6.7** /
-  **7.1–7.7** / **9.1a–9.1c** / **9.2a–9.2f** / completed **9.3a–9.5d3** slices
+  **7.1–7.8** / **9.1a–9.1c** / **9.2a–9.2f** / completed **9.3a–9.5d3** slices
 - OIDC live IdP drill; bulk plan checkbox edits; production claims
 - multi-replica impl without SLA (design DEFER)
 - Docker/WSL or a silent model fallback for the lightweight smoke
@@ -852,7 +854,7 @@ in a new turn; do not invent another local QG item.
 ### Further alternates (only if user prioritizes)
 
 - live §1 / migrate 019–023 (**explicit opt-in only**)
-- further curated corpus depth beyond 3/slice
+- further curated corpus depth beyond 4/slice
 - multi-replica durable session (**only with explicit SLA/product ask**)
 
 ---
@@ -1026,7 +1028,7 @@ Never log secret values.
 |-------|-------|
 | Plan closed? | **No** |
 | Production ready? | **No** |
-| Local quality path deep? | **Yes** (4.1–4.8, 5.1–5.7, 6.1–6.7, 7.1–7.7, 8.x, DEP-01, QG-01, QG-02, QG-03A, QG-03B, QG-04) |
+| Local quality path deep? | **Yes** (4.1–4.8, 5.1–5.7, 6.1–6.7, 7.1–7.8, 8.x, DEP-01, QG-01, QG-02, QG-03A, QG-03B, QG-04) |
 | Graph node SSE? | **Yes local** (4.7) |
 | Provider token stream? | **Yes local** (4.8; parity on + stream-capable LLM) |
 | OpenCode Zen profile? | **Yes local** (`faaa815`); trial/non-sensitive only; no live evidence |
