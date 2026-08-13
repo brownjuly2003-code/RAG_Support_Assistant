@@ -1,5 +1,31 @@
 # Agent State
 
+## 2026-08-13 Update-203 — automated UAC owner test unavailable ⚠ START HERE
+
+> **Actual Git before this blocked system slice:** Windows `master` at
+> `bd12a3a`, ahead of `origin/master` by 340 commits. Resolve this Update's
+> commit through Actual Git; no push or index-mutation authority is implied.
+>
+> **Bounded elevation result:** the exact Ubuntu-only owner command from
+> Update-202 was launched once through Windows `RunAs`. The UAC request did
+> not complete within 60 seconds, and the caller timed out. Its residual
+> `consent.exe` could not be terminated by the medium-integrity shell
+> (`Access is denied`) and was then closed externally. A final post-check found
+> no active consent process and preserved VHD owner `BUILTIN\Administrators`,
+> size 12,810,452,992 bytes, and mtime
+> `2026-08-13T08:03:56.9732590-04:00`. No owner, ACL, VHD content, Docker
+> data, WSL distro, PostgreSQL service, index, snapshot, manifest, or project
+> runtime was changed.
+>
+> **Anti-repeat boundary:** do not launch the same UAC/elevated command through
+> this agent again. The only remaining owner-hypothesis step is for the owner
+> to open an elevated PowerShell directly and run
+> `icacls "D:\WSL\Ubuntu-22.04\ext4.vhdx" /setowner "JULIADEV25\uedom"`.
+> After independently verifying the owner, make one ordinary Ubuntu attach
+> attempt. If it still returns `E_ACCESSDENIED`, stop the owner hypothesis and
+> preserve the VHD; do not broaden ACLs or touch Docker VHDX files. INDEX-DIM
+> remains stopped before lock, preflight rerun, snapshot, or copy.
+
 ## 2026-08-13 Update-202 — WSL VHD owner test admin-blocked ⚠ START HERE
 
 > **Actual Git before this blocked diagnostic slice:** Windows `master` at
