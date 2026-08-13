@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-13 — **Update-204** (Ubuntu VHD owner corrected; ordinary WSL attach is restored).
+**Обновлено:** 2026-08-13 — **Update-205** (self-contained WSL recovery evidence and permission boundaries).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-204**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-205**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-204; dirty
+**Не использовать:** старые `START HERE` ниже Update-205; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -29,8 +29,8 @@
 |-------------------------|-------------------|
 | Последний implementation SHA | `0cba9d1` — read-only Windows INDEX-DIM activation preflight; Updates 199–204 did not change product code |
 | Последний committed test contract | `0cba9d1` — fail-closed evidence/source/target/snapshot readiness; §7.8 remains `bc9ee2b` |
-| Последний committed docs/dependency closure | `94c03eb` — Update-203 automated-UAC result; resolve Update-204 through Actual Git after this system-recovery record |
-| Actual Git перед этой edit | `master...origin/master [ahead 341]` at `94c03eb`; resolve Update-204 through Actual Git after commit; this is not push authority |
+| Последний committed docs/dependency closure | `8a4a8e0` — Update-204 restored Ubuntu attach; resolve Update-205 through Actual Git after this docs-only transparency record |
+| Actual Git перед этой edit | `master...origin/master [ahead 342]` at `8a4a8e0`; resolve Update-205 through Actual Git after commit; this is not push authority |
 | Где лежит Mac-артефакт | Checkout `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813`; imported Chroma copy `.runtime/windows-chroma` (56 MiB observed); evidence `.runtime/index-dim-rebuild-result.json`, SHA-256 `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382` |
 | Что закрыто локально | `INDEX-DIM` runtime detection/cache containment is local-green at `d157b31`; first-publish legacy rollback bootstrap is local-green at `1aa9f19`; an isolated Mac copy now has a verified 3×1024 versioned artifact plus publish → rollback → reactivate evidence. The working Windows index and primary Mac corpus are unchanged. GraceKelly containment, generation fail-closed, VER-01 local MyPy, §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
@@ -43,6 +43,39 @@
 
 ---
 
+### 0B. Update-204 WSL recovery evidence — не восстанавливать из чата
+
+| Поле | Зафиксированный факт |
+|------|----------------------|
+| Причина | Ubuntu data VHD не подключался: `Wsl/Service/CreateInstance/MountVhd/HCS/E_ACCESSDENIED`. Системный и swap VHD создавались успешно, поэтому диагностика была сужена до Ubuntu VHD. |
+| Разрешение пользователя | Пользователь явно разрешил один повтор elevated owner correction после предупреждения о UAC. Это разрешение применено только к указанному ниже Ubuntu VHD. |
+| Единственная elevated-мутация | `icacls "D:\WSL\Ubuntu-22.04\ext4.vhdx" /setowner "JULIADEV25\uedom"` через `RunAs`; UAC подтверждён, `icacls` завершился с exit code `0`. |
+| Независимая owner-проверка | `Get-Acl` вернул `JULIADEV25\uedom`. Исходное значение было `BUILTIN\Administrators`. ACL не расширялись. |
+| Проверка исходного симптома | `wsl.exe -d Ubuntu-22.04 -e sh -lc "printf 'WSL_OK\n'; uname -r"` завершился с exit code `0`; вывод: `WSL_OK` и `5.15.167.4-microsoft-standard-WSL2`. |
+| Вывод | Owner-гипотеза подтверждена для этого состояния: обычный Ubuntu attach восстановлен. Повторять UAC/owner эксперимент без нового противоречащего состояния нельзя. |
+| Что не менялось | Docker VHDX, Docker Desktop, PostgreSQL, проектный код, рабочий Windows Chroma, canonical staging, snapshot, manifest/retention registries и миграции не затрагивались. Push и deploy не выполнялись. |
+| Durable evidence | `8a4a8e0` — `docs(index): record restored Ubuntu attach`; подробный текущий runbook: [`index-dim-windows-activation.md`](../index-dim-windows-activation.md). |
+
+**Граница разрешений:** прошлое подтверждение UAC не является бессрочным
+«разрешено всё». Следующая сессия может выполнять read-only Git/Ubuntu/
+PostgreSQL inventory. Изменение пакетов или сервисов должно быть отдельным
+обоснованным atomic slice. Для ACL broadening, Docker-VHD mutation, index
+mutation, migrations 019–023, push, deploy, live multi-service и paid-provider
+execution нельзя выводить разрешение из Update-204.
+
+**Следующий порядок:**
+
+1. Обновить Actual Git и защитить четыре owner-dirty файла.
+2. Не повторять уже зелёный owner/UAC тест; начать с read-only PostgreSQL
+   inventory внутри `Ubuntu-22.04`.
+3. Отдельно установить достижимость PostgreSQL и доказать acquire/release
+   штатного advisory lock для tenant `default`; lock нельзя обходить или
+   подделывать.
+4. Только после зелёного lock gate повторить существующий read-only INDEX-DIM
+   preflight. Snapshot/copy/publish остаются более поздними mutation gates.
+
+---
+
 ## 1. Нулевая неоднозначность
 
 | Факт | Значение |
@@ -51,10 +84,10 @@
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
 | Latest **committed test contract** | `0cba9d1` — exact source/evidence/target/snapshot preflight; `1aa9f19` still preserves legacy rollback and `d157b31` still enforces the stored/declared width guard |
-| Latest **committed docs before this Update** | `94c03eb` — Update-203 automated-UAC result |
+| Latest **committed docs before this Update** | `8a4a8e0` — Update-204 restored Ubuntu attach |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md index-dim-windows-activation.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 341]` at `94c03eb` before this system-recovery record — **refresh mandatory; no push authorization** |
-| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored control/test artifacts remain local; no UAC/consent process remains; Update-204 owns only `AGENT_STATE.md`, this handoff, and `index-dim-windows-activation.md` |
+| Branch advisory | observed `master...origin/master [ahead 342]` at `8a4a8e0` before this docs-only transparency record — **refresh mandatory; no push authorization** |
+| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored control/test artifacts remain local; no UAC/consent process remains; Update-205 owns only `AGENT_STATE.md` and this handoff |
 | Locally complete (documented scopes) | isolated INDEX-DIM Mac artifact/lifecycle proof + INDEX-DIM runtime guard `d157b31` + rollback bootstrap `1aa9f19` + GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28` + TestClient backend `e400d88`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.8** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/04/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |

@@ -1,5 +1,29 @@
 # Agent State
 
+## 2026-08-13 Update-205 — WSL recovery handoff made explicit ✅ START HERE
+
+> **Actual Git before this docs-only transparency slice:** Windows `master`
+> at `8a4a8e0`, ahead of `origin/master` by 342 commits. Resolve this Update's
+> commit through Actual Git; no push or runtime-mutation authority is implied.
+>
+> **Why this Update exists:** Update-204 restored Ubuntu attach, but the next
+> session must not reconstruct the permission scope and evidence chain from
+> chat. `docs/SESSION_HANDOFF.md` now records the exact owner command, exit
+> codes, observed owner/kernel, unchanged boundaries, and next gate in one
+> self-contained capsule.
+>
+> **Permission boundary:** the user's explicit approval was consumed only for
+> the one elevated Ubuntu-VHD owner correction recorded in Update-204. It is
+> not reusable blanket authorization for ACL broadening, Docker-VHD changes,
+> package/service mutation, index mutation, migrations, push, deploy, or paid
+> provider execution. Update-205 itself changes documentation only.
+>
+> **Next exact boundary:** do not repeat the successful owner/UAC experiment.
+> Start with read-only PostgreSQL inventory inside the restored Ubuntu runtime.
+> Establish and verify a reachable lock service as a separately scoped action,
+> then acquire/release the normal `default` tenant advisory-lock context. The
+> existing read-only INDEX-DIM preflight remains behind that green lock gate.
+
 ## 2026-08-13 Update-204 — Ubuntu WSL attach restored after owner correction ✅ START HERE
 
 > **Actual Git before this system-recovery slice:** Windows `master` at
