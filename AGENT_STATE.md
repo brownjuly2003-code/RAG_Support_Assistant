@@ -1,5 +1,46 @@
 # Agent State
 
+## 2026-08-13 Update-198 — Windows INDEX-DIM activation preflight ready ✅ START HERE
+
+> **Baseline before this slice:** Windows `master` at `bc9ee2b`, ahead of
+> `origin/master` by 335 commits. Resolve this Update's commit through Actual
+> Git; the baseline is not push authority.
+>
+> **Committed scope:** a new read-only, fail-closed activation preflight checks
+> exact source/target/snapshot separation, Chroma tree fingerprints, evidence
+> SHA/schema, candidate count/dimension, previous collection, known-query
+> document, absence of collection deletions, and snapshot disk headroom. It
+> rejects symlinks, overlaps, an existing snapshot path, malformed/mismatched
+> evidence, source-tree substitution, and insufficient capacity. It only emits
+> a JSON plan with `mutation_performed=false`; it cannot snapshot, copy,
+> activate, switch a manifest, or delete a collection.
+>
+> **Test-first / verification:** the new focused test first stopped at the
+> expected missing-module `ImportError`. After implementation and the bounded
+> source-hash/schema safety corrections, **10 tests passed**. Fresh final verification
+> passed scoped Ruff, MyPy (`1 source`), and `git diff --check`. The only prior
+> final-gate failure was Ruff `I001`; systematic diagnosis found one extra
+> blank line after a late import, and the canonical isort layout closed it.
+>
+> **Real read-only evidence:** the verified Mac artifact was copied only to
+> ignored local staging. Source fingerprint: **631 files / 56,309,636 bytes /
+> `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96`**.
+> Evidence JSON still matches
+> `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382`.
+> The real Windows-target preflight returned `ready=true` for candidate
+> `rag_docs-v-default-3f2b79fbe1246ab3` at `3 × 1024`; it measured the target
+> as **627 files / 55,885,536 bytes /
+> `5c9eff00707d725a06c1a4f442833e675525d888d4d200f85049d9a77963842e`**
+> and required 111,771,072 bytes of snapshot headroom.
+>
+> **Boundary / next exact slice:** working Windows Chroma remained unchanged
+> and the proposed snapshot path was not created. Windows readiness is closed;
+> activation remains open. A later state-changing slice must first create and
+> verify the snapshot, then import, run dimension/content/E20 smoke, and restore
+> the snapshot on any failed check. No provider call, manifest change,
+> collection deletion, migration, deploy, push, or release action occurred.
+> The four protected owner-dirty files stayed byte-identical.
+
 ## 2026-08-13 Update-197 — §7.8 curated required-slice depth 4 ✅ START HERE
 
 > **Baseline before this slice:** Windows `master` at `24ca711`, ahead of

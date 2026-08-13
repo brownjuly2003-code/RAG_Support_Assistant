@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-13 (Update-197 §7.8 curated floor 4; live/release state unchanged)
+**Date:** 2026-08-13 (Update-198 Windows INDEX-DIM preflight ready; activation open)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-197**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-198**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
@@ -10,6 +10,16 @@ authoritative open-problem ledger in §1C.
 > Update-191. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
+
+**Update-198:** no plan checkbox or release gate changed. A new read-only
+Windows activation preflight verifies the exact staged source/evidence hash,
+candidate `3 × 1024` shape, rollback target, known-query document, source and
+target tree fingerprints, path separation, and snapshot headroom. The real
+preflight returned `ready=true` / `mutation_performed=false`; **10 tests**, Ruff,
+scoped MyPy, and diff checks passed. Working Windows Chroma retained SHA
+`5c9eff00707d725a06c1a4f442833e675525d888d4d200f85049d9a77963842e`;
+no snapshot, import, activation, provider call, manifest change, deletion,
+migration, deploy, or push occurred.
 
 **Update-197:** no release gate changed. The offline curated corpus now has
 **76 unique cases** and every required slice has depth at least **4**
@@ -197,7 +207,7 @@ push, or scheduler change occurred.
 | Plan § | Local implementation | Full section DoD | Blocks release |
 |--------|----------------------|------------------|----------------|
 | **1** live multi-tenant / backup / RPO | partial chart/docs only | **OPEN** (opt-in live) | **yes** Gate A |
-| **2** index lifecycle | **2.1–2.6g local residual closed + isolated 3×1024 rebuild/publish/rollback/reactivation artifact verified** | **OPEN** working-runtime activation and live PG/Redis/Celery/Chroma | yes for live index ops |
+| **2** index lifecycle | **2.1–2.6g local residual closed + isolated 3×1024 artifact verified + Windows activation preflight ready** | **OPEN** snapshot/import/working-runtime activation and live PG/Redis/Celery/Chroma | yes for live index ops |
 | **3** execution / session / budget | **3.1a–3.1i local** | **OPEN** multi-replica durable version | partial |
 | **4** unified pipeline + escalation | **4.1–4.8 local** | **OPEN** parity default still off (product) | partial |
 | **5** grounding fail-closed | **5.1–5.7 + QG-01/QG-02/QG-03A/QG-03B/QG-04 + GraceKelly artifact containment + HYBRID-MEM env local** | **OPEN** post-QG seed 42 has valid complete evidence but **FAILS** at 25% candidate vs 90% baseline; passing ×3 remains open | **yes** quality |

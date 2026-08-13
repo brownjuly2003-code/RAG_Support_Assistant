@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-13 — **Update-197** (§7.8 curated required-slice depth 4; live/release state unchanged).
+**Обновлено:** 2026-08-13 — **Update-198** (Windows INDEX-DIM activation preflight ready; activation not run).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-197**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-198**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-197; dirty
+**Не использовать:** старые `START HERE` ниже Update-198; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -27,19 +27,19 @@
 
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
-| Последний implementation SHA | `1aa9f19` — first versioned publish preserves the resolved legacy collection as the rollback target; runtime dimension guard remains `d157b31` |
-| Последний committed test contract | Resolve Update-197 through Actual Git — §7.8 requires 76 unique curated cases and depth ≥4 for every required slice; index contracts at `1aa9f19`/`d157b31` are unchanged |
-| Последний committed docs/dependency closure | Resolve Update-197 through Actual Git — dataset/handoff closure; latest dependency closure remains `e400d88` (VER-04) |
-| Actual Git перед этой edit | `master...origin/master [ahead 334]` at `24ca711`; resolve Update-197 through Actual Git after commit; this is not push authority |
+| Последний implementation SHA | Resolve Update-198 through Actual Git — read-only Windows INDEX-DIM activation preflight; prior runtime implementation remains `1aa9f19` / `d157b31` |
+| Последний committed test contract | Resolve Update-198 through Actual Git — fail-closed evidence/source/target/snapshot readiness; §7.8 remains `bc9ee2b` |
+| Последний committed docs/dependency closure | Resolve Update-198 through Actual Git — Windows readiness boundary; latest dependency closure remains `e400d88` (VER-04) |
+| Actual Git перед этой edit | `master...origin/master [ahead 335]` at `bc9ee2b`; resolve Update-198 through Actual Git after commit; this is not push authority |
 | Где лежит Mac-артефакт | Checkout `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813`; imported Chroma copy `.runtime/windows-chroma` (56 MiB observed); evidence `.runtime/index-dim-rebuild-result.json`, SHA-256 `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382` |
 | Что закрыто локально | `INDEX-DIM` runtime detection/cache containment is local-green at `d157b31`; first-publish legacy rollback bootstrap is local-green at `1aa9f19`; an isolated Mac copy now has a verified 3×1024 versioned artifact plus publish → rollback → reactivate evidence. The working Windows index and primary Mac corpus are unchanged. GraceKelly containment, generation fail-closed, VER-01 local MyPy, §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
 | Известный baseline debt | **VER-01 is LOCAL TYPE-GREEN:** exact command 1 is green across 72 sources and exact command 2 is freshly green across 31 sources in the retained Windows Python 3.11 diagnostic environment. Exact Ubuntu/full 222-package-lock equivalence remains unproved |
-| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none after Update-197 commit**; ignored prompt/test artifacts remain; no active delegated writer |
+| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none after Update-198 commit**; ignored local staging/prompt/test artifacts remain; no active delegated writer |
 | Grok route truth | Update-197 attempt 1 (`grok-4.5-build`) was cancelled before reads/edits at a compound onboarding request. Cause-specific attempt 2 used `local_grok_cli` / actual `grok-4.5-build`, completed in 16 turns, and produced the scoped four-file diff. Codex independently reviewed and verified it; no QA follow-up was needed. |
 | Что не запускалось | No working Windows-index replacement, primary Mac corpus mutation, collection deletion, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana provisioning, seeds 43–44, independent judge, or scrape/alert delivery ran. The isolated Mac rebuild did make one authorized Mistral embedding call path and mutate only the imported Chroma copy; its temporary PostgreSQL service is stopped. |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
-| Следующий slice | The isolated `INDEX-DIM-REBUILD` artifact is verified. Activation/import into a working runtime remains a separate state-changing slice: choose the exact target, snapshot it, then define smoke and rollback checks. Never overwrite/delete either retained corpus casually |
+| Следующий slice | Windows target/source/evidence readiness is verified by the read-only preflight. A later state-changing activation must first create and verify the named snapshot, then import, smoke, and restore on failure; do not overwrite/delete either retained corpus casually |
 
 ---
 
@@ -59,7 +59,7 @@
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | Isolated `INDEX-DIM-REBUILD` evidence is complete. Import/activation into a working runtime is a separate target-specific mutation with snapshot, smoke, and rollback requirements. WSL raw retry remains exhausted; live quality still needs an authorized routing/provider boundary or fresh paid gate |
+| Next ordered | Windows `INDEX-DIM` readiness is complete. Snapshot creation/import/activation remains a separate state-changing mutation with smoke and rollback requirements. WSL raw retry remains exhausted; live quality still needs an authorized routing/provider boundary or fresh paid gate |
 | Gates | WSL was used only for isolated dependency verification; Docker daemon was unavailable. No push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
@@ -77,8 +77,8 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 
 | Question | Durable answer |
 |----------|----------------|
-| What is the current docs baseline? | `24ca711` before Update-197; Actual Git must override the embedded SHA after commit. |
-| Is an owned writer/test still running? | No related writer/test is active. Both Update-197 Grok attempts stopped and the independent Codex gate completed. |
+| What is the current docs baseline? | `bc9ee2b` before Update-198; Actual Git must override the embedded SHA after commit. |
+| Is an owned writer/test still running? | No related writer/test is active. The preflight and focused gates completed. |
 | Is the memory guard active? | Last durable verification recorded `PythonMemoryGuard` as `Running`, with a 1024 MiB / 10-second contract. Update-197 did not recheck it; verify current scheduler state before relying on it. |
 | What does §5 prove? | The post-QG vector-only seed 42 is valid live evidence but **FAILS** quality: 25% candidate vs 90% baseline, 13 regressions. Seeds 43–44 and passing ×3 evidence do not exist. |
 | What does local artifact containment prove? | Retained output classification found 12 timestamp-only and 6 prompt-echo candidate answers. `63aa5df` rejects those shapes; `dbd2b28` routes the resulting provider outage human/not_verified without automatic ticket registration. No live recovery is inferred. |
@@ -456,7 +456,7 @@ dated and are not rewritten.
 | **QG-LIVE** | **LOCAL-CONTAINED / LIVE FAIL** | Offline classification of all 20 retained candidate answers found 12 timestamp-only, 6 prompt echoes, and 2 failed-escalation fallbacks. `63aa5df` rejects the evidenced browser artifacts as `invalid_response`; `dbd2b28` routes expected generation-provider outages human/not_verified through response safety without traceback state or automatic ticket registration. | `gracekelly-mixed` has no fallback, so quality recovery is unproved. A GraceKelly/root extraction fix or routing/fallback cost decision needs separate authority; do not claim live recovery. |
 | **LIVE-QUALITY** | **OPEN / FAIL** | Post-QG seed 42 of required seeds 42–44 ran with valid complete evidence: precision 0.3012, recall 0.725, FULL 0.70, MISS 5, faithfulness 0.7101, relevancy 0.30, unverified-auto 0. Candidate pass 25% vs baseline 90%/floor 85%; 13 regressions. | Fail-fast skipped seeds 43–44. Passing §5 evidence does not exist; another paid run needs fresh authorization after an approved provider/routing boundary. |
 | **INDEX-DIM-GUARD** | **LOCAL-CLOSED** | `d157b31` declares built-in embedder dimensions, validates remote response width, and makes tenant runtime read one stored Chroma embedding before chunk restore/retriever/cache. `3 != 1024` raises a bounded rebuild-required error, performs no provider call or collection mutation, and leaves no tenant retriever/chunk/store/index-key cache. Independent final gate: **36 passed**, Ruff and diff clean. | Do not reopen without a dimension/cache boundary change. This is containment/diagnosis only, not index compatibility or quality recovery. |
-| **INDEX-DIM-REBUILD** | **ARTIFACT-CLOSED / ACTIVATION OPEN** | An isolated Mac copy of the Windows 6×3 legacy index produced `rag_docs-v-default-3f2b79fbe1246ab3` at 3×1024, then passed publish generation 1 → rollback generation 2 → reactivate generation 3, persisted-state inspection, the E20 query, and **73 tests**. Artifact SHA-256: `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382`. | The working Windows index and primary Mac corpus remain unchanged. Import/activation needs a separately selected target, recoverable snapshot, smoke, and rollback; never replace/delete retained collections casually. |
+| **INDEX-DIM-REBUILD** | **ARTIFACT-CLOSED / WINDOWS PREFLIGHT READY / ACTIVATION OPEN** | The isolated Mac artifact remains verified. Update-198 added a read-only Windows preflight: source 631 files / 56,309,636 bytes / `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96`; target 627 files / 55,885,536 bytes / `5c9eff00707d725a06c1a4f442833e675525d888d4d200f85049d9a77963842e`; evidence SHA/schema valid; candidate 3×1024; **10 tests**, Ruff, scoped MyPy, and diff clean. | Working Windows Chroma is unchanged and no snapshot exists. A later state-changing slice must create/verify the snapshot, import, run dimension/content/E20 smoke, and restore on failure. |
 | **HYBRID-MEM** | **LOCAL-CLOSED / MEMORY-BLOCKED** | `3c90368` proves blank child-reranker propagation. Update-175 enabled the 1 GiB watchdog and one bounded default-hybrid smoke was killed during production reranker loading at **4044.1 MiB private / 801.4 MiB working set**, before retrieval/provider execution. | Do not retry this high-memory path locally. A future design must be expected to stay below 1 GiB; vector-only seed 42 remains the authoritative quality FAIL. |
 | **LIVE-LATENCY** | **OPEN** | Seed 42 took about 2 h 9 min. Mean latency was 81,878.8 ms baseline vs 304,456.7 ms candidate. | Profile only in a separately authorized bounded run; do not raw-retry the aggregate. |
 
@@ -817,10 +817,10 @@ OPS-01 is enforced and default hybrid is conclusively memory-blocked under the
 narrowed design expected below that limit. VER-03 remains local-green.
 `INDEX-DIM-GUARD` is locally closed at `d157b31`; do not reimplement or
 re-probe it. The isolated **INDEX-DIM-REBUILD** artifact and its
-publish/rollback/reactivation proof are verified on the Mac. The remaining
-index boundary is target-specific import/activation: choose either the working
-Windows runtime or another explicit target, snapshot it, and define smoke plus
-rollback before mutation. No ungated local slice is preselected; remaining
+publish/rollback/reactivation proof are verified, and Update-198 closes the
+read-only Windows source/target/evidence preflight. The remaining index boundary
+is state-changing: create and verify the named snapshot before import, then run
+smoke and restore on failure. No ungated local slice is preselected; remaining
 work needs a separately selected authorized boundary, a product/SLA decision,
 or human-labelled evidence.
 
