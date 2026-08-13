@@ -1,5 +1,32 @@
 # Agent State
 
+## 2026-08-13 Update-204 — Ubuntu WSL attach restored after owner correction ✅ START HERE
+
+> **Actual Git before this system-recovery slice:** Windows `master` at
+> `94c03eb`, ahead of `origin/master` by 341 commits. Resolve this Update's
+> commit through Actual Git; no push or index-mutation authority is implied.
+>
+> **Bounded owner correction:** after fresh explicit user authorization, the
+> Ubuntu-only command
+> `icacls "D:\WSL\Ubuntu-22.04\ext4.vhdx" /setowner "JULIADEV25\uedom"`
+> was launched once through `RunAs` and the UAC prompt was accepted. `icacls`
+> exited `0`, and an independent ACL read reported owner
+> `JULIADEV25\uedom`.
+>
+> **Attach verification:** one ordinary
+> `wsl.exe -d Ubuntu-22.04 -e sh -lc "printf 'WSL_OK\n'; uname -r"` probe
+> exited `0` and returned `WSL_OK` plus kernel
+> `5.15.167.4-microsoft-standard-WSL2`. The prior data-VHD
+> `MountVhd/HCS/E_ACCESSDENIED` blocker is therefore cleared. Docker VHDX
+> files, project code, PostgreSQL, the working index, canonical staging,
+> snapshot, and manifest were not touched in this slice.
+>
+> **Next exact boundary:** inventory the restored Ubuntu runtime and establish
+> a reachable PostgreSQL service without broadening ACLs or touching Docker
+> VHDX files. Acquire and release the normal `default` tenant advisory-lock
+> context as a connectivity probe. Only after that gate is green may the
+> existing read-only INDEX-DIM preflight be rerun; snapshot/copy remains later.
+
 ## 2026-08-13 Update-203 — automated UAC owner test unavailable ⚠ START HERE
 
 > **Actual Git before this blocked system slice:** Windows `master` at

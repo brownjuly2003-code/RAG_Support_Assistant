@@ -25,6 +25,8 @@ must stop before the next mutation boundary.
 - [x] Attempt the exact Ubuntu-only owner test once through `RunAs`; UAC did
   not complete within 60 seconds, closed without mutation, and must not be
   relaunched automatically.
+- [x] With fresh explicit authorization, complete the Ubuntu-only owner change
+  and prove one ordinary WSL attach succeeds without touching Docker VHDX.
 - [ ] Establish and verify a reachable PostgreSQL tenant-lock service.
 - [ ] Create and verify the snapshot before copying, then run
   dimension/content/E20 smoke, prove snapshot restore, and reactivate.
@@ -40,9 +42,9 @@ must stop before the next mutation boundary.
 | Windows target | Unchanged legacy tree at exact fingerprint below |
 | Snapshot | `.tmp/index-dim-windows-target-snapshot-before-activation` — absent |
 | Manifest / retention registry | `data/vectordb/index-manifests` / `data/vectordb/index-retention` — absent |
-| Lock service | PostgreSQL ports `5432`/`55432` are unavailable; Docker and Ubuntu WSL startup are blocked below PostgreSQL by VHD attach `E_ACCESSDENIED` |
-| Runtime | Docker Desktop stopped; WSL attach still fails; non-elevated and one automated-UAC owner attempts changed nothing; no consent/PostgreSQL service was left running |
-| Ubuntu VHD owner | `BUILTIN\Administrators`; current user has no direct ACE and cannot test a current-user owner without elevation |
+| Lock service | PostgreSQL capability and ports remain to be re-inventoried after WSL recovery; no tenant-lock probe has run |
+| Runtime | Ubuntu WSL attach is restored; one probe returned `WSL_OK` on kernel `5.15.167.4-microsoft-standard-WSL2`; Docker Desktop and Docker VHDX files were not touched |
+| Ubuntu VHD owner | `JULIADEV25\uedom`; elevated `icacls /setowner` exited `0` and an independent ACL read confirmed it |
 
 Opening canonical staging with `chromadb.PersistentClient` is forbidden. The
 Update-199 probe proved candidate `3 × 1024`, all three sources, and E20 top-1,
@@ -82,14 +84,9 @@ The proposed snapshot path remained absent.
 1. Refresh Git and protect the four owner-dirty files: `BACKLOG.md`,
    `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`.
 2. Confirm no project Python/uvicorn/Celery process has the target open.
-3. The owner must open an elevated Windows shell directly; do not relaunch UAC
-   through the agent. Run exactly one owner hypothesis against
-   `D:\WSL\Ubuntu-22.04\ext4.vhdx`: set its owner to `JULIADEV25\uedom`,
-   verify the owner, and make one ordinary Ubuntu attach attempt. Do not touch
-   Docker VHDX files or broaden ACLs. If the same attach error remains, stop
-   this hypothesis. Otherwise use the restored Ubuntu capability or a
-   separately authorized reachable PostgreSQL `DATABASE_URL`. Do not raw-retry
-   the unchanged Docker/WSL startup path. Acquire and release
+3. Use the restored Ubuntu capability to inventory PostgreSQL before changing
+   services or packages. Establish a reachable PostgreSQL `DATABASE_URL`
+   without touching Docker VHDX files or broadening ACLs. Acquire and release
    the normal `default` tenant advisory-lock context as a connectivity probe.
    Stop if this fails; never bypass the lock or forge a token.
 4. Run the verified preflight command above. Stop unless both tree hashes and
