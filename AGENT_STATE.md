@@ -1,5 +1,40 @@
 # Agent State
 
+## 2026-08-13 Update-206 — Ubuntu PostgreSQL absent; tenant-lock gate blocked ⚠ START HERE
+
+> **Actual Git before this docs-only inventory slice:** Windows `master`
+> at `7e32629b`. Resolve this Update's commit through Actual Git; no push,
+> package-install, or runtime-mutation authority is implied.
+>
+> **WSL evidence (prior verified attach, not re-probed here):** ordinary
+> `Ubuntu-22.04` attach succeeded. `uname -r` reported
+> `5.15.167.4-microsoft-standard-WSL2`. This slice did not repeat attach
+> or binary-path probes.
+>
+> **Package inventory (this slice, five direct `dpkg --status` commands):**
+> `postgresql-common`, `postgresql`, `postgresql-14`, `postgresql-15`, and
+> `postgresql-16` each exited `1` with
+> `package '…' is not installed and no information is available`. Prior
+> attempt-2 evidence already showed `psql --version` unresolved, no
+> `/usr/bin/psql`, no `/usr/lib/postgresql`, no `/etc/postgresql`, and no
+> `postgres` on PATH. No installed PostgreSQL server or cluster is present.
+>
+> **Lock gate:** the normal `default` tenant advisory-lock context was not
+> attempted. Package installation is outside this slice, so the tenant-lock
+> gate is blocked. The next step is an explicit owner choice: authorize
+> installation/configuration of a local Ubuntu PostgreSQL service in a
+> future atomic slice, or provide a separately authorized reachable
+> non-production `DATABASE_URL`.
+>
+> **Mutation statement:** no runtime, repository, index, package, service,
+> Docker VHDX, `.env`, or protected-file mutation occurred. Only this
+> status record and the two companion status docs were edited.
+>
+> **Next exact boundary:** do not retry package listing, do not install
+> packages, and do not start a substitute server. Wait for the owner
+> choice above. The existing read-only INDEX-DIM preflight remains behind
+> a green lock gate; snapshot/copy/publish remain later mutation gates.
+
 ## 2026-08-13 Update-205 — WSL recovery handoff made explicit ✅ START HERE
 
 > **Actual Git before this docs-only transparency slice:** Windows `master`

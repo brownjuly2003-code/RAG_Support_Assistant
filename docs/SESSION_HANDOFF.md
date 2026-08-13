@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-13 — **Update-205** (self-contained WSL recovery evidence and permission boundaries).
+**Обновлено:** 2026-08-13 — **Update-206** (Ubuntu PostgreSQL inventory: no server/cluster; tenant-lock gate blocked).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-205**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-206**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-205; dirty
+**Не использовать:** старые `START HERE` ниже Update-206; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -29,21 +29,48 @@
 |-------------------------|-------------------|
 | Последний implementation SHA | `0cba9d1` — read-only Windows INDEX-DIM activation preflight; Updates 199–204 did not change product code |
 | Последний committed test contract | `0cba9d1` — fail-closed evidence/source/target/snapshot readiness; §7.8 remains `bc9ee2b` |
-| Последний committed docs/dependency closure | `8a4a8e0` — Update-204 restored Ubuntu attach; resolve Update-205 through Actual Git after this docs-only transparency record |
-| Actual Git перед этой edit | `master...origin/master [ahead 342]` at `8a4a8e0`; resolve Update-205 through Actual Git after commit; this is not push authority |
+| Последний committed docs/dependency closure | `7e32629b` — Update-205 WSL recovery handoff; resolve Update-206 through Actual Git after this docs-only inventory record |
+| Actual Git перед этой edit | `7e32629b` before this docs-only record; resolve Update-206 through Actual Git after commit; this is not push authority |
 | Где лежит Mac-артефакт | Checkout `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813`; imported Chroma copy `.runtime/windows-chroma` (56 MiB observed); evidence `.runtime/index-dim-rebuild-result.json`, SHA-256 `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382` |
 | Что закрыто локально | `INDEX-DIM` runtime detection/cache containment is local-green at `d157b31`; first-publish legacy rollback bootstrap is local-green at `1aa9f19`; an isolated Mac copy now has a verified 3×1024 versioned artifact plus publish → rollback → reactivate evidence. The working Windows index and primary Mac corpus are unchanged. GraceKelly containment, generation fail-closed, VER-01 local MyPy, §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
 | Известный baseline debt | **VER-01 is LOCAL TYPE-GREEN:** exact command 1 is green across 72 sources and exact command 2 is freshly green across 31 sources in the retained Windows Python 3.11 diagnostic environment. Exact Ubuntu/full 222-package-lock equivalence remains unproved |
 | Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none**; canonical ignored staging was freshly restored to its exact SHA, and the Chroma-opened copy is quarantined separately; no active delegated writer |
-| Grok route truth | Update-197 attempt 1 (`grok-4.5-build`) was cancelled before reads/edits at a compound onboarding request. Cause-specific attempt 2 used `local_grok_cli` / actual `grok-4.5-build`, completed in 16 turns, and produced the scoped four-file diff. Codex independently reviewed and verified it; no QA follow-up was needed. |
-| Что не запускалось | No PostgreSQL/tenant-lock probe, working Windows-index replacement, target snapshot, manifest publish, primary Mac corpus mutation, collection deletion, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana provisioning, seeds 43–44, independent judge, or scrape/alert delivery ran. Update-204 changed only the Ubuntu VHD owner and proved one ordinary WSL attach; Docker VHDX files remained untouched. |
+| Grok route truth | Update-206 inventory attempt 2 was cancelled before the remaining `dpkg --status` checks. This attempt used actual Grok 4.6, ran the five direct package-status commands, and recorded the no-server lock-gate stop in the three allowed status docs. |
+| Что не запускалось | The five Ubuntu `dpkg --status` checks ran and all reported not-installed. The normal `default` tenant lock was not attempted. No package install, service start, working Windows-index replacement, target snapshot, manifest publish, primary Mac corpus mutation, collection deletion, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana provisioning, seeds 43–44, independent judge, or scrape/alert delivery ran. Docker VHDX files remained untouched. |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
-| Следующий slice | Inventory PostgreSQL capability inside the restored Ubuntu runtime, establish a reachable lock service, then acquire/release the normal `default` tenant advisory-lock context as the mandatory connectivity gate. Docker VHDX files stay untouched. |
+| Следующий slice | Tenant-lock gate is blocked: Ubuntu has no installed PostgreSQL server or cluster. Next is an explicit owner choice — authorize installation/configuration of a local Ubuntu PostgreSQL service in a future atomic slice, or provide a separately authorized reachable non-production `DATABASE_URL`. Then prove acquire/release of the normal `default` lock. Do not retry package listing or install packages in this gate. |
 
 ---
 
-### 0B. Update-204 WSL recovery evidence — не восстанавливать из чата
+### 0B. Update-206 PostgreSQL inventory evidence — не восстанавливать из чата
+
+| Поле | Зафиксированный факт |
+|------|----------------------|
+| WSL | Ordinary `Ubuntu-22.04` attach already green; prior `uname -r` was `5.15.167.4-microsoft-standard-WSL2`. This slice did not repeat attach or binary-path probes. |
+| Binaries/paths (attempt 2) | `psql --version` unresolved; `/usr/bin/psql`, `/usr/lib/postgresql`, and `/etc/postgresql` absent; `which postgres` produced no path. |
+| Direct package checks (this slice) | `dpkg --status` for `postgresql-common`, `postgresql`, `postgresql-14`, `postgresql-15`, and `postgresql-16` each exited `1`: package is not installed and no information is available. |
+| Server/cluster | Absent. No installed PostgreSQL server or cluster was established. |
+| Lock probe | Not attempted. Package installation is outside this slice. |
+| Mutation | None. No runtime, repository, index, package, service, Docker VHDX, `.env`, or protected-file change. Only the three allowed status docs were edited. |
+
+**Граница разрешений:** Update-204 UAC/owner approval remains consumed and
+is not reusable. This inventory does not authorize package installation,
+service configuration, Docker-VHD mutation, index mutation, migrations,
+push, deploy, or paid-provider execution.
+
+**Следующий порядок:**
+
+1. Обновить Actual Git и защитить четыре owner-dirty файла.
+2. Не повторять owner/UAC тест и не повторять package listing.
+3. Ждать явный выбор владельца: либо отдельный atomic slice на
+   установку/конфигурацию локального Ubuntu PostgreSQL, либо отдельно
+   авторизованный достижимый non-production `DATABASE_URL`.
+4. Только после зелёного acquire/release штатного `default` lock
+   повторить существующий read-only INDEX-DIM preflight.
+   Snapshot/copy/publish остаются более поздними mutation gates.
+
+### 0B2. Update-204 WSL recovery evidence — исторический факт, не текущий gate
 
 | Поле | Зафиксированный факт |
 |------|----------------------|
@@ -57,22 +84,15 @@
 | Durable evidence | `8a4a8e0` — `docs(index): record restored Ubuntu attach`; подробный текущий runbook: [`index-dim-windows-activation.md`](../index-dim-windows-activation.md). |
 
 **Граница разрешений:** прошлое подтверждение UAC не является бессрочным
-«разрешено всё». Следующая сессия может выполнять read-only Git/Ubuntu/
-PostgreSQL inventory. Изменение пакетов или сервисов должно быть отдельным
-обоснованным atomic slice. Для ACL broadening, Docker-VHD mutation, index
-mutation, migrations 019–023, push, deploy, live multi-service и paid-provider
+«разрешено всё». Inventory из Update-206 уже выполнен: сервер/кластер
+отсутствует. Изменение пакетов или сервисов требует отдельного обоснованного
+atomic slice. Для ACL broadening, Docker-VHD mutation, index mutation,
+migrations 019–023, push, deploy, live multi-service и paid-provider
 execution нельзя выводить разрешение из Update-204.
 
-**Следующий порядок:**
-
-1. Обновить Actual Git и защитить четыре owner-dirty файла.
-2. Не повторять уже зелёный owner/UAC тест; начать с read-only PostgreSQL
-   inventory внутри `Ubuntu-22.04`.
-3. Отдельно установить достижимость PostgreSQL и доказать acquire/release
-   штатного advisory lock для tenant `default`; lock нельзя обходить или
-   подделывать.
-4. Только после зелёного lock gate повторить существующий read-only INDEX-DIM
-   preflight. Snapshot/copy/publish остаются более поздними mutation gates.
+**Исторический порядок Update-204 (superseded):** read-only PostgreSQL
+inventory выполнен в Update-206. Текущий gate — явный выбор владельца,
+зафиксированный в секции 0B выше.
 
 ---
 
@@ -84,16 +104,16 @@ execution нельзя выводить разрешение из Update-204.
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
 | Latest **committed test contract** | `0cba9d1` — exact source/evidence/target/snapshot preflight; `1aa9f19` still preserves legacy rollback and `d157b31` still enforces the stored/declared width guard |
-| Latest **committed docs before this Update** | `8a4a8e0` — Update-204 restored Ubuntu attach |
-| This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md index-dim-windows-activation.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 342]` at `8a4a8e0` before this docs-only transparency record — **refresh mandatory; no push authorization** |
-| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored control/test artifacts remain local; no UAC/consent process remains; Update-205 owns only `AGENT_STATE.md` and this handoff |
+| Latest **committed docs before this Update** | `7e32629b` — Update-205 WSL recovery handoff |
+| This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md index-dim-windows-activation.md`); never add a follow-up only to embed this file's self-SHA |
+| Branch advisory | observed HEAD `7e32629b` before this docs-only inventory record — **refresh mandatory; no push authorization** |
+| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored control/test artifacts remain local; Update-206 owns only `AGENT_STATE.md`, this handoff, and `index-dim-windows-activation.md` |
 | Locally complete (documented scopes) | isolated INDEX-DIM Mac artifact/lifecycle proof + INDEX-DIM runtime guard `d157b31` + rollback bootstrap `1aa9f19` + GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28` + TestClient backend `e400d88`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.8** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/04/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | INDEX-DIM activation is **tenant-lock-blocked** before snapshot: Ubuntu data-VHD ownership is corrected and ordinary WSL attach is green; PostgreSQL capability and the required `default` tenant advisory-lock probe remain unverified. |
-| Gates | Establish and verify a reachable PostgreSQL lock service before preflight or index mutation. No ACL broadening, Docker-VHD mutation, push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
+| Next ordered | INDEX-DIM activation is **tenant-lock-blocked** before snapshot: Ubuntu attach is green, but no PostgreSQL server/cluster is installed. The normal `default` lock was not attempted. Next is an explicit owner choice: authorize local Ubuntu PostgreSQL install/config in a future atomic slice, or provide a separately authorized reachable non-production `DATABASE_URL`. |
+| Gates | Do not install packages or retry package listing. Owner must choose install/config of a local Ubuntu PostgreSQL service or a separately authorized non-production `DATABASE_URL` before any lock probe, preflight, or index mutation. No ACL broadening, Docker-VHD mutation, push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
 **Update-176 adds bounded formal §7.6 evidence:** one direct-Mistral seed-43
@@ -118,7 +138,7 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 | What does §7.6 prove? | One direct-Mistral seed-43 case passed with valid complete child evidence. It proves the bounded route/gate attempt only, not scheduled breadth, independent judge, §5 ×3, or whole release. |
 | What does hybrid prove? | Default production reranker exceeded 1 GiB and was killed before retrieval/provider execution. Hybrid quality remains unknown; raw local retry is forbidden. |
 | What is the full local Python gate? | Python 3.13 CI-shaped unit+coverage is local-green: **1851 passed / 4 skipped**, coverage **77.04%** ≥ 72%. VER-01 retained Windows Python 3.11 MyPy command 1 is green across 72 sources and command 2 is green across 31 sources. Ubuntu/full 222-package-lock CI and release gates remain open. |
-| What is preauthorized next? | One manually initiated elevated owner test on the Ubuntu VHD only, with owner verification and one attach attempt. Do not relaunch UAC through the agent. If unchanged, stop the hypothesis. Docker VHDX, ACL broadening, lock bypass, push, deploy, paid provider calls, migrations 019–023, production claims, and destructive deletion remain unauthorized. |
+| What is preauthorized next? | Nothing on the lock path. Ubuntu attach is green and PostgreSQL packages/server are absent. Wait for an explicit owner choice: authorize local Ubuntu PostgreSQL install/config in a future atomic slice, or provide a separately authorized reachable non-production `DATABASE_URL`. Docker VHDX, ACL broadening, lock bypass, package install without that authorization, push, deploy, paid provider calls, migrations 019–023, production claims, and destructive deletion remain unauthorized. |
 
 ### 0C. Exact INDEX-DIM artifact map
 
@@ -134,7 +154,7 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 | Canonical Windows staging | `.tmp/index-dim-windows-chroma-source-20260813` | Restored from Mac; 631 files / 56,309,636 bytes / SHA `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96`; fingerprint only, never open directly with Chroma |
 | Quarantined opened copy | `.tmp/index-dim-windows-chroma-source-opened-20260813` | Preserved diagnostic artifact; `PersistentClient` changed its bytes, so it is not an activation source |
 | Windows rollback paths | `.tmp/index-dim-windows-target-snapshot-before-activation`; `data/vectordb/index-manifests`; `data/vectordb/index-retention` | All absent after Update-199; unexpected presence is a stop condition, not permission to overwrite |
-| Lock dependency | PostgreSQL advisory lock through the configured `DATABASE_URL` | Required before snapshot/copy/publish; system/swap VHD setup succeeds, but Ubuntu data-VHD attach fails with `E_ACCESSDENIED`; current shell cannot run the one bounded owner test |
+| Lock dependency | PostgreSQL advisory lock through the configured `DATABASE_URL` | Required before snapshot/copy/publish; Ubuntu attach is green; five direct `dpkg --status` checks found no `postgresql-common` / `postgresql` / `14` / `15` / `16` packages; no server/cluster; lock not attempted; next is owner install/config authorization or a separately authorized non-production `DATABASE_URL` |
 | Temporary resources | `/tmp/mistral-key-20260813` absent; PostgreSQL ports `5432`/`55432` unavailable; Docker Desktop stopped | No credential file, Docker daemon, or isolated database service was left active |
 
 The next session must not rebuild or raw-retry WSL/Docker merely to rediscover
@@ -153,16 +173,15 @@ activation slice.
 1. Refresh Actual Git and confirm only the four protected owner files are dirty.
 2. Confirm no project Python/uvicorn/Celery process has the Windows Chroma tree
    open. Confirm Docker/PostgreSQL state instead of assuming it.
-3. The owner must open an elevated Windows shell directly; do not relaunch UAC
-   through the agent. Set the owner of only
-   `D:\WSL\Ubuntu-22.04\ext4.vhdx` to `JULIADEV25\uedom`, verify the owner,
-   and make one ordinary Ubuntu attach attempt. Do not touch Docker VHDX files
-   or broaden ACLs. If the same error remains, stop the owner hypothesis. If
-   attach succeeds, use existing Ubuntu PostgreSQL capability when present, or
-   provide a separately authorized reachable `DATABASE_URL`. Then prove the
+3. Do not repeat the green Ubuntu attach or the completed package inventory.
+   The lock gate is blocked until the owner either authorizes
+   installation/configuration of a local Ubuntu PostgreSQL service in a
+   future atomic slice, or provides a separately authorized reachable
+   non-production `DATABASE_URL`. After that service is reachable, prove the
    normal tenant advisory-lock context can acquire and release the `default`
    lock. This is a connectivity probe only; do not create a manifest manually
-   or construct a lock token outside that context.
+   or construct a lock token outside that context. Do not install packages
+   without that authorization.
 4. Run the exact preflight from the activation plan. Require canonical source
    SHA `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96`,
    target SHA

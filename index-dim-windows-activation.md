@@ -27,7 +27,11 @@ must stop before the next mutation boundary.
   relaunched automatically.
 - [x] With fresh explicit authorization, complete the Ubuntu-only owner change
   and prove one ordinary WSL attach succeeds without touching Docker VHDX.
-- [ ] Establish and verify a reachable PostgreSQL tenant-lock service.
+- [x] Inventory Ubuntu PostgreSQL packages after restored attach: five
+  direct `dpkg --status` checks found no server or cluster.
+- [ ] Establish and verify a reachable PostgreSQL tenant-lock service after
+  an explicit owner choice (local Ubuntu install/config, or a separately
+  authorized reachable non-production `DATABASE_URL`).
 - [ ] Create and verify the snapshot before copying, then run
   dimension/content/E20 smoke, prove snapshot restore, and reactivate.
 
@@ -42,8 +46,8 @@ must stop before the next mutation boundary.
 | Windows target | Unchanged legacy tree at exact fingerprint below |
 | Snapshot | `.tmp/index-dim-windows-target-snapshot-before-activation` — absent |
 | Manifest / retention registry | `data/vectordb/index-manifests` / `data/vectordb/index-retention` — absent |
-| Lock service | PostgreSQL capability and ports remain to be re-inventoried after WSL recovery; no tenant-lock probe has run |
-| Runtime | Ubuntu WSL attach is restored; one probe returned `WSL_OK` on kernel `5.15.167.4-microsoft-standard-WSL2`; Docker Desktop and Docker VHDX files were not touched |
+| Lock service | Blocked. Direct `dpkg --status` for `postgresql-common`, `postgresql`, `postgresql-14`, `postgresql-15`, and `postgresql-16` all returned not-installed. No server or cluster is present. The normal `default` lock was not attempted. |
+| Runtime | Ubuntu WSL attach remains green on kernel `5.15.167.4-microsoft-standard-WSL2`; `psql`/`postgres` binaries and `/usr/lib/postgresql`/`/etc/postgresql` are absent. Docker Desktop and Docker VHDX files were not touched |
 | Ubuntu VHD owner | `JULIADEV25\uedom`; elevated `icacls /setowner` exited `0` and an independent ACL read confirmed it |
 
 Opening canonical staging with `chromadb.PersistentClient` is forbidden. The
@@ -84,14 +88,17 @@ The proposed snapshot path remained absent.
 1. Refresh Git and protect the four owner-dirty files: `BACKLOG.md`,
    `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`.
 2. Confirm no project Python/uvicorn/Celery process has the target open.
-3. Use the restored Ubuntu capability to inventory PostgreSQL before changing
-   services or packages. Establish a reachable PostgreSQL `DATABASE_URL`
-   without touching Docker VHDX files or broadening ACLs. Acquire and release
-   the normal `default` tenant advisory-lock context as a connectivity probe.
-   Stop if this fails; never bypass the lock or forge a token.
-4. Run the verified preflight command above. Stop unless both tree hashes and
-   the evidence hash match, `ready=true`, `mutation_performed=false`, and the
-   snapshot path is absent.
+3. Do not repeat the completed Ubuntu package inventory. The lock gate is
+   blocked until the owner either authorizes installation/configuration of a
+   local Ubuntu PostgreSQL service in a future atomic slice, or provides a
+   separately authorized reachable non-production `DATABASE_URL`. After that
+   service is reachable, acquire and release the normal `default` tenant
+   advisory-lock context as a connectivity probe. Stop if this fails; never
+   bypass the lock or forge a token. Do not install packages without that
+   authorization.
+4. Only after the lock gate is green, run the verified preflight command
+   above. Stop unless both tree hashes and the evidence hash match,
+   `ready=true`, `mutation_performed=false`, and the snapshot path is absent.
 5. Acquire the `default` tenant lock again and hold it continuously through
    steps 6–10. Recheck the target fingerprint, absent snapshot, absent
    manifest/retention registries, and absence of another runtime after lock
