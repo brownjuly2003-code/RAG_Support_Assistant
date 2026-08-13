@@ -1,5 +1,42 @@
 # Agent State
 
+## 2026-08-13 Update-200 — next-session activation handoff reconciled ✅ START HERE
+
+> **Actual Git before this docs-only slice:** Windows `master` at `bac1939`,
+> ahead of `origin/master` by 337 commits. Resolve this Update's commit through
+> Actual Git; neither the observed count nor this documentation grants push or
+> runtime-mutation authority.
+>
+> **Why this update exists:** Update-199 recorded the correct fail-closed
+> outcome, but the active handoff still contained older implementation/docs
+> SHAs and described INDEX-DIM as merely activation-open. The canonical
+> activation plan also lacked the PostgreSQL-lock blocker, the Chroma source
+> mutation warning, and an ordered restart/stop contract.
+>
+> **Reconciled truth:** product implementation remains `0cba9d1`; the blocker
+> record is `bac1939`. Canonical local staging is restored at 631 files /
+> 56,309,636 bytes / SHA
+> `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96`.
+> Windows target remains 627 files / 55,885,536 bytes / SHA
+> `5c9eff00707d725a06c1a4f442833e675525d888d4d200f85049d9a77963842e`.
+> Snapshot, manifest registry, and retention registry are absent; Docker
+> Desktop is stopped and no PostgreSQL lock service was started.
+>
+> **Next-session routing:** read this block, the top of
+> `docs/SESSION_HANDOFF.md`, and `index-dim-windows-activation.md`. Do not open
+> canonical staging with `PersistentClient`. A new direct autonomy request may
+> select activation, but the first executable gate is still a reachable
+> PostgreSQL advisory-lock service. If the lock, exact source/target hashes,
+> empty snapshot path, or absence of an active project runtime cannot be
+> established, stop before snapshot/copy. The activation plan now owns the
+> ordered snapshot → import → publish → smoke → restore proof → reactivate
+> contract and all rollback/stop conditions.
+>
+> **Scope:** documentation only. No Chroma directory, manifest, retention
+> registry, Docker service, PostgreSQL service, provider, migration, deploy,
+> push, or release action ran. The four protected owner-dirty files remained
+> outside this scope.
+
 ## 2026-08-13 Update-199 — Windows INDEX-DIM activation lock-blocked ⚠ START HERE
 
 > **Baseline before this slice:** Windows `master` at `0cba9d1`, ahead of

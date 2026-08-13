@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-13 (Update-199 Windows INDEX-DIM activation lock-blocked)
+**Date:** 2026-08-13 (Update-200 next-session activation handoff reconciled)
 **Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-199**)
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-200**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
@@ -10,6 +10,15 @@ authoritative open-problem ledger in §1C.
 > Update-191. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
+
+**Update-200:** documentation-only reconciliation; no plan checkbox or runtime
+gate changed. The active handoff now points to implementation `0cba9d1`, blocker
+record `bac1939`, Actual Git before this edit, exact canonical/quarantined
+staging paths, absent snapshot/manifest/retention paths, and the PostgreSQL-lock
+dependency. The activation runbook now separates prerequisites, ordered
+snapshot/import/publish/smoke/restore/reactivate steps, acceptance criteria, and
+stop/rollback conditions. No index, lock service, provider, migration, deploy,
+push, or release action ran.
 
 **Update-199:** no plan checkbox or release gate changed. The exact activation
 preflight passed again, but the state-changing path stopped before snapshot or

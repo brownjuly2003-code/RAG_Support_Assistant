@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-13 — **Update-199** (Windows INDEX-DIM activation stopped fail-closed at the PostgreSQL lock boundary).
+**Обновлено:** 2026-08-13 — **Update-200** (next-session INDEX-DIM activation handoff reconciled; runtime state unchanged).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-199**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-200**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-199; dirty
+**Не использовать:** старые `START HERE` ниже Update-200; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -27,10 +27,10 @@
 
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
-| Последний implementation SHA | `0cba9d1` — read-only Windows INDEX-DIM activation preflight; Update-199 is docs-only and did not change product code |
+| Последний implementation SHA | `0cba9d1` — read-only Windows INDEX-DIM activation preflight; Updates 199–200 are docs-only and did not change product code |
 | Последний committed test contract | `0cba9d1` — fail-closed evidence/source/target/snapshot readiness; §7.8 remains `bc9ee2b` |
-| Последний committed docs/dependency closure | Resolve Update-199 through Actual Git — activation lock blocker; latest dependency closure remains `e400d88` (VER-04) |
-| Actual Git перед этой edit | `master...origin/master [ahead 336]` at `0cba9d1`; resolve Update-199 through Actual Git after commit; this is not push authority |
+| Последний committed docs/dependency closure | `bac1939` — fail-closed Windows activation lock blocker; resolve Update-200 through Actual Git after this docs-only reconciliation |
+| Actual Git перед этой edit | `master...origin/master [ahead 337]` at `bac1939`; resolve Update-200 through Actual Git after commit; this is not push authority |
 | Где лежит Mac-артефакт | Checkout `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813`; imported Chroma copy `.runtime/windows-chroma` (56 MiB observed); evidence `.runtime/index-dim-rebuild-result.json`, SHA-256 `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382` |
 | Что закрыто локально | `INDEX-DIM` runtime detection/cache containment is local-green at `d157b31`; first-publish legacy rollback bootstrap is local-green at `1aa9f19`; an isolated Mac copy now has a verified 3×1024 versioned artifact plus publish → rollback → reactivate evidence. The working Windows index and primary Mac corpus are unchanged. GraceKelly containment, generation fail-closed, VER-01 local MyPy, §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
@@ -39,7 +39,7 @@
 | Grok route truth | Update-197 attempt 1 (`grok-4.5-build`) was cancelled before reads/edits at a compound onboarding request. Cause-specific attempt 2 used `local_grok_cli` / actual `grok-4.5-build`, completed in 16 turns, and produced the scoped four-file diff. Codex independently reviewed and verified it; no QA follow-up was needed. |
 | Что не запускалось | No working Windows-index replacement, target snapshot, manifest publish, primary Mac corpus mutation, collection deletion, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana provisioning, seeds 43–44, independent judge, or scrape/alert delivery ran. The bounded Docker Desktop startup did not expose a daemon and left no service running. |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
-| Следующий slice | Make the mandatory PostgreSQL advisory-lock service reachable first. Then rerun the exact preflight, create/verify the named snapshot, copy without opening the canonical source, publish under the tenant lock, run smoke, prove restore, and reactivate; do not bypass the lock or overwrite/delete retained corpora casually |
+| Следующий slice | If a new direct autonomy request selects activation, make the mandatory PostgreSQL advisory-lock service reachable first. Then follow §0D and [`index-dim-windows-activation.md`](../index-dim-windows-activation.md); do not bypass the lock or open canonical staging with Chroma |
 
 ---
 
@@ -47,19 +47,19 @@
 
 | Факт | Значение |
 |------|----------|
-| Latest **committed implementation** | `1aa9f19` — first versioned publish preserves the legacy collection as rollback target; runtime dimension guard remains `d157b31` |
+| Latest **committed implementation** | `0cba9d1` — read-only Windows activation preflight; first-publish rollback bootstrap remains `1aa9f19`, runtime dimension guard remains `d157b31` |
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
-| Latest **committed test contract** | `1aa9f19` — first versioned publish can roll back to the resolved legacy collection; `d157b31` still enforces the stored/declared width guard |
-| Latest **committed docs before this Update** | `46b51b2` — Update-195 verified Mac artifact record |
-| This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 333]` at `46b51b2` before this docs edit — **refresh mandatory; no push authorization** |
-| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored control/test artifacts remain local; this Update owns only the three status docs and `index-dim-rebuild.md` |
+| Latest **committed test contract** | `0cba9d1` — exact source/evidence/target/snapshot preflight; `1aa9f19` still preserves legacy rollback and `d157b31` still enforces the stored/declared width guard |
+| Latest **committed docs before this Update** | `bac1939` — Update-199 activation lock blocker |
+| This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md index-dim-windows-activation.md`); never add a follow-up only to embed this file's self-SHA |
+| Branch advisory | observed `master...origin/master [ahead 337]` at `bac1939` before this docs edit — **refresh mandatory; no push authorization** |
+| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored control/test artifacts remain local; Update-200 owns only `AGENT_STATE.md`, this handoff, `PLAN_CLOSURE_STATUS.md`, and `index-dim-windows-activation.md` |
 | Locally complete (documented scopes) | isolated INDEX-DIM Mac artifact/lifecycle proof + INDEX-DIM runtime guard `d157b31` + rollback bootstrap `1aa9f19` + GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28` + TestClient backend `e400d88`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.8** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/04/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | Windows `INDEX-DIM` readiness is complete. Snapshot creation/import/activation remains a separate state-changing mutation with smoke and rollback requirements. WSL raw retry remains exhausted; live quality still needs an authorized routing/provider boundary or fresh paid gate |
+| Next ordered | INDEX-DIM activation is **lock-blocked** before snapshot: establish a reachable PostgreSQL advisory lock, then follow the exact §0D sequence. WSL raw retry remains exhausted; live quality still needs an authorized routing/provider boundary or fresh paid gate |
 | Gates | WSL was used only for isolated dependency verification; Docker daemon was unavailable. No push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
@@ -77,7 +77,7 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 
 | Question | Durable answer |
 |----------|----------------|
-| What is the current docs baseline? | `0cba9d1` before Update-199; Actual Git must override the embedded SHA after commit. |
+| What is the current docs baseline? | `bac1939` before Update-200; Actual Git must override the embedded SHA after commit. |
 | Is an owned writer/test still running? | No related writer/test is active. Docker Desktop is not running; no temporary PostgreSQL service started. |
 | Is the memory guard active? | Last durable verification recorded `PythonMemoryGuard` as `Running`, with a 1024 MiB / 10-second contract. Update-197 did not recheck it; verify current scheduler state before relying on it. |
 | What does §5 prove? | The post-QG vector-only seed 42 is valid live evidence but **FAILS** quality: 25% candidate vs 90% baseline, 13 regressions. Seeds 43–44 and passing ×3 evidence do not exist. |
@@ -85,7 +85,7 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 | What does §7.6 prove? | One direct-Mistral seed-43 case passed with valid complete child evidence. It proves the bounded route/gate attempt only, not scheduled breadth, independent judge, §5 ×3, or whole release. |
 | What does hybrid prove? | Default production reranker exceeded 1 GiB and was killed before retrieval/provider execution. Hybrid quality remains unknown; raw local retry is forbidden. |
 | What is the full local Python gate? | Python 3.13 CI-shaped unit+coverage is local-green: **1851 passed / 4 skipped**, coverage **77.04%** ≥ 72%. VER-01 retained Windows Python 3.11 MyPy command 1 is green across 72 sources and command 2 is green across 31 sources. Ubuntu/full 222-package-lock CI and release gates remain open. |
-| What is preauthorized next? | No new state-changing slice. The isolated INDEX-DIM artifact is complete, but importing/activating it in a working runtime requires a target-specific snapshot/smoke/rollback boundary. Do not raw-retry WSL or claim Linux CI equivalence. GraceKelly edit, routing/fallback cost change, paid call, migration 019–023, deploy, or push needs separate exact authority. |
+| What is preauthorized next? | This Update authorizes documentation only. A later direct autonomy request may select the documented local activation slice; it does not authorize lock bypass, push, deploy, paid provider calls, migrations 019–023, production claims, or destructive deletion. |
 
 ### 0C. Exact INDEX-DIM artifact map
 
@@ -98,6 +98,10 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 | Candidate | `rag_docs-v-default-3f2b79fbe1246ab3`, 3 vectors × 1024 | Final isolated manifest generation 3 points here; previous is legacy `rag_docs_default` |
 | Primary Mac corpus | `/Users/julia/RAG_Support_Assistant/data/vectordb/chroma` | Not mutated; last inspected `rag_docs_default` was 5589 × 1024 |
 | Windows working corpus | `D:\RAG_Support_Assistant\data\vectordb\chroma` | Not replaced; captured legacy baseline was `rag_docs_default`, 6 × 3 |
+| Canonical Windows staging | `.tmp/index-dim-windows-chroma-source-20260813` | Restored from Mac; 631 files / 56,309,636 bytes / SHA `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96`; fingerprint only, never open directly with Chroma |
+| Quarantined opened copy | `.tmp/index-dim-windows-chroma-source-opened-20260813` | Preserved diagnostic artifact; `PersistentClient` changed its bytes, so it is not an activation source |
+| Windows rollback paths | `.tmp/index-dim-windows-target-snapshot-before-activation`; `data/vectordb/index-manifests`; `data/vectordb/index-retention` | All absent after Update-199; unexpected presence is a stop condition, not permission to overwrite |
+| Lock dependency | PostgreSQL advisory lock through the configured `DATABASE_URL` | Required before snapshot/copy/publish; `127.0.0.1:5432` was unreachable and Docker Desktop did not start its daemon in the bounded attempt |
 | Temporary resources | `/tmp/mistral-key-20260813` absent; PostgreSQL ports `5432`/`55432` unavailable; Docker Desktop stopped | No credential file, Docker daemon, or isolated database service was left active |
 
 The next session must not rebuild merely to rediscover this state. Start with
@@ -105,6 +109,57 @@ Actual Git and this table. If activation is explicitly selected, verify the
 artifact hash, snapshot the exact target, import without deleting the retained
 corpus, run dimension/content/E20 smoke checks, and keep a tested rollback.
 Otherwise select a different documented residual and leave both corpora alone.
+
+### 0D. Zero-guess INDEX-DIM resume order
+
+This is routing and acceptance documentation, not standing authority to mutate
+the index. Execute it only when the latest user request selects the local
+activation slice.
+
+1. Refresh Actual Git and confirm only the four protected owner files are dirty.
+2. Confirm no project Python/uvicorn/Celery process has the Windows Chroma tree
+   open. Confirm Docker/PostgreSQL state instead of assuming it.
+3. Establish a reachable PostgreSQL `DATABASE_URL` and prove the normal tenant
+   advisory-lock context can acquire and release the `default` lock. This is a
+   connectivity probe only; do not create a manifest manually or construct a
+   lock token outside that context.
+4. Run the exact preflight from the activation plan. Require canonical source
+   SHA `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96`,
+   target SHA
+   `5c9eff00707d725a06c1a4f442833e675525d888d4d200f85049d9a77963842e`,
+   evidence SHA
+   `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382`,
+   `ready=true`, `mutation_performed=false`, and an absent snapshot path.
+5. Acquire the `default` tenant lock again and hold it continuously through
+   steps 6–10. After acquisition, recheck the target fingerprint, absent
+   snapshot/sidecar state, and absence of another runtime before mutating.
+6. Move/copy the complete original target to the named snapshot and verify its
+   full fingerprint before installing anything. Copy from canonical staging
+   without opening canonical staging through `PersistentClient`.
+7. Validate the installed target before publication: candidate count `3`,
+   dimension `1024`, exact three source documents, E20 content, and
+   `errors_e10_e30.md` as E20 top-1. No provider call is needed. Then record
+   retention and publish through existing lock-guarded APIs; first Windows
+   publication must produce generation 1 with previous `rag_docs_default`.
+8. Accept the active candidate, then use the existing rollback API. Require
+   generation 2 with active `rag_docs_default` and previous candidate before
+   restoring the Chroma snapshot.
+9. Preserve the candidate tree in the named hold path, restore the verified
+   target snapshot, and recheck its exact fingerprint. Move the restored target
+   back to the snapshot path, reinstall the preserved candidate tree, validate
+   it again, and publish it as generation 3 with previous `rag_docs_default`.
+10. Repeat active candidate acceptance, then release the tenant lock. Retain
+    the verified snapshot until final reporting explicitly decides its fate.
+11. On any failed hash, lock, snapshot, manifest, dimension, content, E20, or
+    restore check: stop, preserve evidence, return the manifest to a compatible
+    legacy target before restoring the verified snapshot, and do not delete
+    either retained collection.
+
+Completion requires both a verified rollback proof and final manifest
+generation 3 active on `rag_docs-v-default-3f2b79fbe1246ab3` at `3 × 1024`,
+with previous `rag_docs_default`. Snapshot retention/removal and sidecar state
+must be reported explicitly. The detailed contract and forbidden shortcuts are
+in [`index-dim-windows-activation.md`](../index-dim-windows-activation.md).
 
 **Update-193 implementation evidence:** `d157b31` adds a read-only one-vector
 active Chroma preflight at the tenant-runtime boundary, declares built-in
@@ -541,7 +596,7 @@ dated and are not rewritten.
 | HYBRID-MEM | Guard is enforced; production-reranker hybrid exceeded the 1 GiB ceiling and was killed before retrieval/provider execution | Do not retry locally without a narrowed design expected below 1 GiB; no hybrid quality claim exists |
 | Live quality ×3 | Post-QG seed 42 ran with valid evidence and **failed** at 25% candidate vs 90% baseline; seeds 43–44 and a valid passing aggregate do not exist | Diagnose candidate/browser behavior locally first; any new paid seed needs fresh opt-in |
 | INDEX-DIM guard | **LOCAL-CLOSED at `d157b31`:** tenant runtime fails before provider/retriever/cache/mutation when stored width differs from declared embedder width | Do not reopen without a dimension/cache boundary change; guard closure is not index repair |
-| INDEX-DIM rebuild | **ARTIFACT-CLOSED / ACTIVATION OPEN:** isolated Mac copy has a verified 3×1024 versioned artifact and publish/rollback/reactivation proof; working Windows and primary Mac corpora are unchanged | Select one exact target, take a recoverable snapshot, and define smoke/rollback before any import or activation; never replace/delete retained collections casually |
+| INDEX-DIM rebuild | **ARTIFACT-CLOSED / PREFLIGHT READY / ACTIVATION LOCK-BLOCKED:** isolated Mac copy has a verified 3×1024 artifact; canonical Windows staging and target hashes are fixed; working Windows target is unchanged | First restore a reachable PostgreSQL advisory-lock service. Then follow §0D; do not open canonical staging, bypass the lock, or delete retained collections |
 | Release / migrations / deploy / push | Plan and production remain open | Exact target-specific owner authorization plus the relevant full gate |
 
 The table is routing information only. It grants no permission to execute a
@@ -817,10 +872,12 @@ OPS-01 is enforced and default hybrid is conclusively memory-blocked under the
 narrowed design expected below that limit. VER-03 remains local-green.
 `INDEX-DIM-GUARD` is locally closed at `d157b31`; do not reimplement or
 re-probe it. The isolated **INDEX-DIM-REBUILD** artifact and its
-publish/rollback/reactivation proof are verified, and Update-198 closes the
-read-only Windows source/target/evidence preflight. The remaining index boundary
-is state-changing: create and verify the named snapshot before import, then run
-smoke and restore on failure. No ungated local slice is preselected; remaining
+publish/rollback/reactivation proof are verified, Update-198 closes the
+read-only Windows source/target/evidence preflight, and Update-199 records the
+failed bounded Docker/lock attempt. The remaining index boundary is
+state-changing and currently PostgreSQL-lock-blocked before snapshot. After a
+new direct autonomy request selects it, follow §0D; otherwise no ungated local
+slice is preselected. Remaining
 work needs a separately selected authorized boundary, a product/SLA decision,
 or human-labelled evidence.
 
