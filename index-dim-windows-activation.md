@@ -19,6 +19,9 @@ must stop before the next mutation boundary.
 - [x] Diagnose the unchanged retry boundary: WSL VHD attachment fails with
   `Wsl/Service/CreateInstance/MountVhd/HCS/E_ACCESSDENIED`; one narrowed
   `wsl --shutdown` correction did not change the result.
+- [x] Narrow the attach failure past successful system/swap VHD setup and stop
+  at the admin-only Ubuntu VHD owner test; the non-elevated test changed
+  nothing and returned `Access is denied`.
 - [ ] Establish and verify a reachable PostgreSQL tenant-lock service.
 - [ ] Create and verify the snapshot before copying, then run
   dimension/content/E20 smoke, prove snapshot restore, and reactivate.
@@ -35,7 +38,8 @@ must stop before the next mutation boundary.
 | Snapshot | `.tmp/index-dim-windows-target-snapshot-before-activation` — absent |
 | Manifest / retention registry | `data/vectordb/index-manifests` / `data/vectordb/index-retention` — absent |
 | Lock service | PostgreSQL ports `5432`/`55432` are unavailable; Docker and Ubuntu WSL startup are blocked below PostgreSQL by VHD attach `E_ACCESSDENIED` |
-| Runtime | Docker Desktop stopped; WSL attach still fails after one `wsl --shutdown`; no temporary PostgreSQL service was left running |
+| Runtime | Docker Desktop stopped; WSL attach still fails after one `wsl --shutdown`; a non-elevated owner test processed zero files; no temporary PostgreSQL service was left running |
+| Ubuntu VHD owner | `BUILTIN\Administrators`; current user has no direct ACE and cannot test a current-user owner without elevation |
 
 Opening canonical staging with `chromadb.PersistentClient` is forbidden. The
 Update-199 probe proved candidate `3 × 1024`, all three sources, and E20 top-1,
@@ -75,7 +79,11 @@ The proposed snapshot path remained absent.
 1. Refresh Git and protect the four owner-dirty files: `BACKLOG.md`,
    `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`.
 2. Confirm no project Python/uvicorn/Celery process has the target open.
-3. Require changed system-state evidence that WSL VHD attachment works, or a
+3. From an elevated Windows shell, run exactly one owner hypothesis against
+   `D:\WSL\Ubuntu-22.04\ext4.vhdx`: set its owner to `JULIADEV25\uedom`,
+   verify the owner, and make one ordinary Ubuntu attach attempt. Do not touch
+   Docker VHDX files or broaden ACLs. If the same attach error remains, stop
+   this hypothesis. Otherwise use the restored Ubuntu capability or a
    separately authorized reachable PostgreSQL `DATABASE_URL`. Do not raw-retry
    the unchanged Docker/WSL startup path. Acquire and release
    the normal `default` tenant advisory-lock context as a connectivity probe.

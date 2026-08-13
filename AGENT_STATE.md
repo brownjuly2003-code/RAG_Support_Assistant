@@ -1,5 +1,39 @@
 # Agent State
 
+## 2026-08-13 Update-202 — WSL VHD owner test admin-blocked ⚠ START HERE
+
+> **Actual Git before this blocked diagnostic slice:** Windows `master` at
+> `2e5254e`, ahead of `origin/master` by 339 commits. Resolve this Update's
+> commit through Actual Git; this record grants no push or index-mutation
+> authority.
+>
+> **Narrowed boundary:** fresh VHDMP events show that WSL successfully creates,
+> surfaces, and closes `C:\Program Files\WSL\system.vhd` and a new
+> `%LOCALAPPDATA%\Temp\<vm-id>\swap.vhdx`. The failure is therefore later at
+> the distro data-VHD boundary, not the current swap or free-space boundary.
+> Ubuntu and both Docker data VHDX files share owner
+> `BUILTIN\Administrators`; current user `JULIADEV25\uedom` has no direct ACE
+> and reaches the files only through `Authenticated Users: Modify`. This
+> matches a known cause of `MountVhd/HCS/E_ACCESSDENIED`, but the same symptom
+> also exists as an open WSL issue on Windows build 26200, so ownership is a
+> bounded hypothesis rather than a claimed root cause.
+>
+> **Admin gate:** one non-elevated owner test against only
+> `D:\WSL\Ubuntu-22.04\ext4.vhdx` returned `Access is denied` and processed
+> zero files. Post-check preserved owner `BUILTIN\Administrators`, size
+> 12,810,452,992 bytes, and mtime 2026-08-13 08:03:56. No ACL, owner, VHD
+> content, Docker data, service, index, snapshot, manifest, or project file was
+> mutated by the failed test.
+>
+> **Next exact boundary:** from an elevated Windows shell, test only
+> `icacls "D:\WSL\Ubuntu-22.04\ext4.vhdx" /setowner "JULIADEV25\uedom"`,
+> verify the owner, then make one ordinary Ubuntu attach attempt. If attach
+> still returns the same error, stop: do not broaden ACLs or repeat owner
+> changes; treat the current Windows/WSL build as the remaining hypothesis. If
+> attach succeeds, inspect existing PostgreSQL capability before installing or
+> starting anything, then return to the tenant-lock gate. Docker VHDX files
+> remain out of scope.
+
 ## 2026-08-13 Update-201 — Windows INDEX-DIM activation WSL-blocked ⚠ START HERE
 
 > **Actual Git before this blocked runtime slice:** Windows `master` at

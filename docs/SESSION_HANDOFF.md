@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-13 — **Update-201** (INDEX-DIM activation stopped at WSL VHD attach `E_ACCESSDENIED`; no project data mutation).
+**Обновлено:** 2026-08-13 — **Update-202** (WSL data-VHD owner hypothesis narrowed to one elevated test; non-elevated attempt changed nothing).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,11 +11,11 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-201**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-202**) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
 
-**Не использовать:** старые `START HERE` ниже Update-201; dirty
+**Не использовать:** старые `START HERE` ниже Update-202; dirty
 `BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
 (это untracked stale pointer на Update-122, не SoT).
 
@@ -27,19 +27,19 @@
 
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
-| Последний implementation SHA | `0cba9d1` — read-only Windows INDEX-DIM activation preflight; Updates 199–201 did not change product code |
+| Последний implementation SHA | `0cba9d1` — read-only Windows INDEX-DIM activation preflight; Updates 199–202 did not change product code |
 | Последний committed test contract | `0cba9d1` — fail-closed evidence/source/target/snapshot readiness; §7.8 remains `bc9ee2b` |
-| Последний committed docs/dependency closure | `426442a` — Update-200 activation handoff reconciliation; resolve Update-201 through Actual Git after this blocked-slice record |
-| Actual Git перед этой edit | `master...origin/master [ahead 338]` at `426442a`; resolve Update-201 through Actual Git after commit; this is not push authority |
+| Последний committed docs/dependency closure | `2e5254e` — Update-201 WSL activation blocker; resolve Update-202 through Actual Git after this blocked diagnostic record |
+| Actual Git перед этой edit | `master...origin/master [ahead 339]` at `2e5254e`; resolve Update-202 through Actual Git after commit; this is not push authority |
 | Где лежит Mac-артефакт | Checkout `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813`; imported Chroma copy `.runtime/windows-chroma` (56 MiB observed); evidence `.runtime/index-dim-rebuild-result.json`, SHA-256 `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382` |
 | Что закрыто локально | `INDEX-DIM` runtime detection/cache containment is local-green at `d157b31`; first-publish legacy rollback bootstrap is local-green at `1aa9f19`; an isolated Mac copy now has a verified 3×1024 versioned artifact plus publish → rollback → reactivate evidence. The working Windows index and primary Mac corpus are unchanged. GraceKelly containment, generation fail-closed, VER-01 local MyPy, §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не означает production ready |
 | Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
 | Известный baseline debt | **VER-01 is LOCAL TYPE-GREEN:** exact command 1 is green across 72 sources and exact command 2 is freshly green across 31 sources in the retained Windows Python 3.11 diagnostic environment. Exact Ubuntu/full 222-package-lock equivalence remains unproved |
 | Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); implementation/test WIP **none**; canonical ignored staging was freshly restored to its exact SHA, and the Chroma-opened copy is quarantined separately; no active delegated writer |
 | Grok route truth | Update-197 attempt 1 (`grok-4.5-build`) was cancelled before reads/edits at a compound onboarding request. Cause-specific attempt 2 used `local_grok_cli` / actual `grok-4.5-build`, completed in 16 turns, and produced the scoped four-file diff. Codex independently reviewed and verified it; no QA follow-up was needed. |
-| Что не запускалось | No working Windows-index replacement, target snapshot, manifest publish, primary Mac corpus mutation, collection deletion, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana provisioning, seeds 43–44, independent judge, or scrape/alert delivery ran. Update-201 stopped after WSL VHD attach remained `E_ACCESSDENIED`; no Docker/PostgreSQL service was left running. |
+| Что не запускалось | No working Windows-index replacement, target snapshot, manifest publish, primary Mac corpus mutation, collection deletion, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana provisioning, seeds 43–44, independent judge, or scrape/alert delivery ran. Update-202 only read VHD/HCS evidence; its one non-elevated owner test processed zero files and changed nothing. |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
-| Следующий slice | First obtain changed evidence that WSL VHD attachment works, or provide a separately authorized reachable PostgreSQL `DATABASE_URL`. Then prove normal tenant-lock acquisition/release before following §0D and [`index-dim-windows-activation.md`](../index-dim-windows-activation.md); do not raw-retry the unchanged WSL/Docker path, bypass the lock, or open canonical staging with Chroma. |
+| Следующий slice | From an elevated Windows shell, set owner only on `D:\WSL\Ubuntu-22.04\ext4.vhdx` to `JULIADEV25\uedom`, verify it, and make one Ubuntu attach attempt. If the same error remains, stop the owner hypothesis. Docker VHDX files stay untouched. Only a successful attach or separately authorized reachable PostgreSQL service may resume §0D. |
 
 ---
 
@@ -51,16 +51,16 @@
 | Latest **committed QG evidence** | `5f8bb78` — exact retained five-document E30 grading replay |
 | Prior implementations (recent) | `d865b06` **9.5d2 PipelineRunner sync** · `aefcf20` **9.5d1 PipelineRunner capacity** · `890155a` **9.5c2 ingestion worker** · `84fbdf7` **9.5c1 ingestion API** · `03057aa` **9.5b escalation** · `9c207b6` **9.5a tracing** · `344e174` **9.2f** · `5a2f696` **9.2e** · `9817e89` **9.2d** · `64f40b3` **9.2c** · `356a530` **VER-06** · `11e52f1` **9.2b** · `3fe6d6f` **9.2a** · `4b0fba7` **VER-05** · `893efe3` **9.1c** |
 | Latest **committed test contract** | `0cba9d1` — exact source/evidence/target/snapshot preflight; `1aa9f19` still preserves legacy rollback and `d157b31` still enforces the stored/declared width guard |
-| Latest **committed docs before this Update** | `426442a` — Update-200 activation handoff reconciliation |
+| Latest **committed docs before this Update** | `2e5254e` — Update-201 WSL activation blocker |
 | This Update docs identity | Resolve with Actual Git (`git log -1 --oneline -- AGENT_STATE.md docs/SESSION_HANDOFF.md docs/PLAN_CLOSURE_STATUS.md index-dim-windows-activation.md`); never add a follow-up only to embed this file's self-SHA |
-| Branch advisory | observed `master...origin/master [ahead 338]` at `426442a` before this blocked-slice record — **refresh mandatory; no push authorization** |
-| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored control/test artifacts remain local; Update-201 owns only `AGENT_STATE.md`, this handoff, and `index-dim-windows-activation.md` |
+| Branch advisory | observed `master...origin/master [ahead 339]` at `2e5254e` before this blocked diagnostic record — **refresh mandatory; no push authorization** |
+| Active writer / WIP | active delegated writer **none**; implementation/test WIP **none**; ignored control/test artifacts remain local; Update-202 owns only `AGENT_STATE.md`, this handoff, and `index-dim-windows-activation.md` |
 | Locally complete (documented scopes) | isolated INDEX-DIM Mac artifact/lifecycle proof + INDEX-DIM runtime guard `d157b31` + rollback bootstrap `1aa9f19` + GraceKelly artifact containment `63aa5df` + generation-provider fail-closed `dbd2b28` + TestClient backend `e400d88`; **2.1–2.6g** + **3.1a–3.1i** + **4.1–4.8** + **5.1–5.7** + **6.1–6.7** + **7.1–7.8** + **8.1–8.5** + **9.1a–9.1c** + **9.2a–9.2f telemetry** + **9.3a dashboard** + **9.4a Astro 7 / DEP-01** + **9.5a–9.5d3 completed owner slices** + **QG-01–QG-04** + **HYBRID-MEM env propagation** + **VER-02/03/04/05/06/07** |
 | Off-plan local capability | OpenCode Zen `opencode-zen-free` @ `faaa815`; no plan checkbox closed |
 | Full plan §1–§10 / production | **NOT** complete / **NOT** claimed |
 | Plan status | **ACTIVE** |
-| Next ordered | INDEX-DIM activation is **WSL/lock-blocked** before snapshot: Ubuntu VHD attach remains `E_ACCESSDENIED` after one narrowed shutdown/recheck. Require changed system-state evidence or a separately authorized reachable PostgreSQL service before the exact §0D sequence. Live quality still needs an authorized routing/provider boundary or fresh paid gate. |
-| Gates | WSL VHD attachment is currently blocked by `E_ACCESSDENIED`; Docker daemon and PostgreSQL are unavailable. No push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
+| Next ordered | INDEX-DIM activation is **admin/lock-blocked** before snapshot: system/swap VHD setup succeeds, but the Ubuntu data VHD attach remains `E_ACCESSDENIED`. The next bounded hypothesis is one elevated owner change on the Ubuntu VHD only, followed by one attach. Live quality still needs an authorized routing/provider boundary or fresh paid gate. |
+| Gates | Current shell cannot change the Ubuntu VHD owner; Docker daemon and PostgreSQL are unavailable. No ACL broadening, Docker-VHD mutation, push / deploy / live multi-service / further paid provider·quality execute / migrate 019–023 without **fresh explicit opt-in** |
 | Migrations on disk | **019–023** (not applied here) |
 
 **Update-176 adds bounded formal §7.6 evidence:** one direct-Mistral seed-43
@@ -77,7 +77,7 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 
 | Question | Durable answer |
 |----------|----------------|
-| What is the current docs baseline? | `426442a` before Update-201; Actual Git must override the embedded SHA after commit. |
+| What is the current docs baseline? | `2e5254e` before Update-202; Actual Git must override the embedded SHA after commit. |
 | Is an owned writer/test still running? | No related writer/test is active. Docker Desktop is not running; no temporary PostgreSQL service started. |
 | Is the memory guard active? | Last durable verification recorded `PythonMemoryGuard` as `Running`, with a 1024 MiB / 10-second contract. Update-197 did not recheck it; verify current scheduler state before relying on it. |
 | What does §5 prove? | The post-QG vector-only seed 42 is valid live evidence but **FAILS** quality: 25% candidate vs 90% baseline, 13 regressions. Seeds 43–44 and passing ×3 evidence do not exist. |
@@ -85,7 +85,7 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 | What does §7.6 prove? | One direct-Mistral seed-43 case passed with valid complete child evidence. It proves the bounded route/gate attempt only, not scheduled breadth, independent judge, §5 ×3, or whole release. |
 | What does hybrid prove? | Default production reranker exceeded 1 GiB and was killed before retrieval/provider execution. Hybrid quality remains unknown; raw local retry is forbidden. |
 | What is the full local Python gate? | Python 3.13 CI-shaped unit+coverage is local-green: **1851 passed / 4 skipped**, coverage **77.04%** ≥ 72%. VER-01 retained Windows Python 3.11 MyPy command 1 is green across 72 sources and command 2 is green across 31 sources. Ubuntu/full 222-package-lock CI and release gates remain open. |
-| What is preauthorized next? | Update-201 exhausted the unchanged local WSL attach retry. Resume activation only after changed system-state evidence or a separately authorized reachable PostgreSQL service; no lock bypass, push, deploy, paid provider calls, migrations 019–023, production claims, or destructive deletion is authorized. |
+| What is preauthorized next? | One elevated owner test on the Ubuntu VHD only, with owner verification and one attach attempt. If unchanged, stop the hypothesis. Docker VHDX, ACL broadening, lock bypass, push, deploy, paid provider calls, migrations 019–023, production claims, and destructive deletion remain unauthorized. |
 
 ### 0C. Exact INDEX-DIM artifact map
 
@@ -101,7 +101,7 @@ and `reports/regression/live-provider-gate-result-2026-08-12-seed43-one-case.jso
 | Canonical Windows staging | `.tmp/index-dim-windows-chroma-source-20260813` | Restored from Mac; 631 files / 56,309,636 bytes / SHA `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96`; fingerprint only, never open directly with Chroma |
 | Quarantined opened copy | `.tmp/index-dim-windows-chroma-source-opened-20260813` | Preserved diagnostic artifact; `PersistentClient` changed its bytes, so it is not an activation source |
 | Windows rollback paths | `.tmp/index-dim-windows-target-snapshot-before-activation`; `data/vectordb/index-manifests`; `data/vectordb/index-retention` | All absent after Update-199; unexpected presence is a stop condition, not permission to overwrite |
-| Lock dependency | PostgreSQL advisory lock through the configured `DATABASE_URL` | Required before snapshot/copy/publish; ports `5432`/`55432` are unavailable and the current WSL VHD attach fails with `E_ACCESSDENIED` even after one narrowed `wsl --shutdown` correction |
+| Lock dependency | PostgreSQL advisory lock through the configured `DATABASE_URL` | Required before snapshot/copy/publish; system/swap VHD setup succeeds, but Ubuntu data-VHD attach fails with `E_ACCESSDENIED`; current shell cannot run the one bounded owner test |
 | Temporary resources | `/tmp/mistral-key-20260813` absent; PostgreSQL ports `5432`/`55432` unavailable; Docker Desktop stopped | No credential file, Docker daemon, or isolated database service was left active |
 
 The next session must not rebuild or raw-retry WSL/Docker merely to rediscover
@@ -120,10 +120,15 @@ activation slice.
 1. Refresh Actual Git and confirm only the four protected owner files are dirty.
 2. Confirm no project Python/uvicorn/Celery process has the Windows Chroma tree
    open. Confirm Docker/PostgreSQL state instead of assuming it.
-3. Establish a reachable PostgreSQL `DATABASE_URL` and prove the normal tenant
-   advisory-lock context can acquire and release the `default` lock. This is a
-   connectivity probe only; do not create a manifest manually or construct a
-   lock token outside that context.
+3. From an elevated Windows shell, set the owner of only
+   `D:\WSL\Ubuntu-22.04\ext4.vhdx` to `JULIADEV25\uedom`, verify the owner,
+   and make one ordinary Ubuntu attach attempt. Do not touch Docker VHDX files
+   or broaden ACLs. If the same error remains, stop the owner hypothesis. If
+   attach succeeds, use existing Ubuntu PostgreSQL capability when present, or
+   provide a separately authorized reachable `DATABASE_URL`. Then prove the
+   normal tenant advisory-lock context can acquire and release the `default`
+   lock. This is a connectivity probe only; do not create a manifest manually
+   or construct a lock token outside that context.
 4. Run the exact preflight from the activation plan. Require canonical source
    SHA `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96`,
    target SHA
@@ -876,9 +881,10 @@ re-probe it. The isolated **INDEX-DIM-REBUILD** artifact and its
 publish/rollback/reactivation proof are verified, Update-198 closes the
 read-only Windows source/target/evidence preflight, and Update-199 records the
 failed bounded Docker/lock attempt. The remaining index boundary is
-state-changing and currently blocked below PostgreSQL: Ubuntu WSL VHD
-attachment returns `E_ACCESSDENIED`, and one narrowed shutdown/recheck did not
-change it. Resume §0D only after changed system-state evidence or a separately
+state-changing and currently blocked below PostgreSQL: Ubuntu WSL data-VHD
+attachment returns `E_ACCESSDENIED`. System/swap VHD setup succeeds; the next
+bounded hypothesis is one elevated owner change on the Ubuntu VHD only, then
+one attach. Resume §0D only after a successful attach or a separately
 authorized reachable database; otherwise no ungated local slice is preselected.
 Remaining
 work needs a separately selected authorized boundary, a product/SLA decision,
