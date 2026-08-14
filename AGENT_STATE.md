@@ -1,5 +1,71 @@
 # Agent State
 
+## 2026-08-14 Update-208 — dpkg/PostgreSQL repaired; Windows relay still blocks tenant lock ⚠ START HERE
+
+> **Actual Git before this docs-only closeout:** Windows `master` at
+> `fb9e74e2c05a6af5884c821f7b6c3dd41808862b`, ahead of `origin/master` by
+> 345 commits. Resolve this Update's commit through Actual Git; no push
+> or lock-relay authority is implied.
+>
+> **Authorization:** the owner authorized repair of the confirmed
+> interrupted Ubuntu dpkg/Python state and continuation of PostgreSQL
+> setup plus the normal `default` lock probe.
+>
+> **Executor:** route `local_grok_cli`; actual model `grok-4.6-build`;
+> run id `rag-dpkg-postgres-lock-20260814-01`; stderr empty.
+>
+> **dpkg repair (green):** initial `dpkg --configure -a` and a limited
+> reinstall exposed an exact Python version dependency mismatch.
+> Simulated `apt-get --fix-broken install` proposed 7 upgrades, 0 new,
+> 0 remove, no downgrade. The actual bounded fix completed with exit 0.
+> Final `dpkg --configure -a` exited 0, `dpkg --audit` was empty, and
+> `apt-get check` exited 0. Codex independently confirmed audit/check
+> green. No removal, purge, force flags, direct dpkg database edit, or
+> lock-file deletion occurred.
+>
+> **PostgreSQL (green, WSL-internal):** Ubuntu PostgreSQL 14.23 installed
+> via `postgresql` and `postgresql-contrib`; cluster `14/main` is online
+> on port 5432. Unix socket and WSL `127.0.0.1:5432` accept connections.
+> Codex independently confirmed `pg_lsclusters` and both `pg_isready`
+> checks. Package-default local bind/auth config was unchanged. Only the
+> previously missing checked-in local-dev fallback role/database were
+> created; role login and database ownership were verified. No migration
+> or application table was created.
+>
+> **Lock gate (red):** immediate Grok Windows login attempts were refused,
+> so the implementation run stopped without a lock probe. Later Codex
+> `Test-NetConnection localhost:5432` reported overall `True` while
+> warning that IPv6 `::1` failed. That created a boundary for one QA
+> follow-up.
+>
+> **Consumed QA follow-up:** route `local_grok_cli`; actual model
+> `grok-4.6-build`; run id `rag-postgres-lock-followup-20260814-01`;
+> stderr empty. Created only
+> `.grok-prompts/postgres-lock-probe-20260814.py` and ran it once. Grok
+> probe exited 1: `first_acquired=false`, `token_invalidated=false`,
+> `second_acquired=false`, `released=false`, error type
+> `TenantIndexLockUnavailable`. Codex inspected the correct
+> production-API probe and independently ran it once with the identical
+> false JSON/error. One redacted Codex connection diagnostic classified
+> the cause as `connection_refused`, root type `OperationalError`; no
+> DSN/password or exception text was emitted. The single QA follow-up is
+> consumed. No further retry or network/config mutation occurred.
+>
+> **Mutation statement:** Docker, Docker VHDX, ACLs, firewall, port
+> proxy, PostgreSQL listen/auth, `.env`, index data, snapshot, manifest,
+> retention registry, migrations, providers, push, and deploy remained
+> untouched. The four protected owner-file SHA-256 values were unchanged.
+> No tracked product/test/config file changed. This closeout edits only
+> the three allowed status docs.
+>
+> **Next exact boundary:** do not repeat lock probes or package work. A
+> future slice requires fresh owner authorization for a bounded WSL
+> localhost-forwarding/relay recovery decision. PostgreSQL listen/auth,
+> firewall, port-proxy, WSL shutdown/restart, or DSN changes are not
+> implied authorized, and no exact recovery sequence is claimed verified.
+> The existing read-only INDEX-DIM preflight remains behind that green
+> lock gate; snapshot/copy/publish remain later mutation gates.
+
 ## 2026-08-14 Update-207 — Ubuntu dpkg blocker stops PostgreSQL lock-gate install ⚠ START HERE
 
 > **Actual Git before this docs-only closeout:** Windows `master` at

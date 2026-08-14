@@ -29,12 +29,27 @@ must stop before the next mutation boundary.
   and prove one ordinary WSL attach succeeds without touching Docker VHDX.
 - [x] Inventory Ubuntu PostgreSQL packages after restored attach: five
   direct `dpkg --status` checks found no server or cluster.
-- [ ] Establish and verify a reachable PostgreSQL tenant-lock service.
-  Local Ubuntu install/config was authorized and attempted once
-  (`postgresql` + `postgresql-contrib`) and stopped before packages
-  installed because unrelated dpkg is already interrupted. Do not
-  raw-retry that install until dpkg repair is separately authorized and
-  verified. Then prove acquire/release of the normal `default` lock.
+- [x] Repair the interrupted Ubuntu dpkg/Python state: bounded
+  `apt-get --fix-broken install` completed exit 0; final
+  `dpkg --configure -a` exit 0; `dpkg --audit` empty; `apt-get check`
+  exit 0; Codex independently confirmed audit/check green. No removal,
+  purge, force flags, direct dpkg database edit, or lock-file deletion.
+- [x] Install and prove WSL-internal PostgreSQL readiness: Ubuntu
+  PostgreSQL 14.23 via `postgresql` + `postgresql-contrib`; cluster
+  `14/main` online on 5432; unix socket and WSL `127.0.0.1:5432`
+  accept connections; Codex confirmed `pg_lsclusters` and both
+  `pg_isready` checks. Package-default bind/auth unchanged; only the
+  missing checked-in local-dev fallback role/database created.
+- [ ] Establish and verify a reachable PostgreSQL tenant-lock service
+  from the Windows production API. WSL-internal PostgreSQL is ready,
+  but the consumed production-API probe exited 1 with
+  `first_acquired=false`, `token_invalidated=false`,
+  `second_acquired=false`, `released=false`, error type
+  `TenantIndexLockUnavailable` / `connection_refused`. Do not repeat
+  lock probes or package work. A future slice needs fresh owner
+  authorization for a bounded WSL localhost-forwarding/relay recovery
+  decision; listen/auth, firewall, port-proxy, WSL restart, and DSN
+  changes are not implied authorized.
 - [ ] Create and verify the snapshot before copying, then run
   dimension/content/E20 smoke, prove snapshot restore, and reactivate.
 
@@ -43,14 +58,14 @@ must stop before the next mutation boundary.
 | Item | Current truth |
 |------|---------------|
 | Product implementation | `0cba9d1` (`scripts/index_activation_preflight.py`) |
-| Blocker record | Update-207 (resolve SHA through Actual Git); prior lock-unavailable record remains `bac1939` |
+| Blocker record | Update-208 (resolve SHA through Actual Git); prior lock-unavailable record remains `bac1939` |
 | Canonical staging | `.tmp/index-dim-windows-chroma-source-20260813`; exact fingerprint below |
 | Quarantined opened copy | `.tmp/index-dim-windows-chroma-source-opened-20260813`; diagnostic only, never activate from it |
 | Windows target | Unchanged legacy tree at exact fingerprint below |
 | Snapshot | `.tmp/index-dim-windows-target-snapshot-before-activation` — absent |
 | Manifest / retention registry | `data/vectordb/index-manifests` / `data/vectordb/index-retention` — absent |
-| Lock service | Blocked. Owner-authorized noninteractive install of `postgresql` and `postgresql-contrib` exited 1 before packages installed: dpkg was already interrupted. Confirmed audit: `libpython3.10-dev:amd64` must be reinstalled; `python3.10-dev` unpacked/not configured; `man-db` trigger pending. No server or cluster. No `default` lock probe. |
-| Runtime | Ubuntu WSL attach remains green on kernel `5.15.167.4-microsoft-standard-WSL2`. `apt-get update` as WSL root exited 0 (package lists only). PostgreSQL packages, service, and cluster were not installed or started. Docker Desktop and Docker VHDX files were not touched |
+| Lock service | Still blocked from Windows. WSL-internal PostgreSQL 14.23 cluster `14/main` is online and accepts unix-socket plus `127.0.0.1:5432` connections. The consumed Windows production-API probe failed: all acquire/release flags false, `TenantIndexLockUnavailable`, redacted cause `connection_refused` / `OperationalError`. Do not treat this as a successful tenant lock. |
+| Runtime | Ubuntu WSL attach remains green on kernel `5.15.167.4-microsoft-standard-WSL2`. dpkg audit/check are green. WSL PostgreSQL is listening internally on 5432. Windows localhost relay still refuses the production connection. Docker Desktop and Docker VHDX files were not touched |
 | Ubuntu VHD owner | `JULIADEV25\uedom`; elevated `icacls /setowner` exited `0` and an independent ACL read confirmed it |
 
 Opening canonical staging with `chromadb.PersistentClient` is forbidden. The
@@ -91,16 +106,17 @@ The proposed snapshot path remained absent.
 1. Refresh Git and protect the four owner-dirty files: `BACKLOG.md`,
    `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26`.
 2. Confirm no project Python/uvicorn/Celery process has the target open.
-3. Do not repeat the completed Ubuntu package inventory and do not
-   raw-retry the same PostgreSQL install. That install was authorized and
-   attempted once, then stopped before package installation on an
-   unrelated dpkg blocker. Wait for separately authorized and verified
-   repair of that dpkg state (at minimum the required configure/reinstall
-   work; the exact command sequence is not already verified). Only after a
-   clean package manager may a future slice retry PostgreSQL install and
-   then acquire and release the normal `default` tenant advisory-lock
-   context as a connectivity probe. Stop if this fails; never bypass the
-   lock or forge a token.
+3. Do not repeat the completed Ubuntu package inventory, the completed
+   dpkg repair, the completed WSL-internal PostgreSQL install/readiness
+   checks, or the consumed Windows lock probe. The blocker is Windows
+   production connection refusal, not package health or WSL-internal
+   PostgreSQL. Wait for fresh owner authorization for a bounded WSL
+   localhost-forwarding/relay recovery decision. PostgreSQL listen/auth,
+   firewall, port-proxy, WSL shutdown/restart, and DSN changes are not
+   implied authorized; the exact recovery sequence is not already
+   verified. Only after a green Windows production acquire/release of the
+   normal `default` tenant advisory-lock context may activation continue.
+   Stop if this fails; never bypass the lock or forge a token.
 4. Only after the lock gate is green, run the verified preflight command
    above. Stop unless both tree hashes and the evidence hash match,
    `ready=true`, `mutation_performed=false`, and the snapshot path is absent.
