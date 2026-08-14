@@ -1,5 +1,57 @@
 # Agent State
 
+## 2026-08-14 Update-207 — Ubuntu dpkg blocker stops PostgreSQL lock-gate install ⚠ START HERE
+
+> **Actual Git before this docs-only closeout:** Windows `master` at
+> `4e77f15`, ahead of `origin/master` by 344 commits. Resolve this Update's
+> commit through Actual Git; no push or package-repair authority is implied.
+>
+> **Authorization:** the owner explicitly authorized installation and
+> configuration of a local PostgreSQL service in `Ubuntu-22.04` and the
+> normal `default` tenant-lock acquire/release probe. That authorization
+> did not include repair of unrelated pre-existing packages.
+>
+> **Executor:** route `local_grok_cli`; actual model `grok-4.6-build`; run
+> id `rag-postgres-lock-20260814-01`; stderr empty.
+>
+> **APT outcome:** `apt-get update` as WSL root exited `0` and refreshed
+> Ubuntu package lists. This is the only known runtime/system mutation in
+> the install slice.
+>
+> **Install stop / dpkg audit:** the first noninteractive install of
+> `postgresql` and `postgresql-contrib` exited `1` immediately: dpkg had
+> been interrupted and `dpkg --configure -a` must be run. Grok ran one
+> narrowed `dpkg --audit` diagnosis and stopped without raw retry or
+> repair. Codex independently reran only `dpkg --audit` and confirmed
+> `libpython3.10-dev:amd64` is in a serious broken state and must be
+> reinstalled; `python3.10-dev` is unpacked but not configured; `man-db`
+> has pending trigger processing. These packages are unrelated to
+> PostgreSQL. No `dpkg --configure -a`, reinstall, fix-broken action,
+> package removal, or unrelated-package mutation was authorized or
+> performed.
+>
+> **Lock/service result:** PostgreSQL packages were not installed; no
+> service or cluster was started; no role or database was created or
+> altered; no fallback login or normal `tenant_index_lock("default")`
+> probe ran; the probe file was not created.
+>
+> **Mutation statement:** Docker, Docker VHDX, ACLs, firewall/network/port
+> proxy, `.env`, index data, snapshot, manifest, retention registry,
+> migrations, providers, push, and deploy remained untouched. Independent
+> Git/status/hash checks found no new tracked source/test/config change;
+> the four protected owner-file SHA-256 values were unchanged. This
+> closeout edits only the three allowed status docs.
+>
+> **Next exact boundary:** do not raw-retry the same PostgreSQL install.
+> Wait for fresh owner authorization to repair the unrelated Ubuntu dpkg
+> state, at minimum the required configure/reinstall work identified by
+> `dpkg --audit`. Do not treat any specific repair command sequence as
+> already verified. Only after a clean package-manager state may a future
+> slice retry PostgreSQL install and then prove normal `default`
+> acquire/release. The existing read-only INDEX-DIM preflight remains
+> behind that green lock gate; snapshot/copy/publish remain later
+> mutation gates.
+
 ## 2026-08-13 Update-206 — Ubuntu PostgreSQL absent; tenant-lock gate blocked ⚠ START HERE
 
 > **Actual Git before this docs-only inventory slice:** Windows `master`
