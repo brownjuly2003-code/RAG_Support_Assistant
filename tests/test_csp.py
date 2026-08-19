@@ -15,28 +15,30 @@ warnings.filterwarnings("ignore")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from api.app import app  # noqa: E402
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STATIC = PROJECT_ROOT / "static"
 
 
-def _csp() -> str:
-    with TestClient(app) as client:
-        resp = client.get("/static/agent.html")
+def _csp(client: TestClient) -> str:
+    # Use the shared conftest client: it stubs initialize_vector_store,
+    # alembic auto-migrate and the ingestion reaper, so this header-only test
+    # never loads a real embedding model from a developer's local Chroma
+    # directory (that made the suite hang locally while CI, with no data/,
+    # stayed green).
+    resp = client.get("/static/agent.html")
     assert resp.status_code == 200
     csp = resp.headers.get("content-security-policy")
     assert csp, "Content-Security-Policy header is missing"
     return csp
 
 
-def test_csp_present_and_default_src_self() -> None:
-    csp = _csp()
+def test_csp_present_and_default_src_self(client: TestClient) -> None:
+    csp = _csp(client)
     assert "default-src 'self'" in csp
 
 
-def test_csp_script_src_is_external_only() -> None:
-    csp = _csp()
+def test_csp_script_src_is_external_only(client: TestClient) -> None:
+    csp = _csp(client)
     directive = next(
         (d.strip() for d in csp.split(";") if d.strip().startswith("script-src")),
         "",

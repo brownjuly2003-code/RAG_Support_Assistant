@@ -647,19 +647,24 @@ def test_rollback_manifest_without_previous_raises_unavailable(
     operator = _operator_module()
     from vectordb.index_manifest import (
         IndexManifestRollbackUnavailable,
+        _legacy_collection_name,
         index_manifest_path,
         publish_active_collection,
     )
 
     chroma_directory = tmp_path / "vectordb" / "chroma"
-    version = _versioned_name("acme", 1)
+    # Since 1aa9f19 a first publish records the legacy collection as
+    # previous_collection, so the only manifest genuinely without a rollback
+    # target is one whose first active collection *is* the legacy name.
+    legacy = _legacy_collection_name("acme")
     with _held_tenant_lock(monkeypatch, "acme") as lock_token:
-        publish_active_collection(
+        manifest = publish_active_collection(
             "acme",
-            version,
+            legacy,
             lock_token=lock_token,
             chroma_directory=chroma_directory,
         )
+    assert manifest.previous_collection is None
 
     _stub_tenant_lock(monkeypatch)
     manifest_path = index_manifest_path("acme", chroma_directory=chroma_directory)

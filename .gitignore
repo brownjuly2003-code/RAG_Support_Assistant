@@ -48,3 +48,6 @@ reports/ragas/*.md
 
 # Ad-hoc QA screenshots at repo root (per-session captures, not committed assets)
 /*.png
+
+# pytest basetemp trees (local test-run artifacts, never evidence)
+.pytest_tmp*/
