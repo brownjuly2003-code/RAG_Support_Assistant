@@ -1,14 +1,19 @@
 # План существенного улучшения RAG Support Assistant
 
+> **SUPERSEDED FOR FUTURE WORK (2026-08-03):** открытые DoD этого плана и
+> дополнительные LLM/RAG-пункты консолидированы в
+> [`rag-remediation-plan-2026-08-03.md`](rag-remediation-plan-2026-08-03.md).
+> Этот файл сохраняется как историческое evidence завершённых срезов.
+
 **Основание:** `audit_gpt_23_07_26.md`
 **Принцип порядка:** сначала release-blockers и проверяемые контракты, затем RAG-качество, после этого декомпозиция.
 **Оценка (historical, 2026-07-23):** 6–9 инженерных недель для одного сильного разработчика; шаги 3–4 и 7–8 частично параллелятся только после закрытия шага 2.
 
 > ## 2026-08-03 execution status (step 4.8d3e fail-closed retention budget)
 >
-> Plan is **ACTIVE**. Original step estimates below are **historical** and are
+> Plan execution status below is **historical**. Original step estimates are
 > not rewritten. Closure candidate / empty-backlog narrative remains revoked;
-> this plan is the sole active remediation source (see `BACKLOG.md`).
+> future work is sourced from `rag-remediation-plan-2026-08-03.md`.
 >
 > Implementation HEAD: `f899ba5`. Audit snapshot body: `383cfe9` (2026-07-23).
 > P0 local implementation is verified; OBS-01 is locally remediated; steps 4.1

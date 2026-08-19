@@ -83,7 +83,9 @@
 > `74d187c`). No next slice was started; remaining open P1/P2 findings keep
 > their prior status without new evidence.
 >
-> Active plan: [`plan_sol_23_07_26`](plan_sol_23_07_26).
+> Active consolidated plan (2026-08-03):
+> [`rag-remediation-plan-2026-08-03.md`](rag-remediation-plan-2026-08-03.md).
+> `plan_sol_23_07_26` remains historical execution evidence.
 
 ## Итоговый вердикт
 

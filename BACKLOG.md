@@ -2,8 +2,11 @@
 
 ## Active source (2026-08-03) — step 4.8d3e locally verified @ `f899ba5`
 
-**Sole active backlog:** [`plan_sol_23_07_26`](plan_sol_23_07_26)
-(status matrix in [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md)).
+**Sole active backlog:**
+[`rag-remediation-plan-2026-08-03.md`](rag-remediation-plan-2026-08-03.md).
+It contains only open DoD from `plan_sol_23_07_26` plus the 2026-08-03 LLM/RAG
+gaps; the old plan remains historical implementation evidence. Audit finding
+status remains in [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md).
 
 The 2026-07-27 «project closure / empty queue» narrative remains **revoked**.
 Plan remains **ACTIVE**; project/production release is **not** complete.
@@ -107,7 +110,8 @@ only until re-decided under the audit plan.
 > use `docs/plans/2026-05-01-backlog.md` for older product context. The only
 > remaining benchmark lane is live GraceKelly/Mistral work: explicit opt-in only.
 > It requires staged runtime and is not an active local backlog item.
-> **Active remediation source (2026-08-02+):** `plan_sol_23_07_26`.
+> **Historical note:** active remediation moved to
+> `rag-remediation-plan-2026-08-03.md` on 2026-08-03.
 
 ## Safe Task 1: Add a Local Gate Wrapper
 

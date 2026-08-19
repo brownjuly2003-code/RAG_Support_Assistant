@@ -5,12 +5,13 @@
 Answers support questions against a knowledge base and decides whether a
 request can be resolved automatically or should be escalated to a human.
 
-**Project status:** audit remediation in progress (revalidated 2026-08-02;
-plan step 4 in progress through slice 4.3 at `6dc6fe4`). The 2026-07-23
-audit plan is **ACTIVE**: project/production release is not complete; P0/P1
-contracts have not all met their DoD. See
+**Project status:** audit remediation in progress (revalidated 2026-08-03;
+index lifecycle work remains incomplete after local slice 4.8d3e). The active
+consolidated plan contains only remaining audit DoD plus the 2026-08-03 LLM/RAG
+gaps: project/production release is not complete. See
 [`audit_gpt_23_07_26.md`](audit_gpt_23_07_26.md) and
-[`plan_sol_23_07_26`](plan_sol_23_07_26). The earlier
+[`rag-remediation-plan-2026-08-03.md`](rag-remediation-plan-2026-08-03.md).
+The earlier
 [docs/PROJECT_CLOSURE.md](docs/PROJECT_CLOSURE.md) note is historical and
 **superseded** by that revalidation.
 
