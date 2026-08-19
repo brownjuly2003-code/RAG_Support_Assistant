@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-14 — **Update-208** (dpkg/PostgreSQL repaired; Windows relay still blocks tenant lock).
+**Обновлено:** 2026-08-18 — **Update-209** (stage closed: suite green 1870/7, lock gate root-caused = WSL idle-shutdown, INDEX-DIM activated on Windows).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,13 +11,13 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-208**) |
-| 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) |
-| 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-209**) |
+| 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) + анализ [`operations/2026-08-18-test-failure-analysis.md`](operations/2026-08-18-test-failure-analysis.md) |
+| 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек (теперь tracked, `5d93e12`) |
 
-**Не использовать:** старые `START HERE` ниже Update-208; dirty
-`BACKLOG.md` / `README.md` / audits; `_NEXT_SESSION.md` для routing
-(это untracked stale pointer на Update-122, не SoT).
+**Не использовать:** старые `START HERE` ниже Update-209; `_NEXT_SESSION.md`
+для routing (untracked pointer, не SoT). Owner-dirty файлы больше не dirty —
+закоммичены в `5d93e12`.
 
 **Plan checkboxes:** не править casually. Local slice ≠ section closed ≠ release.
 
@@ -27,23 +27,35 @@
 
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
-| Последний implementation SHA | `0cba9d1` — read-only Windows INDEX-DIM activation preflight; Updates 199–204 did not change product code |
-| Последний committed test contract | `0cba9d1` — fail-closed evidence/source/target/snapshot readiness; §7.8 remains `bc9ee2b` |
-| Последний committed docs/dependency closure | `fb9e74e` before this docs-only record; resolve Update-208 through Actual Git after commit; this is not push authority |
-| Actual Git перед этой edit | `fb9e74e2c05a6af5884c821f7b6c3dd41808862b` on `master`, ahead of origin by 345; resolve Update-208 through Actual Git after commit; this is not push authority |
+| Последний implementation SHA | `0cba9d1` — read-only Windows INDEX-DIM activation preflight; product code unchanged since |
+| Последний committed test contract | `cc0458d` — `test_csp.py` через shared `client`-fixture (не грузит реальный embedder), `test_index_operator.py` rollback-тест приведён к `1aa9f19`; полный suite **1870 passed / 7 skipped** |
+| Последний committed docs closure | `5d93e12` (owner pointer-docs + tracked plan) → Update-209 docs commit (resolve через Actual Git); push НЕ выполнялся |
+| Dev-runbook: tenant lock на Windows | PostgreSQL живёт в WSL `Ubuntu-22.04`; инстанс гаснет по idle → перед lock-guarded операцией держать keepalive `wsl -d Ubuntu-22.04 -u root -e sh -c 'service postgresql start; exec sleep infinity'` (проверено: acquire/exclusive/release зелёные) |
+| Windows-индекс сейчас | `data/vectordb/chroma` = staged 3×1024 tree (SHA `1ce87531…`), manifest generation 1: active `rag_docs-v-default-3f2b79fbe1246ab3`, previous `rag_docs_default`; snapshot до активации `.tmp/index-dim-windows-target-snapshot-before-activation` (SHA `5c9eff00…`, 627 files); evidence `.tmp/index-dim-windows-activation-result-20260818.json` |
 | Где лежит Mac-артефакт | Checkout `/Users/julia/RAG_Support_Assistant-index-rebuild-20260813`; imported Chroma copy `.runtime/windows-chroma` (56 MiB observed); evidence `.runtime/index-dim-rebuild-result.json`, SHA-256 `c49feed5812cc44987b4478f0737d99c075f350b8ba66fb8ebba3e70df86a382` |
-| Что закрыто локально | Interrupted Ubuntu dpkg/Python is repaired and WSL-internal PostgreSQL 14.23 cluster `14/main` is online; this is not a green tenant lock. `INDEX-DIM` runtime detection/cache containment is local-green at `d157b31`; first-publish legacy rollback bootstrap is local-green at `1aa9f19`; an isolated Mac copy now has a verified 3×1024 versioned artifact plus publish → rollback → reactivate evidence. The working Windows index and primary Mac corpus are unchanged. GraceKelly containment, generation fail-closed, VER-01 local MyPy, §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-03, and VER-07 remain local evidence only; это не означает production ready |
-| Последний live gate | post-QG §5 seed 42: **20/20 effective**, zero infrastructure failures, complete metrics, authoritative child `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions |
+| Что закрыто локально | Update-209: unit suite green (1870/7), tenant-lock gate green с keepalive, INDEX-DIM **activated on Windows** (candidate 3×1024 active, gen 1, snapshot retained). Ранее: `d157b31` guard, `1aa9f19` legacy rollback, Mac artifact + publish→rollback→reactivate (Update-195). GraceKelly containment, generation fail-closed, VER-01 local MyPy, §9 telemetry **7/7**, dashboard, Astro 7 / DEP-01, lifecycle owners, VER-07 remain local evidence only; это не означает production ready |
+| Последний live gate | post-QG §5 seed 42: **20/20 effective**, `evidence_valid=true` / `release_passed=false`; candidate 25% vs baseline 90%, 13 regressions. **Решение Update-209:** причина — transport-unfit кандидат `gracekelly-mixed` (browser-артефакты 18/20, 304 с/кейс), не RAG-регрессия; §5 остаётся OPEN, платные seed'ы на Windows больше не тратить, путь — off-Windows полный hybrid-пайплайн |
 | Известный baseline debt | **VER-01 is LOCAL TYPE-GREEN:** exact command 1 is green across 72 sources and exact command 2 is freshly green across 31 sources in the retained Windows Python 3.11 diagnostic environment. Exact Ubuntu/full 222-package-lock equivalence remains unproved |
-| Worktree boundary | four protected tracked owner files remain dirty (`BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`); independent hash checks left all four SHA-256 values unchanged; implementation/test WIP **none**; no new tracked source/test/config change; no active delegated writer |
-| Grok route truth | Update-208 used two `local_grok_cli` runs, both actual model `grok-4.6-build`, both stderr empty: implementation `rag-dpkg-postgres-lock-20260814-01` and consumed QA follow-up `rag-postgres-lock-followup-20260814-01`. dpkg repair and WSL-internal PostgreSQL 14.23 are independently Codex-confirmed green. The Windows production lock probe is independently Codex-confirmed red (`TenantIndexLockUnavailable` / `connection_refused`). |
-| Что не запускалось | No second lock probe, no further package work, and no listen/auth, firewall, port-proxy, WSL shutdown/restart, or DSN mutation. No working Windows-index replacement, target snapshot, manifest publish, primary Mac corpus mutation, collection deletion, Exact Ubuntu/full 222-package CI, push, deploy, migration 019–023, Grafana provisioning, seeds 43–44, independent judge, or scrape/alert delivery ran. Docker, Docker VHDX, ACLs, firewall/network/port proxy, PostgreSQL listen/auth, and `.env` remained untouched. |
+| Worktree boundary | owner-dirty файлы закоммичены (`5d93e12`); implementation/test WIP **none**; untracked остаются только презентации/HTML/`.grok-prompts/`/`_NEXT_SESSION.md`; 151 `.pytest_tmp_*` каталогов (1.1 GB) удалены и добавлены в `.gitignore` |
+| Executor truth (Update-209) | Работа выполнена напрямую (Claude Code); Grok не привлекался; Codex second-opinion запрошен через плагин, но упал на auth (`access token could not be refreshed`) — нужен интерактивный re-login владельца |
+| Что не запускалось | Push, deploy, migration 019–023, paid live seeds 43–44, independent judge, hybrid+reranker на Windows, Grafana, scrape/alert delivery, publish→rollback→reinstall loop на Windows, retention inventory write. `.env`, firewall, ACLs, Docker не трогались; WSL: только `service postgresql start` + keepalive-процесс (без изменений конфигурации). |
 | Что осталось в §9 | SessionService deferred pending multi-replica SLA; live scrape/alert delivery; no ungated local architecture owner preselected |
-| Следующий slice | Tenant-lock gate is still red: Windows production API cannot reach WSL PostgreSQL (`connection_refused`). Do not repeat lock probes or package work. Next is fresh owner authorization for a bounded WSL localhost-forwarding/relay recovery decision. PostgreSQL listen/auth, firewall, port-proxy, WSL shutdown/restart, and DSN changes are not implied authorized; no exact recovery sequence is claimed verified. |
+| Следующий slice | Решения владельца: (1) push `master` → читать CI (3.11 leg, integration PG/Redis, migrations); (2) при желании re-login Codex и повторить second-opinion; (3) §5 live evidence — только off-Windows (Mac/Kaggle) полный hybrid-пайплайн; (4) снапшот `.tmp/index-dim-windows-target-snapshot-before-activation` можно удалить после того, как активированный индекс поживёт. |
 
 ---
 
-### 0B. Update-208 dpkg/PostgreSQL green, Windows lock still red — не восстанавливать из чата
+### 0B. Update-209 — закрытие этапа (одним экраном)
+
+| Поле | Факт |
+|------|------|
+| Suite | run1: hang 300 s в `test_csp.py` (lifespan → реальный bge-m3 при локальном `data/vectordb/chroma`); run2 после фикса: 1 failed (`test_index_operator` stale к `1aa9f19`) / 1869 passed; run3: **1870 passed / 7 skipped / 0 failed / 339 s** → `cc0458d` |
+| Lint/type | ruff tracked non-legacy: clean; mypy cmd2 green (31 sources); mypy cmd1 локально падает на numpy 2.5.1 stubs vs lock 2.4.4 (env drift) |
+| Lock gate | root cause = WSL2 idle-shutdown; keepalive → `first_acquired=true, second_acquired_while_held=false, released=true, reacquired=true` |
+| INDEX-DIM | activated: fingerprints verified, snapshot verified (627/55,885,536/`5c9eff00…`), install verified (`1ce87531…`), child validation 3×1024 + sources + E20 top-1 (remote `mistral-embed`), `publish_active_collection` gen 1 previous `rag_docs_default`, app `initialize_vector_store()` грузит кандидата, retriever E20 top-1 |
+| Compromises | без publish→rollback→reinstall loop на Windows (proven on Mac + unit contracts); retention inventory не писался; §5 остаётся OPEN; `gracekelly-mixed` unfit as candidate |
+| Docs | analysis `docs/operations/2026-08-18-test-failure-analysis.md`; runbook `index-dim-windows-activation.md` обновлён; `_NEXT_SESSION.md` → pointer на Update-209 |
+
+### 0B5. Update-208 dpkg/PostgreSQL green, Windows lock still red — исторический факт (superseded by Update-209)
 
 | Поле | Зафиксированный факт |
 |------|----------------------|
@@ -640,9 +652,9 @@ dated and are not rewritten.
 | **QG-03B** | **LOCAL-ONLY** | Retained current-code reproduction matched the saved verdict pattern: a header-only `errors_e10_e30.md` chunk was kept while its same-logical-source E20 body was filtered. `5662ea7` replaces a positively graded contextual-header shell with its content-bearing chunks. | No live replay; do not infer E20 keyword recovery or reopen without new code/evidence. |
 | **QG-04** | **LOCAL-ONLY** | Retained trace showed E30 content at retrieve, then only its header shell at grade; low-quality generation triggered a retry whose retrieval was empty. Current `5662ea7` replay restores the E30 body at the first loss boundary, and `5f8bb78` guards the exact five-document verdict pattern. | No live replay; do not infer E30 keyword recovery or reopen without new code/evidence. |
 | **QG-LIVE** | **LOCAL-CONTAINED / LIVE FAIL** | Offline classification of all 20 retained candidate answers found 12 timestamp-only, 6 prompt echoes, and 2 failed-escalation fallbacks. `63aa5df` rejects the evidenced browser artifacts as `invalid_response`; `dbd2b28` routes expected generation-provider outages human/not_verified through response safety without traceback state or automatic ticket registration. | `gracekelly-mixed` has no fallback, so quality recovery is unproved. A GraceKelly/root extraction fix or routing/fallback cost decision needs separate authority; do not claim live recovery. |
-| **LIVE-QUALITY** | **OPEN / FAIL** | Post-QG seed 42 of required seeds 42–44 ran with valid complete evidence: precision 0.3012, recall 0.725, FULL 0.70, MISS 5, faithfulness 0.7101, relevancy 0.30, unverified-auto 0. Candidate pass 25% vs baseline 90%/floor 85%; 13 regressions. | Fail-fast skipped seeds 43–44. Passing §5 evidence does not exist; another paid run needs fresh authorization after an approved provider/routing boundary. |
+| **LIVE-QUALITY** | **OPEN / candidate UNFIT (Update-209)** | Post-QG seed 42 valid FAIL: precision 0.3012, recall 0.725, FULL 0.70, MISS 5, faithfulness 0.7101, relevancy 0.30; candidate 25% vs baseline 90%; 13 regressions. Root cause: `gracekelly-mixed` browser artifacts (18/20) + 304 s/case — transport-unfit candidate, not RAG regression. §5 thresholds unreachable in vector-only 6-doc local config by construction. | No more paid seeds on Windows. §5 stays OPEN; closure path = full-corpus hybrid pipeline off-Windows (Mac/Kaggle) with a direct-provider candidate. |
 | **INDEX-DIM-GUARD** | **LOCAL-CLOSED** | `d157b31` declares built-in embedder dimensions, validates remote response width, and makes tenant runtime read one stored Chroma embedding before chunk restore/retriever/cache. `3 != 1024` raises a bounded rebuild-required error, performs no provider call or collection mutation, and leaves no tenant retriever/chunk/store/index-key cache. Independent final gate: **36 passed**, Ruff and diff clean. | Do not reopen without a dimension/cache boundary change. This is containment/diagnosis only, not index compatibility or quality recovery. |
-| **INDEX-DIM-REBUILD** | **ARTIFACT-CLOSED / WINDOWS PREFLIGHT READY / ACTIVATION LOCK-BLOCKED** | The isolated Mac artifact remains verified. Update-198 added a read-only preflight; Update-199 reconfirmed exact source SHA `1ce875318d2d4c903a684e7d1dd6326d4dd4366b0e131c6c8418fd9e94835b96` and unchanged target SHA `5c9eff00707d725a06c1a4f442833e675525d888d4d200f85049d9a77963842e`. A staged-copy smoke proved candidate 3×1024/content/E20 top-1, then the opened copy was quarantined and canonical staging was restored from Mac. | Mandatory PostgreSQL advisory lock was unavailable and bounded Docker startup failed. Working Windows Chroma is unchanged; snapshot/manifest/retention registry are absent. Next attempt must restore the lock service before snapshot/import and must not open canonical source directly. |
+| **INDEX-DIM-REBUILD** | **ACTIVATED ON WINDOWS (Update-209)** | Lock gate root cause = WSL2 idle-shutdown (keepalive fixes it). Activation under held `default` lock: fingerprints verified, snapshot `.tmp/index-dim-windows-target-snapshot-before-activation` (SHA `5c9eff00…`), staged tree installed (SHA `1ce87531…`), candidate `rag_docs-v-default-3f2b79fbe1246ab3` 3×1024 + sources + E20 top-1 (remote embed), manifest gen 1 previous `rag_docs_default`; app `initialize_vector_store()` loads candidate. Evidence `.tmp/index-dim-windows-activation-result-20260818.json`. | Publish→rollback→reinstall loop not repeated on Windows (proven on Mac + unit contracts); retention inventory not written. Snapshot retained; `rollback_index_version` API available. |
 | **HYBRID-MEM** | **LOCAL-CLOSED / MEMORY-BLOCKED** | `3c90368` proves blank child-reranker propagation. Update-175 enabled the 1 GiB watchdog and one bounded default-hybrid smoke was killed during production reranker loading at **4044.1 MiB private / 801.4 MiB working set**, before retrieval/provider execution. | Do not retry this high-memory path locally. A future design must be expected to stay below 1 GiB; vector-only seed 42 remains the authoritative quality FAIL. |
 | **LIVE-LATENCY** | **OPEN** | Seed 42 took about 2 h 9 min. Mean latency was 81,878.8 ms baseline vs 304,456.7 ms candidate. | Profile only in a separately authorized bounded run; do not raw-retry the aggregate. |
 
@@ -665,7 +677,7 @@ dated and are not rewritten.
 |----|--------|----------------------|---------------|
 | **VER-01** | **LOCAL TYPE-GREEN / LINUX-CI OPEN** | Product commit `d4583cc` closed the final eight command-1 MyPy diagnostics. Exact unchanged MyPy command 1 is locally green across **72/72** sources and exact command 2 across **31/31** sources under the retained Windows Python 3.11 diagnostic environment. Runtime product evidence remains the existing Python 3.13 32-test focused band plus historical full unit/coverage; no full Python 3.11 runtime gate is claimed. Exact Ubuntu execution with the full 222-package hashed dev lock remains unproved. Two earlier full WSL installation paths are exhausted. | Do not raw-retry exhausted WSL installs or the completed direct-package/toolchain experiment. Local Windows MyPy green is not Ubuntu/full-lock CI green and not release/production evidence. Exact Linux CI needs explicit remote/push authority or a genuinely distinct local environment hypothesis. No push, remote CI, migration, live provider/index/service operation, deploy, or production/release proof exists from Update-191. |
 | **VER-02** | **LOCAL-CLOSED** | `3a37fd2` casts the final runtime-guarded callable to `FaultAction`. The exact failure reproduced before the edit; afterward narrowed MyPy passed, 11 lifecycle tests passed, Ruff passed, and package `vectordb` MyPy checked 10 sources under `--follow-imports=skip`. | Do not reopen without a code/environment change. Do not extrapolate this to VER-01, full imports, the repository, locked Python 3.11, or CI. |
-| **VER-03** | **LOCAL-CLOSED** | Fresh Python 3.13 CI-shaped unit+coverage gate passes **1851 tests / 4 skipped / 187 warnings in 753.44s** at **77.04%** coverage (threshold **72%**). The historical aggregate-only direct-CLI failure does not recur after `fce19ba`. | Do not repeat without a changed code/environment boundary. This does not close locked Python 3.11, integration/live services, migrations, image/Helm, canary, rollback, or release. |
+| **VER-03** | **LOCAL-CLOSED (re-proven Update-209)** | Full Python 3.13 unit suite with `RAG_RERANKER_MODEL=""`: **1870 passed / 7 skipped / 0 failed in 339 s** at `cc0458d`, after fixing `test_csp.py` (env-dependent lifespan → real embedder) and the stale `test_index_operator.py` rollback test (`1aa9f19` contract). Historical: 1851/4 at 77.04% coverage (Update-174). | Rule: contract changes in `vectordb/`, `agent/`, `api/` → run the full suite before commit; never rely on focused bands alone. |
 | **VER-04** | **REPO-CLOSED / HOST-ENV STALE** | `requirements-dev.txt` and its hashed lock pin `httpx2 2.10.0`, the backend Starlette 1.3+ selects before its deprecated `httpx` fallback. The dependency contract reproduced red before the pin; afterward an isolated strict-warning TestClient band passed **33 tests**, and a real request returned 200 through `httpx2` without the warning. The narrowed new-stack audit found no known vulnerabilities. The current global Python is not synchronized to the dev lock and still emits the warning. | Install the hashed dev lock in a clean environment before claiming host/CI closure. Do not reopen the repository contract without a Starlette/TestClient or dependency change. The full 222-package dev-lock audit timed out after 124 seconds, so no fresh whole-lock security audit is claimed. |
 | **VER-05** | **LOCAL-CLOSED** | `4b0fba7` replaces the stale zero-caller assertion with the exact intentional allowlist `["api/routers/admin_ops.py"]` and renames the test accordingly. The original assert reproduced red; the independent retention/admin band passed 51 tests, scoped Ruff and diff checks passed. | Do not reopen without a new caller or contract change. Whole-file Ruff format debt predates this slice and was not reformatted here. |
 | **VER-06** | **LOCAL-CLOSED** | `356a530` updates the exact stale agentic-injection test to patch `agent.tools.search_kb_docs` and return `(formatted_text, raw_docs)`. The failure reproduced before the edit; afterward the exact test and the 44-test response-safety/agentic band passed. | Do not reopen without another agentic KB boundary change. File-wide formatter debt predates this test-only slice. |
@@ -678,10 +690,10 @@ dated and are not rewritten.
 
 | ID | Status | Problem and evidence | Safe handling |
 |----|--------|----------------------|---------------|
-| **WS-01** | **UNPUSHED** | Project branch was `master...origin/master [ahead 329]` at `d157b31` before Update-193 docs. No push is authorized. | Actual Git wins; push only with fresh explicit authorization and full gate. |
-| **WS-02** | **PROTECTED DIRTY** | `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, and `plan_sol_23_07_26` contain unrelated owner changes. Exact hashes are in §8. | Never stage, rewrite, or use them as current routing authority. |
+| **WS-01** | **UNPUSHED** | `master` ahead of `origin/master` by ~349 at Update-209 (`cc0458d`, `5d93e12`, docs). No push is authorized by this session. | Owner decision: push and read CI (public repo). |
+| **WS-02** | **CLOSED (Update-209)** | The four owner-dirty files + untracked active plan were the owner's 2026-08-03 pointer edits; committed as `5d93e12`. | Nothing protected remains dirty. |
 | **WS-03** | **UNTRACKED SoT RISK** | Active DoD file `rag-remediation-plan-2026-08-03.md` is untracked; `_NEXT_SESSION.md` is a stale untracked pointer. | Preserve both; use this handoff + Actual Git for routing. Do not casually stage or edit plan checkboxes. |
-| **WS-04** | **UNTRACKED ARTIFACTS** | Numerous `.pytest_tmp*`, presentation/HTML, report, prompt, and diagnostic artifacts remain; some old Grok temp directories return permission warnings. The two `.grok-prompts/dashboard-artifact-9-3a-*.md` controls remain, while their dashboard pytest basetemps are absent. `cache-namespace-9-1c.md` and its prompt are historical. | They are not implementation WIP. Do not bulk-delete or stage them, and do not relaunch the same Grok prompt without new evidence or a narrowed hypothesis. |
+| **WS-04** | **CLEANED (Update-209)** | 151 `.pytest_tmp_*` basetemp trees (1.1 GB) deleted and `.pytest_tmp*/` added to `.gitignore`. Presentations/HTML, `.grok-prompts/`, `_NEXT_SESSION.md`, `.tmp/*` evidence remain untracked/ignored on purpose. | Do not stage presentations (public repo). |
 | **WS-05** | **LOCAL-CLOSED** | `eb764da` aligns the deployment assertion with the canonical queue metric and implemented collision-resistant tenant-name marker. The exact test reproduced stale `ten-03`, then passed **1 test** after one narrowed correction; scoped gates were green. | Do not reopen without changed deployment reliability evidence. This focused closure does not close VER-03 or establish a full-suite claim. |
 | **EXT-01** | **EXTERNAL / UNPUSHED** | `D:\GraceKelly` is `main...origin/main [ahead 1]` at `886b277`, with untracked `issues.md`. Port `8011` still listens under PID 3048 on the pre-existing command; `8012` is closed. | Do not claim `8011` serves `886b277`; external push/restart needs separate authority. |
 
@@ -1218,7 +1230,7 @@ Never log secret values.
 
 | Claim | Truth |
 |-------|-------|
-| Plan closed? | **No** |
+| Plan closed? | **No** (this dev stage is closed: suite green, INDEX-DIM active on Windows, lock gate root-caused; §1, §5 live, §10 remain open) |
 | Production ready? | **No** |
 | Local quality path deep? | **Yes** (4.1–4.8, 5.1–5.7, 6.1–6.7, 7.1–7.8, 8.x, DEP-01, QG-01, QG-02, QG-03A, QG-03B, QG-04) |
 | Graph node SSE? | **Yes local** (4.7) |
@@ -1256,11 +1268,11 @@ Never log secret values.
 | Agentic injection safety test current? | **Yes local** (`356a530`): mock follows `search_kb_docs(text, docs)` and the full safety/agentic band is green |
 | Starlette TestClient warning closed? | **Repository contract yes; current host no** (`e400d88`): `httpx2 2.10.0` is pinned in the dev input and hashed lock; isolated strict-warning band **33 passed**. Neither WSL nor lightweight diagnostics produced a faithful locked MyPy environment, so no host/locked closure is inferred. Full 222-package lock audit timed out and is not claimed green. |
 | VER-01 exact-lock MyPy green? | **Local yes / exact Ubuntu full-lock CI no.** Both exact MyPy commands are green locally (72/72 and 31/31 under retained Windows Python 3.11). Exact Ubuntu execution with the full 222-package hashed dev lock remains unproved; do not equate local type-green with Linux CI or release. |
-| Active index dimension safe? | **Runtime containment yes / index compatibility no.** `d157b31` blocks and clears caches on `3 != 1024` without provider/mutation; active `rag_docs_default` is still 3D and requires a separately authorized validated rebuild/publish |
+| Active index dimension safe? | **Yes on Windows since Update-209** — active `rag_docs-v-default-3f2b79fbe1246ab3` is 3×1024 (manifest gen 1); `d157b31` guard still protects any other tenant/dir |
 | Canonical restart capsule reconciled? | **Yes as of Update-193** (INDEX-DIM guard vs rebuild states separated); Actual Git remains first authority and `_NEXT_SESSION.md` remains stale/non-authoritative |
 | All known open problems indexed? | **Yes in §1C as of Update-193**; Actual Git/new evidence overrides the snapshot |
-| Live quality metrics ×3 evidence? | **No passing ×3 evidence**; one formal seed-42 child is valid but **FAILS** quality, and seeds 43–44 were not run |
+| Live quality metrics ×3 evidence? | **No passing ×3 evidence**; seed-42 child valid but FAILS; decision Update-209: candidate `gracekelly-mixed` unfit, no more paid seeds on Windows, §5 needs off-Windows full pipeline |
 | Human calibration DoD? | **No** (synthetic seed; readiness gate ready) |
 | Formal §7.6 live provider evidence? | **Partial:** one direct-Mistral seed-43 case has valid complete child evidence and release PASS; scheduled breadth and independent-judge execution remain open |
 | Parity default ON? | **No** (`STREAMING_RAG_PARITY` default false) |
-| WIP / active writer? | Owned implementation/test WIP **none**; no active writer. Lightweight and INDEX-DIM artifacts are ignored/untracked evidence; if `AGENT_STATE.md` or this handoff is dirty, Update-193 docs-only routing WIP is present until committed |
+| WIP / active writer? | none; worktree clean apart from intentional untracked artifacts (Update-209) |

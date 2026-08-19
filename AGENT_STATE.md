@@ -1,5 +1,80 @@
 # Agent State
 
+## 2026-08-18 Update-209 — stage closed: suite green, lock gate root-caused, INDEX-DIM activated on Windows ✅ START HERE
+
+> **Actual Git:** `master` = `cc0458d` (tests) → `5d93e12` (docs) → this
+> Update's docs commit; ahead of `origin/master` by ~349. **No push was
+> performed** — push is the owner's call (public repo; CI will run on push).
+>
+> **Mandate this session:** deep analysis of why tests were failing, then
+> close the current development stage with healthy compromises. Full analysis
+> and decisions: `docs/operations/2026-08-18-test-failure-analysis.md`.
+>
+> **Unit suite (ground truth, Python 3.13, `RAG_RERANKER_MODEL=""`):** run 1
+> hung 300 s in `tests/test_csp.py` (raw `with TestClient(app)` → lifespan →
+> real `BAAI/bge-m3` load because a local `data/vectordb/chroma` exists; CI
+> never sees it since `data/` is ignored). Run 2 after fix: **1 failed /
+> 1869 passed** — `test_index_operator.py::test_rollback_manifest_without_previous_raises_unavailable`
+> stale against `1aa9f19` (first publish now records the legacy collection as
+> previous). Run 3 after both fixes: **1870 passed / 7 skipped / 0 failed in
+> 339 s.** Commit `cc0458d`. Ruff on tracked non-legacy files: clean; the 206
+> local findings were inside 151 `.pytest_tmp_*` basetemp trees (1.1 GB),
+> now deleted and ignored via `.gitignore`. MyPy command 2: green (31
+> sources); command 1 fails locally only on `numpy 2.5.1` stubs vs lock
+> `2.4.4` (env drift, not repo; VER-01 status unchanged).
+>
+> **Lock gate (Updates 199–208) root cause:** WSL2 idle-shutdown, not
+> firewall/relay/DSN. The Ubuntu instance stops shortly after `wsl.exe`
+> exits and takes PostgreSQL with it, so `Test-NetConnection` was True right
+> after start and refused a minute later. With a keepalive
+> (`wsl -d Ubuntu-22.04 -u root -e sh -c 'service postgresql start; exec sleep infinity'`)
+> the production `tenant_index_lock("default")` probe is green:
+> `first_acquired=true, second_acquired_while_held=false, released=true,
+> reacquired_after_release=true`. Dev runbook: start that keepalive before
+> any lock-guarded index operation on Windows.
+>
+> **INDEX-DIM Windows activation (done, pragmatic):** under the held
+> `default` lock: source/target fingerprints matched preflight
+> (`1ce87531…` / `5c9eff00…`), target moved to snapshot
+> `.tmp/index-dim-windows-target-snapshot-before-activation` (627 files /
+> 55,885,536 B / SHA `5c9eff00…`, verified), staged tree installed (SHA
+> verified), child-process validation: candidate
+> `rag_docs-v-default-3f2b79fbe1246ab3` count 3 / dim 1024 / sources
+> `errors_e10_e30.md, returns_policy.md, warranty.md`, known query «Что
+> означает ошибка E20?» via remote `mistral-embed` → top-1
+> `errors_e10_e30.md`; `publish_active_collection` → generation 1, previous
+> `rag_docs_default`; manifest re-read OK. App-level smoke: real
+> `initialize_vector_store()` (remote backend) loads the candidate (count 3)
+> and the retriever returns `errors_e10_e30.md` first. Evidence:
+> `.tmp/index-dim-windows-activation-result-20260818.json`; script
+> `.tmp/index_activate_windows_20260818.py` (+ `_validate_child.py`).
+> **Compromise:** the runbook's publish→rollback→reinstall→republish loop
+> was NOT repeated on Windows (proven on the Mac copy, Update-195, and by
+> unit contracts); retention inventory not written; snapshot retained for
+> manual rollback (`rollback_index_version` API also available).
+>
+> **Live quality gate decision:** no more paid/live seeds on Windows.
+> Post-QG seed-42 FAIL (25 % vs 90 %) is a transport-unfit candidate
+> (`gracekelly-mixed` browser artifacts 18/20, 304 s/case), not a RAG
+> regression; §5 thresholds are unreachable in the vector-only 6-document
+> local config by construction. `gracekelly-mixed` is unfit as a §5
+> candidate; §5 stays **OPEN** and needs the full-corpus hybrid pipeline
+> off-Windows (Mac/Kaggle). QG-01…QG-04 code fixes stand.
+>
+> **Docs/worktree:** the four "protected owner-dirty" files + untracked
+> active plan are committed (`5d93e12`) — they were the owner's own
+> 2026-08-03 pointer edits. `_NEXT_SESSION.md` rewritten as a pointer to
+> this Update (untracked, non-authoritative). A Codex second opinion was
+> requested but failed on Codex auth (interactive re-login needed);
+> decisions were self-reviewed against `vectordb/index_manifest.py`,
+> `index_staging.py`, `manager.py`, `api/app.py`.
+>
+> **Next (owner decisions, not preauthorized):** (1) push `master` and read
+> CI (3.11 leg, integration with PG/Redis, migrations); (2) optionally
+> re-login Codex and re-run the second-opinion review; (3) §5 live evidence
+> only via off-Windows full pipeline; (4) keep the WSL keepalive habit for
+> any lock-guarded index work.
+
 ## 2026-08-14 Update-208 — dpkg/PostgreSQL repaired; Windows relay still blocks tenant lock ⚠ START HERE
 
 > **Actual Git before this docs-only closeout:** Windows `master` at

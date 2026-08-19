@@ -1,8 +1,8 @@
 # Plan closure status — honest residual matrix
 
-**Date:** 2026-08-13 (Update-200 next-session activation handoff reconciled)
-**Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md)  
-**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-200**)
+**Date:** 2026-08-18 (Update-209 — dev stage closed)
+**Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) (tracked since `5d93e12`)  
+**Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-209**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
 
@@ -10,6 +10,20 @@ authoritative open-problem ledger in §1C.
 > Update-191. Preserve it as DoD input, but use Actual Git + the committed
 > handoff for next-session routing; do not casually stage or bulk-check its
 > historical checkboxes.
+
+**Update-209 (2026-08-18):** dev stage closed. §2 index lifecycle: the
+Windows working index is now the validated `3 × 1024` versioned candidate
+(manifest generation 1, previous `rag_docs_default`, snapshot retained) — the
+first real Windows publish through the lock-guarded API; the ten-Update lock
+blocker was WSL2 idle-shutdown, fixed by a keepalive process. §7/§10 local
+verification: full Python 3.13 unit suite **1870 passed / 7 skipped** after two
+test fixes (`cc0458d`); ruff clean on tracked non-legacy files. §5 live
+quality: **still OPEN** — the post-QG seed-42 FAIL is attributed to the
+transport-unfit `gracekelly-mixed` candidate, and the §5 thresholds cannot be
+met by the vector-only 6-document local config; closure requires the
+full-corpus hybrid pipeline off-Windows. No plan checkbox flipped; §1, §5
+live, §8 live, §10 remain open. No push. Analysis:
+`operations/2026-08-18-test-failure-analysis.md`.
 
 **Update-200:** documentation-only reconciliation; no plan checkbox or runtime
 gate changed. The active handoff now points to implementation `0cba9d1`, blocker

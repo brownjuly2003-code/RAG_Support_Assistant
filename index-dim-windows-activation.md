@@ -40,7 +40,27 @@ must stop before the next mutation boundary.
   accept connections; Codex confirmed `pg_lsclusters` and both
   `pg_isready` checks. Package-default bind/auth unchanged; only the
   missing checked-in local-dev fallback role/database created.
-- [ ] Establish and verify a reachable PostgreSQL tenant-lock service
+- [x] **2026-08-18:** lock gate green. Root cause of the Windows refusal was
+  WSL2 idle-shutdown (the Ubuntu instance stops shortly after `wsl.exe`
+  exits and takes PostgreSQL with it). Fix: keep a keepalive process
+  `wsl -d Ubuntu-22.04 -u root -e sh -c 'service postgresql start; exec sleep infinity'`
+  running; then `tenant_index_lock("default")` from Windows returns
+  `first_acquired=true, second_acquired_while_held=false, released=true,
+  reacquired_after_release=true`. No listen/auth, firewall, port-proxy or DSN
+  change was needed.
+- [x] **2026-08-18 activation done** (`.tmp/index_activate_windows_20260818.py`,
+  result `.tmp/index-dim-windows-activation-result-20260818.json`): under the
+  held lock — fingerprints verified, snapshot created and verified
+  (627 files / 55,885,536 B / `5c9eff00…`), staged tree installed and verified
+  (`1ce87531…`), child-process validation (3 × 1024, exact sources, E20 known
+  query top-1 via remote `mistral-embed`), `publish_active_collection` →
+  generation 1 / previous `rag_docs_default`, manifest re-read OK; app-level
+  `initialize_vector_store()` loads the candidate and the retriever returns
+  `errors_e10_e30.md` first. **Compromise:** the publish → rollback →
+  reinstall → republish loop below was not repeated on Windows (proven on the
+  Mac copy, Update-195, and by unit contracts); retention inventory not
+  written; snapshot retained for manual rollback.
+- [ ] (historical wording) Establish and verify a reachable PostgreSQL tenant-lock service
   from the Windows production API. WSL-internal PostgreSQL is ready,
   but the consumed production-API probe exited 1 with
   `first_acquired=false`, `token_invalidated=false`,
