@@ -1,7 +1,7 @@
 # Plan closure status — honest residual matrix
 
 **Date:** 2026-08-18 (Update-209 — dev stage closed)
-**Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) (tracked since `5d93e12`)  
+**Plan file:** [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) (tracked since `5d93e12`)
 **Routing:** top block of [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-209**)
 **Session capsule:** [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md), especially the
 authoritative open-problem ledger in §1C.
@@ -83,9 +83,9 @@ not production or live-quality evidence.
 
 **Rules:**
 
-1. Checkboxes in the plan file stay open until **behavioral DoD + evidence**.  
-2. Local code slice ≠ full plan section complete ≠ production release.  
-3. Actual Git wins over any SHA embedded here.  
+1. Checkboxes in the plan file stay open until **behavioral DoD + evidence**.
+2. Local code slice ≠ full plan section complete ≠ production release.
+3. Actual Git wins over any SHA embedded here.
 4. Quality > speed; one named atomic slice per user turn.
 
 **Update-191:** no plan checkbox or release gate changed. `d4583cc` expresses
@@ -447,11 +447,11 @@ scores/counts.
 | **6.7** | **done local** | `c707c46` | human readiness gate + recalibrate CLI |
 | 6.x | residual | — | production dual-annotator sample + reissue |
 
-**6.4 residual:** seed is bootstrap-defaults (historical 80/80/0.8/70), not live  
+**6.4 residual:** seed is bootstrap-defaults (historical 80/80/0.8/70), not live
 human production labelling DoD.
 
-**6.7 residual:** readiness gate is ready; **real human labels not collected**.  
-Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails  
+**6.7 residual:** readiness gate is ready; **real human labels not collected**.
+Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 `--require-human`.
 
 ---
@@ -470,7 +470,7 @@ Seed `labelled_routes.jsonl` is `label_source=synthetic` and correctly fails
 | **7.8** | **done local** | resolve through Actual Git | min 4 cases per required slice; 76 unique cases |
 | 7.x | residual | — | live execute with secrets; optional further depth |
 
-**7.2 residual:** CI still runs `--mock-experiment-runtime` as **smoke** (documented non-evidence).  
+**7.2 residual:** CI still runs `--mock-experiment-runtime` as **smoke** (documented non-evidence).
 **7.6 residual:** one authorized direct-provider case now has valid complete child evidence and release PASS; scheduled breadth and independent-judge evidence remain open.
 **7.8 residual:** still synthetic curated (not production human labels); optional deeper still.
 
@@ -552,10 +552,10 @@ exists.
 
 The plan is **closed** only when:
 
-1. Every section §1–§10 meets its own **behavioral DoD + evidence**.  
-2. Unverified auto-rate is zero under live policy.  
-3. Restore/rollback/canary confirmed where required.  
-4. Production release does **not** rest on graceful skip, fixed agentic scores,  
+1. Every section §1–§10 meets its own **behavioral DoD + evidence**.
+2. Unverified auto-rate is zero under live policy.
+3. Restore/rollback/canary confirmed where required.
+4. Production release does **not** rest on graceful skip, fixed agentic scores,
    mock release PASS, or self-judge without human calibration.
 
 Local green slices alone **do not** close the plan.

@@ -13,6 +13,7 @@ import concurrent.futures
 import hashlib
 import json
 import logging
+import os
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -135,18 +136,29 @@ def _deliver_inbox(
     project_root: Path,
     record: dict[str, Any],
 ) -> tuple[DeliveryState, str]:
-    """Best-effort outbox delivery after durable ticket insert."""
-    try:
-        from integrations.mock_inbox import get_support_sink  # noqa: PLC0415
+    """Best-effort outbox delivery after durable ticket insert.
 
-        entity_id = str(record.get("entity_id") or record.get("ticket_id") or "unknown")
-        get_support_sink().send(entity_id, json.dumps(record, ensure_ascii=False))
-        _record_escalation_delivery("delivered")
-        return "delivered", ""
-    except ImportError:
-        pass
-    except Exception as exc:
-        logger.warning("Support sink delivery failed: %s", exc)
+    The default ``local`` backend is the JSONL outbox under ``project_root``
+    (full record, honours the configured root). An external sink
+    (``SUPPORT_SINK_BACKEND`` other than ``local``) is tried first and the
+    JSONL outbox remains the fallback. Routing the local backend through
+    ``LocalFileSupportSink`` (ad5e435) wrote to a hardcoded repo path and
+    dropped fields such as ``reason``/``ticket_id``; the integration test
+    ``test_low_quality_answer_can_be_escalated_to_ticket_and_inbox`` caught it.
+    """
+    backend = os.getenv("SUPPORT_SINK_BACKEND", "local").strip().lower()
+    if backend != "local":
+        try:
+            from integrations.mock_inbox import get_support_sink  # noqa: PLC0415
+
+            entity_id = str(record.get("entity_id") or record.get("ticket_id") or "unknown")
+            get_support_sink().send(entity_id, json.dumps(record, ensure_ascii=False))
+            _record_escalation_delivery("delivered")
+            return "delivered", ""
+        except ImportError:
+            pass
+        except Exception as exc:
+            logger.warning("Support sink delivery failed: %s", exc)
 
     try:
         inbox_path = project_root / "data" / "inbox" / "support_inbox.jsonl"

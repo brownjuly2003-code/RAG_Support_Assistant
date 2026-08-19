@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import json
+import shutil
+import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 
+import pytest
 import yaml
 
 from scripts import live_quality_metrics_gate as gate_mod
@@ -36,6 +40,29 @@ PASSING_SECTION5_METRICS = {
     "answer_relevancy": 0.94,
     "unverified_auto_rate": 0.0,
 }
+
+
+@pytest.fixture
+def tmp_path() -> Iterator[Path]:
+    """Workspace-local temp dir (overrides pytest's ``tmp_path`` for this module).
+
+    The gate only accepts a child ``report_json`` that resolves inside the
+    workspace, so sidecars written by these tests must live under
+    ``PROJECT_ROOT``. pytest's default temp root (``/tmp/pytest-of-runner`` on
+    CI) is outside it and made ``_rel_to_workspace`` raise ``ValueError``;
+    locally this was masked by always passing an in-repo ``--basetemp``.
+    """
+    root = PROJECT_ROOT / ".pytest_tmp_live_gate"
+    root.mkdir(exist_ok=True)
+    path = Path(tempfile.mkdtemp(prefix="case-", dir=root))
+    try:
+        yield path
+    finally:
+        shutil.rmtree(path, ignore_errors=True)
+        try:
+            root.rmdir()  # only succeeds when no other case is using it
+        except OSError:
+            pass
 
 
 def _rel_to_workspace(path: Path) -> str:

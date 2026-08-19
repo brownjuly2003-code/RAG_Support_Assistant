@@ -3654,7 +3654,7 @@
 >
 > ### Protected dirty / untracked
 >
-> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`  
+> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 > Untracked: plan file, `_NEXT_SESSION.md`, pytest temps, presentations
 >
 > ### External gates (opt-in only)
@@ -3747,7 +3747,7 @@
 >
 > ### Protected dirty / untracked
 >
-> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`  
+> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 > Untracked: plan file, `_NEXT_SESSION.md`, pytest temps, presentations
 >
 > ### External gates (opt-in only)
@@ -4095,7 +4095,7 @@
 >
 > ### Protected dirty / untracked
 >
-> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`  
+> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 > Untracked: plan file, `_NEXT_SESSION.md`, pytest temps, presentations
 >
 > ### External gates (opt-in only)
@@ -4178,7 +4178,7 @@
 >
 > ### Protected dirty / untracked
 >
-> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`  
+> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 > Untracked: plan file, `_NEXT_SESSION.md`, pytest temps, presentations
 >
 > ### External gates (opt-in only)
@@ -4264,7 +4264,7 @@
 >
 > ### Protected dirty / untracked
 >
-> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`  
+> Dirty: `BACKLOG.md`, `README.md`, `audit_gpt_23_07_26.md`, `plan_sol_23_07_26`
 > Untracked: plan file, `_NEXT_SESSION.md` (pointer), pytest temps, presentations
 >
 > ### External gates (opt-in only)

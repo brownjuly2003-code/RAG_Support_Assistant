@@ -88,7 +88,18 @@ def test_low_quality_answer_can_be_escalated_to_ticket_and_inbox(
     assert ticket.tenant_id == "acme"
     assert ticket.status == "open"
 
+    # Plan §4 durable escalation: the human-route answer already registered an
+    # automatic ticket (first outbox line), and the explicit /api/escalate adds
+    # the manual one (last line). Both land in the JSONL outbox under the
+    # configured project root with the full record (reason included).
     inbox_file = tmp_path / "data" / "inbox" / "support_inbox.jsonl"
-    record = json.loads(inbox_file.read_text(encoding="utf-8").strip())
-    assert record["question"] == "Нужна помощь оператора"
-    assert record["reason"] == "low_quality"
+    records = [
+        json.loads(line)
+        for line in inbox_file.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert records, "no outbox records written"
+    assert all(r["question"] == "Нужна помощь оператора" for r in records)
+    assert records[0]["route"] == "human_route"
+    assert records[-1]["route"] == "manual"
+    assert records[-1]["reason"] == "low_quality"
