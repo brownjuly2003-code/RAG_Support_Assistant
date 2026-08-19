@@ -1,6 +1,49 @@
 # Agent State
 
-## 2026-08-18 Update-209 — stage closed: suite green, lock gate root-caused, INDEX-DIM activated on Windows ✅ START HERE
+## 2026-08-18 Update-210 — first CI in 2.5 months: red → green on branch, PR #2 for migrations/helm ✅ START HERE
+
+> **Actual Git:** `master` = `752488b` (fix(ci)) on top of `837578a`; pushed
+> to `origin/ci-check-20260818` (temporary verification branch) and PR #2 →
+> `master`. `origin/master` unchanged until the PR run (incl. `migrations`,
+> `helm`) is green; then `master` is fast-forwarded to the same SHA and the
+> branch is deleted. Owner authorized push via the new `Bash(git push:*)`
+> permission rule.
+>
+> **CI run 1 on the branch (`32201231825`): lint ✅ type-check ✅, everything
+> else ❌** — the first CI signal since June because nothing had been pushed
+> for 349 commits. Root causes and fixes (`752488b`):
+> 1. `aiosqlite` never locked (conftest fixture since `b7faa19`) → 250
+>    ModuleNotFoundError in unit+integration; invisible locally (global
+>    interpreter had it). Added to `requirements-dev.txt` + hashed lock.
+> 2. `tests/test_live_quality_metrics_gate.py` assumed `tmp_path` inside the
+>    workspace (12 ValueError on `/tmp/pytest-of-runner`); locally masked by
+>    always using an in-repo `--basetemp`. Module-level workspace-local
+>    `tmp_path` fixture.
+> 3. Product regression since `ad5e435`: default `local` support-sink routed
+>    escalation delivery through `LocalFileSupportSink` (hardcoded repo path,
+>    dropped `reason`/`ticket_id`/`tenant_id`). `_deliver_inbox` now writes the
+>    full JSONL record under the configured `project_root` for the local
+>    backend; external backends unchanged. Integration test updated to §4
+>    semantics (auto human-route ticket + manual escalation = 2 outbox lines).
+> 4. pip-audit: aiohttp 3.14.1→3.14.3, cryptography 49→50, pypdf 6.14.2→6.16.1
+>    via `uv pip compile -P` (only those lines changed in both locks).
+> 5. pre-commit trailing whitespace in three docs.
+>
+> **CI run 2 on the branch (`32203498246`): 8/8 green** (lint, type-check,
+> test-unit 3.11+3.13, test-integration 3.11+3.13, security, pre-commit);
+> migrations/helm/regression-eval skipped by design on non-master branches →
+> PR #2 opened to exercise them.
+>
+> **Local proof:** unit suite with SYSTEM temp dir (CI-like) 1870 passed / 7
+> skipped; `tests/integration` 6 passed / 1 skipped; pip-audit with CI args
+> clean; ruff/scoped mypy/whitespace hooks green.
+>
+> **Lesson recorded:** unpushed work = CI-blind; the two "environment-only"
+> hazards (global interpreter extras, in-repo basetemp) hid three test
+> defects and one product regression. Rule: push a verification branch at
+> least per stage.
+
+## 2026-08-18 Update-209 — stage closed: suite green, lock gate root-caused, INDEX-DIM activated on Windows ✅
 
 > **Actual Git:** `master` = `cc0458d` (tests) → `5d93e12` (docs) → this
 > Update's docs commit; ahead of `origin/master` by ~349. **No push was

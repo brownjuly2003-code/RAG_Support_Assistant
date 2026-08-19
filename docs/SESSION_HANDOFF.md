@@ -1,6 +1,6 @@
 # Session handoff
 
-**Обновлено:** 2026-08-18 — **Update-209** (stage closed: suite green 1870/7, lock gate root-caused = WSL idle-shutdown, INDEX-DIM activated on Windows).
+**Обновлено:** 2026-08-18 — **Update-210** (first CI in 2.5 months: branch `ci-check-20260818` red→green 8/8 at `752488b`; PR #2 exercises migrations/helm before fast-forwarding `master`). Update-209 = stage closed (suite green 1870/7, lock gate root-caused = WSL idle-shutdown, INDEX-DIM activated on Windows).
 **Назначение:** самодостаточный старт **следующей** сессии без чтения всей
 истории `AGENT_STATE.md`.
 
@@ -11,7 +11,7 @@
 | Приоритет | Источник |
 |-----------|----------|
 | 1 | **Actual Git** — `git status --short --branch` + `git log -12 --oneline` |
-| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-209**) |
+| 2 | Верхний блок [`AGENT_STATE.md`](../AGENT_STATE.md) (**Update-210**, затем 209) |
 | 3 | Эта капсула + [`PLAN_CLOSURE_STATUS.md`](PLAN_CLOSURE_STATUS.md) + анализ [`operations/2026-08-18-test-failure-analysis.md`](operations/2026-08-18-test-failure-analysis.md) |
 | 4 | План [`rag-remediation-plan-2026-08-03.md`](../rag-remediation-plan-2026-08-03.md) — **DoD**, не очередь галочек (теперь tracked, `5d93e12`) |
 
@@ -28,7 +28,8 @@
 | Вопрос следующей сессии | Проверяемый ответ |
 |-------------------------|-------------------|
 | Последний implementation SHA | `0cba9d1` — read-only Windows INDEX-DIM activation preflight; product code unchanged since |
-| Последний committed test contract | `cc0458d` — `test_csp.py` через shared `client`-fixture (не грузит реальный embedder), `test_index_operator.py` rollback-тест приведён к `1aa9f19`; полный suite **1870 passed / 7 skipped** |
+| CI (Update-210) | branch `ci-check-20260818` run 1 red (aiosqlite unlocked; live-gate tmp_path; local outbox regression `ad5e435`; pip-audit aiohttp/cryptography/pypdf; whitespace) → `752488b` → run 2 **8/8 green**; PR #2 for migrations/helm; `master` fast-forward after green |
+| Последний committed test contract | `752488b` (CI fixes) ← `cc0458d` — `test_csp.py` через shared `client`-fixture (не грузит реальный embedder), `test_index_operator.py` rollback-тест приведён к `1aa9f19`; полный suite **1870 passed / 7 skipped** |
 | Последний committed docs closure | `5d93e12` (owner pointer-docs + tracked plan) → Update-209 docs commit (resolve через Actual Git); push НЕ выполнялся |
 | Dev-runbook: tenant lock на Windows | PostgreSQL живёт в WSL `Ubuntu-22.04`; инстанс гаснет по idle → перед lock-guarded операцией держать keepalive `wsl -d Ubuntu-22.04 -u root -e sh -c 'service postgresql start; exec sleep infinity'` (проверено: acquire/exclusive/release зелёные) |
 | Windows-индекс сейчас | `data/vectordb/chroma` = staged 3×1024 tree (SHA `1ce87531…`), manifest generation 1: active `rag_docs-v-default-3f2b79fbe1246ab3`, previous `rag_docs_default`; snapshot до активации `.tmp/index-dim-windows-target-snapshot-before-activation` (SHA `5c9eff00…`, 627 files); evidence `.tmp/index-dim-windows-activation-result-20260818.json` |
